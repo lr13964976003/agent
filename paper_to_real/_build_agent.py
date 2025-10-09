@@ -62,7 +62,7 @@ def build_task(description, expected_output, agent):
     )
     return task
 
-@ag.instrument()
+#@ag.instrument()
 def log_task_output(task_output):
     """capture each trace of task completition"""
     return {"task_output": str(task_output)}
@@ -72,14 +72,14 @@ def log_step(step_output):
     """capture each trace of step"""
     attrs = ["result", "thought", "tool", "tool_result"]
     
-    @ag.instrument()
+    #@ag.instrument()
     def log_step_output(step_output, attrs):
         return {attr: getattr(step_output, attr, None) for attr in attrs}
 
     if getattr(step_output, "thought", None) is not None:
         return log_step_output(step_output, attrs)
 
-@ag.instrument()
+#@ag.instrument()
 def run_pipeline(agents: list, tasks: list):
     parent_span = trace.get_current_span()
     parent_ctx = trace.set_span_in_context(parent_span)
@@ -117,7 +117,7 @@ class ReviewLoop:
         self.inputs=inputs
         self.max_rounds = max_rounds
     
-    @ag.instrument()
+    #@ag.instrument()
     def run(self):
         #parent_span = ag.tracing.get_current_span()
         #tracer = trace.get_tracer(__name__)

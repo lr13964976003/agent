@@ -12,9 +12,6 @@ from _build_agent import *
 from datetime import datetime 
 from opentelemetry import trace
 import argparse
-import ssl
-
-ssl._create_default_https_context = ssl._create_unverified_context
 
 
 now = datetime.now()
@@ -22,7 +19,12 @@ submission_dir = now.strftime("%Y-%m-%d-%H-%M-%S")
 if os.path.exists(f"/home/wzc/data/file-share/logs/{submission_dir}") is False:
     os.mkdir(f"/home/wzc/data/file-share/logs/{submission_dir}")
 
-
+def fetch_prompt_local(slug:str, inputs:dict) -> str:
+    with open(f"./prompts/{slug}.md","r") as f:
+        prompt = f.read()
+    prompt = re.sub(r'<<<.*?>>>', '', prompt, flags=re.DOTALL)
+    prompt = prompt.format(**inputs)
+    return prompt
 
 @ag.instrument(spankind="workflow")
 def main():
@@ -79,7 +81,7 @@ def main():
             }
     agents = []
     for k in variant_list:
-        prompt = fetch_prompt(APP_SLUG, variant[k]["slug"], variant[k]["version"], variant[k]["inputs"])
+        prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"])
         tools = variant[k]["tools"]
         agents.append(build_agent(prompt, tools))
     
