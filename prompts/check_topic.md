@@ -6,9 +6,9 @@ RESOURCES
 
 ---
 
-You have been provided with a research paper located at {paper\_path}. <<<提供论文路径>>>
+You have been provided with a research paper located at {paper_path}. <<<提供论文路径>>>
 
-You have been provided with a scoring criteria located at {score\_path}.<<<提供得分路径>>>
+You have been provided with a scoring criteria located at {score_path}.<<<提供得分路径>>>
 
 
 

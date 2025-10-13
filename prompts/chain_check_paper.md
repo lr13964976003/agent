@@ -6,7 +6,7 @@ RESOURCES
 
 ---
 
-You have been provided with an original research paper located at {origin\_paper\_path}. <<<提供原始论文路径>>>
+You have been provided with an original research paper located at {origin_paper_path}. <<<提供原始论文路径>>>
 
 You have been provided with a refined research paper by the previous agent. <<<提供精炼论文>>>
 

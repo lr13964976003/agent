@@ -54,7 +54,7 @@ SUBMISSION
 
 The longest path and the time demonstrated by Get\_Time(m, k, n)
 
-Save the your conclusions in {save\_path} in markdown format. 
+Save the your conclusions in {save_path} in markdown format. 
 
 How we would grade this:
 

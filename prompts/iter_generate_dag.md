@@ -6,7 +6,7 @@ RESOURCES
 
 ---
 
-You have been provided with a supplementary knowledge located at {knowledge\_path}.<<<提供知识路径>>>
+You have been provided with a supplementary knowledge located at {knowledge_path}.<<<提供知识路径>>>
 
 You have been provided with a deployment plan for large models and the actual performance of the deployment by previous agent.<<<提供部署方案与性能>>>
 
@@ -100,7 +100,7 @@ SUBMISSION
 
 ---
 
-The generated DAG should be saved in {save\_path}. 
+The generated DAG should be saved in {save_path}. 
 
 All graphviz codes need to be saved in DOT format.<<<需要提交graphviz代码>>>
 

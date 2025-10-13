@@ -6,9 +6,9 @@ RESOURCES
 
 ---
 
-You have been provided with a research paper located at {paper\_path}. <<<提供论文路径>>>
+You have been provided with a research paper located at {paper_path}. <<<提供论文路径>>>
 
-You have been provided with a supplementary knowledge located at {knowledge\_path}.<<<提供知识路径>>>
+You have been provided with a supplementary knowledge located at {knowledge_path}.<<<提供知识路径>>>
 
 TASK
 
@@ -58,7 +58,7 @@ SUBMISSION
 
 ---
 
-All submission should be saved in {save\_path}.
+All submission should be saved in {save_path}.
 
 You don't need to submit the complete content because it is too large. Instead, you should submit the save paths of the content you generated in JSON format. <<<提交路径而不是content>>>
 
