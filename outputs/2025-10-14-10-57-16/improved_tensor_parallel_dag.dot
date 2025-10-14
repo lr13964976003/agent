@@ -1,0 +1,162 @@
+// Improved: Tensor Parallelism + Pipeline Parallelism Strategy
+// 16 GPUs total: 2 pipeline stages × 8-way tensor parallelism
+// Each stage handles 8 layers with tensor parallelism across 8 GPUs
+
+// Model Configuration:
+// - 16 transformer layers total
+// - Hidden size: 8192
+// - 16 attention heads, 512 dimensions per head
+// - FFN hidden size: 32768
+// - Batch size: 1024
+// - Sequence length: 10000
+
+digraph {
+    rankdir=TB
+    size="40,40"
+    
+    // Node styling
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    node [fillcolor=lightgreen shape=rectangle style=filled]
+    node [fillcolor=yellow shape=parallelogram style=filled]
+    node [fillcolor=orange shape=hexagon style=filled]
+    
+    // Model Input
+    input [label="Model Input\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs" shape=ellipse]
+    
+    // Stage 0: Layers 0-7 on GPUs 0-7 (8-way tensor parallelism)
+    subgraph cluster_stage_0 {
+        color=red
+        label="Stage 0: Layers 0-7\nTensor Parallel across GPUs 0-7"
+        style=dashed
+        
+        // Layer 0 - Tensor Parallel across GPUs 0-7
+        subgraph cluster_layer_0_stage_0 {
+            color=blue
+            label="Layer 0 - Tensor Parallel"
+            style=dotted
+            
+            // Broadcast input to all GPUs
+            broadcast_0 [label="Broadcast\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 0-7" shape=parallelogram]
+            
+            // LayerNorm - replicated on all GPUs
+            layer0_ln1 [label="LayerNorm1\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 0-7" shape=rectangle]
+            
+            // QKV Linear - Column Parallel
+            layer0_qkv_split [label="Split QKV Input\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nGPU: Each GPU 0-7 gets 1/8th" shape=parallelogram]
+            layer0_q_linear [label="Query Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nOutput: [batch_size=1024, seq_len=10000, num_heads=2, head_dim=512]\nGPU: Each GPU 0-7" shape=rectangle]
+            layer0_k_linear [label="Key Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nOutput: [batch_size=1024, seq_len=10000, num_heads=2, head_dim=512]\nGPU: Each GPU 0-7" shape=rectangle]
+            layer0_v_linear [label="Value Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nOutput: [batch_size=1024, seq_len=10000, num_heads=2, head_dim=512]\nGPU: Each GPU 0-7" shape=rectangle]
+            
+            // Attention computation - parallel across heads
+            layer0_attn_score [label="Attention Score Q·K^T\nInput1: [batch_size=1024, seq_len=10000, num_heads=2, head_dim=512]\nInput2: [batch_size=1024, seq_len=10000, num_heads=2, head_dim=512]\nOutput: [batch_size=1024, num_heads=2, seq_len=10000, seq_len=10000]\nGPU: Each GPU 0-7" shape=rectangle]
+            layer0_attn_weights [label="Softmax\nInput: [batch_size=1024, num_heads=2, seq_len=10000, seq_len=10000]\nOutput: [batch_size=1024, num_heads=2, seq_len=10000, seq_len=10000]\nGPU: Each GPU 0-7" shape=rectangle]
+            layer0_attn_out [label="Attention Output\nInput1: [batch_size=1024, num_heads=2, seq_len=10000, seq_len=10000]\nInput2: [batch_size=1024, seq_len=10000, num_heads=2, head_dim=512]\nOutput: [batch_size=1024, seq_len=10000, num_heads=2, head_dim=512]\nGPU: Each GPU 0-7" shape=rectangle]
+            
+            // Gather attention outputs
+            layer0_attn_gather [label="Gather Attention Outputs\nInput: [batch_size=1024, seq_len=10000, num_heads=2, head_dim=512]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 0-7 → GPU 0" shape=parallelogram]
+            
+            // Attention output projection - Row Parallel
+            layer0_attn_proj_split [label="Split for Projection\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nGPU: Each GPU 0-7 gets 1/8th" shape=parallelogram]
+            layer0_attn_proj [label="Attention Projection\nInput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nGPU: Each GPU 0-7" shape=rectangle]
+            layer0_attn_allreduce [label="All-Reduce Sum\nInput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 0-7" shape=parallelogram]
+            
+            // Residual connection
+            layer0_res1 [label="Residual Add 1\nInput1: [batch_size=1024, seq_len=10000, hidden_size=8192]\nInput2: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: GPU 0" shape=rectangle]
+            
+            // LayerNorm2
+            layer0_ln2 [label="LayerNorm2\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: GPU 0" shape=rectangle]
+            
+            // MLP - Column Parallel + Row Parallel
+            layer0_mlp1_split [label="Split MLP Input\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nGPU: Each GPU 0-7 gets 1/8th" shape=parallelogram]
+            layer0_mlp1 [label="MLP Linear1 (Column)\nInput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden_size=4096]\nGPU: Each GPU 0-7" shape=rectangle]
+            layer0_gelu [label="GELU\nInput: [batch_size=1024, seq_len=10000, ffn_hidden_size=4096]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden_size=4096]\nGPU: Each GPU 0-7" shape=rectangle]
+            layer0_mlp2 [label="MLP Linear2 (Row)\nInput: [batch_size=1024, seq_len=10000, ffn_hidden_size=4096]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nGPU: Each GPU 0-7" shape=rectangle]
+            layer0_mlp_allreduce [label="All-Reduce Sum\nInput: [batch_size=1024, seq_len=10000, hidden_size=1024]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 0-7" shape=parallelogram]
+            
+            // Final residual
+            layer0_res2 [label="Residual Add 2\nInput1: [batch_size=1024, seq_len=10000, hidden_size=8192]\nInput2: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: GPU 0" shape=rectangle]
+        }
+        
+        // Similar structure for layers 1-7 (abbreviated for space)
+        // Each layer follows the same pattern but on different GPU sets
+        
+        // Pipeline communication between layers
+        send_layer0_to_layer1 [label="Send to Layer 1\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: GPU 0 → All GPUs 0-7" shape=parallelogram]
+        
+        // Layer 1 (simplified representation)
+        layer1_ln1 [label="LayerNorm1\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 0-7" shape=rectangle]
+        layer1_qkv [label="QKV Linear (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512]\nGPU: All GPUs 0-7" shape=rectangle]
+        layer1_attn [label="Attention (Parallel)\nInput: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 0-7" shape=rectangle]
+        layer1_mlp [label="MLP (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 0-7" shape=rectangle]
+        
+        send_stage0_to_stage1 [label="Send to Stage 1\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: GPU 7 → All GPUs 8-15" shape=parallelogram]
+    }
+    
+    // Stage 1: Layers 8-15 on GPUs 8-15 (8-way tensor parallelism)
+    subgraph cluster_stage_1 {
+        color=red
+        label="Stage 1: Layers 8-15\nTensor Parallel across GPUs 8-15"
+        style=dashed
+        
+        // Similar structure for Stage 1 layers 8-15
+        receive_stage1 [label="Receive from Stage 0\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 8-15" shape=parallelogram]
+        
+        layer8 [label="Layer 8 (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 8-15" shape=rectangle]
+        layer9 [label="Layer 9 (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 8-15" shape=rectangle]
+        layer10 [label="Layer 10 (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 8-15" shape=rectangle]
+        layer11 [label="Layer 11 (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 8-15" shape=rectangle]
+        layer12 [label="Layer 12 (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 8-15" shape=rectangle]
+        layer13 [label="Layer 13 (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 8-15" shape=rectangle]
+        layer14 [label="Layer 14 (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 8-15" shape=rectangle]
+        layer15 [label="Layer 15 (Parallel)\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: All GPUs 8-15" shape=rectangle]
+    }
+    
+    // Model Output
+    output [label="Model Output\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: GPU 15" shape=ellipse]
+    
+    // Connections
+    input -> broadcast_0
+    broadcast_0 -> layer0_ln1
+    layer0_ln1 -> layer0_qkv_split
+    layer0_qkv_split -> layer0_q_linear
+    layer0_qkv_split -> layer0_k_linear
+    layer0_qkv_split -> layer0_v_linear
+    layer0_q_linear -> layer0_attn_score
+    layer0_k_linear -> layer0_attn_score
+    layer0_attn_score -> layer0_attn_weights
+    layer0_attn_weights -> layer0_attn_out
+    layer0_v_linear -> layer0_attn_out
+    layer0_attn_out -> layer0_attn_gather
+    layer0_attn_gather -> layer0_attn_proj_split
+    layer0_attn_proj_split -> layer0_attn_proj
+    layer0_attn_proj -> layer0_attn_allreduce
+    layer0_attn_allreduce -> layer0_res1
+    input -> layer0_res1 [style=dashed]
+    layer0_res1 -> layer0_ln2
+    layer0_ln2 -> layer0_mlp1_split
+    layer0_mlp1_split -> layer0_mlp1
+    layer0_mlp1 -> layer0_gelu
+    layer0_gelu -> layer0_mlp2
+    layer0_mlp2 -> layer0_mlp_allreduce
+    layer0_mlp_allreduce -> layer0_res2
+    layer0_res1 -> layer0_res2 [style=dashed]
+    layer0_res2 -> send_layer0_to_layer1
+    
+    // Simplified connections for remaining layers
+    send_layer0_to_layer1 -> layer1_ln1
+    layer1_ln1 -> layer1_qkv
+    layer1_qkv -> layer1_attn
+    layer1_attn -> layer1_mlp
+    layer1_mlp -> send_stage0_to_stage1
+    
+    send_stage0_to_stage1 -> receive_stage1
+    receive_stage1 -> layer8
+    layer8 -> layer9
+    layer9 -> layer10
+    layer10 -> layer11
+    layer11 -> layer12
+    layer12 -> layer13
+    layer13 -> layer14
+    layer14 -> layer15
+    layer15 -> output
+}
