@@ -1,0 +1,264 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "Baseline_TP8_PP2",
+      "description": "Baseline configuration with Tensor Parallelism 8-way and Pipeline Parallelism 2-way",
+      "model_specification": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "token_dimension": 8192,
+        "mlp_hidden_dimension": 32768,
+        "mha_heads": 16,
+        "mha_head_dimension": 512,
+        "precision": "FP16"
+      },
+      "parallel_strategy": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "dimension": "column_and_row_parallel",
+          "implementation": "standard_transformer_tp"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "stages": [
+            {
+              "stage_id": 0,
+              "layers": [0, 1],
+              "gpus": [0, 1, 2, 3, 4, 5, 6, 7]
+            },
+            {
+              "stage_id": 1,
+              "layers": [2, 3],
+              "gpus": [8, 9, 10, 11, 12, 13, 14, 15]
+            }
+          ]
+        },
+        "expert_parallelism": {
+          "degree": 1,
+          "colocation": true,
+          "experts_per_gpu": 8
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 0,
+          "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+          "modules": {
+            "layer_0": {
+              "mha_tp_shard": "1/8_column_parallel",
+              "mlp_experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "mlp_tp_shard": "1/8_column_and_row_parallel"
+            },
+            "layer_1": {
+              "mha_tp_shard": "1/8_column_parallel",
+              "mlp_experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "mlp_tp_shard": "1/8_column_and_row_parallel"
+            }
+          }
+        },
+        "gpu_1": {
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 1,
+          "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+          "modules": {
+            "layer_0": {
+              "mha_tp_shard": "1/8_column_parallel",
+              "mlp_experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "mlp_tp_shard": "1/8_column_and_row_parallel"
+            },
+            "layer_1": {
+              "mha_tp_shard": "1/8_column_parallel",
+              "mlp_experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "mlp_tp_shard": "1/8_column_and_row_parallel"
+            }
+          }
+        },
+        "gpu_8": {
+          "pipeline_stage": 1,
+          "tensor_parallel_rank": 0,
+          "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+          "modules": {
+            "layer_2": {
+              "mha_tp_shard": "1/8_column_parallel",
+              "mlp_experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "mlp_tp_shard": "1/8_column_and_row_parallel"
+            },
+            "layer_3": {
+              "mha_tp_shard": "1/8_column_parallel",
+              "mlp_experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "mlp_tp_shard": "1/8_column_and_row_parallel"
+            }
+          }
+        }
+      },
+      "communication_pattern": {
+        "tensor_parallel": {
+          "all_reduce_operations": "per_layer_mha_and_mlp",
+          "bandwidth_requirement": "high"
+        },
+        "pipeline_parallel": {
+          "send_receive_operations": "between_stages",
+          "activation_buffering": "required"
+        },
+        "expert_colocation": {
+          "intra_gpu_communication": "shared_memory",
+          "expert_selection_overhead": "minimal"
+        }
+      },
+      "performance_characteristics": {
+        "throughput_tps": 120000,
+        "latency_tpot_ms": 8.3,
+        "gpu_utilization": "moderate_due_to_sharing",
+        "bottleneck": "intra_gpu_expert_contention"
+      }
+    },
+    "proposed": {
+      "name": "Cross_Node_Expert_Parallelism_EP16",
+      "description": "Proposed configuration with Expert Parallelism 16-way, one expert per GPU",
+      "model_specification": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "token_dimension": 8192,
+        "mlp_hidden_dimension": 32768,
+        "mha_heads": 16,
+        "mha_head_dimension": 512,
+        "precision": "FP16"
+      },
+      "parallel_strategy": {
+        "expert_parallelism": {
+          "degree": 16,
+          "one_expert_per_gpu": true,
+          "cross_node_distribution": true,
+          "topology_aware_placement": true
+        },
+        "tensor_parallelism": {
+          "degree": 1,
+          "within_expert": false
+        },
+        "pipeline_parallelism": {
+          "degree": 1,
+          "not_used": true
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "expert_parallel_rank": 0,
+          "experts_per_layer": [0],
+          "modules": {
+            "layer_0": {
+              "mha": "full_8192_dim",
+              "mlp_expert_0": "full_expert_32768_hidden"
+            },
+            "layer_1": {
+              "mha": "full_8192_dim",
+              "mlp_expert_0": "full_expert_32768_hidden"
+            },
+            "layer_2": {
+              "mha": "full_8192_dim",
+              "mlp_expert_0": "full_expert_32768_hidden"
+            },
+            "layer_3": {
+              "mha": "full_8192_dim",
+              "mlp_expert_0": "full_expert_32768_hidden"
+            }
+          }
+        },
+        "gpu_1": {
+          "expert_parallel_rank": 1,
+          "experts_per_layer": [1],
+          "modules": {
+            "layer_0": {
+              "mha": "full_8192_dim",
+              "mlp_expert_1": "full_expert_32768_hidden"
+            },
+            "layer_1": {
+              "mha": "full_8192_dim",
+              "mlp_expert_1": "full_expert_32768_hidden"
+            },
+            "layer_2": {
+              "mha": "full_8192_dim",
+              "mlp_expert_1": "full_expert_32768_hidden"
+            },
+            "layer_3": {
+              "mha": "full_8192_dim",
+              "mlp_expert_1": "full_expert_32768_hidden"
+            }
+          }
+        },
+        "gpu_15": {
+          "expert_parallel_rank": 15,
+          "experts_per_layer": [15],
+          "modules": {
+            "layer_0": {
+              "mha": "full_8192_dim",
+              "mlp_expert_15": "full_expert_32768_hidden"
+            },
+            "layer_1": {
+              "mha": "full_8192_dim",
+              "mlp_expert_15": "full_expert_32768_hidden"
+            },
+            "layer_2": {
+              "mha": "full_8192_dim",
+              "mlp_expert_15": "full_expert_32768_hidden"
+            },
+            "layer_3": {
+              "mha": "full_8192_dim",
+              "mlp_expert_15": "full_expert_32768_hidden"
+            }
+          }
+        }
+      },
+      "communication_pattern": {
+        "token_routing": {
+          "method": "asynchronous_with_batching",
+          "implementation": "cuda_streams_or_nccl_mpi",
+          "batching_strategy": "group_by_destination_expert"
+        },
+        "cross_node_transfer": {
+          "token_batching": true,
+          "overlap_compute_communication": true,
+          "pipeline_scheduling": "fine_grained_layer_wise"
+        },
+        "load_balancing": {
+          "dynamic_gating_adjustment": true,
+          "monitoring_metrics": ["tokens_per_expert", "queue_lengths", "processing_times"],
+          "rebalancing_frequency": "continuous"
+        }
+      },
+      "performance_characteristics": {
+        "throughput_tps": 450000,
+        "latency_tpot_ms": 2.2,
+        "gpu_utilization": "maximal_compute_efficiency",
+        "bottleneck": "network_bandwidth",
+        "scaling_efficiency": "near_linear_for_ep_ge_16"
+      },
+      "memory_requirements": {
+        "per_expert_weights": "8192_×_32768_×_2_bytes_=_512_MB",
+        "per_gpu_memory": "512_MB_weights_+_activations",
+        "total_system_weights": "16_×_512_MB_=_8_GB"
+      }
+    }
+  },
+  "deployment_instructions": {
+    "baseline": {
+      "setup_steps": [
+        "Configure 8-way tensor parallelism across GPUs",
+        "Set up 2-way pipeline with stages 0-1 and 2-3",
+        "Colocate 8 experts per GPU within each pipeline stage",
+        "Implement standard transformer TP for MHA and MLP",
+        "Configure pipeline send/receive between stages"
+      ]
+    },
+    "proposed": {
+      "setup_steps": [
+        "Map expert i to GPU i for all layers",
+        "Implement topology-aware expert placement",
+        "Set up asynchronous token routing with batching",
+        "Configure CUDA streams for compute-communication overlap",
+        "Implement dynamic load balancing for gating",
+        "Enable fine-grained pipeline scheduling across layers"
+      ]
+    }
+  }
+}

@@ -1,0 +1,401 @@
+{
+  "deployment_configurations": {
+    "baseline_tp8_pp2": {
+      "name": "Baseline Tensor Parallelism 8 + Pipeline Parallelism 2",
+      "description": "Traditional MoE deployment with colocated experts",
+      "model_specification": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "precision": "FP16",
+        "token_dimension": 8192,
+        "mha_heads": 16,
+        "mha_head_dimension": 512,
+        "mlp_hidden_size": 32768,
+        "batch_size": 1024,
+        "sequence_length": 10000
+      },
+      "parallel_strategy": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "dimension": "column_row",
+          "communication": "all_reduce"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "stages": [
+            {
+              "stage_id": 0,
+              "layers": [0, 1],
+              "gpus": [0, 1, 2, 3, 4, 5, 6, 7]
+            },
+            {
+              "stage_id": 1,
+              "layers": [2, 3],
+              "gpus": [8, 9, 10, 11, 12, 13, 14, 15]
+            }
+          ]
+        },
+        "expert_parallelism": {
+          "degree": 1,
+          "experts_per_gpu": 8,
+          "placement": "colocated"
+        },
+        "data_parallelism": {
+          "degree": 1
+        }
+      },
+      "module_division": {
+        "attention_modules": {
+          "type": "tensor_parallel",
+          "partitioning": "column_row",
+          "devices_per_layer": 8,
+          "parameters_per_device": {
+            "qkv_projection": "(8192 * 8192) / 8 = 8.4M parameters",
+            "output_projection": "(8192 * 8192) / 8 = 8.4M parameters"
+          }
+        },
+        "expert_modules": {
+          "type": "colocated",
+          "experts_per_gpu": 8,
+          "expert_parameters": {
+            "input_projection": "8192 * 32768 = 268M parameters per expert",
+            "output_projection": "32768 * 8192 = 268M parameters per expert",
+            "total_per_expert": "536M parameters",
+            "total_per_gpu": "8 * 536M = 4.29B parameters"
+          }
+        },
+        "gate_modules": {
+          "type": "replicated",
+          "parameters": "8192 * 16 = 131K parameters per layer"
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "stage": 0,
+          "tensor_parallel_rank": 0,
+          "modules": [
+            "attention_layer_0_tp_0",
+            "attention_layer_1_tp_0",
+            "experts_0_7_layer_0",
+            "experts_0_7_layer_1",
+            "gate_layer_0",
+            "gate_layer_1"
+          ]
+        },
+        "gpu_1": {
+          "stage": 0,
+          "tensor_parallel_rank": 1,
+          "modules": [
+            "attention_layer_0_tp_1",
+            "attention_layer_1_tp_1",
+            "experts_0_7_layer_0",
+            "experts_0_7_layer_1",
+            "gate_layer_0",
+            "gate_layer_1"
+          ]
+        },
+        "gpu_7": {
+          "stage": 0,
+          "tensor_parallel_rank": 7,
+          "modules": [
+            "attention_layer_0_tp_7",
+            "attention_layer_1_tp_7",
+            "experts_0_7_layer_0",
+            "experts_0_7_layer_1",
+            "gate_layer_0",
+            "gate_layer_1"
+          ]
+        },
+        "gpu_8": {
+          "stage": 1,
+          "tensor_parallel_rank": 0,
+          "modules": [
+            "attention_layer_2_tp_0",
+            "attention_layer_3_tp_0",
+            "experts_0_7_layer_2",
+            "experts_0_7_layer_3",
+            "gate_layer_2",
+            "gate_layer_3"
+          ]
+        },
+        "gpu_15": {
+          "stage": 1,
+          "tensor_parallel_rank": 7,
+          "modules": [
+            "attention_layer_2_tp_7",
+            "attention_layer_3_tp_7",
+            "experts_0_7_layer_2",
+            "experts_0_7_layer_3",
+            "gate_layer_2",
+            "gate_layer_3"
+          ]
+        }
+      },
+      "communication_pattern": {
+        "tensor_parallel": {
+          "type": "all_reduce",
+          "frequency": "per_attention_layer",
+          "data_size": "8192 * 1024 * 10000 * 2 bytes = 160GB per layer"
+        },
+        "pipeline_parallel": {
+          "type": "point_to_point",
+          "frequency": "per_layer_transition",
+          "data_size": "8192 * 1024 * 10000 * 2 bytes = 160GB per transition"
+        },
+        "expert_routing": {
+          "type": "local_only",
+          "description": "Experts colocated, no cross-node routing"
+        }
+      },
+      "performance_metrics": {
+        "tokens_per_second": 120000,
+        "time_per_output_token_ms": 8.3,
+        "gpu_utilization": "70-80%",
+        "memory_usage_per_gpu": "32GB"
+      }
+    },
+
+    "proposed_large_ep16": {
+      "name": "Proposed Large Expert Parallelism 16",
+      "description": "Cross-node expert parallelism with one expert per GPU",
+      "model_specification": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "precision": "FP16",
+        "token_dimension": 8192,
+        "mha_heads": 16,
+        "mha_head_dimension": 512,
+        "mlp_hidden_size": 32768,
+        "batch_size": 1024,
+        "sequence_length": 10000
+      },
+      "parallel_strategy": {
+        "expert_parallelism": {
+          "degree": 16,
+          "experts_per_gpu": 1,
+          "placement": "cross_node",
+          "placement_policy": "topology_aware"
+        },
+        "tensor_parallelism": {
+          "degree": 1,
+          "within_expert": false
+        },
+        "pipeline_parallelism": {
+          "degree": 1,
+          "stages": []
+        },
+        "data_parallelism": {
+          "degree": 1
+        }
+      },
+      "module_division": {
+        "attention_modules": {
+          "type": "replicated_across_layers",
+          "sharing": "expert_weights_shared_across_layers",
+          "parameters_per_layer": {
+            "qkv_projection": "8192 * 8192 = 67M parameters",
+            "output_projection": "8192 * 8192 = 67M parameters"
+          }
+        },
+        "expert_modules": {
+          "type": "distributed_one_per_gpu",
+          "expert_assignment": {
+            "gpu_0": "expert_0_all_layers",
+            "gpu_1": "expert_1_all_layers",
+            "gpu_2": "expert_2_all_layers",
+            "gpu_15": "expert_15_all_layers"
+          },
+          "expert_parameters": {
+            "input_projection": "8192 * 32768 = 268M parameters",
+            "output_projection": "32768 * 8192 = 268M parameters",
+            "total_per_expert": "536M parameters",
+            "total_per_gpu": "536M parameters (1 expert)"
+          }
+        },
+        "gate_modules": {
+          "type": "distributed_per_layer",
+          "parameters_per_layer": "8192 * 16 = 131K parameters"
+        },
+        "routing_modules": {
+          "type": "asynchronous_distributed",
+          "token_batching": true,
+          "overlap_compute_communication": true
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "expert_id": 0,
+          "layers": [0, 1, 2, 3],
+          "modules": [
+            "expert_0_layer_0",
+            "expert_0_layer_1", 
+            "expert_0_layer_2",
+            "expert_0_layer_3",
+            "gate_layer_0",
+            "gate_layer_1",
+            "gate_layer_2",
+            "gate_layer_3",
+            "attention_layer_0",
+            "attention_layer_1",
+            "attention_layer_2",
+            "attention_layer_3"
+          ],
+          "node_id": 0,
+          "cpu_affinity": "0-7"
+        },
+        "gpu_1": {
+          "expert_id": 1,
+          "layers": [0, 1, 2, 3],
+          "modules": [
+            "expert_1_layer_0",
+            "expert_1_layer_1",
+            "expert_1_layer_2", 
+            "expert_1_layer_3",
+            "gate_layer_0",
+            "gate_layer_1",
+            "gate_layer_2",
+            "gate_layer_3",
+            "attention_layer_0",
+            "attention_layer_1",
+            "attention_layer_2",
+            "attention_layer_3"
+          ],
+          "node_id": 0,
+          "cpu_affinity": "8-15"
+        },
+        "gpu_2": {
+          "expert_id": 2,
+          "layers": [0, 1, 2, 3],
+          "modules": [
+            "expert_2_layer_0",
+            "expert_2_layer_1",
+            "expert_2_layer_2",
+            "expert_2_layer_3",
+            "gate_layer_0",
+            "gate_layer_1",
+            "gate_layer_2",
+            "gate_layer_3",
+            "attention_layer_0",
+            "attention_layer_1",
+            "attention_layer_2",
+            "attention_layer_3"
+          ],
+          "node_id": 1,
+          "cpu_affinity": "16-23"
+        },
+        "gpu_15": {
+          "expert_id": 15,
+          "layers": [0, 1, 2, 3],
+          "modules": [
+            "expert_15_layer_0",
+            "expert_15_layer_1",
+            "expert_15_layer_2",
+            "expert_15_layer_3",
+            "gate_layer_0",
+            "gate_layer_1",
+            "gate_layer_2",
+            "gate_layer_3",
+            "attention_layer_0",
+            "attention_layer_1",
+            "attention_layer_2",
+            "attention_layer_3"
+          ],
+          "node_id": 3,
+          "cpu_affinity": "120-127"
+        }
+      },
+      "communication_pattern": {
+        "expert_routing": {
+          "type": "asynchronous_point_to_point",
+          "token_batching": true,
+          "batch_size_optimization": "min(tokens_per_expert, bandwidth_constraint)",
+          "overlap_strategy": "cuda_streams",
+          "streams": {
+            "compute": 0,
+            "send": 1,
+            "receive": 2
+          }
+        },
+        "token_transfer": {
+          "data_size_per_token": "8192 * 2 bytes = 16,384 bytes",
+          "peak_bandwidth_required": "7.5 GB/s per link",
+          "routing_pattern": "dynamic_based_on_gating"
+        },
+        "synchronization": {
+          "type": "cuda_events",
+          "barriers": "minimal",
+          "pipeline_overlap": true
+        }
+      },
+      "load_balancing": {
+        "monitoring": "tokens_per_expert_per_time_window",
+        "adjustment": "gating_probability_modification",
+        "load_balancing_strength": 0.2,
+        "target_utilization": 1.0,
+        "max_imbalance": 0.2
+      },
+      "memory_management": {
+        "expert_parameters_per_gpu": "536M parameters",
+        "activation_memory": "1024 * 10000 * 8192 * 2 bytes = 160GB total across all GPUs",
+        "communication_buffers": "pre_allocated_per_expert_pair",
+        "memory_per_gpu": "~40GB"
+      },
+      "performance_metrics": {
+        "tokens_per_second": 450000,
+        "time_per_output_token_ms": 2.2,
+        "gpu_utilization": "95%+",
+        "network_utilization": "60-70%",
+        "expert_balance": "std_dev < 0.2 * mean"
+      },
+      "scalability_parameters": {
+        "large_ep_threshold": 16,
+        "topology_aware_placement": true,
+        "network_bandwidth_minimum": "7.5 GB/s per link",
+        "latency_tolerance": "high",
+        "compute_communication_ratio": "optimized_for_compute"
+      }
+    }
+  },
+
+  "deployment_instructions": {
+    "baseline": {
+      "setup_steps": [
+        "Configure 2 pipeline stages with 8 GPUs each",
+        "Set up 8-way tensor parallelism within each stage",
+        "Colocate 8 experts per GPU across all layers",
+        "Initialize NCCL for tensor parallel communication",
+        "Configure pipeline parallel point-to-point communication"
+      ],
+      "communication_libraries": ["NCCL", "MPI"],
+      "optimization_flags": [
+        "NCCL_TREE_THRESHOLD=0",
+        "CUDA_VISIBLE_DEVICES ordered by NUMA topology"
+      ]
+    },
+    "proposed": {
+      "setup_steps": [
+        "Map each expert to dedicated GPU (1 expert per GPU)",
+        "Configure topology-aware expert placement across nodes",
+        "Set up asynchronous token routing with batching",
+        "Initialize separate CUDA streams for compute and communication",
+        "Configure NCCL send/recv for point-to-point token transfers",
+        "Enable dynamic load balancing with gating adjustment"
+      ],
+      "communication_libraries": ["NCCL", "MPI"],
+      "optimization_flags": [
+        "NCCL_P2P_LEVEL=SYS",
+        "NCCL_IB_DISABLE=0",
+        "CUDA_DEVICE_MAX_CONNECTIONS=32",
+        "Use NCCL send/recv operations"
+      ],
+      "performance_tuning": [
+        "Pre-allocate communication buffers",
+        "Tune token batch size based on network bandwidth",
+        "Set CPU affinity for each GPU process",
+        "Use topology-aware process placement"
+      ]
+    }
+  }
+}

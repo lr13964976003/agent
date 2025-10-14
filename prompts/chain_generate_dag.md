@@ -50,9 +50,9 @@ You need to follow the following constraints:
 
 If multiple models are used in the paper, all the DAGs of them need to be generated.<<<提醒要生成多个dag而不是合并模型>>>
 
-The baseline DAG also needs to be generated, so you will output at least two DAGs.<<<baseline同样需要被生成>>>
-
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
+
+You don't need to generate the DAG of baseline.<<<not need baseline>>>
 
 Not all knowledge in supplementary materials will be useful to you. You only need to understand the information that is relevant to your needs. <<<提醒不是所有知识都是有用的>>>
 

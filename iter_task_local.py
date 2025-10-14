@@ -15,8 +15,8 @@ from opentelemetry import trace
 
 now = datetime.now()
 submission_dir = now.strftime("%Y-%m-%d-%H-%M-%S")
-if os.path.exists(f"/home/wzc/data/file-share/logs/{submission_dir}") is False:
-    os.mkdir(f"/home/wzc/data/file-share/logs/{submission_dir}")
+if os.path.exists(f"./output/{submission_dir}") is False:
+    os.mkdir(f"./outputs/{submission_dir}")
 
 def fetch_prompt_local(slug:str, inputs:dict) -> str:
     with open(f"./prompts/{slug}.md","r") as f:
@@ -39,7 +39,7 @@ def main():
                 "slug": "check_topic",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "./papers/EP/paper.md",
+                    "paper_path": "./papers/PP/paper.md",
                     "score_path": "./knowledges/llm_parallelism_classification_schema.json"
                 },
                 "tools": [
@@ -50,9 +50,9 @@ def main():
                 "slug": "chain_read_paper",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "/home/wzc/data/papers/EP/paper.md",
-                    "knowledge_path": "/home/wzc/data/knowledges/llm_parallel_strategies.md",
-                    "save_path": f"/home/wzc/data/file-share/logs/{submission_dir}"
+                    "paper_path": "./papers/PP/paper.md",
+                    "knowledge_path": "./knowledges/llm_parallel_strategies.md",
+                    "save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
                     FileReadTool(),
@@ -65,8 +65,8 @@ def main():
                 "slug" : "chain_check_paper",
                 "version" : 8,
                 "inputs": {
-                    "origin_paper_path" : "./papers/EP/paper.md",
-                    "plan_path": "./papers/EP/deployment_config.json"
+                    "origin_paper_path" : "./papers/PP/paper.md",
+                    "plan_path": "./papers/PP/deployment_config.json"
                     },
                 "tools": [
                     FileReadTool(),
@@ -81,7 +81,7 @@ def main():
                 "version": 15,
                 "inputs": {
                     "knowledge_path": "./knowledges/llm_parallel_strategies.md",
-                    "save_path": f"/home/wzc/data/file-share/logs/{submission_dir}"
+                    "save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
                     FileReadTool(),
@@ -95,7 +95,7 @@ def main():
                  "slug": "chain_check_dag",
                  "version": 3,
                  "inputs": {
-                     "save_path": f"/home/wzc/data/file-share/logs/{submission_dir}"
+                     "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
                      FileWriterTool(),
@@ -107,7 +107,7 @@ def main():
                  "slug": "chain_performance",
                  "version": 17,
                  "inputs": {
-                     "save_path": f"/home/wzc/data/file-share/logs/{submission_dir}"
+                     "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
                      ExtractEdgeFromDAGTool(),
@@ -121,7 +121,7 @@ def main():
                   "version": 17,
                   "inputs": {
                       "knowledge_path": "./knowledges/llm_parallel_strategies.md",
-                      "save_path": f"/home/wzc/data/file-share/logs/{submission_dir}"
+                      "save_path": f"./outputs/{submission_dir}"
                   },
                   "tools": [
                   ExtractEdgeFromDAGTool(),
@@ -132,56 +132,46 @@ def main():
               }
             }
     agents = []
+    tasks = []
+    i = 0
+    expected_outputs = ["Check Result", "The file path of concise paper and deployment configuration", "Check Result", "The path of graphviz code describing the DAG", "Check Result", "The performance of DAG", "The path of graphviz code describing the DAG"]
     for k in variant.keys():
         prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"])
         tools = variant[k]["tools"]
-        agents.append(build_agent(prompt, tools))
-    tasks = []
-    descriptions = ["Check whether the paper is relevant to the topic", "Read Paper and Refine Paper", "Check the refine paper", "Read concise Paper and Generate DAG", "Check the DAG", "Compute the performance of DAG", "Optimize the performance of DAG"]
-    expected_outputs = ["Check Result", "The file path of concise paper and deployment configuration", "Check Result", "The path of graphviz code describing the DAG", "Check Result", "The performance of DAG", "The path of graphviz code describing the DAG"]
-    for i in range(len(agents)):
-        tasks.append(build_task(descriptions[i], expected_outputs[i], agents[i]))
-    
+        agents.append(build_agent(tools))
+        tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
+        i = i + 1
+    '''
     check_result = run_pipeline([agents[0]], [tasks[0]])
     if "failed" in check_result.lower():
         return "The paper is not relevant to the topic"
 
-    paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], task_description=descriptions[1], expected_output=expected_outputs[1])
+    paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], work_task=tasks[1], review_task=tasks[2])
     paper_result = paper_loop.run()
-    dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], task_description=descriptions[3], expected_output=expected_outputs[3], inputs=paper_result)
+    dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=paper_result)
     dag_result = dag_loop.run()
-
-    description = f"There are the submissions of previous agents: \n\n{paper_result}\n\n{dag_result}"
-    perf_task = Task(
-        description = description,
-        agent = agents[5],
-        expected_output = expected_outputs[5]
-    )
+    
+    perf_task = tasks[5]
+    perf_task.description = tasks[5].description + \
+    f"There are the submissions of previous agents: \n\n{dag_result}"
+    
     init_perf = run_pipeline([agents[5]], [perf_task])
-
+    '''
     for i in range(MAX_ITER):
+        '''
         if i == 0:
             iter_input = f"{paper_result}\n\n{init_perf}"
-            iter_loop = ReviewLoop(worker=agents[6], reviewer=agents[4], task_description=description, expected_output=expected_outputs[3], inputs=iter_input)
-            iter_result = iter_loop.run()
-            description = f"There are the submissions of previous agents: \n\n{iter_result}"
-            perf_task = Task(
-                description = description,
-                agent = agents[5],
-                expected_output = expected_outputs[5]
-            )
-            iter_perf = run_pipeline([agents[5]], [perf_task])
         else:
             iter_input = f"{iter_result}\n\n{iter_perf}"
-            iter_loop = ReviewLoop(worker=agents[6], reviewer=agents[4], task_description=description, expected_output=expected_outputs[3], inputs=iter_input)
-            iter_result = iter_loop.run()
-            description=f"There are the submissions of previous agents: \n\n{iter_result}"
-            perf_task = Task(
-                description = description,
-                agent = agents[5],
-                expected_output = expected_outputs[5]
-            )
-            iter_perf =run_pipeline([agents[5]], [perf_task])
+        '''
+        iter_input = "./outputs/2025-10-14-10-03-38/proposed_layerwise_dag.dot \n\n ./outputs/2025-10-14-10-03-38/DAG_Runtime_Analysis.md"
+        iter_loop = ReviewLoop(worker=agents[6], reviewer=agents[4], work_task=tasks[6], review_task=tasks[4], inputs=iter_input)
+        iter_result = iter_loop.run()
+        perf_task = tasks[5]
+        perf_task.description = tasks[5].description +\
+                        f"There are the submissions of previous agents: \n\n{iter_result}"
+        iter_perf =run_pipeline([agents[5]], [perf_task])
+
     slug_list = []
     for k,v in variant.items():
         slug_list.append([v["slug"],v["version"]])

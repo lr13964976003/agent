@@ -1,0 +1,117 @@
+{
+  "deployment_method": {
+    "analysis": {
+      "baseline": {
+        "description": "Traditional tensor and pipeline parallelism with colocated experts",
+        "parallel_strategy": "TP=8, PP=2, EP=1",
+        "expert_distribution": "8 experts per GPU (colocated)",
+        "total_gpus": 16,
+        "model_layers": 4,
+        "experts_per_layer": 16,
+        "gpu_mapping": {
+          "pipeline_stage_0": {
+            "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+            "layers": [0, 1],
+            "experts_per_gpu": 8
+          },
+          "pipeline_stage_1": {
+            "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+            "layers": [2, 3],
+            "experts_per_gpu": 8
+          }
+        }
+      },
+      "proposed": {
+        "description": "Large-scale expert parallelism with one expert per GPU",
+        "parallel_strategy": "EP=16, TP=1, PP=1",
+        "expert_distribution": "1 expert per GPU (distributed)",
+        "total_gpus": 16,
+        "model_layers": 4,
+        "experts_per_layer": 16,
+        "gpu_mapping": {
+          "expert_parallel": {
+            "gpus": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            "layers": "all_layers_shared",
+            "experts_per_gpu": 1,
+            "node_distribution": {
+              "node_0": [0, 1, 2, 3],
+              "node_1": [4, 5, 6, 7],
+              "node_2": [8, 9, 10, 11],
+              "node_3": [12, 13, 14, 15]
+            }
+          }
+        }
+      }
+    },
+    "dimension_analysis": {
+      "baseline": {
+        "tensor_parallel_sharding": {
+          "hidden_dimension": 8192,
+          "tensor_parallel_degree": 8,
+          "shard_size": 1024,
+          "attention_heads": 16,
+          "heads_per_shard": 2
+        },
+        "expert_colocation": {
+          "experts_per_gpu": 8,
+          "expert_hidden_dim": 32768,
+          "total_expert_parameters_per_gpu": 8 * (8192 * 32768 + 32768 * 8192)
+        }
+      },
+      "proposed": {
+        "expert_parallel_sharding": {
+          "hidden_dimension": 8192,
+          "expert_parallel_degree": 16,
+          "experts_per_layer": 16,
+          "experts_per_gpu": 1,
+          "expert_hidden_dim": 32768,
+          "expert_parameters_per_gpu": 8192 * 32768 + 32768 * 8192
+        },
+        "shared_mha": {
+          "replicated_across_gpus": 16,
+          "parameters_per_gpu": 8192 * 8192 * 3 + 8192 * 8192
+        }
+      }
+    },
+    "communication_patterns": {
+      "baseline": {
+        "tensor_parallel": {
+          "all_reduce_operations": "within each pipeline stage",
+          "communication_volume": "8192 * sequence_length * 8 GPUs"
+        },
+        "pipeline_parallel": {
+          "send_recv_operations": "between pipeline stages",
+          "communication_volume": "8192 * sequence_length * 8 GPUs"
+        }
+      },
+      "proposed": {
+        "expert_parallel": {
+          "all_to_all_operations": "across all 16 GPUs",
+          "communication_volume": "8192 * sequence_length * 16 GPUs",
+          "cross_node_communication": "between 4 nodes"
+        }
+      }
+    },
+    "load_balancing": {
+      "baseline": {
+        "expert_utilization": "colocated experts share GPU resources",
+        "load_balancing": "static distribution"
+      },
+      "proposed": {
+        "expert_utilization": "dedicated GPU per expert",
+        "load_balancing": "dynamic routing with gating network",
+        "token_routing": "sparse activation patterns"
+      }
+    }
+  },
+  "generated_files": {
+    "baseline_dag": {
+      "dot_path": "./outputs/2025-10-13-16-10-29/baseline_dag.dot",
+      "svg_path": "./outputs/2025-10-13-16-10-29/baseline_dag.svg"
+    },
+    "proposed_dag": {
+      "dot_path": "./outputs/2025-10-13-16-10-29/proposed_dag.dot",
+      "svg_path": "./outputs/2025-10-13-16-10-29/proposed_dag.svg"
+    }
+  }
+}

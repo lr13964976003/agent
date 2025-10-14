@@ -1,0 +1,1026 @@
+// Baseline: Tensor Parallelism + Pipeline Parallelism
+digraph {
+	rankdir=TB size="20,20"
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=yellow shape=parallelogram style=filled]
+	input_p0 -> layer0_ln1
+	layer0_ln1 -> layer0_qkv
+	layer0_qkv -> layer0_attn
+	layer0_attn -> layer0_attn_ar
+	input_p0 -> layer0_res1
+	layer0_attn_ar -> layer0_res1
+	layer0_res1 -> layer0_ln2
+	layer0_ln2 -> layer0_mlp1
+	layer0_mlp1 -> layer0_gelu
+	layer0_gelu -> layer0_mlp2
+	layer0_mlp2 -> layer0_mlp_ar
+	layer0_res1 -> layer0_res2
+	layer0_mlp_ar -> layer0_res2
+	layer0_res2 -> layer1_ln1
+	layer1_ln1 -> layer1_qkv
+	layer1_qkv -> layer1_attn
+	layer1_attn -> layer1_attn_ar
+	layer0_res2 -> layer1_res1
+	layer1_attn_ar -> layer1_res1
+	layer1_res1 -> layer1_ln2
+	layer1_ln2 -> layer1_mlp1
+	layer1_mlp1 -> layer1_gelu
+	layer1_gelu -> layer1_mlp2
+	layer1_mlp2 -> layer1_mlp_ar
+	layer1_res1 -> layer1_res2
+	layer1_mlp_ar -> layer1_res2
+	layer1_res2 -> layer2_ln1
+	layer2_ln1 -> layer2_qkv
+	layer2_qkv -> layer2_attn
+	layer2_attn -> layer2_attn_ar
+	layer1_res2 -> layer2_res1
+	layer2_attn_ar -> layer2_res1
+	layer2_res1 -> layer2_ln2
+	layer2_ln2 -> layer2_mlp1
+	layer2_mlp1 -> layer2_gelu
+	layer2_gelu -> layer2_mlp2
+	layer2_mlp2 -> layer2_mlp_ar
+	layer2_res1 -> layer2_res2
+	layer2_mlp_ar -> layer2_res2
+	layer2_res2 -> layer3_ln1
+	layer3_ln1 -> layer3_qkv
+	layer3_qkv -> layer3_attn
+	layer3_attn -> layer3_attn_ar
+	layer2_res2 -> layer3_res1
+	layer3_attn_ar -> layer3_res1
+	layer3_res1 -> layer3_ln2
+	layer3_ln2 -> layer3_mlp1
+	layer3_mlp1 -> layer3_gelu
+	layer3_gelu -> layer3_mlp2
+	layer3_mlp2 -> layer3_mlp_ar
+	layer3_res1 -> layer3_res2
+	layer3_mlp_ar -> layer3_res2
+	layer3_res2 -> layer4_ln1
+	layer4_ln1 -> layer4_qkv
+	layer4_qkv -> layer4_attn
+	layer4_attn -> layer4_attn_ar
+	layer3_res2 -> layer4_res1
+	layer4_attn_ar -> layer4_res1
+	layer4_res1 -> layer4_ln2
+	layer4_ln2 -> layer4_mlp1
+	layer4_mlp1 -> layer4_gelu
+	layer4_gelu -> layer4_mlp2
+	layer4_mlp2 -> layer4_mlp_ar
+	layer4_res1 -> layer4_res2
+	layer4_mlp_ar -> layer4_res2
+	layer4_res2 -> layer5_ln1
+	layer5_ln1 -> layer5_qkv
+	layer5_qkv -> layer5_attn
+	layer5_attn -> layer5_attn_ar
+	layer4_res2 -> layer5_res1
+	layer5_attn_ar -> layer5_res1
+	layer5_res1 -> layer5_ln2
+	layer5_ln2 -> layer5_mlp1
+	layer5_mlp1 -> layer5_gelu
+	layer5_gelu -> layer5_mlp2
+	layer5_mlp2 -> layer5_mlp_ar
+	layer5_res1 -> layer5_res2
+	layer5_mlp_ar -> layer5_res2
+	layer5_res2 -> layer6_ln1
+	layer6_ln1 -> layer6_qkv
+	layer6_qkv -> layer6_attn
+	layer6_attn -> layer6_attn_ar
+	layer5_res2 -> layer6_res1
+	layer6_attn_ar -> layer6_res1
+	layer6_res1 -> layer6_ln2
+	layer6_ln2 -> layer6_mlp1
+	layer6_mlp1 -> layer6_gelu
+	layer6_gelu -> layer6_mlp2
+	layer6_mlp2 -> layer6_mlp_ar
+	layer6_res1 -> layer6_res2
+	layer6_mlp_ar -> layer6_res2
+	layer6_res2 -> layer7_ln1
+	layer7_ln1 -> layer7_qkv
+	layer7_qkv -> layer7_attn
+	layer7_attn -> layer7_attn_ar
+	layer6_res2 -> layer7_res1
+	layer7_attn_ar -> layer7_res1
+	layer7_res1 -> layer7_ln2
+	layer7_ln2 -> layer7_mlp1
+	layer7_mlp1 -> layer7_gelu
+	layer7_gelu -> layer7_mlp2
+	layer7_mlp2 -> layer7_mlp_ar
+	layer7_res1 -> layer7_res2
+	layer7_mlp_ar -> layer7_res2
+	layer7_res2 -> send_to_stage1
+	subgraph cluster_pipeline_stage_0 {
+		label="Pipeline Stage 0: Layers 0-7
+GPUs 0-7 (TP=8)" style=dashed
+		input_p0 [label="Input
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=ellipse]
+		subgraph cluster_layer_0 {
+			label="Layer 0"
+			layer0_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer0_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer0_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer0_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer0_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer0_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer0_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer0_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer0_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer0_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer0_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+		}
+		subgraph cluster_layer_1 {
+			label="Layer 1"
+			layer1_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer1_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer1_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer1_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer1_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer1_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer1_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer1_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer1_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer1_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer1_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+		}
+		subgraph cluster_layer_2 {
+			label="Layer 2"
+			layer2_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer2_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer2_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer2_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer2_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer2_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer2_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer2_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer2_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer2_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer2_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+		}
+		subgraph cluster_layer_3 {
+			label="Layer 3"
+			layer3_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer3_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer3_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer3_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer3_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer3_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer3_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer3_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer3_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer3_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer3_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+		}
+		subgraph cluster_layer_4 {
+			label="Layer 4"
+			layer4_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer4_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer4_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer4_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer4_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer4_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer4_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer4_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer4_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer4_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer4_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+		}
+		subgraph cluster_layer_5 {
+			label="Layer 5"
+			layer5_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer5_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer5_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer5_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer5_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer5_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer5_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer5_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer5_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer5_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer5_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+		}
+		subgraph cluster_layer_6 {
+			label="Layer 6"
+			layer6_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer6_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer6_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer6_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer6_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer6_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer6_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer6_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer6_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer6_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer6_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+		}
+		subgraph cluster_layer_7 {
+			label="Layer 7"
+			layer7_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer7_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer7_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer7_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer7_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer7_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer7_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer7_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer7_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+			layer7_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=parallelogram]
+			layer7_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7" shape=rectangle]
+		}
+		send_to_stage1 [label="Pipeline Send
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 0-7 → GPUs 8-15" shape=parallelogram]
+	}
+	recv_from_stage0 -> layer8_ln1
+	layer8_ln1 -> layer8_qkv
+	layer8_qkv -> layer8_attn
+	layer8_attn -> layer8_attn_ar
+	recv_from_stage0 -> layer8_res1
+	layer8_attn_ar -> layer8_res1
+	layer8_res1 -> layer8_ln2
+	layer8_ln2 -> layer8_mlp1
+	layer8_mlp1 -> layer8_gelu
+	layer8_gelu -> layer8_mlp2
+	layer8_mlp2 -> layer8_mlp_ar
+	layer8_res1 -> layer8_res2
+	layer8_mlp_ar -> layer8_res2
+	layer8_res2 -> layer9_ln1
+	layer9_ln1 -> layer9_qkv
+	layer9_qkv -> layer9_attn
+	layer9_attn -> layer9_attn_ar
+	layer8_res2 -> layer9_res1
+	layer9_attn_ar -> layer9_res1
+	layer9_res1 -> layer9_ln2
+	layer9_ln2 -> layer9_mlp1
+	layer9_mlp1 -> layer9_gelu
+	layer9_gelu -> layer9_mlp2
+	layer9_mlp2 -> layer9_mlp_ar
+	layer9_res1 -> layer9_res2
+	layer9_mlp_ar -> layer9_res2
+	layer9_res2 -> layer10_ln1
+	layer10_ln1 -> layer10_qkv
+	layer10_qkv -> layer10_attn
+	layer10_attn -> layer10_attn_ar
+	layer9_res2 -> layer10_res1
+	layer10_attn_ar -> layer10_res1
+	layer10_res1 -> layer10_ln2
+	layer10_ln2 -> layer10_mlp1
+	layer10_mlp1 -> layer10_gelu
+	layer10_gelu -> layer10_mlp2
+	layer10_mlp2 -> layer10_mlp_ar
+	layer10_res1 -> layer10_res2
+	layer10_mlp_ar -> layer10_res2
+	layer10_res2 -> layer11_ln1
+	layer11_ln1 -> layer11_qkv
+	layer11_qkv -> layer11_attn
+	layer11_attn -> layer11_attn_ar
+	layer10_res2 -> layer11_res1
+	layer11_attn_ar -> layer11_res1
+	layer11_res1 -> layer11_ln2
+	layer11_ln2 -> layer11_mlp1
+	layer11_mlp1 -> layer11_gelu
+	layer11_gelu -> layer11_mlp2
+	layer11_mlp2 -> layer11_mlp_ar
+	layer11_res1 -> layer11_res2
+	layer11_mlp_ar -> layer11_res2
+	layer11_res2 -> layer12_ln1
+	layer12_ln1 -> layer12_qkv
+	layer12_qkv -> layer12_attn
+	layer12_attn -> layer12_attn_ar
+	layer11_res2 -> layer12_res1
+	layer12_attn_ar -> layer12_res1
+	layer12_res1 -> layer12_ln2
+	layer12_ln2 -> layer12_mlp1
+	layer12_mlp1 -> layer12_gelu
+	layer12_gelu -> layer12_mlp2
+	layer12_mlp2 -> layer12_mlp_ar
+	layer12_res1 -> layer12_res2
+	layer12_mlp_ar -> layer12_res2
+	layer12_res2 -> layer13_ln1
+	layer13_ln1 -> layer13_qkv
+	layer13_qkv -> layer13_attn
+	layer13_attn -> layer13_attn_ar
+	layer12_res2 -> layer13_res1
+	layer13_attn_ar -> layer13_res1
+	layer13_res1 -> layer13_ln2
+	layer13_ln2 -> layer13_mlp1
+	layer13_mlp1 -> layer13_gelu
+	layer13_gelu -> layer13_mlp2
+	layer13_mlp2 -> layer13_mlp_ar
+	layer13_res1 -> layer13_res2
+	layer13_mlp_ar -> layer13_res2
+	layer13_res2 -> layer14_ln1
+	layer14_ln1 -> layer14_qkv
+	layer14_qkv -> layer14_attn
+	layer14_attn -> layer14_attn_ar
+	layer13_res2 -> layer14_res1
+	layer14_attn_ar -> layer14_res1
+	layer14_res1 -> layer14_ln2
+	layer14_ln2 -> layer14_mlp1
+	layer14_mlp1 -> layer14_gelu
+	layer14_gelu -> layer14_mlp2
+	layer14_mlp2 -> layer14_mlp_ar
+	layer14_res1 -> layer14_res2
+	layer14_mlp_ar -> layer14_res2
+	layer14_res2 -> layer15_ln1
+	layer15_ln1 -> layer15_qkv
+	layer15_qkv -> layer15_attn
+	layer15_attn -> layer15_attn_ar
+	layer14_res2 -> layer15_res1
+	layer15_attn_ar -> layer15_res1
+	layer15_res1 -> layer15_ln2
+	layer15_ln2 -> layer15_mlp1
+	layer15_mlp1 -> layer15_gelu
+	layer15_gelu -> layer15_mlp2
+	layer15_mlp2 -> layer15_mlp_ar
+	layer15_res1 -> layer15_res2
+	layer15_mlp_ar -> layer15_res2
+	layer15_res2 -> final_output
+	subgraph cluster_pipeline_stage_1 {
+		label="Pipeline Stage 1: Layers 8-15
+GPUs 8-15 (TP=8)" style=dashed
+		recv_from_stage0 [label="Pipeline Receive
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+		subgraph cluster_layer_8 {
+			label="Layer 8"
+			layer8_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer8_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer8_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer8_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer8_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer8_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer8_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer8_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer8_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer8_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer8_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+		}
+		subgraph cluster_layer_9 {
+			label="Layer 9"
+			layer9_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer9_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer9_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer9_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer9_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer9_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer9_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer9_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer9_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer9_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer9_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+		}
+		subgraph cluster_layer_10 {
+			label="Layer 10"
+			layer10_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer10_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer10_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer10_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer10_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer10_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer10_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer10_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer10_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer10_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer10_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+		}
+		subgraph cluster_layer_11 {
+			label="Layer 11"
+			layer11_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer11_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer11_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer11_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer11_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer11_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer11_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer11_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer11_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer11_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer11_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+		}
+		subgraph cluster_layer_12 {
+			label="Layer 12"
+			layer12_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer12_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer12_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer12_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer12_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer12_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer12_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer12_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer12_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer12_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer12_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+		}
+		subgraph cluster_layer_13 {
+			label="Layer 13"
+			layer13_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer13_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer13_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer13_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer13_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer13_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer13_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer13_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer13_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer13_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer13_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+		}
+		subgraph cluster_layer_14 {
+			label="Layer 14"
+			layer14_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer14_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer14_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer14_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer14_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer14_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer14_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer14_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer14_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer14_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer14_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+		}
+		subgraph cluster_layer_15 {
+			label="Layer 15"
+			layer15_ln1 [label="LayerNorm1
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer15_qkv [label="QKV Linear (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer15_attn [label="Multi-Head Attention
+Input: [batch_size=1024, seq_len=10000, num_heads=16, head_dim=512, qkv=3]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer15_attn_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer15_res1 [label="Residual Add 1
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer15_ln2 [label="LayerNorm2
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer15_mlp1 [label="MLP Linear1 (Column-Parallel)
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer15_gelu [label="GELU
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer15_mlp2 [label="MLP Linear2 (Row-Parallel)
+Input: [batch_size=1024, seq_len=10000, ffn_hidden_size=32768]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+			layer15_mlp_ar [label="All-Reduce
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=parallelogram]
+			layer15_res2 [label="Residual Add 2
+Input1: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Input2: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=rectangle]
+		}
+		final_output [label="Final Output
+Input: [batch_size=1024, seq_len=10000, hidden_size=8192]
+Output: [batch_size=1024, seq_len=10000, hidden_size=8192]
+GPU: All GPUs 8-15" shape=ellipse]
+	}
+	send_to_stage1 -> recv_from_stage0 [label="Pipeline Communication" style=dashed]
+}

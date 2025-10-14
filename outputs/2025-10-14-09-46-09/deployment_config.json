@@ -1,0 +1,218 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "Tensor Parallelism + Pipeline Parallelism",
+      "description": "Baseline configuration using TP=8 and PP=2 on 16 GPUs",
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallelism": {
+          "degree": 8,
+          "strategy": "row_column_split"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "strategy": "layer_wise"
+        }
+      },
+      "total_devices": 16,
+      "model_parameters": {
+        "num_layers": 2,
+        "hidden_size": 8192,
+        "num_attention_heads": 16,
+        "attention_head_size": 512,
+        "intermediate_size": 32768,
+        "sequence_length": 10000,
+        "batch_size": 1024
+      },
+      "device_mapping": {
+        "pipeline_stage_0": {
+          "layers": [1],
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "tensor_parallel_group": "tp_group_0"
+        },
+        "pipeline_stage_1": {
+          "layers": [2],
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "tensor_parallel_group": "tp_group_1"
+        }
+      },
+      "module_divisions": {
+        "attention_layer": {
+          "query": {
+            "weight_shape": [8192, 8192],
+            "partition_strategy": "column_parallel",
+            "devices_per_partition": 8
+          },
+          "key": {
+            "weight_shape": [8192, 8192],
+            "partition_strategy": "column_parallel",
+            "devices_per_partition": 8
+          },
+          "value": {
+            "weight_shape": [8192, 8192],
+            "partition_strategy": "column_parallel",
+            "devices_per_partition": 8
+          },
+          "output": {
+            "weight_shape": [8192, 8192],
+            "partition_strategy": "row_parallel",
+            "devices_per_partition": 8
+          }
+        },
+        "mlp_layer": {
+          "gate_up_proj": {
+            "weight_shape": [32768, 8192],
+            "partition_strategy": "column_parallel",
+            "devices_per_partition": 8
+          },
+          "down_proj": {
+            "weight_shape": [8192, 32768],
+            "partition_strategy": "row_parallel",
+            "devices_per_partition": 8
+          }
+        }
+      }
+    },
+    "proposed": {
+      "name": "Two-Level Attention Partitioning",
+      "description": "Proposed method with head and dimension partitioning on 16 GPUs",
+      "parallel_strategy": {
+        "type": "attention_partitioning",
+        "head_partitioning": {
+          "degree": 4,
+          "heads_per_group": 4,
+          "total_heads": 16
+        },
+        "dimension_partitioning": {
+          "degree": 4,
+          "dimension_per_slice": 128,
+          "total_dimension": 512
+        },
+        "total_partitions": 16
+      },
+      "total_devices": 16,
+      "model_parameters": {
+        "num_layers": 2,
+        "hidden_size": 8192,
+        "num_attention_heads": 16,
+        "attention_head_size": 512,
+        "intermediate_size": 32768,
+        "sequence_length": 10000,
+        "batch_size": 1024
+      },
+      "device_mapping": {
+        "partition_0_0": {"device_id": 0, "head_group": 0, "dimension_slice": 0, "heads": [0,1,2,3], "dimensions": [0,127]},
+        "partition_0_1": {"device_id": 1, "head_group": 0, "dimension_slice": 1, "heads": [0,1,2,3], "dimensions": [128,255]},
+        "partition_0_2": {"device_id": 2, "head_group": 0, "dimension_slice": 2, "heads": [0,1,2,3], "dimensions": [256,383]},
+        "partition_0_3": {"device_id": 3, "head_group": 0, "dimension_slice": 3, "heads": [0,1,2,3], "dimensions": [384,511]},
+        "partition_1_0": {"device_id": 4, "head_group": 1, "dimension_slice": 0, "heads": [4,5,6,7], "dimensions": [0,127]},
+        "partition_1_1": {"device_id": 5, "head_group": 1, "dimension_slice": 1, "heads": [4,5,6,7], "dimensions": [128,255]},
+        "partition_1_2": {"device_id": 6, "head_group": 1, "dimension_slice": 2, "heads": [4,5,6,7], "dimensions": [256,383]},
+        "partition_1_3": {"device_id": 7, "head_group": 1, "dimension_slice": 3, "heads": [4,5,6,7], "dimensions": [384,511]},
+        "partition_2_0": {"device_id": 8, "head_group": 2, "dimension_slice": 0, "heads": [8,9,10,11], "dimensions": [0,127]},
+        "partition_2_1": {"device_id": 9, "head_group": 2, "dimension_slice": 1, "heads": [8,9,10,11], "dimensions": [128,255]},
+        "partition_2_2": {"device_id": 10, "head_group": 2, "dimension_slice": 2, "heads": [8,9,10,11], "dimensions": [256,383]},
+        "partition_2_3": {"device_id": 11, "head_group": 2, "dimension_slice": 3, "heads": [8,9,10,11], "dimensions": [384,511]},
+        "partition_3_0": {"device_id": 12, "head_group": 3, "dimension_slice": 0, "heads": [12,13,14,15], "dimensions": [0,127]},
+        "partition_3_1": {"device_id": 13, "head_group": 3, "dimension_slice": 1, "heads": [12,13,14,15], "dimensions": [128,255]},
+        "partition_3_2": {"device_id": 14, "head_group": 3, "dimension_slice": 2, "heads": [12,13,14,15], "dimensions": [256,383]},
+        "partition_3_3": {"device_id": 15, "head_group": 3, "dimension_slice": 3, "heads": [12,13,14,15], "dimensions": [384,511]}
+      },
+      "module_divisions": {
+        "attention_layer": {
+          "query_projection": {
+            "weight_shape": [8192, 8192],
+            "partition_strategy": "two_level_attention",
+            "per_device_weight_shape": [512, 512],
+            "partition_dimensions": {
+              "output_heads": 4,
+              "output_dimension_per_head": 128,
+              "input_dimension": 8192
+            }
+          },
+          "key_projection": {
+            "weight_shape": [8192, 8192],
+            "partition_strategy": "two_level_attention",
+            "per_device_weight_shape": [512, 512],
+            "partition_dimensions": {
+              "output_heads": 4,
+              "output_dimension_per_head": 128,
+              "input_dimension": 8192
+            }
+          },
+          "value_projection": {
+            "weight_shape": [8192, 8192],
+            "partition_strategy": "two_level_attention",
+            "per_device_weight_shape": [512, 512],
+            "partition_dimensions": {
+              "output_heads": 4,
+              "output_dimension_per_head": 128,
+              "input_dimension": 8192
+            }
+          },
+          "output_projection": {
+            "weight_shape": [8192, 8192],
+            "partition_strategy": "two_level_attention",
+            "per_device_weight_shape": [512, 512],
+            "partition_dimensions": {
+              "input_heads": 4,
+              "input_dimension_per_head": 128,
+              "output_dimension": 8192
+            }
+          }
+        },
+        "mlp_layer": {
+          "gate_up_proj": {
+            "weight_shape": [32768, 8192],
+            "partition_strategy": "tensor_parallel",
+            "devices_per_partition": 16,
+            "partition_dimension": "column_parallel"
+          },
+          "down_proj": {
+            "weight_shape": [8192, 32768],
+            "partition_strategy": "tensor_parallel",
+            "devices_per_partition": 16,
+            "partition_dimension": "row_parallel"
+          }
+        }
+      },
+      "communication_patterns": {
+        "input_broadcast": {
+          "type": "all_to_all",
+          "source": "input_tensor",
+          "target": "all_devices",
+          "shape": [1024, 10000, 8192]
+        },
+        "intra_group_concatenation": {
+          "groups": [
+            {"group_id": 0, "devices": [0, 1, 2, 3], "operation": "concatenate_dimension"},
+            {"group_id": 1, "devices": [4, 5, 6, 7], "operation": "concatenate_dimension"},
+            {"group_id": 2, "devices": [8, 9, 10, 11], "operation": "concatenate_dimension"},
+            {"group_id": 3, "devices": [12, 13, 14, 15], "operation": "concatenate_dimension"}
+          ]
+        },
+        "final_concatenation": {
+          "type": "concatenate_heads",
+          "source_groups": [0, 1, 2, 3],
+          "target_shape": [1024, 10000, 8192]
+        }
+      }
+    }
+  },
+  "deployment_metadata": {
+    "precision": "FP16",
+    "framework": "custom",
+    "communication_backend": "NCCL",
+    "network_topology": "NVLink",
+    "memory_requirements": {
+      "baseline": {
+        "per_device_memory_gb": 32,
+        "total_memory_gb": 512
+      },
+      "proposed": {
+        "per_device_memory_gb": 24,
+        "total_memory_gb": 384
+      }
+    }
+  }
+}

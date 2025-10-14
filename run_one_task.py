@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     variant = {
             "check": {
-                "slug": "check_topic",
+                "slug": "",
                 "version": 18,
                 "inputs": {
                     "paper_path": "./papers/2508.12969v1/paper.md",
