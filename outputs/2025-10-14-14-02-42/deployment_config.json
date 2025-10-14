@@ -1,0 +1,108 @@
+{
+  "deployment_strategies": {
+    "baseline_tensor_pipeline": {
+      "name": "Tensor Parallelism + Pipeline Parallelism",
+      "description": "Hybrid parallel strategy combining 8-way tensor parallelism within each of 2 pipeline stages",
+      "total_gpus": 16,
+      "parallelism": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "strategy": "column_and_row_parallel",
+          "communication": "all_reduce"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "stages": 2,
+          "micro_batches": 4
+        }
+      },
+      "gpu_assignment": {
+        "stage_0": {
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": [0, 1, 2, 3, 4, 5, 6, 7],
+          "memory_allocation": "distributed_across_tensor_group"
+        },
+        "stage_1": {
+          "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": [8, 9, 10, 11, 12, 13, 14, 15],
+          "memory_allocation": "distributed_across_tensor_group"
+        }
+      },
+      "communication_patterns": {
+        "within_stage": "all_reduce_across_tensor_group",
+        "between_stages": "pipeline_communication"
+      },
+      "tensor_dimensions": {
+        "batch_size": 1024,
+        "sequence_length": 10000,
+        "hidden_size": 8192,
+        "num_heads": 16,
+        "head_dim": 512,
+        "ffn_hidden_size": 32768
+      }
+    },
+    "proposed_layer_wise": {
+      "name": "Layer-wise Partitioning",
+      "description": "Each transformer layer assigned to a single GPU with sequential processing",
+      "total_gpus": 16,
+      "parallelism": {
+        "type": "layer_wise",
+        "partitioning_algorithm": "greedy_layer_aggregation",
+        "cache_capacity": 12800000000,
+        "memory_constraint": "SRAM_L2_cache_only"
+      },
+      "gpu_assignment": {
+        "layer_0": {"gpu": 0, "memory_utilization": "50.3%"},
+        "layer_1": {"gpu": 1, "memory_utilization": "50.3%"},
+        "layer_2": {"gpu": 2, "memory_utilization": "50.3%"},
+        "layer_3": {"gpu": 3, "memory_utilization": "50.3%"},
+        "layer_4": {"gpu": 4, "memory_utilization": "50.3%"},
+        "layer_5": {"gpu": 5, "memory_utilization": "50.3%"},
+        "layer_6": {"gpu": 6, "memory_utilization": "50.3%"},
+        "layer_7": {"gpu": 7, "memory_utilization": "50.3%"},
+        "layer_8": {"gpu": 8, "memory_utilization": "50.3%"},
+        "layer_9": {"gpu": 9, "memory_utilization": "50.3%"},
+        "layer_10": {"gpu": 10, "memory_utilization": "50.3%"},
+        "layer_11": {"gpu": 11, "memory_utilization": "50.3%"},
+        "layer_12": {"gpu": 12, "memory_utilization": "50.3%"},
+        "layer_13": {"gpu": 13, "memory_utilization": "50.3%"},
+        "layer_14": {"gpu": 14, "memory_utilization": "50.3%"},
+        "layer_15": {"gpu": 15, "memory_utilization": "50.3%"}
+      },
+      "communication_patterns": {
+        "between_layers": "point_to_point_transfer",
+        "transfer_size": 1677721600,
+        "transfer_frequency": "per_layer_forward_pass"
+      },
+      "tensor_dimensions": {
+        "batch_size": 1024,
+        "sequence_length": 10000,
+        "hidden_size": 8192,
+        "num_heads": 16,
+        "head_dim": 512,
+        "ffn_hidden_size": 32768
+      }
+    }
+  },
+  "performance_metrics": {
+    "baseline": {
+      "tokens_per_second": 12800,
+      "time_per_output_token_ms": 0.078
+    },
+    "proposed": {
+      "tokens_per_second": 15360,
+      "time_per_output_token_ms": 0.065
+    },
+    "improvements": {
+      "tps_increase_percent": 20,
+      "tpot_reduction_percent": 16.67
+    }
+  },
+  "validation": {
+    "baseline_dag_validated": true,
+    "proposed_dag_validated": true,
+    "no_cycles_detected": true,
+    "complete_tensor_dimensions": true,
+    "gpu_load_balanced": true
+  }
+}

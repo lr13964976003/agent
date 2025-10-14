@@ -1,0 +1,185 @@
+digraph proposed_layer_wise {
+    rankdir=TB;
+    node [shape=rectangle];
+    
+    // Input node
+    input [shape=ellipse, label="Input\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: Host"];
+    
+    // Layer 0 - GPU 0
+    subgraph cluster_layer0_gpu0 {
+        label="Layer 0 - GPU 0";
+        style=dashed;
+        
+        // Q Projection
+        q_linear0 [label="Q Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+        
+        // K Projection
+        k_linear0 [label="K Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+        
+        // V Projection
+        v_linear0 [label="V Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+        
+        // Reshape Q, K, V for multi-head attention
+        reshape_q0 [label="Reshape Q\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 0"];
+        reshape_k0 [label="Reshape K\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 0"];
+        reshape_v0 [label="Reshape V\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 0"];
+        
+        // Split heads for parallel computation
+        split_heads_q0 [shape=parallelogram, label="Split Heads Q\nInput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024×16, seq_len=10000, d_k=512]\nGPU: 0"];
+        split_heads_k0 [shape=parallelogram, label="Split Heads K\nInput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024×16, seq_len=10000, d_k=512]\nGPU: 0"];
+        split_heads_v0 [shape=parallelogram, label="Split Heads V\nInput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024×16, seq_len=10000, d_k=512]\nGPU: 0"];
+        
+        // Attention score computation per head
+        attn_score0 [label="Attention Score\nInput: [batch_size=1024×16, seq_len=10000, d_k=512] x [batch_size=1024×16, seq_len=10000, d_k=512]\nOutput: [batch_size=1024×16, seq_len=10000, seq_len=10000]\nGPU: 0"];
+        
+        // Softmax
+        softmax0 [label="Softmax\nInput: [batch_size=1024×16, seq_len=10000, seq_len=10000]\nOutput: [batch_size=1024×16, seq_len=10000, seq_len=10000]\nGPU: 0"];
+        
+        // Attention output
+        attn_out0 [label="Attention Output\nInput: [batch_size=1024×16, seq_len=10000, seq_len=10000] x [batch_size=1024×16, seq_len=10000, d_k=512]\nOutput: [batch_size=1024×16, seq_len=10000, d_k=512]\nGPU: 0"];
+        
+        // Merge heads
+        merge_heads0 [shape=parallelogram, label="Merge Heads\nInput: [batch_size=1024×16, seq_len=10000, d_k=512]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+        
+        // Output projection
+        out_proj0 [label="Output Projection\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+        
+        // Residual add and layer norm
+        residual_attn0 [label="Residual Add\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192] x2\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+        layer_norm_attn0 [label="Layer Norm\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+        
+        // MLP operations
+        mlp_linear1_0 [label="MLP Linear1\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nGPU: 0"];
+        gelu0 [label="GELU\nInput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nGPU: 0"];
+        mlp_linear2_0 [label="MLP Linear2\nInput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+        
+        // Final residual and layer norm
+        residual_mlp0 [label="Residual Add\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192] x2\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+        layer_norm_mlp0 [label="Layer Norm\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0"];
+    }
+    
+    // GPU-to-GPU communication
+    comm0_1 [shape=ellipse, label="GPU0→GPU1 Transfer\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0→1"];
+    
+    // Layer 1 - GPU 1
+    subgraph cluster_layer1_gpu1 {
+        label="Layer 1 - GPU 1";
+        style=dashed;
+        
+        q_linear1 [label="Q Linear\nGPU: 1"];
+        k_linear1 [label="K Linear\nGPU: 1"];
+        v_linear1 [label="V Linear\nGPU: 1"];
+        reshape_q1 [label="Reshape Q\nGPU: 1"];
+        reshape_k1 [label="Reshape K\nGPU: 1"];
+        reshape_v1 [label="Reshape V\nGPU: 1"];
+        split_heads_q1 [shape=parallelogram, label="Split Heads Q\nGPU: 1"];
+        split_heads_k1 [shape=parallelogram, label="Split Heads K\nGPU: 1"];
+        split_heads_v1 [shape=parallelogram, label="Split Heads V\nGPU: 1"];
+        attn_score1 [label="Attention Score\nGPU: 1"];
+        softmax1 [label="Softmax\nGPU: 1"];
+        attn_out1 [label="Attention Output\nGPU: 1"];
+        merge_heads1 [shape=parallelogram, label="Merge Heads\nGPU: 1"];
+        out_proj1 [label="Output Projection\nGPU: 1"];
+        residual_attn1 [label="Residual Add\nGPU: 1"];
+        layer_norm_attn1 [label="Layer Norm\nGPU: 1"];
+        mlp_linear1_1 [label="MLP Linear1\nGPU: 1"];
+        gelu1 [label="GELU\nGPU: 1"];
+        mlp_linear2_1 [label="MLP Linear2\nGPU: 1"];
+        residual_mlp1 [label="Residual Add\nGPU: 1"];
+        layer_norm_mlp1 [label="Layer Norm\nGPU: 1"];
+    }
+    
+    // Continue pattern for layers 2-15
+    comm1_2 [shape=ellipse, label="GPU1→GPU2 Transfer\nGPU: 1→2"];
+    comm2_3 [shape=ellipse, label="GPU2→GPU3 Transfer\nGPU: 2→3"];
+    comm3_4 [shape=ellipse, label="GPU3→GPU4 Transfer\nGPU: 3→4"];
+    comm4_5 [shape=ellipse, label="GPU4→GPU5 Transfer\nGPU: 4→5"];
+    comm5_6 [shape=ellipse, label="GPU5→GPU6 Transfer\nGPU: 5→6"];
+    comm6_7 [shape=ellipse, label="GPU6→GPU7 Transfer\nGPU: 6→7"];
+    comm7_8 [shape=ellipse, label="GPU7→GPU8 Transfer\nGPU: 7→8"];
+    comm8_9 [shape=ellipse, label="GPU8→GPU9 Transfer\nGPU: 8→9"];
+    comm9_10 [shape=ellipse, label="GPU9→GPU10 Transfer\nGPU: 9→10"];
+    comm10_11 [shape=ellipse, label="GPU10→GPU11 Transfer\nGPU: 10→11"];
+    comm11_12 [shape=ellipse, label="GPU11→GPU12 Transfer\nGPU: 11→12"];
+    comm12_13 [shape=ellipse, label="GPU12→GPU13 Transfer\nGPU: 12→13"];
+    comm13_14 [shape=ellipse, label="GPU13→GPU14 Transfer\nGPU: 13→14"];
+    comm14_15 [shape=ellipse, label="GPU14→GPU15 Transfer\nGPU: 14→15"];
+    
+    // Layer 15 - GPU 15
+    subgraph cluster_layer15_gpu15 {
+        label="Layer 15 - GPU 15";
+        style=dashed;
+        
+        q_linear15 [label="Q Linear\nGPU: 15"];
+        k_linear15 [label="K Linear\nGPU: 15"];
+        v_linear15 [label="V Linear\nGPU: 15"];
+        reshape_q15 [label="Reshape Q\nGPU: 15"];
+        reshape_k15 [label="Reshape K\nGPU: 15"];
+        reshape_v15 [label="Reshape V\nGPU: 15"];
+        split_heads_q15 [shape=parallelogram, label="Split Heads Q\nGPU: 15"];
+        split_heads_k15 [shape=parallelogram, label="Split Heads K\nGPU: 15"];
+        split_heads_v15 [shape=parallelogram, label="Split Heads V\nGPU: 15"];
+        attn_score15 [label="Attention Score\nGPU: 15"];
+        softmax15 [label="Softmax\nGPU: 15"];
+        attn_out15 [label="Attention Output\nGPU: 15"];
+        merge_heads15 [shape=parallelogram, label="Merge Heads\nGPU: 15"];
+        out_proj15 [label="Output Projection\nGPU: 15"];
+        residual_attn15 [label="Residual Add\nGPU: 15"];
+        layer_norm_attn15 [label="Layer Norm\nGPU: 15"];
+        mlp_linear1_15 [label="MLP Linear1\nGPU: 15"];
+        gelu15 [label="GELU\nGPU: 15"];
+        mlp_linear2_15 [label="MLP Linear2\nGPU: 15"];
+        residual_mlp15 [label="Residual Add\nGPU: 15"];
+        layer_norm_mlp15 [label="Layer Norm\nGPU: 15"];
+    }
+    
+    // Output
+    output [shape=ellipse, label="Output\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 15"];
+    
+    // Connections for Layer 0
+    input -> q_linear0;
+    input -> k_linear0;
+    input -> v_linear0;
+    q_linear0 -> reshape_q0;
+    k_linear0 -> reshape_k0;
+    v_linear0 -> reshape_v0;
+    reshape_q0 -> split_heads_q0;
+    reshape_k0 -> split_heads_k0;
+    reshape_v0 -> split_heads_v0;
+    split_heads_q0 -> attn_score0;
+    split_heads_k0 -> attn_score0;
+    split_heads_v0 -> attn_out0;
+    attn_score0 -> softmax0;
+    softmax0 -> attn_out0;
+    attn_out0 -> merge_heads0;
+    merge_heads0 -> out_proj0;
+    out_proj0 -> residual_attn0;
+    input -> residual_attn0 [style=dashed];
+    residual_attn0 -> layer_norm_attn0;
+    layer_norm_attn0 -> mlp_linear1_0;
+    mlp_linear1_0 -> gelu0;
+    gelu0 -> mlp_linear2_0;
+    mlp_linear2_0 -> residual_mlp0;
+    residual_attn0 -> residual_mlp0 [style=dashed];
+    residual_mlp0 -> layer_norm_mlp0;
+    
+    // Continue connections through all layers
+    layer_norm_mlp0 -> comm0_1;
+    comm0_1 -> q_linear1;
+    comm0_1 -> k_linear1;
+    comm0_1 -> v_linear1;
+    
+    // Pattern continues...
+    layer_norm_mlp1 -> comm1_2;
+    comm1_2 -> q_linear2;
+    comm1_2 -> k_linear2;
+    comm1_2 -> v_linear2;
+    
+    // ... continue for all layers
+    layer_norm_mlp14 -> comm14_15;
+    comm14_15 -> q_linear15;
+    comm14_15 -> k_linear15;
+    comm14_15 -> v_linear15;
+    
+    layer_norm_mlp15 -> output;
+}

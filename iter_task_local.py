@@ -164,7 +164,7 @@ def main():
         else:
             iter_input = f"{iter_result}\n\n{iter_perf}"
         '''
-        iter_input = "./outputs/2025-10-14-10-03-38/proposed_layerwise_dag.dot \n\n ./outputs/2025-10-14-10-03-38/DAG_Runtime_Analysis.md"
+        iter_input = "./outputs/2025-10-14-10-03-38/deployment_config.json \n\n ./outputs/2025-10-14-10-03-38/DAG_Runtime_Analysis.md"
         iter_loop = ReviewLoop(worker=agents[6], reviewer=agents[4], work_task=tasks[6], review_task=tasks[4], inputs=iter_input)
         iter_result = iter_loop.run()
         perf_task = tasks[5]
