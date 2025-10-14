@@ -6,209 +6,303 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
-      background: #f8f9fa;
+      background: #f4f6f8;
       margin: 0;
       height: 100vh;
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
+
+    /* 顶部导航栏 */
+    .navbar {
+      background-color: #1e88e5;
+      color: white;
+      padding: 10px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .navbar .logo {
+      width: 40px;
+      height: 40px;
+      background-color: #fff;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 12px;
+    }
+    .navbar h3 {
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    /* 页面主布局 */
     .layout {
       display: flex;
-      height: 100vh;
+      flex: 1;
+      overflow: hidden;
       transition: all 0.3s ease;
     }
+
     .sidebar {
       flex: 0 0 33%;
       background: #fff;
       border-right: 1px solid #ddd;
-      padding: 60px 15px 15px;
+      padding: 60px 20px 20px;
       overflow-y: auto;
       transition: all 0.3s ease;
     }
+
     .layout.collapsed .sidebar {
       flex: 0 0 0;
       padding: 0;
       border: none;
       overflow: hidden;
     }
+
     .main {
       flex: 1;
-      padding: 20px;
+      padding: 30px;
       overflow-y: auto;
       transition: all 0.3s ease;
     }
+
     #docContent {
       white-space: pre-wrap;
-      background: #f1f3f5;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
       padding: 15px;
-      border-radius: 8px;
+      border-radius: 10px;
       height: 70vh;
       overflow-y: auto;
     }
+
     #promptContent {
       font-family: monospace;
-      height: 300px;
+      height: 280px;
       resize: vertical;
     }
+
     #toggleSidebar {
       position: fixed;
-      top: 10px;
+      top: 80px;
       left: 10px;
       z-index: 1100;
     }
-    .text-center { text-align: center; }
+
+    h4, h5 {
+      color: #333;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+
+    .form-select, .form-control {
+      border-radius: 8px;
+    }
+
+    .btn {
+      border-radius: 8px;
+    }
+
+    .main h4 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
-<button id="toggleSidebar" class="btn btn-outline-secondary">📂 菜单</button>
-
-<div class="layout" id="layout">
-  <!-- 左侧 -->
-  <div id="sidebar" class="sidebar">
-    <h4>⚙️ 环境选择</h4>
-    <select id="envSelect" class="form-select mb-3" onchange="loadPrompts()"></select>
-
-    <h5>📝 Prompt 选择</h5>
-    <select id="promptSelect" class="form-select mb-3" onchange="loadPromptContent()"></select>
-
-    <textarea id="promptContent" class="form-control mb-3"></textarea>
-
-    <div class="mb-3">
-      <label class="form-label">Arxiv ID</label>
-      <input type="text" id="arxiv_id" class="form-control" placeholder="例如: 1234.5678">
+  <!-- 顶部导航栏 -->
+  <div class="navbar">
+    <div class="d-flex align-items-center">
+      <div class="logo"></div>
+      <h3>Paper to Real</h3>
     </div>
-
-    <button class="btn btn-primary w-100 mb-2" onclick="generateDocs()">Paper to Real</button>
-    <button class="btn btn-secondary w-100 mb-2" onclick="queryDocs()">查询已生成内容</button>
-    <button class="btn btn-success w-100" onclick="viewPaper()">查看论文</button>
+    <span>竖亥实验室</span>
   </div>
 
-  <!-- 右侧 -->
-  <div class="main" id="mainContent">
-    <h4 class="text-center">📄 文档选择</h4>
-    <select id="docSelect" class="form-select mb-3" onchange="showSelectedDoc()"></select>
+  <!-- 全局菜单按钮 -->
+  <button id="toggleSidebar" class="btn btn-outline-secondary btn-sm">📂 菜单</button>
 
-    <div class="mb-3">
-      <a id="downloadLink" class="btn btn-outline-success d-none" target="_blank">下载文档</a>
+  <div class="layout" id="layout">
+    <!-- 左侧菜单 -->
+    <div id="sidebar" class="sidebar">
+      <h4>⚙️ 环境选择</h4>
+      <select id="envSelect" class="form-select mb-3" onchange="loadPrompts()"></select>
+
+      <h5>🧠 Prompt 选择</h5>
+      <select id="promptSelect" class="form-select mb-3" onchange="loadVersions()"></select>
+
+      <h5>📜 版本选择</h5>
+      <select id="versionSelect" class="form-select mb-3" onchange="loadPromptContent()"></select>
+
+      <h5>✏️ Prompt 内容</h5>
+      <textarea id="promptContent" class="form-control mb-3"></textarea>
+
+      <button class="btn btn-warning w-100 mb-3" onclick="saveNewVersion()">💾 保存为新版本</button>
+
+      <div class="mb-3">
+        <label class="form-label">📘 Arxiv ID</label>
+        <input type="text" id="arxivId" class="form-control" placeholder="例如: 2301.12345">
+      </div>
+
+      <button class="btn btn-primary w-100 mb-2" onclick="generateDocs()">🚀 Paper to Real</button>
+      <button class="btn btn-success w-100" onclick="queryDocs()">📂 查询已生成</button>
+      <button class="btn btn-outline-dark w-100 mt-2" onclick="viewPaper()">🔗 查看论文</button>
     </div>
 
-    <h5 id="docTitle"></h5>
-    <div id="docContent"></div>
+    <!-- 右侧展示区域 -->
+    <div class="main" id="mainContent">
+      <h4>📄 文档浏览</h4>
+      <select id="docSelect" class="form-select mb-3 text-center" onchange="showSelectedDoc()"></select>
+
+      <div class="text-center mb-3">
+        <a id="downloadLink" class="btn btn-outline-success d-none" target="_blank">下载文档</a>
+      </div>
+
+      <h5 id="docTitle" class="text-center"></h5>
+      <div id="docContent"></div>
+    </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-document.getElementById("toggleSidebar").addEventListener("click", () => {
-  document.getElementById("layout").classList.toggle("collapsed");
-});
-
-// 加载环境
-async function loadEnvs() {
-  const res = await fetch("/list_environments");
-  const data = await res.json();
-  const select = document.getElementById("envSelect");
-  select.innerHTML = "";
-  data.environments.forEach(env => {
-    const opt = document.createElement("option");
-    opt.value = env;
-    opt.textContent = env;
-    select.appendChild(opt);
-  });
-  if (data.environments.length > 0) loadPrompts();
-}
-
-// 加载 prompts
-async function loadPrompts() {
-  const env = document.getElementById("envSelect").value;
-  const res = await fetch(`/list_prompts?env=${env}`);
-  const data = await res.json();
-  const select = document.getElementById("promptSelect");
-  select.innerHTML = "";
-  if (data.prompts) {
-    data.prompts.forEach(fname => {
-      const opt = document.createElement("option");
-      opt.value = fname;
-      opt.textContent = fname;
-      select.appendChild(opt);
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.getElementById("toggleSidebar").addEventListener("click", () => {
+      document.getElementById("layout").classList.toggle("collapsed");
     });
-    loadPromptContent();
-  }
-}
 
-async function loadPromptContent() {
-  const env = document.getElementById("envSelect").value;
-  const fname = document.getElementById("promptSelect").value;
-  const res = await fetch(`/get_prompt?env=${env}&filename=${fname}`);
-  const data = await res.json();
-  document.getElementById("promptContent").value = data.content || "";
-}
-
-// 生成文档
-async function generateDocs() {
-  const arxiv_id = document.getElementById("arxiv_id").value.trim();
-  const env = document.getElementById("envSelect").value;
-  const prompt = document.getElementById("promptContent").value;
-  if (!arxiv_id) { alert("请输入 Arxiv ID"); return; }
-  const res = await fetch("/generate", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({arxiv_id, env, prompt})
-  });
-  const data = await res.json();
-  alert(data.message || data.error);
-  queryDocs(); // 生成完成后刷新文档列表
-}
-
-// 查询已有文档
-async function queryDocs() {
-  const arxiv_id = document.getElementById("arxiv_id").value.trim();
-  if (!arxiv_id) { alert("请输入 Arxiv ID"); return; }
-  const res = await fetch(`/list_docs?arxiv_id=${arxiv_id}`);
-  const data = await res.json();
-  const select = document.getElementById("docSelect");
-  select.innerHTML = "";
-  if (data.files) {
-    data.files.forEach(file => {
-      const opt = document.createElement("option");
-      opt.value = file;
-      opt.textContent = file;
-      select.appendChild(opt);
-    });
-    if (data.files.length>0) {
-      document.getElementById("docSelect").value = data.files[0];
-      showSelectedDoc();
+    // ========== 数据加载 ==========
+    async function loadEnvs() {
+      const res = await fetch("/list_environments");
+      const data = await res.json();
+      const select = document.getElementById("envSelect");
+      select.innerHTML = "";
+      data.environments.forEach(env => {
+        const opt = document.createElement("option");
+        opt.value = env;
+        opt.textContent = env;
+        select.appendChild(opt);
+      });
+      if (data.environments.length > 0) loadPrompts();
     }
-  } else {
-    document.getElementById("docTitle").textContent = "";
-    document.getElementById("docContent").textContent = "";
-    document.getElementById("downloadLink").classList.add("d-none");
-  }
-}
 
-// 显示选中文档内容
-async function showSelectedDoc() {
-  const arxiv_id = document.getElementById("arxiv_id").value.trim();
-  const filename = document.getElementById("docSelect").value;
-  if (!arxiv_id || !filename) return;
-  const res = await fetch(`/get_doc?arxiv_id=${arxiv_id}&filename=${filename}`);
-  const data = await res.json();
-  if (data.content) {
-    document.getElementById("docTitle").textContent = "📑 " + data.filename;
-    document.getElementById("docContent").textContent = data.content;
-    const link = document.getElementById("downloadLink");
-    link.href = `/download_doc?arxiv_id=${arxiv_id}&filename=${filename}`;
-    link.classList.remove("d-none");
-    link.textContent = "下载 " + filename;
-  }
-}
+    async function loadPrompts() {
+      const env = document.getElementById("envSelect").value;
+      const res = await fetch(`/list_prompts?env=${env}`);
+      const data = await res.json();
+      const select = document.getElementById("promptSelect");
+      select.innerHTML = "";
+      if (data.prompts) {
+        data.prompts.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p;
+          opt.textContent = p;
+          select.appendChild(opt);
+        });
+        loadVersions();
+      }
+    }
 
-function viewPaper() {
-  const arxiv_id = document.getElementById("arxiv_id").value.trim();
-  if (!arxiv_id) { alert("请输入 Arxiv ID"); return; }
-  window.open(`https://arxiv.org/abs/${arxiv_id}`, "_blank");
-}
+    async function loadVersions() {
+      const env = document.getElementById("envSelect").value;
+      const prompt = document.getElementById("promptSelect").value;
+      const res = await fetch(`/list_versions?env=${env}&prompt=${prompt}`);
+      const data = await res.json();
+      const select = document.getElementById("versionSelect");
+      select.innerHTML = "";
+      if (data.versions) {
+        data.versions.forEach(v => {
+          const opt = document.createElement("option");
+          opt.value = v;
+          opt.textContent = v;
+          select.appendChild(opt);
+        });
+        loadPromptContent();
+      }
+    }
 
-loadEnvs();
-</script>
+    async function loadPromptContent() {
+      const env = document.getElementById("envSelect").value;
+      const prompt = document.getElementById("promptSelect").value;
+      const version = document.getElementById("versionSelect").value;
+      if (!prompt || !version) return;
+      const res = await fetch(`/get_prompt?env=${env}&prompt=${prompt}&version=${version}`);
+      const data = await res.json();
+      document.getElementById("promptContent").value = data.content || "";
+    }
+
+    async function saveNewVersion() {
+      const env = document.getElementById("envSelect").value;
+      const prompt = document.getElementById("promptSelect").value;
+      const content = document.getElementById("promptContent").value;
+      const res = await fetch("/save_prompt_version", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ env, prompt, content })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+      loadVersions();
+    }
+
+    async function generateDocs(){
+      const arxiv_id = document.getElementById("arxivId").value.trim();
+      const env = document.getElementById("envSelect").value;
+      if(!arxiv_id) return alert("请输入 Arxiv ID！");
+      if(!env) return alert("请选择环境！");
+      const res = await fetch("/generate", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ arxiv_id, env })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+      queryDocs();
+    }
+
+    async function queryDocs(){
+      const arxiv_id = document.getElementById("arxivId").value.trim();
+      if(!arxiv_id) return alert("请输入 Arxiv ID！");
+      const res = await fetch(`/list_docs?arxiv_id=${arxiv_id}`);
+      const data = await res.json();
+      const select = document.getElementById("docSelect");
+      select.innerHTML = "";
+      if(data.files){
+        data.files.forEach(file=>{
+          const opt = document.createElement("option");
+          opt.value = file;
+          opt.textContent = file;
+          select.appendChild(opt);
+        });
+        if(data.files.length>0){
+          document.getElementById("docSelect").value = data.files[0];
+          showSelectedDoc();
+        }
+      }
+    }
+
+    async function showSelectedDoc(){
+      const arxiv_id = document.getElementById("arxivId").value.trim();
+      const filename = document.getElementById("docSelect").value;
+      if(!filename) return;
+      const res = await fetch(`/get_doc?arxiv_id=${arxiv_id}&filename=${filename}`);
+      const data = await res.json();
+      document.getElementById("docTitle").textContent = data.filename || "";
+      document.getElementById("docContent").textContent = data.content || "";
+      const link = document.getElementById("downloadLink");
+      link.href = `/download_doc?arxiv_id=${arxiv_id}&filename=${filename}`;
+      link.classList.remove("d-none");
+      link.textContent = `下载 ${filename}`;
+    }
+
+    function viewPaper(){
+      const id = document.getElementById("arxivId").value.trim();
+      if(!id) return alert("请输入 Arxiv ID！");
+      window.open(`https://arxiv.org/abs/${id}`, "_blank");
+    }
+
+    loadEnvs();
+  </script>
 </body>
 </html>
