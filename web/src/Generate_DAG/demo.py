@@ -13,34 +13,62 @@ from datetime import datetime
 from opentelemetry import trace
 
 
-now = datetime.now()
-submission_dir = now.strftime("%Y-%m-%d-%H-%M-%S")
-if os.path.exists(f"/home/wzc/data/file-share/{submission_dir}") is False:
-    os.mkdir(f"/home/wzc/data/file-share/{submission_dir}")
-
-def fetch_prompt_local(slug:str, inputs:dict) -> str:
-    with open(f"./prompts/{slug}.md","r") as f:
+def fetch_prompt_local(slug:str, version:str, inputs:dict) -> str:
+    with open(f"./prompts/{slug}_{version}.md","r") as f:
         prompt = f.read()
     prompt = re.sub(r'<<<.*?>>>', '', prompt, flags=re.DOTALL)
     prompt = prompt.format(**inputs)
     return prompt
 
+def sanitize_filename(name: str) -> str:
+    return re.sub(r'[\\/*?:"<>|] ', "_", name)
+
+def download_paper(arxiv_id: str, save_dir: str):
+    search = arxiv.Search(id_list=[arxiv_id])
+    result = next(search.results())
+    
+    title = sanitize_filename(result.title)
+    save_dir = os.path.join(save_dir, arxiv_id)
+    if os.path.exists(save_dir) is False:
+        os.mkdir(save_dir)
+    
+    pdf_path = os.path.join(save_dir, "paper.pdf")
+    result.download_pdf(filename=pdf_path)
+    
+    with open(pdf_path, "rb") as file:
+        reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+    with open(os.path.join(save_dir, "paper.md"), "w") as file:
+        file.write(text)
 
 #@ag.instrument(spankind="workflow")
 def main():
-    TOPIC = "Read Paper, Generate DAG and Performance"
-    APP_SLUG = "paper_to_real"          # 换成你在 Agenta 的 app_slug
-    ENV_SLUG = "production"      # 或 staging/dev
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--arxiv_id", type=str, help="The id od paper in arxiv")
+    parser.add_argument("--prompts_json", type=str, help="prompt version")
+    args = parser.parse_args()
 
-    variant_list = ["read_paper", "check_paper", "generate_dag", "check_dag", "performance"]
+    arxiv_id = args.arxiv_id
+    prompts_json = json.loads(args.prompts_json)
+    
+
+    if os.path.exists(f"./papers/{arxiv_id}/paper.md") is False:
+        download_paper(arxiv_id, "./papers")
+
+    output_dir = os.path.join("./generated_docs", args.arxiv_id)
+    os.makedirs(output_dir, exist_ok=True)
+
+
     variant = {
             "read_paper": {
-                "slug": "chain_read_paper",
-                "version": 10,
+                "slug": "Read_Paper",
+                "version": prompts_json["Read_Paper/Read_Paper"],
                 "inputs": {
-                    "paper_path": "/home/wzc/data/papers/FA/paper.md",
-                    "knowledge_path": "/home/wzc/data/knowledges/llm_parallel_strategies.md",
-                    "save_path": f"/home/wzc/data/file-share/{submission_dir}"
+                    "paper_path": f"./papers/{arxiv_id}/paper.md",
+                    "knowledge_path": "./knowledges",
+                    "save_path": output_dir
                     },
                 "tools": [
                     FileReadTool(),
@@ -50,11 +78,10 @@ def main():
                     ]
                 },
             "check_paper": {
-                "slug" : "chain_check_paper",
-                "version" : 8,
+                "slug" : "Check_Paper",
+                "version" : prompts_json["Check_Paper/Check_Paper"],
                 "inputs": {
-                    "origin_paper_path" : "/home/wzc/data/papers/FA/paper.pdf",
-                    "plan_path": "/home/wzc/data/papers/FA/deployment_config.json"
+                    "origin_paper_path" : f"./papers/{arxiv_id}/paper.md",
                     },
                 "tools": [
                     FileReadTool(),
@@ -65,11 +92,11 @@ def main():
                     ]
                 },
             "generate_dag": {
-                "slug": "chain_generate_dag",
-                "version": 15,
+                "slug": "Generate_DAG",
+                "version": prompts_json["Generate_DAG/Generate_DAG"],
                 "inputs": {
-                    "knowledge_path": "/home/wzc/data/knowledges/llm_parallel_strategies.md",
-                    "save_path": f"/home/wzc/data/file-share/{submission_dir}"
+                    "knowledge_path": "./knowledges",
+                    "save_path": output_dir
                     },
                 "tools": [
                     FileReadTool(),
@@ -80,10 +107,10 @@ def main():
                     ]
                 },
              "check_dag": {
-                 "slug": "chain_check_dag",
-                 "version": 3,
+                 "slug": "Check_DAG",
+                 "version": prompts_json["Check_DAG/Check_DAG"],
                  "inputs": {
-                     "save_path": f"/home/wzc/data/file-share/{submission_dir}"
+                     "save_path": output_dir
                      },
                  "tools": [
                      FileWriterTool(),
@@ -92,10 +119,10 @@ def main():
                      ]
                  },
              "performance": {
-                 "slug": "chain_performance",
-                 "version": 17,
+                 "slug": "Profing",
+                 "version": prompts_json["Profing/Profing"],
                  "inputs": {
-                     "save_path": f"/home/wzc/data/file-share/{submission_dir}"
+                     "save_path": output_dir
                      },
                  "tools": [
                      ExtractEdgeFromDAGTool(),
@@ -106,32 +133,32 @@ def main():
                  }
             }
     agents = []
-    for k in variant_list:
-        prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"])
-        tools = variant[k]["tools"]
-        agents.append(build_agent(prompt, tools))
     tasks = []
-    descriptions = ["Read Paper and Refine Paper", "Check the refine paper", "Read concise Paper and Generate DAG", "Check the DAG", "Compute the performance of DAG"]
-    expected_outputs = ["The file path of concise paper and deployment configuration", "Check Result", "The path of graphviz code describing the DAG", "Check Result", "The performance of DAG"]
-    for i in range(len(agents)):
-        tasks.append(build_task(descriptions[i], expected_outputs[i], agents[i]))
+    expected_outputs = ["The file path of concise paper and new idea", \
+                        "The path of Python code of implement methods", \
+                            "The path of testing result"]
+    i = 0
+    for k in variant.keys():
+        prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["version"], variant[k]["inputs"])
+        tools = variant[k]["tools"]
+        agents.append(build_agent(tools))
+        tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
+        i = i + 1
     
-    paper_loop = ReviewLoop(worker=agents[0], reviewer=agents[1], task_description=descriptions[0], expected_output=expected_outputs[0])
+    paper_loop = ReviewLoop(worker=agents[0], reviewer=agents[1], work_task=tasks[0], review_task=tasks[1])
     paper_result = paper_loop.run()
-    dag_loop = ReviewLoop(worker=agents[2], reviewer=agents[3], task_description=descriptions[2], expected_output=expected_outputs[2], inputs=paper_result)
+    dag_loop = ReviewLoop(worker=agents[2], reviewer=agents[3], work_task=tasks[2], review_task=tasks[3], inputs=paper_result)
     dag_result = dag_loop.run()
 
-    description = f"There are the submissions of previous agents: \n\n{paper_result}\n\n{dag_result}"
-    perf_task = Task(
-        description = description,
-        agent = agents[4],
-        expected_output = expected_outputs[4]
-    )
+    tasks[4].description = tasks[4].description + f"There are the submissions of previous agents: \n\n{dag_result}"
     run_pipeline([agents[4]], [perf_task])
+
+    print("Run Success")
 
     slug_list = []
     for k,v in variant.items():
         slug_list.append([v["slug"],v["version"]])
+    print(slug_list)
     return slug_list
 
 
