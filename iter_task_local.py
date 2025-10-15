@@ -39,7 +39,7 @@ def main():
                 "slug": "check_topic",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "./papers/PP/paper.md",
+                    "paper_path": "./papers/helix/paper.md",
                     "score_path": "./knowledges/llm_parallelism_classification_schema.json"
                 },
                 "tools": [
@@ -50,7 +50,7 @@ def main():
                 "slug": "chain_read_paper",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "./papers/PP/paper.md",
+                    "paper_path": "./papers/helix/paper.md",
                     "knowledge_path": "./knowledges/llm_parallel_strategies.md",
                     "save_path": f"./outputs/{submission_dir}"
                     },
@@ -65,8 +65,8 @@ def main():
                 "slug" : "chain_check_paper",
                 "version" : 8,
                 "inputs": {
-                    "origin_paper_path" : "./papers/PP/paper.md",
-                    "plan_path": "./papers/PP/deployment_config.json"
+                    "origin_paper_path" : "./papers/helix/paper.md",
+                    "plan_path": "./papers/helix/deployment_config.json"
                     },
                 "tools": [
                     FileReadTool(),
@@ -160,11 +160,11 @@ def main():
     for i in range(MAX_ITER):
         '''
         if i == 0:
-            iter_input = f"{paper_result}\n\n{init_perf}"
+            iter_input = f"{dag_result}\n\n{init_perf}"
         else:
             iter_input = f"{iter_result}\n\n{iter_perf}"
         '''
-        iter_input = "./outputs/2025-10-14-10-03-38/deployment_config.json \n\n ./outputs/2025-10-14-10-03-38/DAG_Runtime_Analysis.md"
+        iter_input = "./outputs/2025-10-14-14-33-05/deployment_config.json"
         iter_loop = ReviewLoop(worker=agents[6], reviewer=agents[4], work_task=tasks[6], review_task=tasks[4], inputs=iter_input)
         iter_result = iter_loop.run()
         perf_task = tasks[5]

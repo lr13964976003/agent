@@ -1,0 +1,219 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "Tensor Parallelism + Pipeline Parallelism",
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallelism": {
+          "degree": 8,
+          "strategy": "column_row_split"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "stages": 2
+        }
+      },
+      "total_devices": 16,
+      "model_mapping": {
+        "layer_0": {
+          "mha": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+            "parallel_strategy": "tensor_parallel",
+            "partitioning": {
+              "type": "column_row_split",
+              "weight_matrices": {
+                "W_Q": {"shape": [8192, 8192], "partitioned_shape": [1024, 8192]},
+                "W_K": {"shape": [8192, 8192], "partitioned_shape": [1024, 8192]},
+                "W_V": {"shape": [8192, 8192], "partitioned_shape": [1024, 8192]}
+              }
+            }
+          },
+          "mlp": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+            "parallel_strategy": "tensor_parallel",
+            "partitioning": {
+              "type": "column_row_split",
+              "first_linear": {"shape": [32768, 8192], "partitioned_shape": [4096, 8192]},
+              "second_linear": {"shape": [8192, 32768], "partitioned_shape": [8192, 4096]}
+            }
+          }
+        },
+        "layer_1": {
+          "mha": {
+            "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+            "parallel_strategy": "tensor_parallel",
+            "partitioning": {
+              "type": "column_row_split",
+              "weight_matrices": {
+                "W_Q": {"shape": [8192, 8192], "partitioned_shape": [1024, 8192]},
+                "W_K": {"shape": [8192, 8192], "partitioned_shape": [1024, 8192]},
+                "W_V": {"shape": [8192, 8192], "partitioned_shape": [1024, 8192]}
+              }
+            }
+          },
+          "mlp": {
+            "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+            "parallel_strategy": "tensor_parallel",
+            "partitioning": {
+              "type": "column_row_split",
+              "first_linear": {"shape": [32768, 8192], "partitioned_shape": [4096, 8192]},
+              "second_linear": {"shape": [8192, 32768], "partitioned_shape": [8192, 4096]}
+            }
+          }
+        }
+      }
+    },
+    "proposed": {
+      "name": "Two-Level Attention Partitioning",
+      "parallel_strategy": {
+        "type": "attention_partitioning",
+        "parameters": {
+          "m": 4,
+          "n": 4,
+          "total_partitions": 16,
+          "partitioning_strategy": "head_and_dimension_split"
+        }
+      },
+      "total_devices": 16,
+      "model_parameters": {
+        "h": 16,
+        "d": 512,
+        "D": 8192,
+        "h_g": 4,
+        "d_s": 128,
+        "batch_size": 1024,
+        "sequence_length": 10000
+      },
+      "model_mapping": {
+        "layer_0": {
+          "mha": {
+            "partitioning_scheme": {
+              "type": "two_level",
+              "head_groups": 4,
+              "dimension_slices": 4,
+              "devices_per_partition": 1
+            },
+            "device_mapping": {
+              "device_0": {"head_group": 0, "dimension_slice": 0, "partition_id": [0, 0]},
+              "device_1": {"head_group": 0, "dimension_slice": 1, "partition_id": [0, 1]},
+              "device_2": {"head_group": 0, "dimension_slice": 2, "partition_id": [0, 2]},
+              "device_3": {"head_group": 0, "dimension_slice": 3, "partition_id": [0, 3]},
+              "device_4": {"head_group": 1, "dimension_slice": 0, "partition_id": [1, 0]},
+              "device_5": {"head_group": 1, "dimension_slice": 1, "partition_id": [1, 1]},
+              "device_6": {"head_group": 1, "dimension_slice": 2, "partition_id": [1, 2]},
+              "device_7": {"head_group": 1, "dimension_slice": 3, "partition_id": [1, 3]},
+              "device_8": {"head_group": 2, "dimension_slice": 0, "partition_id": [2, 0]},
+              "device_9": {"head_group": 2, "dimension_slice": 1, "partition_id": [2, 1]},
+              "device_10": {"head_group": 2, "dimension_slice": 2, "partition_id": [2, 2]},
+              "device_11": {"head_group": 2, "dimension_slice": 3, "partition_id": [2, 3]},
+              "device_12": {"head_group": 3, "dimension_slice": 0, "partition_id": [3, 0]},
+              "device_13": {"head_group": 3, "dimension_slice": 1, "partition_id": [3, 1]},
+              "device_14": {"head_group": 3, "dimension_slice": 2, "partition_id": [3, 2]},
+              "device_15": {"head_group": 3, "dimension_slice": 3, "partition_id": [3, 3]}
+            },
+            "weight_matrices": {
+              "W_Q": {
+                "full_shape": [8192, 8192],
+                "partitioned_shape": [512, 512],
+                "partition_mapping": {
+                  "device_0": {"slice": "[0:512, 0:512]", "heads": [0,1,2,3], "dims": [0:128]},
+                  "device_1": {"slice": "[0:512, 512:1024]", "heads": [0,1,2,3], "dims": [128:256]},
+                  "device_2": {"slice": "[0:512, 1024:1536]", "heads": [0,1,2,3], "dims": [256:384]},
+                  "device_3": {"slice": "[0:512, 1536:2048]", "heads": [0,1,2,3], "dims": [384:512]},
+                  "device_4": {"slice": "[512:1024, 2048:2560]", "heads": [4,5,6,7], "dims": [0:128]},
+                  "device_5": {"slice": "[512:1024, 2560:3072]", "heads": [4,5,6,7], "dims": [128:256]},
+                  "device_6": {"slice": "[512:1024, 3072:3584]", "heads": [4,5,6,7], "dims": [256:384]},
+                  "device_7": {"slice": "[512:1024, 3584:4096]", "heads": [4,5,6,7], "dims": [384:512]},
+                  "device_8": {"slice": "[1024:1536, 4096:4608]", "heads": [8,9,10,11], "dims": [0:128]},
+                  "device_9": {"slice": "[1024:1536, 4608:5120]", "heads": [8,9,10,11], "dims": [128:256]},
+                  "device_10": {"slice": "[1024:1536, 5120:5632]", "heads": [8,9,10,11], "dims": [256:384]},
+                  "device_11": {"slice": "[1024:1536, 5632:6144]", "heads": [8,9,10,11], "dims": [384:512]},
+                  "device_12": {"slice": "[1536:2048, 6144:6656]", "heads": [12,13,14,15], "dims": [0:128]},
+                  "device_13": {"slice": "[1536:2048, 6656:7168]", "heads": [12,13,14,15], "dims": [128:256]},
+                  "device_14": {"slice": "[1536:2048, 7168:7680]", "heads": [12,13,14,15], "dims": [256:384]},
+                  "device_15": {"slice": "[1536:2048, 7680:8192]", "heads": [12,13,14,15], "dims": [384:512]}
+                }
+              },
+              "W_K": {
+                "full_shape": [8192, 8192],
+                "partitioned_shape": [512, 512],
+                "partition_mapping": "same_as_W_Q"
+              },
+              "W_V": {
+                "full_shape": [8192, 8192],
+                "partitioned_shape": [512, 512],
+                "partition_mapping": "same_as_W_Q"
+              }
+            },
+            "output_aggregation": {
+              "hierarchy": [
+                {
+                  "level": "dimension_concatenation",
+                  "groups": [
+                    {"group_id": 0, "devices": [0, 1, 2, 3], "concat_dim": 2},
+                    {"group_id": 1, "devices": [4, 5, 6, 7], "concat_dim": 2},
+                    {"group_id": 2, "devices": [8, 9, 10, 11], "concat_dim": 2},
+                    {"group_id": 3, "devices": [12, 13, 14, 15], "concat_dim": 2}
+                  ]
+                },
+                {
+                  "level": "head_concatenation",
+                  "devices": ["all_groups"],
+                  "concat_dim": 2
+                }
+              ]
+            }
+          },
+          "mlp": {
+            "parallel_strategy": "tensor_parallel",
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            "partitioning": {
+              "type": "column_row_split",
+              "first_linear": {
+                "shape": [32768, 8192],
+                "partitioned_shape": [2048, 8192],
+                "devices_per_partition": 16
+              },
+              "second_linear": {
+                "shape": [8192, 32768],
+                "partitioned_shape": [8192, 2048],
+                "devices_per_partition": 16
+              }
+            }
+          }
+        },
+        "layer_1": {
+          "mha": "same_as_layer_0",
+          "mlp": "same_as_layer_0"
+        }
+      }
+    }
+  },
+  "communication_parameters": {
+    "baseline": {
+      "all_reduce_operations": 2,
+      "pipeline_stages": 2,
+      "communication_pattern": "ring_all_reduce"
+    },
+    "proposed": {
+      "hierarchical_communication": true,
+      "intra_group_communication": 4,
+      "inter_group_communication": 1,
+      "communication_pattern": "hierarchical_reduce"
+    }
+  },
+  "memory_requirements": {
+    "baseline": {
+      "parameters_per_device": 12582912,
+      "activation_memory": "varies_by_pipeline_stage"
+    },
+    "proposed": {
+      "parameters_per_device": {
+        "mha": 786432,
+        "mlp": 2097152,
+        "total": 2883584
+      },
+      "activation_memory": "uniform_across_devices"
+    }
+  }
+}

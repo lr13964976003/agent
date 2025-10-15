@@ -1,0 +1,154 @@
+digraph baseline_tensor_pipeline_parallel {
+    rankdir=TB;
+    node [shape=rectangle];
+    
+    // Input node
+    input [shape=ellipse, label="Input\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: all"];
+    
+    // Layer 0 - Stage 0 (Devices 0-7)
+    subgraph cluster_layer0 {
+        label="Layer 0 - Stage 0 (Devices 0-7)";
+        style=dashed;
+        
+        // MHA - Query Linear (Column Parallel)
+        mha_q_linear_0 [label="MHA Q Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 0-7"];
+        
+        // MHA - Key Linear (Column Parallel)
+        mha_k_linear_0 [label="MHA K Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 0-7"];
+        
+        // MHA - Value Linear (Column Parallel)
+        mha_v_linear_0 [label="MHA V Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 0-7"];
+        
+        // MHA - Attention Score
+        mha_score_0 [label="MHA Attention Score\nInput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024, heads=16, seq_len=10000, seq_len=10000]\nGPU: 0-7"];
+        
+        // MHA - Attention Weights
+        mha_weights_0 [label="MHA Softmax\nInput: [batch_size=1024, heads=16, seq_len=10000, seq_len=10000]\nOutput: [batch_size=1024, heads=16, seq_len=10000, seq_len=10000]\nGPU: 0-7"];
+        
+        // MHA - Attention Output
+        mha_output_0 [label="MHA Output\nInput: [batch_size=1024, heads=16, seq_len=10000, seq_len=10000], [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 0-7"];
+        
+        // MHA - Concat and Linear (Row Parallel)
+        mha_concat_linear_0 [label="MHA Concat & Linear\nInput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0-7"];
+        
+        // Residual Add
+        mha_residual_0 [label="Residual Add\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192], [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0-7"];
+        
+        // Layer Norm
+        layer_norm_0 [label="Layer Norm\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0-7"];
+        
+        // MLP - First Linear (Column Parallel)
+        mlp_linear1_0 [label="MLP First Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nGPU: 0-7"];
+        
+        // MLP - GELU Activation
+        mlp_gelu_0 [label="MLP GELU\nInput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nGPU: 0-7"];
+        
+        // MLP - Second Linear (Row Parallel)
+        mlp_linear2_0 [label="MLP Second Linear\nInput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0-7"];
+        
+        // MLP Residual Add
+        mlp_residual_0 [label="MLP Residual Add\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192], [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0-7"];
+        
+        // Layer Norm 2
+        layer_norm2_0 [label="Layer Norm 2\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0-7"];
+    }
+    
+    // Communication - Pipeline Stage Transfer
+    pipeline_comm_0_1 [shape=parallelogram, label="Pipeline Communication\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 0-7 → 8-15"];
+    
+    // Layer 1 - Stage 1 (Devices 8-15)
+    subgraph cluster_layer1 {
+        label="Layer 1 - Stage 1 (Devices 8-15)";
+        style=dashed;
+        
+        // MHA - Query Linear (Column Parallel)
+        mha_q_linear_1 [label="MHA Q Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 8-15"];
+        
+        // MHA - Key Linear (Column Parallel)
+        mha_k_linear_1 [label="MHA K Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 8-15"];
+        
+        // MHA - Value Linear (Column Parallel)
+        mha_v_linear_1 [label="MHA V Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 8-15"];
+        
+        // MHA - Attention Score
+        mha_score_1 [label="MHA Attention Score\nInput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024, heads=16, seq_len=10000, seq_len=10000]\nGPU: 8-15"];
+        
+        // MHA - Attention Weights
+        mha_weights_1 [label="MHA Softmax\nInput: [batch_size=1024, heads=16, seq_len=10000, seq_len=10000]\nOutput: [batch_size=1024, heads=16, seq_len=10000, seq_len=10000]\nGPU: 8-15"];
+        
+        // MHA - Attention Output
+        mha_output_1 [label="MHA Output\nInput: [batch_size=1024, heads=16, seq_len=10000, seq_len=10000], [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nGPU: 8-15"];
+        
+        // MHA - Concat and Linear (Row Parallel)
+        mha_concat_linear_1 [label="MHA Concat & Linear\nInput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 8-15"];
+        
+        // Residual Add
+        mha_residual_1 [label="Residual Add\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192], [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 8-15"];
+        
+        // Layer Norm
+        layer_norm_1 [label="Layer Norm\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 8-15"];
+        
+        // MLP - First Linear (Column Parallel)
+        mlp_linear1_1 [label="MLP First Linear\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nGPU: 8-15"];
+        
+        // MLP - GELU Activation
+        mlp_gelu_1 [label="MLP GELU\nInput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nGPU: 8-15"];
+        
+        // MLP - Second Linear (Row Parallel)
+        mlp_linear2_1 [label="MLP Second Linear\nInput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 8-15"];
+        
+        // MLP Residual Add
+        mlp_residual_1 [label="MLP Residual Add\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192], [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 8-15"];
+        
+        // Layer Norm 2
+        layer_norm2_1 [label="Layer Norm 2\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 8-15"];
+    }
+    
+    // Output node
+    output [shape=ellipse, label="Output\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nGPU: 8-15"];
+    
+    // Edges
+    input -> mha_q_linear_0;
+    input -> mha_k_linear_0;
+    input -> mha_v_linear_0;
+    
+    mha_q_linear_0 -> mha_score_0;
+    mha_k_linear_0 -> mha_score_0;
+    mha_v_linear_0 -> mha_output_0;
+    
+    mha_score_0 -> mha_weights_0;
+    mha_weights_0 -> mha_output_0;
+    mha_output_0 -> mha_concat_linear_0;
+    mha_concat_linear_0 -> mha_residual_0;
+    input -> mha_residual_0;
+    mha_residual_0 -> layer_norm_0;
+    layer_norm_0 -> mlp_linear1_0;
+    mlp_linear1_0 -> mlp_gelu_0;
+    mlp_gelu_0 -> mlp_linear2_0;
+    mlp_linear2_0 -> mlp_residual_0;
+    layer_norm_0 -> mlp_residual_0;
+    mlp_residual_0 -> layer_norm2_0;
+    
+    layer_norm2_0 -> pipeline_comm_0_1;
+    pipeline_comm_0_1 -> mha_q_linear_1;
+    
+    mha_q_linear_1 -> mha_score_1;
+    mha_k_linear_1 -> mha_score_1;
+    mha_v_linear_1 -> mha_output_1;
+    pipeline_comm_0_1 -> mha_k_linear_1;
+    pipeline_comm_0_1 -> mha_v_linear_1;
+    
+    mha_score_1 -> mha_weights_1;
+    mha_weights_1 -> mha_output_1;
+    mha_output_1 -> mha_concat_linear_1;
+    mha_concat_linear_1 -> mha_residual_1;
+    pipeline_comm_0_1 -> mha_residual_1;
+    mha_residual_1 -> layer_norm_1;
+    layer_norm_1 -> mlp_linear1_1;
+    mlp_linear1_1 -> mlp_gelu_1;
+    mlp_gelu_1 -> mlp_linear2_1;
+    mlp_linear2_1 -> mlp_residual_1;
+    layer_norm_1 -> mlp_residual_1;
+    mlp_residual_1 -> layer_norm2_1;
+    layer_norm2_1 -> output;
+}

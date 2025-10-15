@@ -1,0 +1,198 @@
+{
+  "deployment_configurations": {
+    "baseline_tensor_pipeline_parallelism": {
+      "name": "Baseline TP=8, PP=2",
+      "description": "Standard tensor and pipeline parallelism baseline",
+      "parallel_strategy": {
+        "type": "hybrid_tensor_pipeline",
+        "tensor_parallelism": {
+          "degree": 8,
+          "method": "row_column_parallel",
+          "communication_pattern": "all_reduce"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "stages": 2,
+          "micro_batch_size": 512
+        }
+      },
+      "model_configuration": {
+        "layers": 16,
+        "hidden_size": 8192,
+        "heads": 16,
+        "head_dimension": 512,
+        "mlp_hidden_size": 32768,
+        "precision": "FP16",
+        "batch_size": 1024,
+        "sequence_length": 10000
+      },
+      "module_division": {
+        "pipeline_stage_0": {
+          "layers": [0, 1, 2, 3, 4, 5, 6, 7],
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "tensor_parallel_group": "tp_group_0"
+        },
+        "pipeline_stage_1": {
+          "layers": [8, 9, 10, 11, 12, 13, 14, 15],
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "tensor_parallel_group": "tp_group_1"
+        }
+      },
+      "device_mapping": {
+        "tp_group_0": {
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "memory_per_device_gb": 80,
+          "interconnect": "nvlink",
+          "bandwidth_gbps": 900
+        },
+        "tp_group_1": {
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "memory_per_device_gb": 80,
+          "interconnect": "nvlink",
+          "bandwidth_gbps": 900
+        }
+      },
+      "communication_overhead": {
+        "inter_stage_latency_ms": 0.5,
+        "tensor_parallel_allreduce_latency_ms": 0.1
+      }
+    },
+    "proposed_layer_wise": {
+      "name": "Proposed Layer-wise Partitioning",
+      "description": "Layer-wise deployment with cache-aware partitioning",
+      "parallel_strategy": {
+        "type": "layer_wise_pipeline",
+        "partitioning_method": "greedy_aggregation",
+        "cache_constraint_bytes": 50331648,
+        "memory_hierarchy": "SRAM_L2_cache"
+      },
+      "model_configuration": {
+        "layers": 16,
+        "hidden_size": 8192,
+        "heads": 16,
+        "head_dimension": 512,
+        "mlp_hidden_size": 32768,
+        "precision": "FP16",
+        "batch_size": 1024,
+        "sequence_length": 10000
+      },
+      "memory_footprint_estimation": {
+        "per_layer_weights_bytes": 1436549120,
+        "per_layer_activations_bytes": 167772160000,
+        "per_layer_buffer_bytes": 5368709120,
+        "total_per_layer_bytes": 174574530560
+      },
+      "partitioning_algorithm": {
+        "type": "greedy_layer_aggregation",
+        "cache_capacity_bytes": 50331648,
+        "layers_per_partition": 2,
+        "partitions_count": 8,
+        "partition_boundaries": [
+          {"start_layer": 0, "end_layer": 1, "size_bytes": 349149061120},
+          {"start_layer": 2, "end_layer": 3, "size_bytes": 349149061120},
+          {"start_layer": 4, "end_layer": 5, "size_bytes": 349149061120},
+          {"start_layer": 6, "end_layer": 7, "size_bytes": 349149061120},
+          {"start_layer": 8, "end_layer": 9, "size_bytes": 349149061120},
+          {"start_layer": 10, "end_layer": 11, "size_bytes": 349149061120},
+          {"start_layer": 12, "end_layer": 13, "size_bytes": 349149061120},
+          {"start_layer": 14, "end_layer": 15, "size_bytes": 349149061120}
+        ]
+      },
+      "module_division": {
+        "partition_0": {
+          "layers": [0, 1],
+          "devices": [0],
+          "memory_allocation": {
+            "weights_bytes": 2873098240,
+            "activations_bytes": 335544320000,
+            "buffers_bytes": 10737418240,
+            "total_bytes": 349149061120
+          }
+        },
+        "partition_1": {
+          "layers": [2, 3],
+          "devices": [1],
+          "memory_allocation": {
+            "weights_bytes": 2873098240,
+            "activations_bytes": 335544320000,
+            "buffers_bytes": 10737418240,
+            "total_bytes": 349149061120
+          }
+        },
+        "partition_2": {
+          "layers": [4, 5],
+          "devices": [2],
+          "memory_allocation": {
+            "weights_bytes": 2873098240,
+            "activations_bytes": 335544320000,
+            "buffers_bytes": 10737418240,
+            "total_bytes": 349149061120
+          }
+        },
+        "partition_3": {
+          "layers": [6, 7],
+          "devices": [3],
+          "memory_allocation": {
+            "weights_bytes": 2873098240,
+            "activations_bytes": 335544320000,
+            "buffers_bytes": 10737418240,
+            "total_bytes": 349149061120
+          }
+        },
+        "partition_4": {
+          "layers": [8, 9],
+          "devices": [4],
+          "memory_allocation": {
+            "weights_bytes": 2873098240,
+            "activations_bytes": 335544320000,
+            "buffers_bytes": 10737418240,
+            "total_bytes": 349149061120
+          }
+        },
+        "partition_5": {
+          "layers": [10, 11],
+          "devices": [5],
+          "memory_allocation": {
+            "weights_bytes": 2873098240,
+            "activations_bytes": 335544320000,
+            "buffers_bytes": 10737418240,
+            "total_bytes": 349149061120
+          }
+        },
+        "partition_6": {
+          "layers": [12, 13],
+          "devices": [6],
+          "memory_allocation": {
+            "weights_bytes": 2873098240,
+            "activations_bytes": 335544320000,
+            "buffers_bytes": 10737418240,
+            "total_bytes": 349149061120
+          }
+        },
+        "partition_7": {
+          "layers": [14, 15],
+          "devices": [7],
+          "memory_allocation": {
+            "weights_bytes": 2873098240,
+            "activations_bytes": 335544320000,
+            "buffers_bytes": 10737418240,
+            "total_bytes": 349149061120
+          }
+        }
+      },
+      "device_mapping": {
+        "device_0": {
+          "partition": "partition_0",
+          "layers": [0, 1],
+          "memory_utilization": {
+            "cache_used_bytes": 50331648,
+            "dram_used_bytes": 0,
+            "efficiency": 0.95
+          }
+        },
+        "device_1": {
+          "partition": "partition_1",
+          "layers": [2, 3],
+          "memory_utilization": {
+            "cache_used_bytes": 50331648,
+            "dram_used_bytes": 0,

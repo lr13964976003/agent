@@ -3,12 +3,15 @@ import re
 import json
 import subprocess
 from flask import Flask, request, jsonify, send_file, render_template
+import markdown
 
 app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR = os.path.join(BASE_DIR, "src")
 GENERATED_DIR = os.path.join(BASE_DIR, "generated_docs")
+
+print(os.getcwd())
 
 # ---------- 环境列表 ----------
 @app.route("/list_environments", methods=["GET"])
@@ -165,6 +168,28 @@ def generate_docs():
 
     return jsonify({"message": f"Paper to Real 成功: {arxiv_id} ({env})"})
 
+@app.route("/get_markdown", methods=["GET"])
+def get_markdown():
+    arxiv_id = request.args.get("arxiv_id")
+    folder = os.path.join("./papers", arxiv_id)
+
+    if not os.path.exists(folder):
+        return jsonify({"error": "No paper found"}), 404
+
+    md_path = os.path.join(folder,"paper.md")
+    if os.path.exists(md_path) is False:
+        return jsonify({"error": "No paper found"}), 404
+
+    with open(md_path, "r", encoding="utf-8") as f:
+        md_text = f.read()
+
+    html_content = markdown.markdown(md_text, extensions=['fenced_code', 'tables'])
+
+    return jsonify({
+        "html": html_content
+        }
+    )
+
 # ---------- 文档管理 ----------
 @app.route("/list_docs", methods=["GET"])
 def list_docs():
@@ -199,4 +224,4 @@ def index():
     return render_template("index.html")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0",port=5000,debug=True)

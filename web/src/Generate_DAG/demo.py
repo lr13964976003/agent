@@ -11,10 +11,15 @@ from _my_tools import *
 from _build_agent import *
 from datetime import datetime 
 from opentelemetry import trace
+import arxiv
+import argparse
+import json
 
+#BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+#ROOT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
 
 def fetch_prompt_local(slug:str, version:str, inputs:dict) -> str:
-    with open(f"./prompts/{slug}_{version}.md","r") as f:
+    with open(f"./src/Generate_DAG/prompts/{slug}/{slug}_{version}.txt","r") as f:
         prompt = f.read()
     prompt = re.sub(r'<<<.*?>>>', '', prompt, flags=re.DOTALL)
     prompt = prompt.format(**inputs)
@@ -67,7 +72,7 @@ def main():
                 "version": prompts_json["Read_Paper/Read_Paper"],
                 "inputs": {
                     "paper_path": f"./papers/{arxiv_id}/paper.md",
-                    "knowledge_path": "./knowledges",
+                    "knowledge_path": "./knowledges/llm_parallel_strategies.md",
                     "save_path": output_dir
                     },
                 "tools": [
@@ -95,7 +100,7 @@ def main():
                 "slug": "Generate_DAG",
                 "version": prompts_json["Generate_DAG/Generate_DAG"],
                 "inputs": {
-                    "knowledge_path": "./knowledges",
+                    "knowledge_path": "./knowledges/llm_parallel_strategies.md",
                     "save_path": output_dir
                     },
                 "tools": [
@@ -135,7 +140,9 @@ def main():
     agents = []
     tasks = []
     expected_outputs = ["The file path of concise paper and new idea", \
+                        "Check Result", \
                         "The path of Python code of implement methods", \
+                        "Check Result", \
                             "The path of testing result"]
     i = 0
     for k in variant.keys():

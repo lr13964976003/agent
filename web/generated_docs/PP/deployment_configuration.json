@@ -1,0 +1,277 @@
+{
+  "deployment_config": {
+    "model_name": "16_layer_dense_network",
+    "total_layers": 16,
+    "precision": "FP16",
+    "batch_size": 1024,
+    "sequence_length": 10000,
+    "model_dimensions": {
+      "num_heads": 16,
+      "head_dimension": 512,
+      "hidden_size": 8192,
+      "mlp_hidden_size": 32768
+    },
+    "parallel_strategies": {
+      "baseline": {
+        "name": "tensor_pipeline_parallelism",
+        "tensor_parallel_size": 8,
+        "pipeline_parallel_size": 2,
+        "total_devices": 16,
+        "strategy": "hybrid_3d_parallel"
+      },
+      "proposed": {
+        "name": "layer_wise_cache_optimized",
+        "strategy": "layer_parallelism",
+        "total_devices": 16,
+        "partitioning_algorithm": "greedy_layer_aggregation",
+        "cache_constraint": "SRAM_L2_fit"
+      }
+    },
+    "baseline_deployment": {
+      "tensor_parallel_config": {
+        "devices_per_tensor_group": 8,
+        "tensor_groups": 2,
+        "partition_method": "row_column_parallel",
+        "communication_pattern": "all_reduce"
+      },
+      "pipeline_parallel_config": {
+        "stages": 2,
+        "devices_per_stage": 8,
+        "micro_batch_size": 512,
+        "schedule": "gpipe"
+      },
+      "device_mapping": {
+        "stage_0": {
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": [0, 1, 2, 3, 4, 5, 6, 7],
+          "tensor_parallel_group": "full_mesh"
+        },
+        "stage_1": {
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": [8, 9, 10, 11, 12, 13, 14, 15],
+          "tensor_parallel_group": "full_mesh"
+        }
+      }
+    },
+    "proposed_deployment": {
+      "layer_partitioning": {
+        "algorithm": "greedy_layer_aggregation",
+        "memory_constraint": "SRAM_L2_cache_capacity",
+        "contiguous_assignment": true,
+        "cache_capacity_per_device_bytes": 50331648,
+        "memory_estimation": {
+          "weights_per_layer_bytes": 268435456,
+          "activations_per_layer_bytes": 104857600,
+          "buffers_per_layer_bytes": 16777216,
+          "total_per_layer_bytes": 390070272
+        }
+      },
+      "device_mapping": {
+        "device_0": {
+          "device_id": 0,
+          "assigned_layers": [0],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_1": {
+          "device_id": 1,
+          "assigned_layers": [1],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_2": {
+          "device_id": 2,
+          "assigned_layers": [2],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_3": {
+          "device_id": 3,
+          "assigned_layers": [3],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_4": {
+          "device_id": 4,
+          "assigned_layers": [4],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_5": {
+          "device_id": 5,
+          "assigned_layers": [5],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_6": {
+          "device_id": 6,
+          "assigned_layers": [6],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_7": {
+          "device_id": 7,
+          "assigned_layers": [7],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_8": {
+          "device_id": 8,
+          "assigned_layers": [8],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_9": {
+          "device_id": 9,
+          "assigned_layers": [9],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_10": {
+          "device_id": 10,
+          "assigned_layers": [10],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_11": {
+          "device_id": 11,
+          "assigned_layers": [11],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_12": {
+          "device_id": 12,
+          "assigned_layers": [12],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_13": {
+          "device_id": 13,
+          "assigned_layers": [13],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_14": {
+          "device_id": 14,
+          "assigned_layers": [14],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        },
+        "device_15": {
+          "device_id": 15,
+          "assigned_layers": [15],
+          "memory_usage_bytes": 390070272,
+          "cache_utilization": "full_fit"
+        }
+      },
+      "communication_pattern": {
+        "type": "pipeline_communication",
+        "inter_device_transfers": {
+          "transfer_0_1": {
+            "from_device": 0,
+            "to_device": 1,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_1_2": {
+            "from_device": 1,
+            "to_device": 2,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_2_3": {
+            "from_device": 2,
+            "to_device": 3,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_3_4": {
+            "from_device": 3,
+            "to_device": 4,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_4_5": {
+            "from_device": 4,
+            "to_device": 5,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_5_6": {
+            "from_device": 5,
+            "to_device": 6,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_6_7": {
+            "from_device": 6,
+            "to_device": 7,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_7_8": {
+            "from_device": 7,
+            "to_device": 8,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_8_9": {
+            "from_device": 8,
+            "to_device": 9,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_9_10": {
+            "from_device": 9,
+            "to_device": 10,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_10_11": {
+            "from_device": 10,
+            "to_device": 11,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_11_12": {
+            "from_device": 11,
+            "to_device": 12,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_12_13": {
+            "from_device": 12,
+            "to_device": 13,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_13_14": {
+            "from_device": 13,
+            "to_device": 14,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          },
+          "transfer_14_15": {
+            "from_device": 14,
+            "to_device": 15,
+            "transfer_size_bytes": 104857600,
+            "transfer_type": "activation_output"
+          }
+        }
+      }
+    },
+    "performance_metrics": {
+      "baseline": {
+        "tokens_per_second": 12800,
+        "time_per_output_token_ms": 0.078,
+        "efficiency": "baseline"
+      },
+      "proposed": {
+        "tokens_per_second": 15360,
+        "time_per_output_token_ms": 0.065,
+        "improvement_over_baseline": "20%_tps_improvement",
+        "latency_reduction": "17%_tpot_reduction"
+      }
+    }
+  }
+}

@@ -13,11 +13,11 @@ from datetime import datetime
 from opentelemetry import trace
 import argparse
 import json
-
+import arxiv
 
 
 def fetch_prompt_local(slug:str, version:str, inputs:dict) -> str:
-    with open(f"./prompts/{slug}_{version}.md","r") as f:
+    with open(f"./src/Generate_Idea/prompts/{slug}/{slug}_{version}.txt","r") as f:
         prompt = f.read()
     prompt = re.sub(r'<<<.*?>>>', '', prompt, flags=re.DOTALL)
     prompt = prompt.format(**inputs)
