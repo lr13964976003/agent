@@ -141,7 +141,7 @@ def main():
         agents.append(build_agent(tools))
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
-    '''
+    
     check_result = run_pipeline([agents[0]], [tasks[0]])
     if "failed" in check_result.lower():
         return "The paper is not relevant to the topic"
@@ -156,15 +156,18 @@ def main():
     f"There are the submissions of previous agents: \n\n{dag_result}"
     
     init_perf = run_pipeline([agents[5]], [perf_task])
-    '''
+
+    with open("temp.txt","w") as f:
+        f.write(f"{dag_result}\n\n{init_perf}")
+
     for i in range(MAX_ITER):
-        '''
+        
         if i == 0:
             iter_input = f"{dag_result}\n\n{init_perf}"
         else:
             iter_input = f"{iter_result}\n\n{iter_perf}"
-        '''
-        iter_input = "./outputs/2025-10-14-14-33-05/deployment_config.json"
+        
+        #iter_input = "./outputs/2025-10-14-14-33-05"
         iter_loop = ReviewLoop(worker=agents[6], reviewer=agents[4], work_task=tasks[6], review_task=tasks[4], inputs=iter_input)
         iter_result = iter_loop.run()
         perf_task = tasks[5]

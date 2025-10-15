@@ -1,0 +1,365 @@
+{
+  "models": {
+    "baseline": {
+      "name": "2-layer Dense Transformer (Baseline)",
+      "parallel_strategy": {
+        "type": "tensor_parallelism_pipeline_parallelism",
+        "tensor_parallel_degree": 8,
+        "pipeline_parallel_degree": 2,
+        "total_devices": 16
+      },
+      "modules": {
+        "layer_0": {
+          "mha": {
+            "type": "multi_head_attention",
+            "parameters": {
+              "num_heads": 16,
+              "head_dim": 512,
+              "embed_dim": 8192,
+              "qkv_weight_shape": [8192, 8192],
+              "output_weight_shape": [8192, 8192]
+            },
+            "tensor_parallel_split": {
+              "qkv_column_parallel": {
+                "split_dim": 0,
+                "split_size": 1024,
+                "devices": [0, 1, 2, 3, 4, 5, 6, 7]
+              },
+              "output_row_parallel": {
+                "split_dim": 1,
+                "split_size": 1024,
+                "devices": [0, 1, 2, 3, 4, 5, 6, 7]
+              }
+            }
+          },
+          "mlp": {
+            "type": "feed_forward",
+            "parameters": {
+              "input_dim": 8192,
+              "hidden_dim": 32768,
+              "output_dim": 8192,
+              "fc1_weight_shape": [32768, 8192],
+              "fc2_weight_shape": [8192, 32768]
+            },
+            "tensor_parallel_split": {
+              "fc1_column_parallel": {
+                "split_dim": 0,
+                "split_size": 4096,
+                "devices": [0, 1, 2, 3, 4, 5, 6, 7]
+              },
+              "fc2_row_parallel": {
+                "split_dim": 1,
+                "split_size": 4096,
+                "devices": [0, 1, 2, 3, 4, 5, 6, 7]
+              }
+            }
+          }
+        },
+        "layer_1": {
+          "mha": {
+            "type": "multi_head_attention",
+            "parameters": {
+              "num_heads": 16,
+              "head_dim": 512,
+              "embed_dim": 8192,
+              "qkv_weight_shape": [8192, 8192],
+              "output_weight_shape": [8192, 8192]
+            },
+            "tensor_parallel_split": {
+              "qkv_column_parallel": {
+                "split_dim": 0,
+                "split_size": 1024,
+                "devices": [8, 9, 10, 11, 12, 13, 14, 15]
+              },
+              "output_row_parallel": {
+                "split_dim": 1,
+                "split_size": 1024,
+                "devices": [8, 9, 10, 11, 12, 13, 14, 15]
+              }
+            }
+          },
+          "mlp": {
+            "type": "feed_forward",
+            "parameters": {
+              "input_dim": 8192,
+              "hidden_dim": 32768,
+              "output_dim": 8192,
+              "fc1_weight_shape": [32768, 8192],
+              "fc2_weight_shape": [8192, 32768]
+            },
+            "tensor_parallel_split": {
+              "fc1_column_parallel": {
+                "split_dim": 0,
+                "split_size": 4096,
+                "devices": [8, 9, 10, 11, 12, 13, 14, 15]
+              },
+              "fc2_row_parallel": {
+                "split_dim": 1,
+                "split_size": 4096,
+                "devices": [8, 9, 10, 11, 12, 13, 14, 15]
+              }
+            }
+          }
+        }
+      },
+      "device_mapping": {
+        "pipeline_stage_0": {
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layer": 0
+        },
+        "pipeline_stage_1": {
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layer": 1
+        }
+      }
+    },
+    "proposed": {
+      "name": "2-layer Dense Transformer (Proposed)",
+      "parallel_strategy": {
+        "type": "two_level_attention_partitioning",
+        "m": 4,
+        "n": 4,
+        "total_partitions": 16,
+        "total_devices": 16
+      },
+      "modules": {
+        "layer_0": {
+          "mha": {
+            "type": "multi_head_attention_partitioned",
+            "parameters": {
+              "num_heads": 16,
+              "head_dim": 512,
+              "embed_dim": 8192,
+              "heads_per_group": 4,
+              "dimension_per_segment": 128,
+              "total_partitions": 16
+            },
+            "partitioning_scheme": {
+              "head_groups": [
+                {
+                  "group_id": 0,
+                  "head_indices": [0, 1, 2, 3],
+                  "dimension_segments": [
+                    {"segment_id": 0, "dim_range": [0, 127], "device": 0},
+                    {"segment_id": 1, "dim_range": [128, 255], "device": 1},
+                    {"segment_id": 2, "dim_range": [256, 383], "device": 2},
+                    {"segment_id": 3, "dim_range": [384, 511], "device": 3}
+                  ]
+                },
+                {
+                  "group_id": 1,
+                  "head_indices": [4, 5, 6, 7],
+                  "dimension_segments": [
+                    {"segment_id": 0, "dim_range": [0, 127], "device": 4},
+                    {"segment_id": 1, "dim_range": [128, 255], "device": 5},
+                    {"segment_id": 2, "dim_range": [256, 383], "device": 6},
+                    {"segment_id": 3, "dim_range": [384, 511], "device": 7}
+                  ]
+                },
+                {
+                  "group_id": 2,
+                  "head_indices": [8, 9, 10, 11],
+                  "dimension_segments": [
+                    {"segment_id": 0, "dim_range": [0, 127], "device": 8},
+                    {"segment_id": 1, "dim_range": [128, 255], "device": 9},
+                    {"segment_id": 2, "dim_range": [256, 383], "device": 10},
+                    {"segment_id": 3, "dim_range": [384, 511], "device": 11}
+                  ]
+                },
+                {
+                  "group_id": 3,
+                  "head_indices": [12, 13, 14, 15],
+                  "dimension_segments": [
+                    {"segment_id": 0, "dim_range": [0, 127], "device": 12},
+                    {"segment_id": 1, "dim_range": [128, 255], "device": 13},
+                    {"segment_id": 2, "dim_range": [256, 383], "device": 14},
+                    {"segment_id": 3, "dim_range": [384, 511], "device": 15}
+                  ]
+                }
+              ]
+            },
+            "weight_partitioning": {
+              "qkv_weights": {
+                "shape_per_partition": [512, 512],
+                "total_partitions": 16,
+                "partition_mapping": [
+                  {"partition_id": 0, "device": 0, "head_group": 0, "dim_segment": 0},
+                  {"partition_id": 1, "device": 1, "head_group": 0, "dim_segment": 1},
+                  {"partition_id": 2, "device": 2, "head_group": 0, "dim_segment": 2},
+                  {"partition_id": 3, "device": 3, "head_group": 0, "dim_segment": 3},
+                  {"partition_id": 4, "device": 4, "head_group": 1, "dim_segment": 0},
+                  {"partition_id": 5, "device": 5, "head_group": 1, "dim_segment": 1},
+                  {"partition_id": 6, "device": 6, "head_group": 1, "dim_segment": 2},
+                  {"partition_id": 7, "device": 7, "head_group": 1, "dim_segment": 3},
+                  {"partition_id": 8, "device": 8, "head_group": 2, "dim_segment": 0},
+                  {"partition_id": 9, "device": 9, "head_group": 2, "dim_segment": 1},
+                  {"partition_id": 10, "device": 10, "head_group": 2, "dim_segment": 2},
+                  {"partition_id": 11, "device": 11, "head_group": 2, "dim_segment": 3},
+                  {"partition_id": 12, "device": 12, "head_group": 3, "dim_segment": 0},
+                  {"partition_id": 13, "device": 13, "head_group": 3, "dim_segment": 1},
+                  {"partition_id": 14, "device": 14, "head_group": 3, "dim_segment": 2},
+                  {"partition_id": 15, "device": 15, "head_group": 3, "dim_segment": 3}
+                ]
+              }
+            }
+          },
+          "mlp": {
+            "type": "feed_forward_tensor_parallel",
+            "parameters": {
+              "input_dim": 8192,
+              "hidden_dim": 32768,
+              "output_dim": 8192,
+              "tensor_parallel_degree": 16
+            },
+            "partitioning": {
+              "fc1_column_parallel": {
+                "split_dim": 0,
+                "split_size": 2048,
+                "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+              },
+              "fc2_row_parallel": {
+                "split_dim": 1,
+                "split_size": 2048,
+                "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+              }
+            }
+          }
+        },
+        "layer_1": {
+          "mha": {
+            "type": "multi_head_attention_partitioned",
+            "parameters": {
+              "num_heads": 16,
+              "head_dim": 512,
+              "embed_dim": 8192,
+              "heads_per_group": 4,
+              "dimension_per_segment": 128,
+              "total_partitions": 16
+            },
+            "partitioning_scheme": {
+              "head_groups": [
+                {
+                  "group_id": 0,
+                  "head_indices": [0, 1, 2, 3],
+                  "dimension_segments": [
+                    {"segment_id": 0, "dim_range": [0, 127], "device": 0},
+                    {"segment_id": 1, "dim_range": [128, 255], "device": 1},
+                    {"segment_id": 2, "dim_range": [256, 383], "device": 2},
+                    {"segment_id": 3, "dim_range": [384, 511], "device": 3}
+                  ]
+                },
+                {
+                  "group_id": 1,
+                  "head_indices": [4, 5, 6, 7],
+                  "dimension_segments": [
+                    {"segment_id": 0, "dim_range": [0, 127], "device": 4},
+                    {"segment_id": 1, "dim_range": [128, 255], "device": 5},
+                    {"segment_id": 2, "dim_range": [256, 383], "device": 6},
+                    {"segment_id": 3, "dim_range": [384, 511], "device": 7}
+                  ]
+                },
+                {
+                  "group_id": 2,
+                  "head_indices": [8, 9, 10, 11],
+                  "dimension_segments": [
+                    {"segment_id": 0, "dim_range": [0, 127], "device": 8},
+                    {"segment_id": 1, "dim_range": [128, 255], "device": 9},
+                    {"segment_id": 2, "dim_range": [256, 383], "device": 10},
+                    {"segment_id": 3, "dim_range": [384, 511], "device": 11}
+                  ]
+                },
+                {
+                  "group_id": 3,
+                  "head_indices": [12, 13, 14, 15],
+                  "dimension_segments": [
+                    {"segment_id": 0, "dim_range": [0, 127], "device": 12},
+                    {"segment_id": 1, "dim_range": [128, 255], "device": 13},
+                    {"segment_id": 2, "dim_range": [256, 383], "device": 14},
+                    {"segment_id": 3, "dim_range": [384, 511], "device": 15}
+                  ]
+                }
+              ]
+            }
+          },
+          "mlp": {
+            "type": "feed_forward_tensor_parallel",
+            "parameters": {
+              "input_dim": 8192,
+              "hidden_dim": 32768,
+              "output_dim": 8192,
+              "tensor_parallel_degree": 16
+            },
+            "partitioning": {
+              "fc1_column_parallel": {
+                "split_dim": 0,
+                "split_size": 2048,
+                "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+              },
+              "fc2_row_parallel": {
+                "split_dim": 1,
+                "split_size": 2048,
+                "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+              }
+            }
+          }
+        }
+      },
+      "device_mapping": {
+        "device_0": {"gpu_id": 0, "mha_partition": {"head_group": 0, "dim_segment": 0}, "mlp_partition": {"fc1_slice": 0, "fc2_slice": 0}},
+        "device_1": {"gpu_id": 1, "mha_partition": {"head_group": 0, "dim_segment": 1}, "mlp_partition": {"fc1_slice": 1, "fc2_slice": 1}},
+        "device_2": {"gpu_id": 2, "mha_partition": {"head_group": 0, "dim_segment": 2}, "mlp_partition": {"fc1_slice": 2, "fc2_slice": 2}},
+        "device_3": {"gpu_id": 3, "mha_partition": {"head_group": 0, "dim_segment": 3}, "mlp_partition": {"fc1_slice": 3, "fc2_slice": 3}},
+        "device_4": {"gpu_id": 4, "mha_partition": {"head_group": 1, "dim_segment": 0}, "mlp_partition": {"fc1_slice": 4, "fc2_slice": 4}},
+        "device_5": {"gpu_id": 5, "mha_partition": {"head_group": 1, "dim_segment": 1}, "mlp_partition": {"fc1_slice": 5, "fc2_slice": 5}},
+        "device_6": {"gpu_id": 6, "mha_partition": {"head_group": 1, "dim_segment": 2}, "mlp_partition": {"fc1_slice": 6, "fc2_slice": 6}},
+        "device_7": {"gpu_id": 7, "mha_partition": {"head_group": 1, "dim_segment": 3}, "mlp_partition": {"fc1_slice": 7, "fc2_slice": 7}},
+        "device_8": {"gpu_id": 8, "mha_partition": {"head_group": 2, "dim_segment": 0}, "mlp_partition": {"fc1_slice": 8, "fc2_slice": 8}},
+        "device_9": {"gpu_id": 9, "mha_partition": {"head_group": 2, "dim_segment": 1}, "mlp_partition": {"fc1_slice": 9, "fc2_slice": 9}},
+        "device_10": {"gpu_id": 10, "mha_partition": {"head_group": 2, "dim_segment": 2}, "mlp_partition": {"fc1_slice": 10, "fc2_slice": 10}},
+        "device_11": {"gpu_id": 11, "mha_partition": {"head_group": 2, "dim_segment": 3}, "mlp_partition": {"fc1_slice": 11, "fc2_slice": 11}},
+        "device_12": {"gpu_id": 12, "mha_partition": {"head_group": 3, "dim_segment": 0}, "mlp_partition": {"fc1_slice": 12, "fc2_slice": 12}},
+        "device_13": {"gpu_id": 13, "mha_partition": {"head_group": 3, "dim_segment": 1}, "mlp_partition": {"fc1_slice": 13, "fc2_slice": 13}},
+        "device_14": {"gpu_id": 14, "mha_partition": {"head_group": 3, "dim_segment": 2}, "mlp_partition": {"fc1_slice": 14, "fc2_slice": 14}},
+        "device_15": {"gpu_id": 15, "mha_partition": {"head_group": 3, "dim_segment": 3}, "mlp_partition": {"fc1_slice": 15, "fc2_slice": 15}}
+      }
+    }
+  },
+  "communication_patterns": {
+    "baseline": {
+      "pipeline_communication": {
+        "stages": 2,
+        "devices_per_stage": 8,
+        "communication_volume": "layer_output_activations"
+      },
+      "tensor_parallel_communication": {
+        "all_reduce_operations": ["mha_output", "mlp_output"],
+        "communication_volume": "model_parallel_size * hidden_dim"
+      }
+    },
+    "proposed": {
+      "hierarchical_communication": {
+        "intra_group_concatenation": {
+          "groups": 4,
+          "devices_per_group": 4,
+          "communication_volume": "head_group_size * dimension_segment"
+        },
+        "cross_group_concatenation": {
+          "final_reduction": "head_dimension_concatenation",
+          "communication_volume": "embed_dim * sequence_length * batch_size"
+        }
+      },
+      "tensor_parallel_mlp": {
+        "all_reduce_operations": ["fc1_forward", "fc2_backward"],
+        "communication_volume": "tensor_parallel_degree * hidden_dim"
+      }
+    }
+  },
+  "runtime_parameters": {
+    "batch_size": 1024,
+    "sequence_length": 10000,
+    "precision": "fp16",
+    "memory_per_device_gb": 80,
+    "communication_backend": "nccl",
+    "synchronization_method": "cuda_stream"
+  }
+}
