@@ -1,0 +1,99 @@
+digraph optimized_mha_layer_1 {
+    rankdir=TB size="25,35"
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    
+    input [label="Layer 1 MHA Input\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-11 (Pipeline Stage 2)" fillcolor=lightgreen shape=parallelogram]
+    
+    // LayerNorm
+    ln [label="LayerNorm\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-11" fillcolor=lightyellow shape=rectangle]
+    
+    // Optimized QKV projections - 4-way tensor parallel
+    q_linear_gpu0 [label="Q Linear\nHeads 0-15, Dim 0-2047\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nGPU: 8" fillcolor=lightcoral shape=rectangle]
+    q_linear_gpu1 [label="Q Linear\nHeads 0-15, Dim 2048-4095\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nGPU: 9" fillcolor=lightcoral shape=rectangle]
+    q_linear_gpu2 [label="Q Linear\nHeads 0-15, Dim 4096-6143\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nGPU: 10" fillcolor=lightcoral shape=rectangle]
+    q_linear_gpu3 [label="Q Linear\nHeads 0-15, Dim 6144-8191\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nGPU: 11" fillcolor=lightcoral shape=rectangle]
+    
+    k_linear_gpu0 [label="K Linear\nHeads 0-15, Dim 0-2047\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nGPU: 8" fillcolor=lightcoral shape=rectangle]
+    k_linear_gpu1 [label="K Linear\nHeads 0-15, Dim 2048-4095\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nGPU: 9" fillcolor=lightcoral shape=rectangle]
+    k_linear_gpu2 [label="K Linear\nHeads 0-15, Dim 4096-6143\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nGPU: 10" fillcolor=lightcoral shape=rectangle]
+    k_linear_gpu3 [label="K Linear\nHeads 0-15, Dim 6144-8191\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nGPU: 11" fillcolor=lightcoral shape=rectangle]
+    
+    v_linear_gpu0 [label="V Linear\nHeads 0-15, Dim 0-2047\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nGPU: 8" fillcolor=lightcoral shape=rectangle]
+    v_linear_gpu1 [label="V Linear\nHeads 0-15, Dim 2048-4095\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nGPU: 9" fillcolor=lightcoral shape=rectangle]
+    v_linear_gpu2 [label="V Linear\nHeads 0-15, Dim 4096-6143\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nGPU: 10" fillcolor=lightcoral shape=rectangle]
+    v_linear_gpu3 [label="V Linear\nHeads 0-15, Dim 6144-8191\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nGPU: 11" fillcolor=lightcoral shape=rectangle]
+    
+    // Optimized attention computation
+    attn_gpu0 [label="Scaled Dot-Product Attention\nHeads 0-15, Partial 0\nQ: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nK: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nV: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=512]\nGPU: 8" fillcolor=lightpink shape=rectangle]
+    attn_gpu1 [label="Scaled Dot-Product Attention\nHeads 0-15, Partial 1\nQ: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nK: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nV: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=512]\nGPU: 9" fillcolor=lightpink shape=rectangle]
+    attn_gpu2 [label="Scaled Dot-Product Attention\nHeads 0-15, Partial 2\nQ: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nK: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nV: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=512]\nGPU: 10" fillcolor=lightpink shape=rectangle]
+    attn_gpu3 [label="Scaled Dot-Product Attention\nHeads 0-15, Partial 3\nQ: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nK: [batch_size=1024, seq_len=10000, heads=16, d_k=128]\nV: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=512]\nGPU: 11" fillcolor=lightpink shape=rectangle]
+    
+    concat_heads [label="Concatenate Attention Heads\nInput: 4×[batch_size=1024, seq_len=10000, heads=16, d_v=512]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-11 (All-reduce)" fillcolor=lightsteelblue shape=parallelogram]
+    
+    output_proj_gpu0 [label="Output Linear Projection\nPartial 0\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 8" fillcolor=lightcoral shape=rectangle]
+    output_proj_gpu1 [label="Output Linear Projection\nPartial 1\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 9" fillcolor=lightcoral shape=rectangle]
+    output_proj_gpu2 [label="Output Linear Projection\nPartial 2\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 10" fillcolor=lightcoral shape=rectangle]
+    output_proj_gpu3 [label="Output Linear Projection\nPartial 3\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 11" fillcolor=lightcoral shape=rectangle]
+    
+    output_allreduce [label="All-Reduce Sum\nInput: 4×[batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-11" fillcolor=lightsteelblue shape=parallelogram]
+    
+    residual [label="Residual Add\nInput 1: [batch_size=1024, seq_len=10000, embed_dim=8192]\nInput 2: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-11" fillcolor=lightgray shape=rectangle]
+    
+    // Connections
+    input -> ln
+    
+    // Q projections
+    ln -> q_linear_gpu0
+    ln -> q_linear_gpu1
+    ln -> q_linear_gpu2
+    ln -> q_linear_gpu3
+    
+    // K projections
+    ln -> k_linear_gpu0
+    ln -> k_linear_gpu1
+    ln -> k_linear_gpu2
+    ln -> k_linear_gpu3
+    
+    // V projections
+    ln -> v_linear_gpu0
+    ln -> v_linear_gpu1
+    ln -> v_linear_gpu2
+    ln -> v_linear_gpu3
+    
+    // Attention computation
+    q_linear_gpu0 -> attn_gpu0
+    k_linear_gpu0 -> attn_gpu0
+    v_linear_gpu0 -> attn_gpu0
+    
+    q_linear_gpu1 -> attn_gpu1
+    k_linear_gpu1 -> attn_gpu1
+    v_linear_gpu1 -> attn_gpu1
+    
+    q_linear_gpu2 -> attn_gpu2
+    k_linear_gpu2 -> attn_gpu2
+    v_linear_gpu2 -> attn_gpu2
+    
+    q_linear_gpu3 -> attn_gpu3
+    k_linear_gpu3 -> attn_gpu3
+    v_linear_gpu3 -> attn_gpu3
+    
+    // Concatenation and output projection
+    attn_gpu0 -> concat_heads
+    attn_gpu1 -> concat_heads
+    attn_gpu2 -> concat_heads
+    attn_gpu3 -> concat_heads
+    
+    concat_heads -> output_proj_gpu0
+    concat_heads -> output_proj_gpu1
+    concat_heads -> output_proj_gpu2
+    concat_heads -> output_proj_gpu3
+    
+    output_proj_gpu0 -> output_allreduce
+    output_proj_gpu1 -> output_allreduce
+    output_proj_gpu2 -> output_allreduce
+    output_proj_gpu3 -> output_allreduce
+    
+    output_allreduce -> residual
+    input -> residual
+}

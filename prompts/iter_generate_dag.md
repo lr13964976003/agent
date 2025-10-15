@@ -8,7 +8,7 @@ RESOURCES
 
 You have been provided with a supplementary knowledge located at {knowledge_path}.<<<提供知识路径>>>
 
-You have been provided with a deployment plan for large models and the actual performance of the deployment by previous agent.<<<提供部署方案与性能>>>
+You have been provided with a DAG for large models and the actual performance of the deployment by previous agent.<<<提供DAG与性能>>>
 
 
 
@@ -18,13 +18,9 @@ TASK
 
 You are tested to completed the following tasks:
 
-Gain a deep understanding of the methods in deployment configuration <<<要求理解之前的部署方案>>> 
+Gain a deep understanding of the structure of previous DAG and its performance.<<<要求理解之前的DAG>>> 
 
-Thinking about how to deploy the model on a GPU to achieve better performance and proposing corresponding deployment solutions. Ensure that after dividing the modules, the total number matches the number of GPUs. <<<提出更优的部署方案>>>
-
-After you complete the division of one module, calculate how many parts the module has been divided into and whether it matches the number of GPUs.  <<<要求反思部署方案是否符合实际>>>
-
-Please analyze how the dimensions of the module will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析维度变化是否正确>>>
+Optimize based on the existing DAG, with the goal of improving TPS(token per second), and propose new deployment strategies.
 
 Generate complete model deployment DAGs(directed acyclic graph) according to you deployment plan and the baseline in the paper by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
 
@@ -54,31 +50,11 @@ Do not make any changes to the original file. <<<禁止修改原始文件>>>
 
 Not all knowledge in supplementary materials will be useful to you. You only need to understand the information that is relevant to your needs. <<<提醒不是所有知识都是有用的>>>
 
-Generally speaking, a layer in the model consists of a Multi-Head Attention along with an FFN or (Gate and Experts). <<<提供模型一层的组成信息>>>
-
-A complete DAG must include a total input and output.<<<提醒要包含完整输入输出>>>
-
-If a module contains multiple operations, you must break it down to explicitly represent all of them.<<<包含多个operator的模块要拆>>>
-
-Each nodes must have the attributions: INPUT DIMENSION and OUTPUT DIMENSION. Sample: Input: \[batch\_size=?, seq\_len=?, heads=?, d\_k=?],Output:\[batch\_size=?, seq\_len=?, heads=?, d\_k=?]<<<每个计算节点必须注明输入维度和输出维度>>>
-
-If the node attribute has a specific value, you must specify which attribute it is by using an equal sign (=) for connection.<<<注明每个数值是哪个属性>>>
-
-Information from different dimensions must be separated by commas.<<<不同维度信息用,隔开>>>
-
-In a batch, there are a total of batch\_size independent data points.<<<batch中数据是独立的>>>
-
 The generated DAG must not contain any cycles.<<<禁止有环>>>
 
 Except for the input node, each node must have a preceding input node; except for the output node, each node must output to another node. <<<禁止有空悬的节点>>>
 
 The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意dag中不能漏残差的边>>>
-
-The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
-
-Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
-
-Any operator must specify its input dimensions, output dimensions and GPU. If the operator exists across all GPUs, it should be noted as "all GPUs." <<<要求每个算子注明维度与GPU>>>
 
 Use ellipses to represent communication, rectangles for computation, and parallelograms for routing/aggregation.<<<指定节点形状>>>
 
@@ -88,7 +64,7 @@ Ensure that you generate a complete DAG, not a simplified version that requires 
 
 For multi-layer models, it is not allowed to generate only one of the layers.<<<不允许省略层>>>
 
-Sometimes, a complete DAG can be very large and contain a lot of similar content. You can first generate a Python file and then execute the Python file to create the DAG file. <<<提醒可以生成python文件来生成dag>>>
+A complete DAG can be very large and contain a lot of similar content. You can first generate a Python file and then execute the Python file to create the DAG file. <<<提醒可以生成python文件来生成dag>>>
 
 By executing Python, you need to generate images and .dot files.<<<图像和dot文件都需要生成>>>
 
@@ -105,8 +81,6 @@ The generated DAG should be saved in {save_path}.
 All graphviz codes need to be saved in DOT format.<<<需要提交graphviz代码>>>
 
 All images need to be saved in SVG format. <<<指定图像保存格式为svg>>>
-
-Your deployment method needs to be saved in JSON format.<<<保存部署策略为json>>>
 
 Submit the save paths of all DAGs you generated in JSON format. <<<要求用json格式提交生成dag的路径>>>
 

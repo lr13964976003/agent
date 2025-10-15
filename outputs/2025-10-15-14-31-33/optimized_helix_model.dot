@@ -1,0 +1,95 @@
+digraph optimized_helix_model {
+    rankdir=TB size="40,50"
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    
+    model_input [label="Model Input\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: Pipeline Stage 0" fillcolor=lightgreen shape=parallelogram]
+    
+    // Layer 0 - Optimized Pipeline Stage 0
+    layer0_ln [label="Layer 0 LayerNorm\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-3 (Pipeline Stage 0)" fillcolor=lightyellow shape=rectangle]
+    
+    // Optimized MHA Layer 0 - 4-way tensor parallel within pipeline stage
+    layer0_mha_qkv_group0 [label="Layer 0 MHA QKV Linear\nHead Groups 0-1, Dim Seg 0-1\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=32, d_k=256]\nGPU: 0-3 (Tensor Parallel)" fillcolor=lightcoral shape=rectangle]
+    
+    layer0_mha_attn_group0 [label="Layer 0 MHA Attention\nHead Groups 0-1, Dim Seg 0-1\nQ: [batch_size=1024, seq_len=10000, heads=32, d_k=256]\nK: [batch_size=1024, seq_len=10000, heads=32, d_k=256]\nV: [batch_size=1024, seq_len=10000, heads=32, d_v=256]\nOutput: [batch_size=1024, seq_len=10000, heads=32, d_v=256]\nGPU: 0-3 (Tensor Parallel)" fillcolor=lightpink shape=rectangle]
+    
+    layer0_mha_out_group0 [label="Layer 0 MHA Output Linear\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-3 (Tensor Parallel)" fillcolor=lightcoral shape=rectangle]
+    
+    layer0_mha_residual [label="Layer 0 MHA Residual Add\nInput 1: [batch_size=1024, seq_len=10000, embed_dim=8192]\nInput 2: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-3" fillcolor=lightgray shape=rectangle]
+    
+    // Pipeline communication to next stage
+    pipeline_comm_0_1 [label="Pipeline Communication\nStage 0 → Stage 1\nData: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-3 → 4-7" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Layer 0 MLP - Pipeline Stage 1
+    layer0_mlp_ln [label="Layer 0 MLP LayerNorm\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 4-7 (Pipeline Stage 1)" fillcolor=lightyellow shape=rectangle]
+    
+    layer0_mlp_fc1 [label="Layer 0 MLP FC1\nColumn Parallel\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nGPU: 4-7 (4-way tensor parallel)" fillcolor=lightcoral shape=rectangle]
+    
+    layer0_mlp_gelu [label="Layer 0 MLP GELU\nInput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nGPU: 4-7" fillcolor=lightyellow shape=rectangle]
+    
+    layer0_mlp_fc2 [label="Layer 0 MLP FC2\nRow Parallel\nInput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 4-7 (4-way tensor parallel)" fillcolor=lightcoral shape=rectangle]
+    
+    layer0_mlp_residual [label="Layer 0 MLP Residual Add\nInput 1: [batch_size=1024, seq_len=10000, embed_dim=8192]\nInput 2: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 4-7" fillcolor=lightgray shape=rectangle]
+    
+    // Pipeline communication to next stage
+    pipeline_comm_1_2 [label="Pipeline Communication\nStage 1 → Stage 2\nData: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 4-7 → 8-11" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Layer 1 - Optimized Pipeline Stage 2
+    layer1_ln [label="Layer 1 LayerNorm\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-11 (Pipeline Stage 2)" fillcolor=lightyellow shape=rectangle]
+    
+    layer1_mha_qkv_group0 [label="Layer 1 MHA QKV Linear\nHead Groups 0-1, Dim Seg 0-1\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=32, d_k=256]\nGPU: 8-11 (Tensor Parallel)" fillcolor=lightcoral shape=rectangle]
+    
+    layer1_mha_attn_group0 [label="Layer 1 MHA Attention\nHead Groups 0-1, Dim Seg 0-1\nQ: [batch_size=1024, seq_len=10000, heads=32, d_k=256]\nK: [batch_size=1024, seq_len=10000, heads=32, d_k=256]\nV: [batch_size=1024, seq_len=10000, heads=32, d_v=256]\nOutput: [batch_size=1024, seq_len=10000, heads=32, d_v=256]\nGPU: 8-11 (Tensor Parallel)" fillcolor=lightpink shape=rectangle]
+    
+    layer1_mha_out_group0 [label="Layer 1 MHA Output Linear\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-11 (Tensor Parallel)" fillcolor=lightcoral shape=rectangle]
+    
+    layer1_mha_residual [label="Layer 1 MHA Residual Add\nInput 1: [batch_size=1024, seq_len=10000, embed_dim=8192]\nInput 2: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-11" fillcolor=lightgray shape=rectangle]
+    
+    // Pipeline communication to final stage
+    pipeline_comm_2_3 [label="Pipeline Communication\nStage 2 → Stage 3\nData: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-11 → 12-15" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Layer 1 MLP - Pipeline Stage 3
+    layer1_mlp_ln [label="Layer 1 MLP LayerNorm\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 12-15 (Pipeline Stage 3)" fillcolor=lightyellow shape=rectangle]
+    
+    layer1_mlp_fc1 [label="Layer 1 MLP FC1\nColumn Parallel\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nGPU: 12-15 (4-way tensor parallel)" fillcolor=lightcoral shape=rectangle]
+    
+    layer1_mlp_gelu [label="Layer 1 MLP GELU\nInput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nGPU: 12-15" fillcolor=lightyellow shape=rectangle]
+    
+    layer1_mlp_fc2 [label="Layer 1 MLP FC2\nRow Parallel\nInput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 12-15 (4-way tensor parallel)" fillcolor=lightcoral shape=rectangle]
+    
+    layer1_mlp_residual [label="Layer 1 MLP Residual Add\nInput 1: [batch_size=1024, seq_len=10000, embed_dim=8192]\nInput 2: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 12-15" fillcolor=lightgray shape=rectangle]
+    
+    model_output [label="Model Output\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 12-15" fillcolor=lightgreen shape=parallelogram]
+    
+    // Connections
+    model_input -> layer0_ln
+    layer0_ln -> layer0_mha_qkv_group0
+    layer0_mha_qkv_group0 -> layer0_mha_attn_group0
+    layer0_mha_attn_group0 -> layer0_mha_out_group0
+    layer0_mha_out_group0 -> layer0_mha_residual
+    model_input -> layer0_mha_residual
+    layer0_mha_residual -> pipeline_comm_0_1
+    
+    pipeline_comm_0_1 -> layer0_mlp_ln
+    layer0_mlp_ln -> layer0_mlp_fc1
+    layer0_mlp_fc1 -> layer0_mlp_gelu
+    layer0_mlp_gelu -> layer0_mlp_fc2
+    layer0_mlp_fc2 -> layer0_mlp_residual
+    pipeline_comm_0_1 -> layer0_mlp_residual
+    layer0_mlp_residual -> pipeline_comm_1_2
+    
+    pipeline_comm_1_2 -> layer1_ln
+    layer1_ln -> layer1_mha_qkv_group0
+    layer1_mha_qkv_group0 -> layer1_mha_attn_group0
+    layer1_mha_attn_group0 -> layer1_mha_out_group0
+    layer1_mha_out_group0 -> layer1_mha_residual
+    pipeline_comm_1_2 -> layer1_mha_residual
+    layer1_mha_residual -> pipeline_comm_2_3
+    
+    pipeline_comm_2_3 -> layer1_mlp_ln
+    layer1_mlp_ln -> layer1_mlp_fc1
+    layer1_mlp_fc1 -> layer1_mlp_gelu
+    layer1_mlp_gelu -> layer1_mlp_fc2
+    layer1_mlp_fc2 -> layer1_mlp_residual
+    pipeline_comm_2_3 -> layer1_mlp_residual
+    layer1_mlp_residual -> model_output
+}

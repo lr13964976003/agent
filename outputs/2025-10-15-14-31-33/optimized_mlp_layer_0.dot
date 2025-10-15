@@ -1,0 +1,65 @@
+digraph optimized_mlp_layer_0 {
+    rankdir=TB size="25,35"
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    
+    input [label="Layer 0 MLP Input\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 4-7 (Pipeline Stage 1)" fillcolor=lightgreen shape=parallelogram]
+    
+    // LayerNorm
+    ln [label="LayerNorm\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 4-7" fillcolor=lightyellow shape=rectangle]
+    
+    // Optimized FC1 - 4-way tensor parallel (reduced from 16-way)
+    fc1_gpu0 [label="FC1 Linear (Column Parallel)\nHidden Dim 0-8191\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nGPU: 4" fillcolor=lightcoral shape=rectangle]
+    fc1_gpu1 [label="FC1 Linear (Column Parallel)\nHidden Dim 8192-16383\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nGPU: 5" fillcolor=lightcoral shape=rectangle]
+    fc1_gpu2 [label="FC1 Linear (Column Parallel)\nHidden Dim 16384-24575\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nGPU: 6" fillcolor=lightcoral shape=rectangle]
+    fc1_gpu3 [label="FC1 Linear (Column Parallel)\nHidden Dim 24576-32767\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nGPU: 7" fillcolor=lightcoral shape=rectangle]
+    
+    // Concatenation for FC1 - reduced communication
+    fc1_concat [label="Concatenate FC1 Outputs\nInput: 4×[batch_size=1024, seq_len=10000, hidden_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nGPU: 4-7 (Local concat)" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // GELU activation
+    gelu [label="GELU Activation\nInput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nGPU: 4-7" fillcolor=lightyellow shape=rectangle]
+    
+    // Optimized FC2 - 4-way tensor parallel
+    fc2_gpu0 [label="FC2 Linear (Row Parallel)\nHidden Dim 0-8191\nInput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 4" fillcolor=lightcoral shape=rectangle]
+    fc2_gpu1 [label="FC2 Linear (Row Parallel)\nHidden Dim 8192-16383\nInput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 5" fillcolor=lightcoral shape=rectangle]
+    fc2_gpu2 [label="FC2 Linear (Row Parallel)\nHidden Dim 16384-24575\nInput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 6" fillcolor=lightcoral shape=rectangle]
+    fc2_gpu3 [label="FC2 Linear (Row Parallel)\nHidden Dim 24576-32767\nInput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 7" fillcolor=lightcoral shape=rectangle]
+    
+    // Split for FC2 - reduced communication
+    fc2_split [label="Split for FC2\nInput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nOutput: 4×[batch_size=1024, seq_len=10000, hidden_dim=8192]\nGPU: 4-7 (Local split)" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Final all-reduce for FC2
+    fc2_allreduce [label="All-Reduce Sum\nInput: 4×[batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 4-7" fillcolor=lightsteelblue shape=parallelogram]
+    
+    residual [label="Residual Add\nInput 1: [batch_size=1024, seq_len=10000, embed_dim=8192]\nInput 2: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 4-7" fillcolor=lightgray shape=rectangle]
+    
+    // Connections
+    input -> ln
+    
+    // Split input for tensor parallelism
+    ln -> fc1_gpu0
+    ln -> fc1_gpu1
+    ln -> fc1_gpu2
+    ln -> fc1_gpu3
+    
+    fc1_gpu0 -> fc1_concat
+    fc1_gpu1 -> fc1_concat
+    fc1_gpu2 -> fc1_concat
+    fc1_gpu3 -> fc1_concat
+    
+    fc1_concat -> gelu
+    gelu -> fc2_split
+    
+    fc2_split -> fc2_gpu0
+    fc2_split -> fc2_gpu1
+    fc2_split -> fc2_gpu2
+    fc2_split -> fc2_gpu3
+    
+    fc2_gpu0 -> fc2_allreduce
+    fc2_gpu1 -> fc2_allreduce
+    fc2_gpu2 -> fc2_allreduce
+    fc2_gpu3 -> fc2_allreduce
+    
+    fc2_allreduce -> residual
+    input -> residual
+}
