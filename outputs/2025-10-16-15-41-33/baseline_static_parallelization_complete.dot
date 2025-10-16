@@ -1,0 +1,287 @@
+digraph baseline_static_parallelization {
+    rankdir=TB;
+    node [shape=rectangle];
+    
+    // Input
+    Input [shape=ellipse, label="Input\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: All GPUs"];
+    
+    // Embedding Layer - Split across GPUs 0-7 (TP=8)
+    Embedding_GPU0 [label="Embedding\nInput: [batch_size=1024, seq_len=VARIABLE, token_ids]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 0"];
+    Embedding_GPU1 [label="Embedding\nInput: [batch_size=1024, seq_len=VARIABLE, token_ids]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 1"];
+    Embedding_GPU2 [label="Embedding\nInput: [batch_size=1024, seq_len=VARIABLE, token_ids]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 2"];
+    Embedding_GPU3 [label="Embedding\nInput: [batch_size=1024, seq_len=VARIABLE, token_ids]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 3"];
+    Embedding_GPU4 [label="Embedding\nInput: [batch_size=1024, seq_len=VARIABLE, token_ids]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 4"];
+    Embedding_GPU5 [label="Embedding\nInput: [batch_size=1024, seq_len=VARIABLE, token_ids]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 5"];
+    Embedding_GPU6 [label="Embedding\nInput: [batch_size=1024, seq_len=VARIABLE, token_ids]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 6"];
+    Embedding_GPU7 [label="Embedding\nInput: [batch_size=1024, seq_len=VARIABLE, token_ids]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 7"];
+    Embedding_AllGather [shape=parallelogram, label="Embedding All-Gather\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7"];
+    
+    // Positional Encoding
+    Positional_Encoding [label="Positional Encoding\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7"];
+    
+    // Layer 1 - Pipeline Stage 0 (GPUs 0-7)
+    subgraph cluster_layer1 {
+        label="Layer 1 - Pipeline Stage 0 (GPUs 0-7)";
+        
+        // LayerNorm 1
+        LayerNorm1 [label="LayerNorm1\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        
+        // Multi-Head Attention - Split across 8 GPUs (TP=8)
+        MHA_Query_Split1 [shape=parallelogram, label="Query Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: GPUs 0-7"];
+        MHA_Key_Split1 [shape=parallelogram, label="Key Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: GPUs 0-7"];
+        MHA_Value_Split1 [shape=parallelogram, label="Value Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: GPUs 0-7"];
+        
+        MHA_Attention1_GPU0 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 0"];
+        MHA_Attention1_GPU1 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 1"];
+        MHA_Attention1_GPU2 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 2"];
+        MHA_Attention1_GPU3 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 3"];
+        MHA_Attention1_GPU4 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 4"];
+        MHA_Attention1_GPU5 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 5"];
+        MHA_Attention1_GPU6 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 6"];
+        MHA_Attention1_GPU7 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 7"];
+        
+        MHA_Concat1 [shape=parallelogram, label="Attention Concat\nInput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        MHA_Projection1_GPU0 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 0"];
+        MHA_Projection1_GPU1 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 1"];
+        MHA_Projection1_GPU2 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 2"];
+        MHA_Projection1_GPU3 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 3"];
+        MHA_Projection1_GPU4 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 4"];
+        MHA_Projection1_GPU5 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 5"];
+        MHA_Projection1_GPU6 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 6"];
+        MHA_Projection1_GPU7 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 7"];
+        MHA_AllGather1 [shape=parallelogram, label="Projection All-Gather\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        
+        Residual_Add1 [shape=oval, label="Residual Add 1\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096], [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        
+        // FFN for Layer 1
+        FFN_LayerNorm1 [label="FFN LayerNorm 1\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        
+        FFN_Gate_Split1 [shape=parallelogram, label="Gate Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=2048]\nGPU: GPUs 0-7"];
+        FFN_Up_Split1 [shape=parallelogram, label="Up Projection Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=2048]\nGPU: GPUs 0-7"];
+        
+        FFN_Gate1_GPU0 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 0"];
+        FFN_Gate1_GPU1 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 1"];
+        FFN_Gate1_GPU2 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 2"];
+        FFN_Gate1_GPU3 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 3"];
+        FFN_Gate1_GPU4 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 4"];
+        FFN_Gate1_GPU5 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 5"];
+        FFN_Gate1_GPU6 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 6"];
+        FFN_Gate1_GPU7 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 7"];
+        
+        FFN_Up1_GPU0 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 0"];
+        FFN_Up1_GPU1 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 1"];
+        FFN_Up1_GPU2 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 2"];
+        FFN_Up1_GPU3 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 3"];
+        FFN_Up1_GPU4 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 4"];
+        FFN_Up1_GPU5 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 5"];
+        FFN_Up1_GPU6 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 6"];
+        FFN_Up1_GPU7 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 7"];
+        
+        FFN_GELU1_GPU0 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 0"];
+        FFN_GELU1_GPU1 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 1"];
+        FFN_GELU1_GPU2 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 2"];
+        FFN_GELU1_GPU3 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 3"];
+        FFN_GELU1_GPU4 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 4"];
+        FFN_GELU1_GPU5 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 5"];
+        FFN_GELU1_GPU6 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 6"];
+        FFN_GELU1_GPU7 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 7"];
+        
+        FFN_Down1_GPU0 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 0"];
+        FFN_Down1_GPU1 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 1"];
+        FFN_Down1_GPU2 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 2"];
+        FFN_Down1_GPU3 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 3"];
+        FFN_Down1_GPU4 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 4"];
+        FFN_Down1_GPU5 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 5"];
+        FFN_Down1_GPU6 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 6"];
+        FFN_Down1_GPU7 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 7"];
+        
+        FFN_AllReduce1 [shape=parallelogram, label="FFN All-Reduce\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        
+        Residual_Add2 [shape=oval, label="Residual Add 2\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096], [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7"];
+    }
+    
+    // Pipeline Communication to Stage 1
+    Pipeline_Comm1 [shape=ellipse, label="Pipeline Communication\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 0-7 → GPUs 8-15"];
+    
+    // Layer 2 - Pipeline Stage 1 (GPUs 8-15)
+    subgraph cluster_layer2 {
+        label="Layer 2 - Pipeline Stage 1 (GPUs 8-15)";
+        
+        LayerNorm2 [label="LayerNorm2\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 8-15"];
+        
+        MHA_Query_Split2 [shape=parallelogram, label="Query Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: GPUs 8-15"];
+        MHA_Key_Split2 [shape=parallelogram, label="Key Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: GPUs 8-15"];
+        MHA_Value_Split2 [shape=parallelogram, label="Value Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: GPUs 8-15"];
+        
+        MHA_Attention2_GPU8 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 8"];
+        MHA_Attention2_GPU9 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 9"];
+        MHA_Attention2_GPU10 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 10"];
+        MHA_Attention2_GPU11 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 11"];
+        MHA_Attention2_GPU12 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 12"];
+        MHA_Attention2_GPU13 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 13"];
+        MHA_Attention2_GPU14 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 14"];
+        MHA_Attention2_GPU15 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128], K,V=[batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nGPU: 15"];
+        
+        MHA_Concat2 [shape=parallelogram, label="Attention Concat\nInput: [batch_size=1024, seq_len=VARIABLE, heads=4, d_k=128]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 8-15"];
+        MHA_Projection2_GPU8 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 8"];
+        MHA_Projection2_GPU9 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 9"];
+        MHA_Projection2_GPU10 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 10"];
+        MHA_Projection2_GPU11 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 11"];
+        MHA_Projection2_GPU12 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 12"];
+        MHA_Projection2_GPU13 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 13"];
+        MHA_Projection2_GPU14 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 14"];
+        MHA_Projection2_GPU15 [label="Output Projection\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 15"];
+        MHA_AllGather2 [shape=parallelogram, label="Projection All-Gather\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 8-15"];
+        
+        Residual_Add3 [shape=oval, label="Residual Add 3\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096], [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 8-15"];
+        
+        // FFN for Layer 2
+        FFN_LayerNorm2 [label="FFN LayerNorm 2\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 8-15"];
+        
+        FFN_Gate_Split2 [shape=parallelogram, label="Gate Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=2048]\nGPU: GPUs 8-15"];
+        FFN_Up_Split2 [shape=parallelogram, label="Up Projection Split\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=2048]\nGPU: GPUs 8-15"];
+        
+        FFN_Gate2_GPU8 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 8"];
+        FFN_Gate2_GPU9 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 9"];
+        FFN_Gate2_GPU10 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 10"];
+        FFN_Gate2_GPU11 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 11"];
+        FFN_Gate2_GPU12 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 12"];
+        FFN_Gate2_GPU13 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 13"];
+        FFN_Gate2_GPU14 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 14"];
+        FFN_Gate2_GPU15 [label="Gate Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 15"];
+        
+        FFN_Up2_GPU8 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 8"];
+        FFN_Up2_GPU9 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 9"];
+        FFN_Up2_GPU10 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 10"];
+        FFN_Up2_GPU11 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 11"];
+        FFN_Up2_GPU12 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 12"];
+        FFN_Up2_GPU13 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 13"];
+        FFN_Up2_GPU14 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 14"];
+        FFN_Up2_GPU15 [label="Up Linear\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 15"];
+        
+        FFN_GELU2_GPU8 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 8"];
+        FFN_GELU2_GPU9 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 9"];
+        FFN_GELU2_GPU10 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 10"];
+        FFN_GELU2_GPU11 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 11"];
+        FFN_GELU2_GPU12 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 12"];
+        FFN_GELU2_GPU13 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 13"];
+        FFN_GELU2_GPU14 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 14"];
+        FFN_GELU2_GPU15 [label="GELU + Multiply\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nGPU: 15"];
+        
+        FFN_Down2_GPU8 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 8"];
+        FFN_Down2_GPU9 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 9"];
+        FFN_Down2_GPU10 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 10"];
+        FFN_Down2_GPU11 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 11"];
+        FFN_Down2_GPU12 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 12"];
+        FFN_Down2_GPU13 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 13"];
+        FFN_Down2_GPU14 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 14"];
+        FFN_Down2_GPU15 [label="Down Linear\nInput: [batch_size=1024, seq_len=VARIABLE, ffn_dim=1024]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nGPU: 15"];
+        
+        FFN_AllReduce2 [shape=parallelogram, label="FFN All-Reduce\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 8-15"];
+        
+        Residual_Add4 [shape=oval, label="Residual Add 4\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096], [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: GPUs 8-15"];
+    }
+    
+    // Continue with Layer 3 and 4...
+    // (Similar structure for remaining layers)
+    
+    // Output Layer
+    Output_LayerNorm [label="Output LayerNorm\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nGPU: All GPUs"];
+    Output [shape=ellipse, label="Output\nInput: [batch_size=1024, seq_len=VARIABLE, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=VARIABLE, vocab_size]\nGPU: All GPUs"];
+    
+    // Edges
+    Input -> Embedding_GPU0;
+    Input -> Embedding_GPU1;
+    Input -> Embedding_GPU2;
+    Input -> Embedding_GPU3;
+    Input -> Embedding_GPU4;
+    Input -> Embedding_GPU5;
+    Input -> Embedding_GPU6;
+    Input -> Embedding_GPU7;
+    
+    Embedding_GPU0 -> Embedding_AllGather;
+    Embedding_GPU1 -> Embedding_AllGather;
+    Embedding_GPU2 -> Embedding_AllGather;
+    Embedding_GPU3 -> Embedding_AllGather;
+    Embedding_GPU4 -> Embedding_AllGather;
+    Embedding_GPU5 -> Embedding_AllGather;
+    Embedding_GPU6 -> Embedding_AllGather;
+    Embedding_GPU7 -> Embedding_AllGather;
+    
+    Embedding_AllGather -> Positional_Encoding -> LayerNorm1;
+    
+    // Layer 1 attention
+    LayerNorm1 -> MHA_Query_Split1;
+    LayerNorm1 -> MHA_Key_Split1;
+    LayerNorm1 -> MHA_Value_Split1;
+    
+    MHA_Query_Split1 -> MHA_Attention1_GPU0;
+    MHA_Query_Split1 -> MHA_Attention1_GPU1;
+    MHA_Query_Split1 -> MHA_Attention1_GPU2;
+    MHA_Query_Split1 -> MHA_Attention1_GPU3;
+    MHA_Query_Split1 -> MHA_Attention1_GPU4;
+    MHA_Query_Split1 -> MHA_Attention1_GPU5;
+    MHA_Query_Split1 -> MHA_Attention1_GPU6;
+    MHA_Query_Split1 -> MHA_Attention1_GPU7;
+    
+    MHA_Key_Split1 -> MHA_Attention1_GPU0;
+    MHA_Key_Split1 -> MHA_Attention1_GPU1;
+    MHA_Key_Split1 -> MHA_Attention1_GPU2;
+    MHA_Key_Split1 -> MHA_Attention1_GPU3;
+    MHA_Key_Split1 -> MHA_Attention1_GPU4;
+    MHA_Key_Split1 -> MHA_Attention1_GPU5;
+    MHA_Key_Split1 -> MHA_Attention1_GPU6;
+    MHA_Key_Split1 -> MHA_Attention1_GPU7;
+    
+    MHA_Value_Split1 -> MHA_Attention1_GPU0;
+    MHA_Value_Split1 -> MHA_Attention1_GPU1;
+    MHA_Value_Split1 -> MHA_Attention1_GPU2;
+    MHA_Value_Split1 -> MHA_Attention1_GPU3;
+    MHA_Value_Split1 -> MHA_Attention1_GPU4;
+    MHA_Value_Split1 -> MHA_Attention1_GPU5;
+    MHA_Value_Split1 -> MHA_Attention1_GPU6;
+    MHA_Value_Split1 -> MHA_Attention1_GPU7;
+    
+    MHA_Attention1_GPU0 -> MHA_Concat1;
+    MHA_Attention1_GPU1 -> MHA_Concat1;
+    MHA_Attention1_GPU2 -> MHA_Concat1;
+    MHA_Attention1_GPU3 -> MHA_Concat1;
+    MHA_Attention1_GPU4 -> MHA_Concat1;
+    MHA_Attention1_GPU5 -> MHA_Concat1;
+    MHA_Attention1_GPU6 -> MHA_Concat1;
+    MHA_Attention1_GPU7 -> MHA_Concat1;
+    
+    MHA_Concat1 -> MHA_Projection1_GPU0;
+    MHA_Concat1 -> MHA_Projection1_GPU1;
+    MHA_Concat1 -> MHA_Projection1_GPU2;
+    MHA_Concat1 -> MHA_Projection1_GPU3;
+    MHA_Concat1 -> MHA_Projection1_GPU4;
+    MHA_Concat1 -> MHA_Projection1_GPU5;
+    MHA_Concat1 -> MHA_Projection1_GPU6;
+    MHA_Concat1 -> MHA_Projection1_GPU7;
+    
+    MHA_Projection1_GPU0 -> MHA_AllGather1;
+    MHA_Projection1_GPU1 -> MHA_AllGather1;
+    MHA_Projection1_GPU2 -> MHA_AllGather1;
+    MHA_Projection1_GPU3 -> MHA_AllGather1;
+    MHA_Projection1_GPU4 -> MHA_AllGather1;
+    MHA_Projection1_GPU5 -> MHA_AllGather1;
+    MHA_Projection1_GPU6 -> MHA_AllGather1;
+    MHA_Projection1_GPU7 -> MHA_AllGather1;
+    
+    Residual_Add1 -> MHA_AllGather1 [style=dashed];
+    MHA_AllGather1 -> Residual_Add1;
+    Residual_Add1 -> FFN_LayerNorm1;
+    
+    // Continue with FFN layer 1...
+    FFN_LayerNorm1 -> FFN_Gate_Split1;
+    FFN_LayerNorm1 -> FFN_Up_Split1;
+    
+    // Pipeline communication
+    Residual_Add2 -> Pipeline_Comm1;
+    Pipeline_Comm1 -> LayerNorm2;
+    
+    // Continue with remaining layers...
+    Residual_Add4 -> Output_LayerNorm;
+    Output_LayerNorm -> Output;
+}

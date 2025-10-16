@@ -1,0 +1,213 @@
+digraph fa_pool_dynamic_8k_tokens {
+    rankdir=TB;
+    node [shape=rectangle];
+    
+    // Configuration: seq_len=8192, pool_gpus=8, total_gpus=16
+    
+    // Input
+    Input [shape=ellipse, label="Input\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: All GPUs"];
+    
+    // Base Layer - 8 GPUs (Fixed)
+    subgraph cluster_base_layer {
+        label="Base Layer - Fixed 8 GPUs (GPUs 0-7)";
+        
+        // Embedding and Positional Encoding
+        Embedding_GPU0 [label="Embedding\nInput: [batch_size=1024, seq_len=8192, token_ids]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 0"];
+        Embedding_GPU1 [label="Embedding\nInput: [batch_size=1024, seq_len=8192, token_ids]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 1"];
+        Embedding_GPU2 [label="Embedding\nInput: [batch_size=1024, seq_len=8192, token_ids]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 2"];
+        Embedding_GPU3 [label="Embedding\nInput: [batch_size=1024, seq_len=8192, token_ids]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 3"];
+        Embedding_GPU4 [label="Embedding\nInput: [batch_size=1024, seq_len=8192, token_ids]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 4"];
+        Embedding_GPU5 [label="Embedding\nInput: [batch_size=1024, seq_len=8192, token_ids]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 5"];
+        Embedding_GPU6 [label="Embedding\nInput: [batch_size=1024, seq_len=8192, token_ids]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 6"];
+        Embedding_GPU7 [label="Embedding\nInput: [batch_size=1024, seq_len=8192, token_ids]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 7"];
+        
+        Embedding_AllGather [shape=parallelogram, label="Embedding All-Gather\nInput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        Positional_Encoding [label="Positional Encoding\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        
+        // FFN components on Base Layer
+        FFN_Base_GPU0 [label="FFN Components\nInput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 0"];
+        FFN_Base_GPU1 [label="FFN Components\nInput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 1"];
+        FFN_Base_GPU2 [label="FFN Components\nInput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 2"];
+        FFN_Base_GPU3 [label="FFN Components\nInput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 3"];
+        FFN_Base_GPU4 [label="FFN Components\nInput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 4"];
+        FFN_Base_GPU5 [label="FFN Components\nInput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 5"];
+        FFN_Base_GPU6 [label="FFN Components\nInput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 6"];
+        FFN_Base_GPU7 [label="FFN Components\nInput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=512]\nGPU: 7"];
+    }
+    
+    // Attention Pool - 8 GPUs (Dynamic, GPUs 8-15)
+    subgraph cluster_attention_pool {
+        label="Attention Pool - Dynamic 8 GPUs (GPUs 8-15)";
+        
+        // Sequence Splitting for attention computation
+        Seq_Split_GPU8 [shape=parallelogram, label="Sequence Split\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=1024, hidden_dim=4096]\nGPU: 8"];
+        Seq_Split_GPU9 [shape=parallelogram, label="Sequence Split\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=1024, hidden_dim=4096]\nGPU: 9"];
+        Seq_Split_GPU10 [shape=parallelogram, label="Sequence Split\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=1024, hidden_dim=4096]\nGPU: 10"];
+        Seq_Split_GPU11 [shape=parallelogram, label="Sequence Split\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=1024, hidden_dim=4096]\nGPU: 11"];
+        Seq_Split_GPU12 [shape=parallelogram, label="Sequence Split\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=1024, hidden_dim=4096]\nGPU: 12"];
+        Seq_Split_GPU13 [shape=parallelogram, label="Sequence Split\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=1024, hidden_dim=4096]\nGPU: 13"];
+        Seq_Split_GPU14 [shape=parallelogram, label="Sequence Split\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=1024, hidden_dim=4096]\nGPU: 14"];
+        Seq_Split_GPU15 [shape=parallelogram, label="Sequence Split\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=1024, hidden_dim=4096]\nGPU: 15"];
+        
+        // KV Cache Broadcast to all pool GPUs
+        KV_Cache_Broadcast [shape=ellipse, label="KV Cache Broadcast\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 8-15"];
+        
+        // Attention computation on each pool GPU
+        Attention_GPU8 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=1024, heads=32, d_k=128], K,V=[batch_size=1024, seq_len=8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nGPU: 8"];
+        Attention_GPU9 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=1024, heads=32, d_k=128], K,V=[batch_size=1024, seq_len=8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nGPU: 9"];
+        Attention_GPU10 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=1024, heads=32, d_k=128], K,V=[batch_size=1024, seq_len=8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nGPU: 10"];
+        Attention_GPU11 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=1024, heads=32, d_k=128], K,V=[batch_size=1024, seq_len=8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nGPU: 11"];
+        Attention_GPU12 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=1024, heads=32, d_k=128], K,V=[batch_size=1024, seq_len=8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nGPU: 12"];
+        Attention_GPU13 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=1024, heads=32, d_k=128], K,V=[batch_size=1024, seq_len=8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nGPU: 13"];
+        Attention_GPU14 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=1024, heads=32, d_k=128], K,V=[batch_size=1024, seq_len=8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nGPU: 14"];
+        Attention_GPU15 [label="Flash Attention\nInput: Q=[batch_size=1024, seq_len=1024, heads=32, d_k=128], K,V=[batch_size=1024, seq_len=8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nGPU: 15"];
+        
+        // Hierarchical reduction tree
+        Reduction_L1_GPU8 [shape=parallelogram, label="Reduce L1\nInput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nGPU: 8"];
+        Reduction_L1_GPU9 [shape=parallelogram, label="Reduce L1\nInput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nGPU: 9"];
+        Reduction_L1_GPU10 [shape=parallelogram, label="Reduce L1\nInput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nGPU: 10"];
+        Reduction_L1_GPU11 [shape=parallelogram, label="Reduce L1\nInput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nGPU: 11"];
+        Reduction_L1_GPU12 [shape=parallelogram, label="Reduce L1\nInput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nGPU: 12"];
+        Reduction_L1_GPU13 [shape=parallelogram, label="Reduce L1\nInput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nGPU: 13"];
+        Reduction_L1_GPU14 [shape=parallelogram, label="Reduce L1\nInput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nGPU: 14"];
+        Reduction_L1_GPU15 [shape=parallelogram, label="Reduce L1\nInput: [batch_size=1024, seq_len=1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nGPU: 15"];
+        
+        Reduction_L2_GPU8 [shape=parallelogram, label="Reduce L2\nInput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096, heads=32, d_k=128]\nGPU: 8"];
+        Reduction_L2_GPU9 [shape=parallelogram, label="Reduce L2\nInput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096, heads=32, d_k=128]\nGPU: 9"];
+        Reduction_L2_GPU10 [shape=parallelogram, label="Reduce L2\nInput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096, heads=32, d_k=128]\nGPU: 10"];
+        Reduction_L2_GPU11 [shape=parallelogram, label="Reduce L2\nInput: [batch_size=1024, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096, heads=32, d_k=128]\nGPU: 11"];
+        
+        Reduction_Final [shape=parallelogram, label="Final Concat\nInput: [batch_size=1024, seq_len=4096, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 8-15"];
+    }
+    
+    // Layer-wise processing for 4 layers
+    subgraph cluster_layer_processing {
+        label="Layer Processing Flow";
+        
+        // Layer 1
+        Layer1_LayerNorm [label="LayerNorm1\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        Layer1_Residual [shape=oval, label="Residual Add 1\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096], [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        
+        // Layer 2
+        Layer2_LayerNorm [label="LayerNorm2\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        Layer2_Residual [shape=oval, label="Residual Add 2\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096], [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        
+        // Layer 3
+        Layer3_LayerNorm [label="LayerNorm3\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        Layer3_Residual [shape=oval, label="Residual Add 3\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096], [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        
+        // Layer 4
+        Layer4_LayerNorm [label="LayerNorm4\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+        Layer4_Residual [shape=oval, label="Residual Add 4\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096], [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+    }
+    
+    // Asynchronous FFN computation
+    subgraph cluster_async_ffn {
+        label="Asynchronous FFN Computation";
+        
+        FFN_Compute [label="FFN Computation\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+    }
+    
+    // Output
+    Output_LayerNorm [label="Output LayerNorm\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nGPU: GPUs 0-7"];
+    Output [shape=ellipse, label="Output\nInput: [batch_size=1024, seq_len=8192, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=8192, vocab_size]\nGPU: GPUs 0-7"];
+    
+    // Connections - showing data flow
+    Input -> Embedding_GPU0;
+    Input -> Embedding_GPU1;
+    Input -> Embedding_GPU2;
+    Input -> Embedding_GPU3;
+    Input -> Embedding_GPU4;
+    Input -> Embedding_GPU5;
+    Input -> Embedding_GPU6;
+    Input -> Embedding_GPU7;
+    
+    Embedding_GPU0 -> Embedding_AllGather;
+    Embedding_GPU1 -> Embedding_AllGather;
+    Embedding_GPU2 -> Embedding_AllGather;
+    Embedding_GPU3 -> Embedding_AllGather;
+    Embedding_GPU4 -> Embedding_AllGather;
+    Embedding_GPU5 -> Embedding_AllGather;
+    Embedding_GPU6 -> Embedding_AllGather;
+    Embedding_GPU7 -> Embedding_AllGather;
+    
+    Embedding_AllGather -> Positional_Encoding -> Layer1_LayerNorm;
+    
+    // Layer 1: Attention computation in pool + FFN in base (async)
+    Layer1_LayerNorm -> Seq_Split_GPU8;
+    Layer1_LayerNorm -> Seq_Split_GPU9;
+    Layer1_LayerNorm -> Seq_Split_GPU10;
+    Layer1_LayerNorm -> Seq_Split_GPU11;
+    Layer1_LayerNorm -> Seq_Split_GPU12;
+    Layer1_LayerNorm -> Seq_Split_GPU13;
+    Layer1_LayerNorm -> Seq_Split_GPU14;
+    Layer1_LayerNorm -> Seq_Split_GPU15;
+    
+    // KV Cache broadcast
+    Layer1_LayerNorm -> KV_Cache_Broadcast;
+    KV_Cache_Broadcast -> Attention_GPU8;
+    KV_Cache_Broadcast -> Attention_GPU9;
+    KV_Cache_Broadcast -> Attention_GPU10;
+    KV_Cache_Broadcast -> Attention_GPU11;
+    KV_Cache_Broadcast -> Attention_GPU12;
+    KV_Cache_Broadcast -> Attention_GPU13;
+    KV_Cache_Broadcast -> Attention_GPU14;
+    KV_Cache_Broadcast -> Attention_GPU15;
+    
+    // Parallel attention computation
+    Seq_Split_GPU8 -> Attention_GPU8;
+    Seq_Split_GPU9 -> Attention_GPU9;
+    Seq_Split_GPU10 -> Attention_GPU10;
+    Seq_Split_GPU11 -> Attention_GPU11;
+    Seq_Split_GPU12 -> Attention_GPU12;
+    Seq_Split_GPU13 -> Attention_GPU13;
+    Seq_Split_GPU14 -> Attention_GPU14;
+    Seq_Split_GPU15 -> Attention_GPU15;
+    
+    // Hierarchical reduction
+    Attention_GPU8 -> Reduction_L1_GPU8;
+    Attention_GPU9 -> Reduction_L1_GPU8;
+    Attention_GPU10 -> Reduction_L1_GPU9;
+    Attention_GPU11 -> Reduction_L1_GPU9;
+    Attention_GPU12 -> Reduction_L1_GPU10;
+    Attention_GPU13 -> Reduction_L1_GPU10;
+    Attention_GPU14 -> Reduction_L1_GPU11;
+    Attention_GPU15 -> Reduction_L1_GPU11;
+    
+    Reduction_L1_GPU8 -> Reduction_L2_GPU8;
+    Reduction_L1_GPU9 -> Reduction_L2_GPU8;
+    Reduction_L1_GPU10 -> Reduction_L2_GPU9;
+    Reduction_L1_GPU11 -> Reduction_L2_GPU9;
+    Reduction_L1_GPU12 -> Reduction_L2_GPU10;
+    Reduction_L1_GPU13 -> Reduction_L2_GPU10;
+    Reduction_L1_GPU14 -> Reduction_L2_GPU11;
+    Reduction_L1_GPU15 -> Reduction_L2_GPU11;
+    
+    Reduction_L2_GPU8 -> Reduction_Final;
+    Reduction_L2_GPU9 -> Reduction_Final;
+    Reduction_L2_GPU10 -> Reduction_Final;
+    Reduction_L2_GPU11 -> Reduction_Final;
+    
+    // Asynchronous execution - FFN overlaps with attention reduction
+    Layer1_LayerNorm -> FFN_Compute [style=dotted];
+    Reduction_Final -> Layer1_Residual [style=bold];
+    FFN_Compute -> Layer1_Residual [style=dotted];
+    
+    // Continue with remaining layers
+    Layer1_Residual -> Layer2_LayerNorm;
+    Layer2_LayerNorm -> Seq_Split_GPU8;  // Reuse same pattern
+    Layer2_LayerNorm -> Seq_Split_GPU9;
+    Layer2_LayerNorm -> Seq_Split_GPU10;
+    Layer2_LayerNorm -> Seq_Split_GPU11;
+    Layer2_LayerNorm -> Seq_Split_GPU12;
+    Layer2_LayerNorm -> Seq_Split_GPU13;
+    Layer2_LayerNorm -> Seq_Split_GPU14;
+    Layer2_LayerNorm -> Seq_Split_GPU15;
+    
+    // Continue pattern for all 4 layers...
+    Layer4_Residual -> Output_LayerNorm;
+    Output_LayerNorm -> Output;
+    
+    // Resource Manager
+    Resource_Manager [shape=hexagon, label="Resource Manager\nMonitors sequence length\nManages GPU allocation/deallocation\nGPU: Control Node"];
+}
