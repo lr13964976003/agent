@@ -1,0 +1,25 @@
+digraph optimized_complete_helix_model {
+	rankdir=TB size="30,40"
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	
+	model_input [label="Model Input\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: all GPUs" fillcolor=lightgreen shape=parallelogram]
+	
+	// Pipeline stages for better overlap
+	stage0_mha [label="Stage 0 - MHA Layer 0 (Optimized)\nPipeline stage with 8-way partitioning\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPUs: 0-7" fillcolor=lightcoral shape=rectangle]
+	
+	stage0_mlp [label="Stage 0 - MLP Layer 0 (Overlapped)\nTensor parallel + pipeline\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPUs: 0-7" fillcolor=lightgreen shape=rectangle]
+	
+	stage1_mha [label="Stage 1 - MHA Layer 1 (Optimized)\nPipeline stage with 8-way partitioning\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPUs: 8-15" fillcolor=lightcoral shape=rectangle]
+	
+	stage1_mlp [label="Stage 1 - MLP Layer 1 (Overlapped)\nTensor parallel + pipeline\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPUs: 8-15" fillcolor=lightgreen shape=rectangle]
+	
+	model_output [label="Model Output\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: all GPUs" fillcolor=lightgreen shape=parallelogram]
+	
+	// Pipeline connections with overlap
+	model_input -> stage0_mha
+	stage0_mha -> stage0_mlp [label="micro-batch 1" style=dashed]
+	stage0_mha -> stage1_mha [label="micro-batch 0" style=solid]
+	stage0_mlp -> stage1_mlp [label="micro-batch 1" style=dashed]
+	stage1_mha -> stage1_mlp
+	stage1_mlp -> model_output
+}

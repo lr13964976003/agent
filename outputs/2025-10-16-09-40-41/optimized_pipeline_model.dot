@@ -1,0 +1,244 @@
+
+digraph optimized_helix_model {
+    rankdir=TB
+    size="30,40"
+    
+    // Node type definitions
+    node [fontname="Arial", fontsize=10]
+    
+    // Input layer
+    input [label="Model Input\n[batch=1024, seq=10000, dim=8192]\nGPU: 0-15", shape=parallelogram, fillcolor=lightgreen, style=filled]
+    
+    // Pipeline stage 0: Layer 0 on GPUs 0-7
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0\nLayer 0 (GPUs 0-7)";
+        style=dashed;
+        color=blue;
+        
+        // LayerNorm (parallel across devices)
+        ln0 [label="LayerNorm\n[1024×10000×8192]\nGPU: 0-7", shape=rectangle, fillcolor=lightyellow, style=filled]
+        
+        // MHA - Optimized 2×2×2 partitioning (8-way)
+        // Head group 0, dim segments 0-1
+        q0_ds0 [label="Q Linear\nHG0/DS0\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 0", shape=rectangle, fillcolor=lightcoral, style=filled]
+        k0_ds0 [label="K Linear\nHG0/DS0\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 0", shape=rectangle, fillcolor=lightcoral, style=filled]
+        v0_ds0 [label="V Linear\nHG0/DS0\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 0", shape=rectangle, fillcolor=lightcoral, style=filled]
+        attn0_ds0 [label="Attention\nHG0/DS0\n[1024×10000×8×128]\nGPU: 0", shape=rectangle, fillcolor=lightpink, style=filled]
+        
+        q0_ds1 [label="Q Linear\nHG0/DS1\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 1", shape=rectangle, fillcolor=lightcoral, style=filled]
+        k0_ds1 [label="K Linear\nHG0/DS1\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 1", shape=rectangle, fillcolor=lightcoral, style=filled]
+        v0_ds1 [label="V Linear\nHG0/DS1\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 1", shape=rectangle, fillcolor=lightcoral, style=filled]
+        attn0_ds1 [label="Attention\nHG0/DS1\n[1024×10000×8×128]\nGPU: 1", shape=rectangle, fillcolor=lightpink, style=filled]
+        
+        // Head group 1, dim segments 0-1
+        q1_ds0 [label="Q Linear\nHG1/DS0\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 2", shape=rectangle, fillcolor=lightcoral, style=filled]
+        k1_ds0 [label="K Linear\nHG1/DS0\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 2", shape=rectangle, fillcolor=lightcoral, style=filled]
+        v1_ds0 [label="V Linear\nHG1/DS0\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 2", shape=rectangle, fillcolor=lightcoral, style=filled]
+        attn1_ds0 [label="Attention\nHG1/DS0\n[1024×10000×8×128]\nGPU: 2", shape=rectangle, fillcolor=lightpink, style=filled]
+        
+        q1_ds1 [label="Q Linear\nHG1/DS1\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 3", shape=rectangle, fillcolor=lightcoral, style=filled]
+        k1_ds1 [label="K Linear\nHG1/DS1\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 3", shape=rectangle, fillcolor=lightcoral, style=filled]
+        v1_ds1 [label="V Linear\nHG1/DS1\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 3", shape=rectangle, fillcolor=lightcoral, style=filled]
+        attn1_ds1 [label="Attention\nHG1/DS1\n[1024×10000×8×128]\nGPU: 3", shape=rectangle, fillcolor=lightpink, style=filled]
+        
+        // Concatenation nodes
+        concat0 [label="Concat\nHG0\n[2×8×128]→[16×128]\nGPU: 0-1", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        concat1 [label="Concat\nHG1\n[2×8×128]→[16×128]\nGPU: 2-3", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        final_concat0 [label="Final Concat\n[2×16×128]→[8192]\nGPU: 0-3", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        
+        // MLP with optimized tensor parallelism
+        fc1_0 [label="FC1 Col\n[8192×4096]\nGPU: 0", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc1_1 [label="FC1 Col\n[8192×4096]\nGPU: 1", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc1_2 [label="FC1 Col\n[8192×4096]\nGPU: 2", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc1_3 [label="FC1 Col\n[8192×4096]\nGPU: 3", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc1_concat [label="Concat FC1\n[4×4096]→[16384]\nGPU: 0-3", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        gelu0 [label="GELU\n[16384]\nGPU: 0-3", shape=rectangle, fillcolor=lightyellow, style=filled]
+        
+        fc2_0 [label="FC2 Row\n[4096×2048]\nGPU: 0", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc2_1 [label="FC2 Row\n[4096×2048]\nGPU: 1", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc2_2 [label="FC2 Row\n[4096×2048]\nGPU: 2", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc2_3 [label="FC2 Row\n[4096×2048]\nGPU: 3", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc2_allreduce [label="All-Reduce\n[4×2048]→[8192]\nGPU: 0-3", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        
+        residual0 [label="Residual Add\nLayer 0\nGPU: 0-3", shape=rectangle, fillcolor=lightgray, style=filled]
+    }
+    
+    // Pipeline stage 1: Layer 1 on GPUs 8-15
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1\nLayer 1 (GPUs 8-15)";
+        style=dashed;
+        color=red;
+        
+        // Similar structure for layer 1
+        ln1 [label="LayerNorm\n[1024×10000×8192]\nGPU: 8-15", shape=rectangle, fillcolor=lightyellow, style=filled]
+        
+        // MHA - optimized for GPUs 8-15
+        q2_ds0 [label="Q Linear\nHG2/DS0\n[1024×10000×8192]→[1024×10000×8×128]\nGPU: 8", shape=rectangle, fillcolor=lightcoral, style=filled]
+        k2_ds0 [label="K Linear\nHG2/DS0\nGPU: 8", shape=rectangle, fillcolor=lightcoral, style=filled]
+        v2_ds0 [label="V Linear\nHG2/DS0\nGPU: 8", shape=rectangle, fillcolor=lightcoral, style=filled]
+        attn2_ds0 [label="Attention\nHG2/DS0\nGPU: 8", shape=rectangle, fillcolor=lightpink, style=filled]
+        
+        q2_ds1 [label="Q Linear\nHG2/DS1\nGPU: 9", shape=rectangle, fillcolor=lightcoral, style=filled]
+        k2_ds1 [label="K Linear\nHG2/DS1\nGPU: 9", shape=rectangle, fillcolor=lightcoral, style=filled]
+        v2_ds1 [label="V Linear\nHG2/DS1\nGPU: 9", shape=rectangle, fillcolor=lightcoral, style=filled]
+        attn2_ds1 [label="Attention\nHG2/DS1\nGPU: 9", shape=rectangle, fillcolor=lightpink, style=filled]
+        
+        q3_ds0 [label="Q Linear\nHG3/DS0\nGPU: 10", shape=rectangle, fillcolor=lightcoral, style=filled]
+        k3_ds0 [label="K Linear\nHG3/DS0\nGPU: 10", shape=rectangle, fillcolor=lightcoral, style=filled]
+        v3_ds0 [label="V Linear\nHG3/DS0\nGPU: 10", shape=rectangle, fillcolor=lightcoral, style=filled]
+        attn3_ds0 [label="Attention\nHG3/DS0\nGPU: 10", shape=rectangle, fillcolor=lightpink, style=filled]
+        
+        q3_ds1 [label="Q Linear\nHG3/DS1\nGPU: 11", shape=rectangle, fillcolor=lightcoral, style=filled]
+        k3_ds1 [label="K Linear\nHG3/DS1\nGPU: 11", shape=rectangle, fillcolor=lightcoral, style=filled]
+        v3_ds1 [label="V Linear\nHG3/DS1\nGPU: 11", shape=rectangle, fillcolor=lightcoral, style=filled]
+        attn3_ds1 [label="Attention\nHG3/DS1\nGPU: 11", shape=rectangle, fillcolor=lightpink, style=filled]
+        
+        concat2 [label="Concat\nHG2\nGPU: 8-9", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        concat3 [label="Concat\nHG3\nGPU: 10-11", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        final_concat1 [label="Final Concat\nGPU: 8-11", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        
+        // MLP layer 1
+        fc1_4 [label="FC1 Col\n[8192×4096]\nGPU: 8", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc1_5 [label="FC1 Col\n[8192×4096]\nGPU: 9", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc1_6 [label="FC1 Col\n[8192×4096]\nGPU: 10", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc1_7 [label="FC1 Col\n[8192×4096]\nGPU: 11", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc1_concat1 [label="Concat FC1\nGPU: 8-11", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        gelu1 [label="GELU\nGPU: 8-11", shape=rectangle, fillcolor=lightyellow, style=filled]
+        
+        fc2_4 [label="FC2 Row\n[4096×2048]\nGPU: 8", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc2_5 [label="FC2 Row\n[4096×2048]\nGPU: 9", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc2_6 [label="FC2 Row\n[4096×2048]\nGPU: 10", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc2_7 [label="FC2 Row\n[4096×2048]\nGPU: 11", shape=rectangle, fillcolor=lightcoral, style=filled]
+        fc2_allreduce1 [label="All-Restore\nGPU: 8-11", shape=parallelogram, fillcolor=lightsteelblue, style=filled]
+        
+        residual1 [label="Residual Add\nLayer 1\nGPU: 8-11", shape=rectangle, fillcolor=lightgray, style=filled]
+    }
+    
+    // Cross-stage communication
+    comm0 [label="Pipeline Communication\nStage 0 → Stage 1\n[1024×10000×8192]\nGPU: 3→8", shape=parallelogram, fillcolor=yellow, style=filled]
+    
+    // Output
+    output [label="Model Output\n[1024×10000×8192]\nGPU: 8-11", shape=parallelogram, fillcolor=lightgreen, style=filled]
+    
+    // Edges for optimized pipeline
+    input -> ln0
+    input -> ln1 [style=dotted, constraint=false]
+    
+    // Layer 0 connections
+    ln0 -> q0_ds0
+    ln0 -> k0_ds0
+    ln0 -> v0_ds0
+    ln0 -> q0_ds1
+    ln0 -> k0_ds1
+    ln0 -> v0_ds1
+    ln0 -> q1_ds0
+    ln0 -> k1_ds0
+    ln0 -> v1_ds0
+    ln0 -> q1_ds1
+    ln0 -> k1_ds1
+    ln0 -> v1_ds1
+    
+    q0_ds0 -> attn0_ds0
+    k0_ds0 -> attn0_ds0
+    v0_ds0 -> attn0_ds0
+    q0_ds1 -> attn0_ds1
+    k0_ds1 -> attn0_ds1
+    v0_ds1 -> attn0_ds1
+    q1_ds0 -> attn1_ds0
+    k1_ds0 -> attn1_ds0
+    v1_ds0 -> attn1_ds0
+    q1_ds1 -> attn1_ds1
+    k1_ds1 -> attn1_ds1
+    v1_ds1 -> attn1_ds1
+    
+    attn0_ds0 -> concat0
+    attn0_ds1 -> concat0
+    attn1_ds0 -> concat1
+    attn1_ds1 -> concat1
+    
+    concat0 -> final_concat0
+    concat1 -> final_concat0
+    final_concat0 -> fc1_0
+    final_concat0 -> fc1_1
+    final_concat0 -> fc1_2
+    final_concat0 -> fc1_3
+    
+    fc1_0 -> fc1_concat
+    fc1_1 -> fc1_concat
+    fc1_2 -> fc1_concat
+    fc1_3 -> fc1_concat
+    fc1_concat -> gelu0
+    gelu0 -> fc2_0
+    gelu0 -> fc2_1
+    gelu0 -> fc2_2
+    gelu0 -> fc2_3
+    
+    fc2_0 -> fc2_allreduce
+    fc2_1 -> fc2_allreduce
+    fc2_2 -> fc2_allreduce
+    fc2_3 -> fc2_allreduce
+    fc2_allreduce -> residual0
+    input -> residual0 [constraint=false]
+    
+    // Pipeline stage communication
+    residual0 -> comm0
+    comm0 -> ln1
+    
+    // Layer 1 connections (similar to layer 0)
+    ln1 -> q2_ds0
+    ln1 -> k2_ds0
+    ln1 -> v2_ds0
+    ln1 -> q2_ds1
+    ln1 -> k2_ds1
+    ln1 -> v2_ds1
+    ln1 -> q3_ds0
+    ln1 -> k3_ds0
+    ln1 -> v3_ds0
+    ln1 -> q3_ds1
+    ln1 -> k3_ds1
+    ln1 -> v3_ds1
+    
+    q2_ds0 -> attn2_ds0
+    k2_ds0 -> attn2_ds0
+    v2_ds0 -> attn2_ds0
+    q2_ds1 -> attn2_ds1
+    k2_ds1 -> attn2_ds1
+    v2_ds1 -> attn2_ds1
+    q3_ds0 -> attn3_ds0
+    k3_ds0 -> attn3_ds0
+    v3_ds0 -> attn3_ds0
+    q3_ds1 -> attn3_ds1
+    k3_ds1 -> attn3_ds1
+    v3_ds1 -> attn3_ds1
+    
+    attn2_ds0 -> concat2
+    attn2_ds1 -> concat2
+    attn3_ds0 -> concat3
+    attn3_ds1 -> concat3
+    
+    concat2 -> final_concat1
+    concat3 -> final_concat1
+    final_concat1 -> fc1_4
+    final_concat1 -> fc1_5
+    final_concat1 -> fc1_6
+    final_concat1 -> fc1_7
+    
+    fc1_4 -> fc1_concat1
+    fc1_5 -> fc1_concat1
+    fc1_6 -> fc1_concat1
+    fc1_7 -> fc1_concat1
+    fc1_concat1 -> gelu1
+    gelu1 -> fc2_4
+    gelu1 -> fc2_5
+    gelu1 -> fc2_6
+    gelu1 -> fc2_7
+    
+    fc2_4 -> fc2_allreduce1
+    fc2_5 -> fc2_allreduce1
+    fc2_6 -> fc2_allreduce1
+    fc2_7 -> fc2_allreduce1
+    fc2_allreduce1 -> residual1
+    comm0 -> residual1 [constraint=false]
+    
+    residual1 -> output
+}

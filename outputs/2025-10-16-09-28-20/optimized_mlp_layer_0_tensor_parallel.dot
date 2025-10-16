@@ -1,0 +1,97 @@
+digraph optimized_mlp_layer_0_tensor_parallel {
+	rankdir=TB size="20,30"
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	
+	input [label="MLP Pipeline Input\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightgreen shape=parallelogram]
+	
+	// Distributed LayerNorm
+	ln [label="Distributed LayerNorm\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightyellow shape=rectangle]
+	
+	// 8-way column-parallel FC1 (instead of 16-way)
+	fc1_device_0 [label="FC1 Column-Parallel\nDevice 0\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle]
+	
+	fc1_device_1 [label="FC1 Column-Parallel\nDevice 1\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle]
+	
+	fc1_device_2 [label="FC1 Column-Parallel\nDevice 2\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nGPU: 2" fillcolor=lightcoral shape=rectangle]
+	
+	fc1_device_3 [label="FC1 Column-Parallel\nDevice 3\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nGPU: 3" fillcolor=lightcoral shape=rectangle]
+	
+	fc1_device_4 [label="FC1 Column-Parallel\nDevice 4\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nGPU: 4" fillcolor=lightcoral shape=rectangle]
+	
+	fc1_device_5 [label="FC1 Column-Parallel\nDevice 5\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nGPU: 5" fillcolor=lightcoral shape=rectangle]
+	
+	fc1_device_6 [label="FC1 Column-Parallel\nDevice 6\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nGPU: 6" fillcolor=lightcoral shape=rectangle]
+	
+	fc1_device_7 [label="FC1 Column-Parallel\nDevice 7\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nGPU: 7" fillcolor=lightcoral shape=rectangle]
+	
+	// Optimized concatenation with overlap
+	fc1_concat [label="Fused Concatenation\nInput: 8×[batch_size=1024, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nGPU: all devices" fillcolor=lightsteelblue shape=parallelogram]
+	
+	// Distributed GELU activation
+	gelu [label="Distributed GELU\nInput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=32768]\nGPU: 0-7" fillcolor=lightyellow shape=rectangle]
+	
+	// 8-way row-parallel FC2 (matching FC1)
+	fc2_device_0 [label="FC2 Row-Parallel\nDevice 0\nInput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=1024]\nGPU: 0" fillcolor=lightcoral shape=rectangle]
+	
+	fc2_device_1 [label="FC2 Row-Parallel\nDevice 1\nInput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=1024]\nGPU: 1" fillcolor=lightcoral shape=rectangle]
+	
+	fc2_device_2 [label="FC2 Row-Parallel\nDevice 2\nInput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=1024]\nGPU: 2" fillcolor=lightcoral shape=rectangle]
+	
+	fc2_device_3 [label="FC2 Row-Parallel\nDevice 3\nInput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=1024]\nGPU: 3" fillcolor=lightcoral shape=rectangle]
+	
+	fc2_device_4 [label="FC2 Row-Parallel\nDevice 4\nInput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=1024]\nGPU: 4" fillcolor=lightcoral shape=rectangle]
+	
+	fc2_device_5 [label="FC2 Row-Parallel\nDevice 5\nInput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=1024]\nGPU: 5" fillcolor=lightcoral shape=rectangle]
+	
+	fc2_device_6 [label="FC2 Row-Parallel\nDevice 6\nInput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=1024]\nGPU: 6" fillcolor=lightcoral shape=rectangle]
+	
+	fc2_device_7 [label="FC2 Row-Parallel\nDevice 7\nInput: [batch_size=1024, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=1024]\nGPU: 7" fillcolor=lightcoral shape=rectangle]
+	
+	// Optimized all-reduce with overlap
+	fc2_allreduce [label="Optimized All-Reduce\nInput: 8×[batch_size=1024, seq_len=10000, embed_dim=1024]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightsteelblue shape=parallelogram]
+	
+	// Final residual connection
+	residual [label="Residual Add\nInput 1: [batch_size=1024, seq_len=10000, embed_dim=8192]\nInput 2: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightgray shape=rectangle]
+	
+	// Connections
+	input -> ln
+	ln -> fc1_device_0
+	ln -> fc1_device_1
+	ln -> fc1_device_2
+	ln -> fc1_device_3
+	ln -> fc1_device_4
+	ln -> fc1_device_5
+	ln -> fc1_device_6
+	ln -> fc1_device_7
+	
+	fc1_device_0 -> fc1_concat
+	fc1_device_1 -> fc1_concat
+	fc1_device_2 -> fc1_concat
+	fc1_device_3 -> fc1_concat
+	fc1_device_4 -> fc1_concat
+	fc1_device_5 -> fc1_concat
+	fc1_device_6 -> fc1_concat
+	fc1_device_7 -> fc1_concat
+	
+	fc1_concat -> gelu
+	gelu -> fc2_device_0
+	gelu -> fc2_device_1
+	gelu -> fc2_device_2
+	gelu -> fc2_device_3
+	gelu -> fc2_device_4
+	gelu -> fc2_device_5
+	gelu -> fc2_device_6
+	gelu -> fc2_device_7
+	
+	fc2_device_0 -> fc2_allreduce
+	fc2_device_1 -> fc2_allreduce
+	fc2_device_2 -> fc2_allreduce
+	fc2_device_3 -> fc2_allreduce
+	fc2_device_4 -> fc2_allreduce
+	fc2_device_5 -> fc2_allreduce
+	fc2_device_6 -> fc2_allreduce
+	fc2_device_7 -> fc2_allreduce
+	
+	fc2_allreduce -> residual
+	input -> residual
+}

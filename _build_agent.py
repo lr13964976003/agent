@@ -30,9 +30,9 @@ def fetch_prompt(app_slug: str, variant_slug: str, variant_version: int, inputs:
     return prompt
 
 #@ag.instrument()
-def build_agent(tools: list):
+def build_agent(model: str, tools: list):
     llm = ChatOpenAI(
-            model = "anthropic/kimi-k2-0711-preview",
+            model = model,
             temperature = 0.7,
             max_tokens = 16384,
             request_timeout = 1800

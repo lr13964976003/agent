@@ -138,7 +138,7 @@ def main():
     for k in variant.keys():
         prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"])
         tools = variant[k]["tools"]
-        agents.append(build_agent(tools))
+        agents.append(build_agent("openai/Kimi-K2",tools))
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
     '''

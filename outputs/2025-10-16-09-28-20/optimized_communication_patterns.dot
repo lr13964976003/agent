@@ -1,0 +1,47 @@
+digraph optimized_communication_patterns {
+	rankdir=LR size="30,20"
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	
+	// Pipeline Stage 0 (GPUs 0-7)
+	subgraph cluster_stage0 {
+		color=green label="Pipeline Stage 0\nGPUs 0-7" style=dashed
+		mha_stage0 [label="MHA Layer 0\n8-way tensor parallel\nOptimized communication\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]" fillcolor=lightcoral shape=rectangle]
+		mlp_stage0 [label="MLP Layer 0\n8-way tensor parallel\nOverlap with next stage\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]" fillcolor=lightgreen shape=rectangle]
+	}
+	
+	// Pipeline Stage 1 (GPUs 8-15)
+	subgraph cluster_stage1 {
+		color=blue label="Pipeline Stage 1\nGPUs 8-15" style=dashed
+		mha_stage1 [label="MHA Layer 1\n8-way tensor parallel\nOptimized communication\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]" fillcolor=lightcoral shape=rectangle]
+		mlp_stage1 [label="MLP Layer 1\n8-way tensor parallel\nFinal output stage\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]" fillcolor=lightgreen shape=rectangle]
+	}
+	
+	// Communication optimization nodes
+	pipeline_forward [label="Pipeline Forward\nMicro-batch 0\nData transfer between stages\nLatency hiding via overlap" fillcolor=lightsteelblue shape=parallelogram]
+	
+	pipeline_overlap [label="Pipeline Overlap\nMicro-batch 1\nConcurrent execution\nImproved TPS" fillcolor=lightsteelblue shape=parallelogram]
+	
+	optimized_allreduce [label="Optimized All-Reduce\n8 devices per stage\nRing topology\nReduced latency" fillcolor=lightsteelblue shape=parallelogram]
+	
+	// Model input/output
+	model_input [label="Model Input\n[batch_size=1024, seq_len=10000, embed_dim=8192]" fillcolor=lightgreen shape=parallelogram]
+	model_output [label="Model Output\n[batch_size=1024, seq_len=10000, embed_dim=8192]" fillcolor=lightgreen shape=parallelogram]
+	
+	// Connection flow showing pipeline overlap
+	model_input -> mha_stage0
+	mha_stage0 -> mlp_stage0
+	mlp_stage0 -> pipeline_forward [label="micro-batch 0" style=dashed]
+	mlp_stage0 -> pipeline_overlap [label="micro-batch 1" style=solid]
+	
+	pipeline_forward -> mha_stage1
+	mha_stage1 -> mlp_stage1
+	pipeline_overlap -> mha_stage1 [label="overlapped" style=solid]
+	
+	// All-reduce connections for each stage
+	mha_stage0 -> optimized_allreduce
+	mlp_stage0 -> optimized_allreduce
+	mha_stage1 -> optimized_allreduce
+	mlp_stage1 -> optimized_allreduce
+	
+	mlp_stage1 -> model_output
+}
