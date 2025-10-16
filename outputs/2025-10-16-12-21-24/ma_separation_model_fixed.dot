@@ -1,0 +1,330 @@
+// MA Separation Model Deployment DAG - Fixed Connectivity
+// Complete 4-layer model with 16 GPU deployment (8 attention + 8 MoE)
+digraph {
+    compound=true;
+    fontname=Arial;
+    fontsize=12;
+    rankdir=TB;
+    
+    node [fontname=Arial];
+    node [fillcolor=lightblue shape=ellipse style=filled];
+    node [fillcolor=lightgreen shape=box style=filled];
+    node [fillcolor=yellow shape=parallelogram style=filled];
+    node [fillcolor=lightcoral shape=diamond style=filled];
+    
+    // Model Input
+    input [label="Model Input\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: Host" fillcolor=lightblue shape=ellipse style="filled,bold"];
+
+    // ===== LAYER 0 =====
+    subgraph cluster_layer_0 {
+        bgcolor=lightgray;
+        label="Layer 1";
+        style=rounded;
+        
+        layer_0_distribute [label="Layer 1 Input Distribution\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096] replicated 8x\nGPU: All GPUs" fillcolor=lightcoral shape=diamond];
+        
+        // Attention branch
+        subgraph cluster_attention_0 {
+            bgcolor="#E6F3FF";
+            label="Attention - Layer 1";
+            style=dashed;
+            
+            layer_0_qkv_gpu_0 [label="QKV Projection\nGPU 0\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor="#FFE4E1" shape=box];
+            layer_0_qkv_gpu_1 [label="QKV Projection\nGPU 1\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor="#E6E6FA" shape=box];
+            layer_0_qkv_gpu_2 [label="QKV Projection\nGPU 2\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor="#F0E68C" shape=box];
+            layer_0_qkv_gpu_3 [label="QKV Projection\nGPU 3\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor="#98FB98" shape=box];
+            layer_0_qkv_gpu_4 [label="QKV Projection\nGPU 4\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor="#87CEEB" shape=box];
+            layer_0_qkv_gpu_5 [label="QKV Projection\nGPU 5\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor="#DDA0DD" shape=box];
+            layer_0_qkv_gpu_6 [label="QKV Projection\nGPU 6\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor="#F4A460" shape=box];
+            layer_0_qkv_gpu_7 [label="QKV Projection\nGPU 7\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor="#D3D3D3" shape=box];
+            
+            layer_0_kv_reduce [label="KV All-Reduce\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128] from 8 GPUs\nOutput: [batch_size=?, seq_len=2048, heads=32, d_k=128]\nGPU: All 0-7" fillcolor=lightcoral shape=diamond];
+            
+            layer_0_attn_gpu_0 [label="Multi-Head Attention\nGPU 0\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor="#FFE4E1" shape=box];
+            layer_0_attn_gpu_1 [label="Multi-Head Attention\nGPU 1\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor="#E6E6FA" shape=box];
+            layer_0_attn_gpu_2 [label="Multi-Head Attention\nGPU 2\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor="#F0E68C" shape=box];
+            layer_0_attn_gpu_3 [label="Multi-Head Attention\nGPU 3\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor="#98FB98" shape=box];
+            layer_0_attn_gpu_4 [label="Multi-Head Attention\nGPU 4\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor="#87CEEB" shape=box];
+            layer_0_attn_gpu_5 [label="Multi-Head Attention\nGPU 5\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor="#DDA0DD" shape=box];
+            layer_0_attn_gpu_6 [label="Multi-Head Attention\nGPU 6\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor="#F4A460" shape=box];
+            layer_0_attn_gpu_7 [label="Multi-Head Attention\nGPU 7\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor="#D3D3D3" shape=box];
+            
+            layer_0_attn_agg [label="Attention Output All-Reduce\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128] from 8 GPUs\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: All 0-7" fillcolor=lightcoral shape=diamond];
+            
+            layer_0_attn_ln [label="LayerNorm + Residual\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 0-7" fillcolor="#FFE4B5" shape=box];
+        }
+        
+        // MoE branch
+        subgraph cluster_moe_0 {
+            bgcolor="#FFE6E6";
+            label="MoE - Layer 1";
+            style=dashed;
+            
+            layer_0_gate_gpu_8 [label="Gating Network\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 8" fillcolor="#FFB6C1" shape=parallelogram];
+            layer_0_gate_gpu_9 [label="Gating Network\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 9" fillcolor="#20B2AA" shape=parallelogram];
+            layer_0_gate_gpu_10 [label="Gating Network\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 10" fillcolor="#B0C4DE" shape=parallelogram];
+            layer_0_gate_gpu_11 [label="Gating Network\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 11" fillcolor="#FFDEAD" shape=parallelogram];
+            layer_0_gate_gpu_12 [label="Gating Network\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 12" fillcolor="#9ACD32" shape=parallelogram];
+            layer_0_gate_gpu_13 [label="Gating Network\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 13" fillcolor="#D8BFD" shape=parallelogram];
+            layer_0_gate_gpu_14 [label="Gating Network\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 14" fillcolor="#E0E0E0" shape=parallelogram];
+            layer_0_gate_gpu_15 [label="Gating Network\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 15" fillcolor="#FFF8DC" shape=parallelogram];
+            
+            layer_0_expert_0_gpu_8 [label="Expert 0\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 8" fillcolor="#FFB6C1" shape=box];
+            layer_0_expert_1_gpu_8 [label="Expert 1\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 8" fillcolor="#FFB6C1" shape=box];
+            layer_0_expert_2_gpu_9 [label="Expert 2\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 9" fillcolor="#20B2AA" shape=box];
+            layer_0_expert_3_gpu_9 [label="Expert 3\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 9" fillcolor="#20B2AA" shape=box];
+            layer_0_expert_4_gpu_10 [label="Expert 4\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 10" fillcolor="#B0C4DE" shape=box];
+            layer_0_expert_5_gpu_10 [label="Expert 5\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 10" fillcolor="#B0C4DE" shape=box];
+            layer_0_expert_6_gpu_11 [label="Expert 6\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 11" fillcolor="#FFDEAD" shape=box];
+            layer_0_expert_7_gpu_11 [label="Expert 7\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 11" fillcolor="#FFDEAD" shape=box];
+            layer_0_expert_8_gpu_12 [label="Expert 8\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 12" fillcolor="#9ACD32" shape=box];
+            layer_0_expert_9_gpu_12 [label="Expert 9\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 12" fillcolor="#9ACD32" shape=box];
+            layer_0_expert_10_gpu_13 [label="Expert 10\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 13" fillcolor="#D8BFD" shape=box];
+            layer_0_expert_11_gpu_13 [label="Expert 11\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 13" fillcolor="#D8BFD" shape=box];
+            layer_0_expert_12_gpu_14 [label="Expert 12\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 14" fillcolor="#E0E0E0" shape=box];
+            layer_0_expert_13_gpu_14 [label="Expert 13\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 14" fillcolor="#E0E0E0" shape=box];
+            layer_0_expert_14_gpu_15 [label="Expert 14\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 15" fillcolor="#FFF8DC" shape=box];
+            layer_0_expert_15_gpu_15 [label="Expert 15\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 15" fillcolor="#FFF8DC" shape=box];
+            
+            layer_0_expert_agg [label="Expert Aggregation (Top-2)\nInput: [batch_size=?, seq_len=2048, expert_hidden=16384] from 16 experts\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 8-15" fillcolor=yellow shape=parallelogram];
+        }
+        
+        layer_0_output [label="Layer 1 Output\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 8-15" fillcolor="#FFE4B5" shape=box];
+    }
+    
+    // ===== LAYER 1 =====
+    subgraph cluster_layer_1 {
+        bgcolor=lightgray;
+        label="Layer 2";
+        style=rounded;
+        
+        layer_1_distribute [label="Layer 2 Input Distribution\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096] replicated 8x\nGPU: All GPUs" fillcolor=lightcoral shape=diamond];
+        
+        subgraph cluster_attention_1 {
+            bgcolor="#E6F3FF";
+            label="Attention - Layer 2";
+            style=dashed;
+            
+            layer_1_qkv_gpu_0 [label="QKV Projection\nGPU 0\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor="#FFE4E1" shape=box];
+            layer_1_qkv_gpu_1 [label="QKV Projection\nGPU 1\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor="#E6E6FA" shape=box];
+            layer_1_qkv_gpu_2 [label="QKV Projection\nGPU 2\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor="#F0E68C" shape=box];
+            layer_1_qkv_gpu_3 [label="QKV Projection\nGPU 3\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor="#98FB98" shape=box];
+            layer_1_qkv_gpu_4 [label="QKV Projection\nGPU 4\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor="#87CEEB" shape=box];
+            layer_1_qkv_gpu_5 [label="QKV Projection\nGPU 5\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor="#DDA0DD" shape=box];
+            layer_1_qkv_gpu_6 [label="QKV Projection\nGPU 6\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor="#F4A460" shape=box];
+            layer_1_qkv_gpu_7 [label="QKV Projection\nGPU 7\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor="#D3D3D3" shape=box];
+            
+            layer_1_kv_reduce [label="KV All-Reduce\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128] from 8 GPUs\nOutput: [batch_size=?, seq_len=2048, heads=32, d_k=128]\nGPU: All 0-7" fillcolor=lightcoral shape=diamond];
+            
+            layer_1_attn_gpu_0 [label="Multi-Head Attention\nGPU 0\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor="#FFE4E1" shape=box];
+            layer_1_attn_gpu_1 [label="Multi-Head Attention\nGPU 1\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor="#E6E6FA" shape=box];
+            layer_1_attn_gpu_2 [label="Multi-Head Attention\nGPU 2\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor="#F0E68C" shape=box];
+            layer_1_attn_gpu_3 [label="Multi-Head Attention\nGPU 3\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor="#98FB98" shape=box];
+            layer_1_attn_gpu_4 [label="Multi-Head Attention\nGPU 4\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor="#87CEEB" shape=box];
+            layer_1_attn_gpu_5 [label="Multi-Head Attention\nGPU 5\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor="#DDA0DD" shape=box];
+            layer_1_attn_gpu_6 [label="Multi-Head Attention\nGPU 6\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor="#F4A460" shape=box];
+            layer_1_attn_gpu_7 [label="Multi-Head Attention\nGPU 7\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor="#D3D3D3" shape=box];
+            
+            layer_1_attn_agg [label="Attention Output All-Reduce\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128] from 8 GPUs\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: All 0-7" fillcolor=lightcoral shape=diamond];
+            
+            layer_1_attn_ln [label="LayerNorm + Residual\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 0-7" fillcolor="#FFE4B5" shape=box];
+        }
+        
+        subgraph cluster_moe_1 {
+            bgcolor="#FFE6E6";
+            label="MoE - Layer 2";
+            style=dashed;
+            
+            layer_1_gate_gpu_8 [label="Gating Network\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 8" fillcolor="#FFB6C1" shape=parallelogram];
+            layer_1_gate_gpu_9 [label="Gating Network\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 9" fillcolor="#20B2AA" shape=parallelogram];
+            layer_1_gate_gpu_10 [label="Gating Network\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 10" fillcolor="#B0C4DE" shape=parallelogram];
+            layer_1_gate_gpu_11 [label="Gating Network\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 11" fillcolor="#FFDEAD" shape=parallelogram];
+            layer_1_gate_gpu_12 [label="Gating Network\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 12" fillcolor="#9ACD32" shape=parallelogram];
+            layer_1_gate_gpu_13 [label="Gating Network\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 13" fillcolor="#D8BFD" shape=parallelogram];
+            layer_1_gate_gpu_14 [label="Gating Network\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 14" fillcolor="#E0E0E0" shape=parallelogram];
+            layer_1_gate_gpu_15 [label="Gating Network\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 15" fillcolor="#FFF8DC" shape=parallelogram];
+            
+            layer_1_expert_0_gpu_8 [label="Expert 0\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 8" fillcolor="#FFB6C1" shape=box];
+            layer_1_expert_1_gpu_8 [label="Expert 1\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 8" fillcolor="#FFB6C1" shape=box];
+            layer_1_expert_2_gpu_9 [label="Expert 2\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 9" fillcolor="#20B2AA" shape=box];
+            layer_1_expert_3_gpu_9 [label="Expert 3\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 9" fillcolor="#20B2AA" shape=box];
+            layer_1_expert_4_gpu_10 [label="Expert 4\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 10" fillcolor="#B0C4DE" shape=box];
+            layer_1_expert_5_gpu_10 [label="Expert 5\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 10" fillcolor="#B0C4DE" shape=box];
+            layer_1_expert_6_gpu_11 [label="Expert 6\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 11" fillcolor="#FFDEAD" shape=box];
+            layer_1_expert_7_gpu_11 [label="Expert 7\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 11" fillcolor="#FFDEAD" shape=box];
+            layer_1_expert_8_gpu_12 [label="Expert 8\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 12" fillcolor="#9ACD32" shape=box];
+            layer_1_expert_9_gpu_12 [label="Expert 9\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 12" fillcolor="#9ACD32" shape=box];
+            layer_1_expert_10_gpu_13 [label="Expert 10\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 13" fillcolor="#D8BFD" shape=box];
+            layer_1_expert_11_gpu_13 [label="Expert 11\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 13" fillcolor="#D8BFD" shape=box];
+            layer_1_expert_12_gpu_14 [label="Expert 12\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 14" fillcolor="#E0E0E0" shape=box];
+            layer_1_expert_13_gpu_14 [label="Expert 13\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 14" fillcolor="#E0E0E0" shape=box];
+            layer_1_expert_14_gpu_15 [label="Expert 14\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 15" fillcolor="#FFF8DC" shape=box];
+            layer_1_expert_15_gpu_15 [label="Expert 15\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 15" fillcolor="#FFF8DC" shape=box];
+            
+            layer_1_expert_agg [label="Expert Aggregation (Top-2)\nInput: [batch_size=?, seq_len=2048, expert_hidden=16384] from 16 experts\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 8-15" fillcolor=yellow shape=parallelogram];
+        }
+        
+        layer_1_output [label="Layer 2 Output\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 8-15" fillcolor="#FFE4B5" shape=box];
+    }
+    
+    // ===== LAYER 2 =====
+    subgraph cluster_layer_2 {
+        bgcolor=lightgray;
+        label="Layer 3";
+        style=rounded;
+        
+        layer_2_distribute [label="Layer 3 Input Distribution\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096] replicated 8x\nGPU: All GPUs" fillcolor=lightcoral shape=diamond];
+        
+        subgraph cluster_attention_2 {
+            bgcolor="#E6F3FF";
+            label="Attention - Layer 3";
+            style=dashed;
+            
+            layer_2_qkv_gpu_0 [label="QKV Projection\nGPU 0\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor="#FFE4E1" shape=box];
+            layer_2_qkv_gpu_1 [label="QKV Projection\nGPU 1\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor="#E6E6FA" shape=box];
+            layer_2_qkv_gpu_2 [label="QKV Projection\nGPU 2\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor="#F0E68C" shape=box];
+            layer_2_qkv_gpu_3 [label="QKV Projection\nGPU 3\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor="#98FB98" shape=box];
+            layer_2_qkv_gpu_4 [label="QKV Projection\nGPU 4\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor="#87CEEB" shape=box];
+            layer_2_qkv_gpu_5 [label="QKV Projection\nGPU 5\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor="#DDA0DD" shape=box];
+            layer_2_qkv_gpu_6 [label="QKV Projection\nGPU 6\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor="#F4A460" shape=box];
+            layer_2_qkv_gpu_7 [label="QKV Projection\nGPU 7\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor="#D3D3D3" shape=box];
+            
+            layer_2_kv_reduce [label="KV All-Reduce\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128] from 8 GPUs\nOutput: [batch_size=?, seq_len=2048, heads=32, d_k=128]\nGPU: All 0-7" fillcolor=lightcoral shape=diamond];
+            
+            layer_2_attn_gpu_0 [label="Multi-Head Attention\nGPU 0\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor="#FFE4E1" shape=box];
+            layer_2_attn_gpu_1 [label="Multi-Head Attention\nGPU 1\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor="#E6E6FA" shape=box];
+            layer_2_attn_gpu_2 [label="Multi-Head Attention\nGPU 2\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor="#F0E68C" shape=box];
+            layer_2_attn_gpu_3 [label="Multi-Head Attention\nGPU 3\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor="#98FB98" shape=box];
+            layer_2_attn_gpu_4 [label="Multi-Head Attention\nGPU 4\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor="#87CEEB" shape=box];
+            layer_2_attn_gpu_5 [label="Multi-Head Attention\nGPU 5\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor="#DDA0DD" shape=box];
+            layer_2_attn_gpu_6 [label="Multi-Head Attention\nGPU 6\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor="#F4A460" shape=box];
+            layer_2_attn_gpu_7 [label="Multi-Head Attention\nGPU 7\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor="#D3D3D3" shape=box];
+            
+            layer_2_attn_agg [label="Attention Output All-Reduce\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128] from 8 GPUs\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: All 0-7" fillcolor=lightcoral shape=diamond];
+            
+            layer_2_attn_ln [label="LayerNorm + Residual\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 0-7" fillcolor="#FFE4B5" shape=box];
+        }
+        
+        subgraph cluster_moe_2 {
+            bgcolor="#FFE6E6";
+            label="MoE - Layer 3";
+            style=dashed;
+            
+            layer_2_gate_gpu_8 [label="Gating Network\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 8" fillcolor="#FFB6C1" shape=parallelogram];
+            layer_2_gate_gpu_9 [label="Gating Network\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 9" fillcolor="#20B2AA" shape=parallelogram];
+            layer_2_gate_gpu_10 [label="Gating Network\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 10" fillcolor="#B0C4DE" shape=parallelogram];
+            layer_2_gate_gpu_11 [label="Gating Network\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 11" fillcolor="#FFDEAD" shape=parallelogram];
+            layer_2_gate_gpu_12 [label="Gating Network\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 12" fillcolor="#9ACD32" shape=parallelogram];
+            layer_2_gate_gpu_13 [label="Gating Network\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 13" fillcolor="#D8BFD" shape=parallelogram];
+            layer_2_gate_gpu_14 [label="Gating Network\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 14" fillcolor="#E0E0E0" shape=parallelogram];
+            layer_2_gate_gpu_15 [label="Gating Network\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 15" fillcolor="#FFF8DC" shape=parallelogram];
+            
+            layer_2_expert_0_gpu_8 [label="Expert 0\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 8" fillcolor="#FFB6C1" shape=box];
+            layer_2_expert_1_gpu_8 [label="Expert 1\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 8" fillcolor="#FFB6C1" shape=box];
+            layer_2_expert_2_gpu_9 [label="Expert 2\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 9" fillcolor="#20B2AA" shape=box];
+            layer_2_expert_3_gpu_9 [label="Expert 3\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 9" fillcolor="#20B2AA" shape=box];
+            layer_2_expert_4_gpu_10 [label="Expert 4\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 10" fillcolor="#B0C4DE" shape=box];
+            layer_2_expert_5_gpu_10 [label="Expert 5\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 10" fillcolor="#B0C4DE" shape=box];
+            layer_2_expert_6_gpu_11 [label="Expert 6\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 11" fillcolor="#FFDEAD" shape=box];
+            layer_2_expert_7_gpu_11 [label="Expert 7\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 11" fillcolor="#FFDEAD" shape=box];
+            layer_2_expert_8_gpu_12 [label="Expert 8\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 12" fillcolor="#9ACD32" shape=box];
+            layer_2_expert_9_gpu_12 [label="Expert 9\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 12" fillcolor="#9ACD32" shape=box];
+            layer_2_expert_10_gpu_13 [label="Expert 10\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 13" fillcolor="#D8BFD" shape=box];
+            layer_2_expert_11_gpu_13 [label="Expert 11\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 13" fillcolor="#D8BFD" shape=box];
+            layer_2_expert_12_gpu_14 [label="Expert 12\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 14" fillcolor="#E0E0E0" shape=box];
+            layer_2_expert_13_gpu_14 [label="Expert 13\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 14" fillcolor="#E0E0E0" shape=box];
+            layer_2_expert_14_gpu_15 [label="Expert 14\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 15" fillcolor="#FFF8DC" shape=box];
+            layer_2_expert_15_gpu_15 [label="Expert 15\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 15" fillcolor="#FFF8DC" shape=box];
+            
+            layer_2_expert_agg [label="Expert Aggregation (Top-2)\nInput: [batch_size=?, seq_len=2048, expert_hidden=16384] from 16 experts\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 8-15" fillcolor=yellow shape=parallelogram];
+        }
+        
+        layer_2_output [label="Layer 3 Output\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 8-15" fillcolor="#FFE4B5" shape=box];
+    }
+    
+    // ===== LAYER 3 =====
+    subgraph cluster_layer_3 {
+        bgcolor=lightgray;
+        label="Layer 4";
+        style=rounded;
+        
+        layer_3_distribute [label="Layer 4 Input Distribution\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096] replicated 8x\nGPU: All GPUs" fillcolor=lightcoral shape=diamond];
+        
+        subgraph cluster_attention_3 {
+            bgcolor="#E6F3FF";
+            label="Attention - Layer 4";
+            style=dashed;
+            
+            layer_3_qkv_gpu_0 [label="QKV Projection\nGPU 0\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor="#FFE4E1" shape=box];
+            layer_3_qkv_gpu_1 [label="QKV Projection\nGPU 1\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor="#E6E6FA" shape=box];
+            layer_3_qkv_gpu_2 [label="QKV Projection\nGPU 2\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor="#F0E68C" shape=box];
+            layer_3_qkv_gpu_3 [label="QKV Projection\nGPU 3\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor="#98FB98" shape=box];
+            layer_3_qkv_gpu_4 [label="QKV Projection\nGPU 4\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor="#87CEEB" shape=box];
+            layer_3_qkv_gpu_5 [label="QKV Projection\nGPU 5\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor="#DDA0DD" shape=box];
+            layer_3_qkv_gpu_6 [label="QKV Projection\nGPU 6\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor="#F4A460" shape=box];
+            layer_3_qkv_gpu_7 [label="QKV Projection\nGPU 7\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor="#D3D3D3" shape=box];
+            
+            layer_3_kv_reduce [label="KV All-Reduce\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128] from 8 GPUs\nOutput: [batch_size=?, seq_len=2048, heads=32, d_k=128]\nGPU: All 0-7" fillcolor=lightcoral shape=diamond];
+            
+            layer_3_attn_gpu_0 [label="Multi-Head Attention\nGPU 0\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor="#FFE4E1" shape=box];
+            layer_3_attn_gpu_1 [label="Multi-Head Attention\nGPU 1\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor="#E6E6FA" shape=box];
+            layer_3_attn_gpu_2 [label="Multi-Head Attention\nGPU 2\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor="#F0E68C" shape=box];
+            layer_3_attn_gpu_3 [label="Multi-Head Attention\nGPU 3\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor="#98FB98" shape=box];
+            layer_3_attn_gpu_4 [label="Multi-Head Attention\nGPU 4\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor="#87CEEB" shape=box];
+            layer_3_attn_gpu_5 [label="Multi-Head Attention\nGPU 5\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor="#DDA0DD" shape=box];
+            layer_3_attn_gpu_6 [label="Multi-Head Attention\nGPU 6\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor="#F4A460" shape=box];
+            layer_3_attn_gpu_7 [label="Multi-Head Attention\nGPU 7\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=?, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor="#D3D3D3" shape=box];
+            
+            layer_3_attn_agg [label="Attention Output All-Reduce\nInput: [batch_size=?, seq_len=2048, heads=4, d_k=128] from 8 GPUs\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: All 0-7" fillcolor=lightcoral shape=diamond];
+            
+            layer_3_attn_ln [label="LayerNorm + Residual\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 0-7" fillcolor="#FFE4B5" shape=box];
+        }
+        
+        subgraph cluster_moe_3 {
+            bgcolor="#FFE6E6";
+            label="MoE - Layer 4";
+            style=dashed;
+            
+            layer_3_gate_gpu_8 [label="Gating Network\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 8" fillcolor="#FFB6C1" shape=parallelogram];
+            layer_3_gate_gpu_9 [label="Gating Network\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 9" fillcolor="#20B2AA" shape=parallelogram];
+            layer_3_gate_gpu_10 [label="Gating Network\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 10" fillcolor="#B0C4DE" shape=parallelogram];
+            layer_3_gate_gpu_11 [label="Gating Network\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 11" fillcolor="#FFDEAD" shape=parallelogram];
+            layer_3_gate_gpu_12 [label="Gating Network\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 12" fillcolor="#9ACD32" shape=parallelogram];
+            layer_3_gate_gpu_13 [label="Gating Network\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 13" fillcolor="#D8BFD" shape=parallelogram];
+            layer_3_gate_gpu_14 [label="Gating Network\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 14" fillcolor="#E0E0E0" shape=parallelogram];
+            layer_3_gate_gpu_15 [label="Gating Network\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, experts=16]\nGPU: 15" fillcolor="#FFF8DC" shape=parallelogram];
+            
+            layer_3_expert_0_gpu_8 [label="Expert 0\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 8" fillcolor="#FFB6C1" shape=box];
+            layer_3_expert_1_gpu_8 [label="Expert 1\nGPU 8\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 8" fillcolor="#FFB6C1" shape=box];
+            layer_3_expert_2_gpu_9 [label="Expert 2\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 9" fillcolor="#20B2AA" shape=box];
+            layer_3_expert_3_gpu_9 [label="Expert 3\nGPU 9\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 9" fillcolor="#20B2AA" shape=box];
+            layer_3_expert_4_gpu_10 [label="Expert 4\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 10" fillcolor="#B0C4DE" shape=box];
+            layer_3_expert_5_gpu_10 [label="Expert 5\nGPU 10\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 10" fillcolor="#B0C4DE" shape=box];
+            layer_3_expert_6_gpu_11 [label="Expert 6\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 11" fillcolor="#FFDEAD" shape=box];
+            layer_3_expert_7_gpu_11 [label="Expert 7\nGPU 11\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 11" fillcolor="#FFDEAD" shape=box];
+            layer_3_expert_8_gpu_12 [label="Expert 8\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 12" fillcolor="#9ACD32" shape=box];
+            layer_3_expert_9_gpu_12 [label="Expert 9\nGPU 12\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 12" fillcolor="#9ACD32" shape=box];
+            layer_3_expert_10_gpu_13 [label="Expert 10\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 13" fillcolor="#D8BFD" shape=box];
+            layer_3_expert_11_gpu_13 [label="Expert 11\nGPU 13\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 13" fillcolor="#D8BFD" shape=box];
+            layer_3_expert_12_gpu_14 [label="Expert 12\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 14" fillcolor="#E0E0E0" shape=box];
+            layer_3_expert_13_gpu_14 [label="Expert 13\nGPU 14\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 14" fillcolor="#E0E0E0" shape=box];
+            layer_3_expert_14_gpu_15 [label="Expert 14\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 15" fillcolor="#FFF8DC" shape=box];
+            layer_3_expert_15_gpu_15 [label="Expert 15\nGPU 15\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, expert_hidden=16384]\nGPU: 15" fillcolor="#FFF8DC" shape=box];
+            
+            layer_3_expert_agg [label="Expert Aggregation (Top-2)\nInput: [batch_size=?, seq_len=2048, expert_hidden=16384] from 16 experts\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 8-15" fillcolor=yellow shape=parallelogram];
+        }
+        
+        layer_3_output [label="Layer 4 Output\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 8-15" fillcolor="#FFE4B5" shape=box];
+    }
+    
+    // Model Output
+    output [label="Model Output\nInput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=?, seq_len=2048, hidden_dim=4096]\nGPU: 15" fillcolor=lightblue shape=ellipse style="filled,bold"];
+    
+    // ===== EDGE CONNECTIONS =====
+    // Input to Layer 1
+    input -> layer_0_distribute;
+    
+    // Layer 1 connections
+    layer_0_distribute -> layer_0_qkv_gpu_0;
+    layer_0_distribute -> layer_0_qkv_gpu_1;
+    layer_0_d
