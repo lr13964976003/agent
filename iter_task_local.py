@@ -32,7 +32,7 @@ def main():
     APP_SLUG = "paper_to_real"          # 换成你在 Agenta 的 app_slug
     ENV_SLUG = "production"      # 或 staging/dev
 
-    MAX_ITER = 5
+    MAX_ITER = 2
 
     variant = {
             "check_topic": {

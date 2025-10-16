@@ -1,0 +1,52 @@
+digraph optimized_mlp_layer_0_grouped_tensor_parallel {
+    rankdir=TB size="35,45"
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    
+    // Input and output
+    mlp_input [label="MLP Layer 0 Input\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightgreen shape=parallelogram]
+    mlp_output [label="MLP Layer 0 Output\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightgreen shape=parallelogram]
+    
+    // LayerNorm - properly connected
+    ln [label="LayerNorm\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightyellow shape=rectangle]
+    
+    // Input split - properly connected
+    input_split [label="Split Input\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: 2×[batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Grouped tensor parallelism - 2 groups of 4 GPUs each
+    
+    // Tensor Group 0: GPUs 0-3
+    fc1_tg0 [label="FC1 Linear (Grouped Column Parallel)\nTensor Group 0\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nGPU: 0-3" fillcolor=lightcoral shape=rectangle]
+    gelu_tg0 [label="GELU Activation\nTensor Group 0\nInput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nGPU: 0-3" fillcolor=lightyellow shape=rectangle]
+    fc2_split_tg0 [label="FC2 Split (Grouped Row Parallel)\nTensor Group 0\nInput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 0-3" fillcolor=lightsteelblue shape=parallelogram]
+    all_reduce_tg0 [label="All-Reduce\nTensor Group 0\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 0-3" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Tensor Group 1: GPUs 4-7
+    fc1_tg1 [label="FC1 Linear (Grouped Column Parallel)\nTensor Group 1\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nGPU: 4-7" fillcolor=lightcoral shape=rectangle]
+    gelu_tg1 [label="GELU Activation\nTensor Group 1\nInput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nGPU: 4-7" fillcolor=lightyellow shape=rectangle]
+    fc2_split_tg1 [label="FC2 Split (Grouped Row Parallel)\nTensor Group 1\nInput: [batch_size=1024, seq_len=10000, hidden_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 4-7" fillcolor=lightsteelblue shape=parallelogram]
+    all_reduce_tg1 [label="All-Reduce\nTensor Group 1\nInput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=2048]\nGPU: 4-7" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Final aggregation - properly connected
+    final_concat [label="Final Concatenate\nInput: 2×[batch_size=1024, seq_len=10000, embed_dim=2048]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightsteelblue shape=parallelogram]
+    residual [label="Residual Add\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]×2\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-7" fillcolor=lightgray shape=rectangle]
+    
+    // Complete flow - all nodes properly connected
+    mlp_input -> ln
+    ln -> input_split
+    input_split -> fc1_tg0
+    input_split -> fc1_tg1
+    
+    fc1_tg0 -> gelu_tg0
+    gelu_tg0 -> fc2_split_tg0
+    fc2_split_tg0 -> all_reduce_tg0
+    all_reduce_tg0 -> final_concat
+    
+    fc1_tg1 -> gelu_tg1
+    gelu_tg1 -> fc2_split_tg1
+    fc2_split_tg1 -> all_reduce_tg1
+    all_reduce_tg1 -> final_concat
+    
+    final_concat -> residual
+    mlp_input -> residual
+    residual -> mlp_output
+}

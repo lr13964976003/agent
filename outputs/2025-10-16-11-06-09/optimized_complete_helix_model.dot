@@ -1,0 +1,21 @@
+digraph optimized_complete_helix_model {
+    rankdir=TB size="30,40"
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    
+    // Input and output nodes
+    model_input [label="Model Input\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram]
+    model_output [label="Model Output\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram]
+    
+    // Pipeline stages
+    stage0 [label="Pipeline Stage 0\nGPUs: 0-7\nLayer 0: MHA + MLP" fillcolor=lightyellow shape=rectangle]
+    stage1 [label="Pipeline Stage 1\nGPUs: 8-15\nLayer 1: MHA + MLP" fillcolor=lightyellow shape=rectangle]
+    
+    // Communication nodes
+    stage0_to_stage1 [label="Pipeline Communication\nTransfer from Stage 0 to Stage 1\nData: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 7→8" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Complete model flow
+    model_input -> stage0
+    stage0 -> stage0_to_stage1
+    stage0_to_stage1 -> stage1
+    stage1 -> model_output
+}

@@ -1,0 +1,131 @@
+digraph optimized_communication_patterns {
+    rankdir=TB size="40,50"
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    
+    // Model overview
+    model_start [label="Model Start\nInput: [1024, 10000, 8192]" fillcolor=lightgreen shape=parallelogram]
+    model_end [label="Model End\nOutput: [1024, 10000, 8192]" fillcolor=lightgreen shape=parallelogram]
+    
+    // GPU groups
+    gpus_0_7 [label="GPUs 0-7\nPipeline Stage 0\nMHA Layer 0 + MLP Layer 0" fillcolor=lightyellow shape=rectangle]
+    gpus_8_15 [label="GPUs 8-15\nPipeline Stage 1\nMHA Layer 1 + MLP Layer 1" fillcolor=lightyellow shape=rectangle]
+    
+    // MHA layer 0 communication
+    mha0_input [label="MHA0 Input Distribution\nBroadcast: [1024, 10000, 8192]\nGPU: 0-7" fillcolor=lightsteelblue shape=parallelogram]
+    mha0_head0 [label="Head Group 0\nGPUs: 0-1\nQ,K,V Linear" fillcolor=lightcoral shape=rectangle]
+    mha0_head1 [label="Head Group 1\nGPUs: 2-3\nQ,K,V Linear" fillcolor=lightcoral shape=rectangle]
+    mha0_head2 [label="Head Group 2\nGPUs: 4-5\nQ,K,V Linear" fillcolor=lightcoral shape=rectangle]
+    mha0_head3 [label="Head Group 3\nGPUs: 6-7\nQ,K,V Linear" fillcolor=lightcoral shape=rectangle]
+    mha0_attn0 [label="Attention\nGPUs: 0-1\nHead Group 0" fillcolor=lightpink shape=rectangle]
+    mha0_attn1 [label="Attention\nGPUs: 2-3\nHead Group 1" fillcolor=lightpink shape=rectangle]
+    mha0_attn2 [label="Attention\nGPUs: 4-5\nHead Group 2" fillcolor=lightpink shape=rectangle]
+    mha0_attn3 [label="Attention\nGPUs: 6-7\nHead Group 3" fillcolor=lightpink shape=rectangle]
+    mha0_concat [label="Concatenate\nGPUs: 0-7\nHead Groups" fillcolor=lightsteelblue shape=parallelogram]
+    mha0_outproj [label="Output Projection\nTensor Parallel\nGPUs: 0-7" fillcolor=lightcoral shape=rectangle]
+    
+    // MLP layer 0 communication
+    mlp0_split [label="Input Split\nGPUs: 0-7\n2-way Grouped" fillcolor=lightsteelblue shape=parallelogram]
+    mlp0_group0 [label="MLP Group 0\nGPUs: 0-3\nFC1 + FC2" fillcolor=lightcoral shape=rectangle]
+    mlp0_group1 [label="MLP Group 1\nGPUs: 4-7\nFC1 + FC2" fillcolor=lightcoral shape=rectangle]
+    mlp0_gelu0 [label="GELU\nGPUs: 0-3" fillcolor=lightyellow shape=rectangle]
+    mlp0_gelu1 [label="GELU\nGPUs: 4-7" fillcolor=lightyellow shape=rectangle]
+    mlp0_allreduce0 [label="All-Reduce\nGPUs: 0-3" fillcolor=lightsteelblue shape=parallelogram]
+    mlp0_allreduce1 [label="All-Reduce\nGPUs: 4-7" fillcolor=lightsteelblue shape=parallelogram]
+    mlp0_concat [label="Final Concatenate\nGPUs: 0-7" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Pipeline communication
+    pipeline_comm [label="Pipeline Communication\nGPUs: 7→8\nData Transfer" fillcolor=lightgreen shape=parallelogram]
+    
+    // MHA layer 1 communication (mirrors MHA layer 0)
+    mha1_input [label="MHA1 Input Distribution\nBroadcast: [1024, 10000, 8192]\nGPU: 8-15" fillcolor=lightsteelblue shape=parallelogram]
+    mha1_head0 [label="Head Group 0\nGPUs: 8-9\nQ,K,V Linear" fillcolor=lightcoral shape=rectangle]
+    mha1_head1 [label="Head Group 1\nGPUs: 10-11\nQ,K,V Linear" fillcolor=lightcoral shape=rectangle]
+    mha1_head2 [label="Head Group 2\nGPUs: 12-13\nQ,K,V Linear" fillcolor=lightcoral shape=rectangle]
+    mha1_head3 [label="Head Group 3\nGPUs: 14-15\nQ,K,V Linear" fillcolor=lightcoral shape=rectangle]
+    mha1_attn0 [label="Attention\nGPUs: 8-9\nHead Group 0" fillcolor=lightpink shape=rectangle]
+    mha1_attn1 [label="Attention\nGPUs: 10-11\nHead Group 1" fillcolor=lightpink shape=rectangle]
+    mha1_attn2 [label="Attention\nGPUs: 12-13\nHead Group 2" fillcolor=lightpink shape=rectangle]
+    mha1_attn3 [label="Attention\nGPUs: 14-15\nHead Group 3" fillcolor=lightpink shape=rectangle]
+    mha1_concat [label="Concatenate\nGPUs: 8-15\nHead Groups" fillcolor=lightsteelblue shape=parallelogram]
+    mha1_outproj [label="Output Projection\nTensor Parallel\nGPUs: 8-15" fillcolor=lightcoral shape=rectangle]
+    
+    // MLP layer 1 communication (mirrors MLP layer 0)
+    mlp1_split [label="Input Split\nGPUs: 8-15\n2-way Grouped" fillcolor=lightsteelblue shape=parallelogram]
+    mlp1_group0 [label="MLP Group 0\nGPUs: 8-11\nFC1 + FC2" fillcolor=lightcoral shape=rectangle]
+    mlp1_group1 [label="MLP Group 1\nGPUs: 12-15\nFC1 + FC2" fillcolor=lightcoral shape=rectangle]
+    mlp1_gelu0 [label="GELU\nGPUs: 8-11" fillcolor=lightyellow shape=rectangle]
+    mlp1_gelu1 [label="GELU\nGPUs: 12-15" fillcolor=lightyellow shape=rectangle]
+    mlp1_allreduce0 [label="All-Reduce\nGPUs: 8-11" fillcolor=lightsteelblue shape=parallelogram]
+    mlp1_allreduce1 [label="All-Reduce\nGPUs: 12-15" fillcolor=lightsteelblue shape=parallelogram]
+    mlp1_concat [label="Final Concatenate\nGPUs: 8-15" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Complete flow with all nodes connected
+    model_start -> gpus_0_7
+    model_start -> mha0_input
+    
+    mha0_input -> mha0_head0
+    mha0_input -> mha0_head1
+    mha0_input -> mha0_head2
+    mha0_input -> mha0_head3
+    
+    mha0_head0 -> mha0_attn0
+    mha0_head1 -> mha0_attn1
+    mha0_head2 -> mha0_attn2
+    mha0_head3 -> mha0_attn3
+    
+    mha0_attn0 -> mha0_concat
+    mha0_attn1 -> mha0_concat
+    mha0_attn2 -> mha0_concat
+    mha0_attn3 -> mha0_concat
+    
+    mha0_concat -> mha0_outproj
+    mha0_outproj -> mlp0_split
+    
+    mlp0_split -> mlp0_group0
+    mlp0_split -> mlp0_group1
+    
+    mlp0_group0 -> mlp0_gelu0
+    mlp0_group1 -> mlp0_gelu1
+    
+    mlp0_gelu0 -> mlp0_allreduce0
+    mlp0_gelu1 -> mlp0_allreduce1
+    
+    mlp0_allreduce0 -> mlp0_concat
+    mlp0_allreduce1 -> mlp0_concat
+    
+    mlp0_concat -> pipeline_comm
+    pipeline_comm -> gpus_8_15
+    pipeline_comm -> mha1_input
+    
+    mha1_input -> mha1_head0
+    mha1_input -> mha1_head1
+    mha1_input -> mha1_head2
+    mha1_input -> mha1_head3
+    
+    mha1_head0 -> mha1_attn0
+    mha1_head1 -> mha1_attn1
+    mha1_head2 -> mha1_attn2
+    mha1_head3 -> mha1_attn3
+    
+    mha1_attn0 -> mha1_concat
+    mha1_attn1 -> mha1_concat
+    mha1_attn2 -> mha1_concat
+    mha1_attn3 -> mha1_concat
+    
+    mha1_concat -> mha1_outproj
+    mha1_outproj -> mlp1_split
+    
+    mlp1_split -> mlp1_group0
+    mlp1_split -> mlp1_group1
+    
+    mlp1_group0 -> mlp1_gelu0
+    mlp1_group1 -> mlp1_gelu1
+    
+    mlp1_gelu0 -> mlp1_allreduce0
+    mlp1_gelu1 -> mlp1_allreduce1
+    
+    mlp1_allreduce0 -> mlp1_concat
+    mlp1_allreduce1 -> mlp1_concat
+    
+    mlp1_concat -> model_end
+}

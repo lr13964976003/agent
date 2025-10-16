@@ -1,0 +1,86 @@
+digraph optimized_mha_layer_1_pipeline_parallel {
+    rankdir=TB size="35,45"
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    
+    // Input and output
+    mha_input [label="MHA Layer 1 Input\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-15" fillcolor=lightgreen shape=parallelogram]
+    mha_output [label="MHA Layer 1 Output\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-15" fillcolor=lightgreen shape=parallelogram]
+    
+    // LayerNorm - properly connected
+    ln [label="LayerNorm\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-15" fillcolor=lightyellow shape=rectangle]
+    
+    // Pipeline pipeline grouping - 2 groups of 4 GPUs each
+    // Group 2: GPUs 8-11 for head groups 0-1
+    // Group 3: GPUs 12-15 for head groups 2-3
+    
+    // Group 2 - Head Groups 0-1
+    q_hg0_g2 [label="Q Linear\nHead Group 0\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_k=128]\nGPU: 8-9" fillcolor=lightcoral shape=rectangle]
+    k_hg0_g2 [label="K Linear\nHead Group 0\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_k=128]\nGPU: 8-9" fillcolor=lightcoral shape=rectangle]
+    v_hg0_g2 [label="V Linear\nHead Group 0\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_v=128]\nGPU: 8-9" fillcolor=lightcoral shape=rectangle]
+    attn_hg0_g2 [label="Attention\nHead Group 0\nInput: Q,K,V [8×128]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_v=128]\nGPU: 8-9" fillcolor=lightpink shape=rectangle]
+    
+    q_hg1_g2 [label="Q Linear\nHead Group 1\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_k=128]\nGPU: 10-11" fillcolor=lightcoral shape=rectangle]
+    k_hg1_g2 [label="K Linear\nHead Group 1\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_k=128]\nGPU: 10-11" fillcolor=lightcoral shape=rectangle]
+    v_hg1_g2 [label="V Linear\nHead Group 1\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_v=128]\nGPU: 10-11" fillcolor=lightcoral shape=rectangle]
+    attn_hg1_g2 [label="Attention\nHead Group 1\nInput: Q,K,V [8×128]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_v=128]\nGPU: 10-11" fillcolor=lightpink shape=rectangle]
+    
+    // Group 3 - Head Groups 2-3
+    q_hg2_g3 [label="Q Linear\nHead Group 2\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_k=128]\nGPU: 12-13" fillcolor=lightcoral shape=rectangle]
+    k_hg2_g3 [label="K Linear\nHead Group 2\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_k=128]\nGPU: 12-13" fillcolor=lightcoral shape=rectangle]
+    v_hg2_g3 [label="V Linear\nHead Group 2\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_v=128]\nGPU: 12-13" fillcolor=lightcoral shape=rectangle]
+    attn_hg2_g3 [label="Attention\nHead Group 2\nInput: Q,K,V [8×128]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_v=128]\nGPU: 12-13" fillcolor=lightpink shape=rectangle]
+    
+    q_hg3_g3 [label="Q Linear\nHead Group 3\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_k=128]\nGPU: 14-15" fillcolor=lightcoral shape=rectangle]
+    k_hg3_g3 [label="K Linear\nHead Group 3\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_k=128]\nGPU: 14-15" fillcolor=lightcoral shape=rectangle]
+    v_hg3_g3 [label="V Linear\nHead Group 3\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_v=128]\nGPU: 14-15" fillcolor=lightcoral shape=rectangle]
+    attn_hg3_g3 [label="Attention\nHead Group 3\nInput: Q,K,V [8×128]\nOutput: [batch_size=1024, seq_len=10000, heads=8, d_v=128]\nGPU: 14-15" fillcolor=lightpink shape=rectangle]
+    
+    // Concatenation nodes - properly connected
+    concat_g2 [label="Concatenate Group 2\nInput: 2×[batch_size=1024, seq_len=10000, heads=8, d_v=128]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nGPU: 8-11" fillcolor=lightsteelblue shape=parallelogram]
+    concat_g3 [label="Concatenate Group 3\nInput: 2×[batch_size=1024, seq_len=10000, heads=8, d_v=128]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_v=128]\nGPU: 12-15" fillcolor=lightsteelblue shape=parallelogram]
+    final_concat [label="Final Concatenate\nInput: 2×[batch_size=1024, seq_len=10000, heads=16, d_v=128]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-15" fillcolor=lightsteelblue shape=parallelogram]
+    
+    // Output projection - properly connected
+    output_proj [label="Output Projection\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-15" fillcolor=lightcoral shape=rectangle]
+    residual [label="Residual Add\nInput: [batch_size=1024, seq_len=10000, embed_dim=8192]×2\nOutput: [batch_size=1024, seq_len=10000, embed_dim=8192]\nGPU: 8-15" fillcolor=lightgray shape=rectangle]
+    
+    // Complete flow - all nodes connected
+    mha_input -> ln
+    ln -> q_hg0_g2
+    ln -> k_hg0_g2
+    ln -> v_hg0_g2
+    ln -> q_hg1_g2
+    ln -> k_hg1_g2
+    ln -> v_hg1_g2
+    ln -> q_hg2_g3
+    ln -> k_hg2_g3
+    ln -> v_hg2_g3
+    ln -> q_hg3_g3
+    ln -> k_hg3_g3
+    ln -> v_hg3_g3
+    
+    q_hg0_g2 -> attn_hg0_g2
+    k_hg0_g2 -> attn_hg0_g2
+    v_hg0_g2 -> attn_hg0_g2
+    q_hg1_g2 -> attn_hg1_g2
+    k_hg1_g2 -> attn_hg1_g2
+    v_hg1_g2 -> attn_hg1_g2
+    q_hg2_g3 -> attn_hg2_g3
+    k_hg2_g3 -> attn_hg2_g3
+    v_hg2_g3 -> attn_hg2_g3
+    q_hg3_g3 -> attn_hg3_g3
+    k_hg3_g3 -> attn_hg3_g3
+    v_hg3_g3 -> attn_hg3_g3
+    
+    attn_hg0_g2 -> concat_g2
+    attn_hg1_g2 -> concat_g2
+    attn_hg2_g3 -> concat_g3
+    attn_hg3_g3 -> concat_g3
+    
+    concat_g2 -> final_concat
+    concat_g3 -> final_concat
+    final_concat -> output_proj
+    output_proj -> residual
+    mha_input -> residual
+    residual -> mha_output
+}
