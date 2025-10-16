@@ -1,0 +1,444 @@
+{
+  "models": {
+    "baseline": {
+      "type": "static_parallel",
+      "tensor_parallelism": 8,
+      "pipeline_parallelism": 2,
+      "total_gpus": 16,
+      "architecture": {
+        "layers": 4,
+        "hidden_dim": 4096,
+        "attention_heads": 32,
+        "feedforward_dim": 16384,
+        "parameters": "~13B"
+      },
+      "gpu_mapping": {
+        "stage_0": {
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": [0, 1]
+        },
+        "stage_1": {
+          "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": [2, 3]
+        }
+      }
+    },
+    "fa_pool": {
+      "type": "dynamic_parallel",
+      "base_layer": {
+        "gpus": 8,
+        "components": ["embedding", "positional_encoding", "output_projection", "ffn_all_layers"],
+        "parallel_strategy": {
+          "type": "tensor_parallelism",
+          "degree": 8,
+          "parameters": {
+            "communication_backend": "nccl",
+            "all_reduce_algorithm": "ring"
+          }
+        }
+      },
+      "attention_pool": {
+        "max_gpus": 32,
+        "activation_threshold": 4096,
+        "allocation_strategy": "sequence_length_based",
+        "parallel_strategy": {
+          "type": "sequence_parallelism",
+          "parameters": {
+            "block_size_calculation": "ceil(sequence_length / pool_gpus)",
+            "communication_pattern": "all_gather",
+            "kv_replication": true
+          }
+        }
+      },
+      "architecture": {
+        "layers": 4,
+        "hidden_dim": 4096,
+        "attention_heads": 32,
+        "feedforward_dim": 16384,
+        "parameters": "~13B"
+      }
+    }
+  },
+  "dynamic_allocation_rules": {
+    "sequence_length_ranges": {
+      "0-4095": {
+        "pool_gpus": 0,
+        "total_gpus": 8
+      },
+      "4096-8191": {
+        "pool_gpus": 8,
+        "total_gpus": 16
+      },
+      "8192-16383": {
+        "pool_gpus": 16,
+        "total_gpus": 24
+      },
+      "16384-32767": {
+        "pool_gpus": 24,
+        "total_gpus": 32
+      },
+      "32768+": {
+        "pool_gpus": 32,
+        "total_gpus": 40
+      }
+    }
+  },
+  "gpu_device_mapping": {
+    "base_layer_devices": {
+      "device_0": {
+        "gpu_id": 0,
+        "memory_capacity": "80GB",
+        "allocated_memory": "65GB",
+        "components": ["embedding_0", "attention_0", "ffn_0", "attention_1", "ffn_1", "attention_2", "ffn_2", "attention_3", "ffn_3", "output_projection_0"],
+        "tensor_parallel_rank": 0
+      },
+      "device_1": {
+        "gpu_id": 1,
+        "memory_capacity": "80GB",
+        "allocated_memory": "65GB",
+        "components": ["embedding_1", "attention_0", "ffn_0", "attention_1", "ffn_1", "attention_2", "ffn_2", "attention_3", "ffn_3", "output_projection_1"],
+        "tensor_parallel_rank": 1
+      },
+      "device_2": {
+        "gpu_id": 2,
+        "memory_capacity": "80GB",
+        "allocated_memory": "65GB",
+        "components": ["embedding_2", "attention_0", "ffn_0", "attention_1", "ffn_1", "attention_2", "ffn_2", "attention_3", "ffn_3", "output_projection_2"],
+        "tensor_parallel_rank": 2
+      },
+      "device_3": {
+        "gpu_id": 3,
+        "memory_capacity": "80GB",
+        "allocated_memory": "65GB",
+        "components": ["embedding_3", "attention_0", "ffn_0", "attention_1", "ffn_1", "attention_2", "ffn_2", "attention_3", "ffn_3", "output_projection_3"],
+        "tensor_parallel_rank": 3
+      },
+      "device_4": {
+        "gpu_id": 4,
+        "memory_capacity": "80GB",
+        "allocated_memory": "65GB",
+        "components": ["embedding_4", "attention_0", "ffn_0", "attention_1", "ffn_1", "attention_2", "ffn_2", "attention_3", "ffn_3", "output_projection_4"],
+        "tensor_parallel_rank": 4
+      },
+      "device_5": {
+        "gpu_id": 5,
+        "memory_capacity": "80GB",
+        "allocated_memory": "65GB",
+        "components": ["embedding_5", "attention_0", "ffn_0", "attention_1", "ffn_1", "attention_2", "ffn_2", "attention_3", "ffn_3", "output_projection_5"],
+        "tensor_parallel_rank": 5
+      },
+      "device_6": {
+        "gpu_id": 6,
+        "memory_capacity": "80GB",
+        "allocated_memory": "65GB",
+        "components": ["embedding_6", "attention_0", "ffn_0", "attention_1", "ffn_1", "attention_2", "ffn_2", "attention_3", "ffn_3", "output_projection_6"],
+        "tensor_parallel_rank": 6
+      },
+      "device_7": {
+        "gpu_id": 7,
+        "memory_capacity": "80GB",
+        "allocated_memory": "65GB",
+        "components": ["embedding_7", "attention_0", "ffn_0", "attention_1", "ffn_1", "attention_2", "ffn_2", "attention_3", "ffn_3", "output_projection_7"],
+        "tensor_parallel_rank": 7
+      }
+    },
+    "attention_pool_devices": {
+      "pool_device_0": {
+        "gpu_id": 8,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_0"],
+        "activation_condition": "sequence_length >= 4096",
+        "block_range": "dynamic"
+      },
+      "pool_device_1": {
+        "gpu_id": 9,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_1"],
+        "activation_condition": "sequence_length >= 4096",
+        "block_range": "dynamic"
+      },
+      "pool_device_2": {
+        "gpu_id": 10,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_2"],
+        "activation_condition": "sequence_length >= 4096",
+        "block_range": "dynamic"
+      },
+      "pool_device_3": {
+        "gpu_id": 11,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_3"],
+        "activation_condition": "sequence_length >= 4096",
+        "block_range": "dynamic"
+      },
+      "pool_device_4": {
+        "gpu_id": 12,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_4"],
+        "activation_condition": "sequence_length >= 8192",
+        "block_range": "dynamic"
+      },
+      "pool_device_5": {
+        "gpu_id": 13,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_5"],
+        "activation_condition": "sequence_length >= 8192",
+        "block_range": "dynamic"
+      },
+      "pool_device_6": {
+        "gpu_id": 14,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_6"],
+        "activation_condition": "sequence_length >= 8192",
+        "block_range": "dynamic"
+      },
+      "pool_device_7": {
+        "gpu_id": 15,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_7"],
+        "activation_condition": "sequence_length >= 8192",
+        "block_range": "dynamic"
+      },
+      "pool_device_8": {
+        "gpu_id": 16,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_8"],
+        "activation_condition": "sequence_length >= 16384",
+        "block_range": "dynamic"
+      },
+      "pool_device_9": {
+        "gpu_id": 17,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_9"],
+        "activation_condition": "sequence_length >= 16384",
+        "block_range": "dynamic"
+      },
+      "pool_device_10": {
+        "gpu_id": 18,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_10"],
+        "activation_condition": "sequence_length >= 16384",
+        "block_range": "dynamic"
+      },
+      "pool_device_11": {
+        "gpu_id": 19,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_11"],
+        "activation_condition": "sequence_length >= 16384",
+        "block_range": "dynamic"
+      },
+      "pool_device_12": {
+        "gpu_id": 20,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_12"],
+        "activation_condition": "sequence_length >= 16384",
+        "block_range": "dynamic"
+      },
+      "pool_device_13": {
+        "gpu_id": 21,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_13"],
+        "activation_condition": "sequence_length >= 16384",
+        "block_range": "dynamic"
+      },
+      "pool_device_14": {
+        "gpu_id": 22,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_14"],
+        "activation_condition": "sequence_length >= 16384",
+        "block_range": "dynamic"
+      },
+      "pool_device_15": {
+        "gpu_id": 23,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_15"],
+        "activation_condition": "sequence_length >= 16384",
+        "block_range": "dynamic"
+      },
+      "pool_device_16": {
+        "gpu_id": 24,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_16"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_17": {
+        "gpu_id": 25,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_17"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_18": {
+        "gpu_id": 26,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_18"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_19": {
+        "gpu_id": 27,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_19"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_20": {
+        "gpu_id": 28,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_20"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_21": {
+        "gpu_id": 29,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_21"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_22": {
+        "gpu_id": 30,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_22"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_23": {
+        "gpu_id": 31,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_23"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_24": {
+        "gpu_id": 32,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_24"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_25": {
+        "gpu_id": 33,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_25"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_26": {
+        "gpu_id": 34,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_26"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_27": {
+        "gpu_id": 35,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_27"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_28": {
+        "gpu_id": 36,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_28"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_29": {
+        "gpu_id": 37,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_29"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_30": {
+        "gpu_id": 38,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_30"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      },
+      "pool_device_31": {
+        "gpu_id": 39,
+        "memory_capacity": "80GB",
+        "allocated_memory": "45GB",
+        "components": ["attention_block_31"],
+        "activation_condition": "sequence_length >= 32768",
+        "block_range": "dynamic"
+      }
+    }
+  },
+  "communication_config": {
+    "backend": "nccl",
+    "topology": {
+      "base_layer_rings": [
+        [0, 1, 2, 3, 4, 5, 6, 7],
+        [7, 6, 5, 4, 3, 2, 1, 0]
+      ],
+      "pool_layer_rings": [
+        [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+        [39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8]
+      ]
+    },
+    "parameters": {
+      "all_reduce_bucket_size": 50*1024*1024,
+      "overlap_communication": true,
+      "asynchronous_reduction": true
+    }
+  },
+  "memory_config": {
+    "base_layer_memory_per_gpu": "65GB",
+    "pool_layer_memory_per_gpu": "45GB",
+    "buffer_sizes": {
+      "kv_cache": "20GB",
+      "attention_buffer": "25GB",
+      "communication_buffer": "5GB"
+    }
+  },
+  "runtime_config": {
+    "scheduler": "dynamic_resource_scheduler",
+    "threshold_monitoring": {
+      "sequence_length_threshold": 4096,
+      "monitoring_frequency": "per_batch",
+      "allocation_latency": "<100ms"
+    },
+    "fault_tolerance": {
+      "max_retries": 3,
+      "timeout": "30s",
+      "checkpointing": false
+    }
+  }
+}

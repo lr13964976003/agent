@@ -39,7 +39,7 @@ def main():
                 "slug": "check_topic",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "./papers/helix/paper.md",
+                    "paper_path": "./papers/FA/paper.md",
                     "score_path": "./knowledges/llm_parallelism_classification_schema.json"
                 },
                 "tools": [
@@ -50,7 +50,7 @@ def main():
                 "slug": "chain_read_paper",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "./papers/helix/paper.md",
+                    "paper_path": "./papers/FA/paper.md",
                     "knowledge_path": "./knowledges/llm_parallel_strategies.md",
                     "save_path": f"./outputs/{submission_dir}"
                     },
@@ -65,8 +65,8 @@ def main():
                 "slug" : "chain_check_paper",
                 "version" : 8,
                 "inputs": {
-                    "origin_paper_path" : "./papers/helix/paper.md",
-                    "plan_path": "./papers/helix/deployment_config.json"
+                    "origin_paper_path" : "./papers/FA/paper.md",
+                    "plan_path": "./papers/FA/deployment_config.json"
                     },
                 "tools": [
                     FileReadTool(),
@@ -141,7 +141,7 @@ def main():
         agents.append(build_agent("openai/Kimi-K2",tools))
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
-    '''
+    
     check_result = run_pipeline([agents[0]], [tasks[0]])
     if "failed" in check_result.lower():
         return "The paper is not relevant to the topic"
@@ -156,14 +156,14 @@ def main():
     f"There are the submissions of previous agents: \n\n{dag_result}"
     
     init_perf = run_pipeline([agents[5]], [perf_task])
-    '''
-    with open("temp.txt","r") as f:
-        iter_input = f.read()
+    
+    #with open("temp.txt","r") as f:
+    #    iter_input = f.read()
 
     for i in range(MAX_ITER):
         
         if i == 0:
-            iter_input = iter_input#f"{dag_result}\n\n{init_perf}"
+            iter_input = f"{dag_result}\n\n{init_perf}"
         else:
             iter_input = f"{iter_result}\n\n{iter_perf}"
         

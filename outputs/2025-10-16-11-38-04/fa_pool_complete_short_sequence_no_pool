@@ -1,0 +1,52 @@
+// Complete FA Pool Deployment - 8 GPUs - SeqLen 512
+digraph {
+	compound=true nodesep=0.5 rankdir=TB splines=ortho
+	subgraph cluster_base {
+		color=blue label="Base Layer (8 GPUs)" style=dashed
+		base_start [label="Base Layer Processing\nGPU 0-7" shape=folder]
+	}
+	input_total [label="Model Input\nInput: [batch_size=1024, seq_len={seq_len}, d_model=4096]\nOutput: [batch_size=1024, seq_len={seq_len}, d_model=4096]\nGPU: 0-7" fillcolor=lightgreen shape=ellipse]
+	resource_manager [label="Resource Manager\nSequence Length: 512\nPool GPUs: 0\nTotal GPUs: 8" fillcolor=gold shape=diamond]
+	embeddings [label="Token Embeddings\nInput: [batch_size=1024, seq_len={seq_len}, d_model=4096]\nOutput: [batch_size=1024, seq_len={seq_len}, d_model=4096]\nGPU: 0-7 (tensor parallel)" fillcolor=lightblue shape=rectangle]
+	attention_0 [label="Layer 0 Attention\nInput: [batch_size=1024, seq_len=512, d_model=4096]\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7" fillcolor=lightblue shape=rectangle]
+	ffn_0 [label="Layer 0 FFN\nInput: [batch_size=1024, seq_len=512, d_model=4096]\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7 (tensor parallel)" fillcolor=lightblue shape=rectangle]
+	residual_attn_0 [label="Residual Add Attention 0\nInput: [batch_size=1024, seq_len=512, d_model=4096] x 2\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7" fillcolor=orange shape=ellipse]
+	residual_ffN_0 [label="Residual Add FFN 0\nInput: [batch_size=1024, seq_len=512, d_model=4096] x 2\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7" fillcolor=orange shape=ellipse]
+	attention_1 [label="Layer 1 Attention\nInput: [batch_size=1024, seq_len=512, d_model=4096]\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7" fillcolor=lightblue shape=rectangle]
+	ffn_1 [label="Layer 1 FFN\nInput: [batch_size=1024, seq_len=512, d_model=4096]\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7 (tensor parallel)" fillcolor=lightblue shape=rectangle]
+	residual_ffN_1 [label="Residual Add FFN 1\nInput: [batch_size=1024, seq_len=512, d_model=4096] x 2\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7" fillcolor=orange shape=ellipse]
+	attention_2 [label="Layer 2 Attention\nInput: [batch_size=1024, seq_len=512, d_model=4096]\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7" fillcolor=lightblue shape=rectangle]
+	ffn_2 [label="Layer 2 FFN\nInput: [batch_size=1024, seq_len=512, d_model=4096]\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7 (tensor parallel)" fillcolor=lightblue shape=rectangle]
+	residual_ffN_2 [label="Residual Add FFN 2\nInput: [batch_size=1024, seq_len=512, d_model=4096] x 2\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7" fillcolor=orange shape=ellipse]
+	attention_3 [label="Layer 3 Attention\nInput: [batch_size=1024, seq_len=512, d_model=4096]\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7" fillcolor=lightblue shape=rectangle]
+	ffn_3 [label="Layer 3 FFN\nInput: [batch_size=1024, seq_len=512, d_model=4096]\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7 (tensor parallel)" fillcolor=lightblue shape=rectangle]
+	residual_ffN_3 [label="Residual Add FFN 3\nInput: [batch_size=1024, seq_len=512, d_model=4096] x 2\nOutput: [batch_size=1024, seq_len=512, d_model=4096]\nGPU: 0-7" fillcolor=orange shape=ellipse]
+	output_total [label="Model Output\nInput: [batch_size=1024, seq_len={seq_len}, d_model=4096]\nOutput: [batch_size=1024, seq_len={seq_len}, vocab_size=full_vocab]\nGPU: 0-7" fillcolor=lightgreen shape=ellipse]
+	input_total -> resource_manager
+	resource_manager -> embeddings
+	embeddings -> attention_0
+	attention_0 -> residual_attn_0
+	embeddings -> residual_attn_0
+	residual_attn_0 -> ffn_0
+	residual_attn_0 -> residual_ffN_0
+	ffn_0 -> residual_ffN_0
+	residual_ffN_0 -> attention_1
+	attention_1 -> residual_attn_1
+	residual_ffN_0 -> residual_attn_1
+	residual_attn_1 -> ffn_1
+	ffn_1 -> residual_ffN_1
+	residual_attn_1 -> residual_ffN_1
+	residual_ffN_1 -> attention_2
+	attention_2 -> residual_attn_2
+	residual_ffN_1 -> residual_attn_2
+	residual_attn_2 -> ffn_2
+	ffn_2 -> residual_ffN_2
+	residual_attn_2 -> residual_ffN_2
+	residual_ffN_2 -> attention_3
+	attention_3 -> residual_attn_3
+	residual_ffN_2 -> residual_attn_3
+	residual_attn_3 -> ffn_3
+	ffn_3 -> residual_ffN_3
+	residual_attn_3 -> residual_ffN_3
+	residual_ffN_3 -> output_total
+}
