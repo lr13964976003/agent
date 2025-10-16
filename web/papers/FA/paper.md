@@ -284,24 +284,3 @@ As large language models continue to grow in size and capability, the importance
 
 The success of FA Pool suggests that dynamic resource allocation strategies will play an increasingly important role in the deployment of large-scale AI systems. Future work should focus on extending these concepts to other computational bottlenecks and developing more sophisticated resource management algorithms.
 
-## References
-
-1. Vaswani, A., et al. (2017). Attention Is All You Need. Advances in Neural Information Processing Systems.
-
-2. Dao, T., et al. (2022). FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness. International Conference on Machine Learning.
-
-3. Narayanan, D., et al. (2021). Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM. International Conference for High Performance Computing, Networking, Storage and Analysis.
-
-4. Korthikanti, V., et al. (2022). Reducing Activation Recomputation in Large Transformer Models. Workshop on Parallel and Distributed Computing for Large Scale Machine Learning.
-
-5. Li, S., et al. (2021). Sequence Parallelism: Long Sequence Training from System Perspective. arXiv preprint arXiv:2105.13120.
-
-6. Shoeybi, M., et al. (2019). Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism. arXiv preprint arXiv:1909.08053.
-
-7. Brown, T., et al. (2020). Language Models are Few-Shot Learners. Advances in Neural Information Processing Systems.
-
-8. Lepikhin, D., et al. (2020). GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding. International Conference on Learning Representations.
-
-9. Fedus, W., et al. (2021). Switch Transformer: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity. Journal of Machine Learning Research.
-
-10. Du, N., et al. (2021). GLaM: Efficient Scaling of Language Models with Mixture-of-Experts. International Conference on Machine Learning.

@@ -30,20 +30,17 @@ def fetch_prompt(app_slug: str, variant_slug: str, variant_version: int, inputs:
     return prompt
 
 #@ag.instrument()
-def build_agent(prompt: str, tools: list):
+def build_agent(model: str, tools: list):
     llm = ChatOpenAI(
-            model = "anthropic/kimi-k2-0711-preview",
-            #model = "anthropic/GLM-4.5",
-            #model = "openai/kimi-k2-250711",
-            #model = "openai/doubao-seed-1-6-thinking-250715",
+            model = model,
             temperature = 0.7,
             max_tokens = 16384,
             request_timeout = 1800
             )
     agent = Agent(
                 role="Assistant",
-                goal=prompt,
-                backstory="You are a helpful assistant",
+                goal="Complete the tasks assigned to you with the utmost seriousness, ensuring that the results fully meet the requirements.",
+                backstory="You are a researcher working on an engineering-level project with other researchers, and this project absolutely cannot have any mistakes.",
                 tools=tools,
                 allow_delegation=False,
 		# allow_code_execution=True,
@@ -62,7 +59,7 @@ def build_task(description, expected_output, agent):
     )
     return task
 
-@ag.instrument()
+#@ag.instrument()
 def log_task_output(task_output):
     """capture each trace of task completition"""
     return {"task_output": str(task_output)}
@@ -72,14 +69,14 @@ def log_step(step_output):
     """capture each trace of step"""
     attrs = ["result", "thought", "tool", "tool_result"]
     
-    @ag.instrument()
+    #@ag.instrument()
     def log_step_output(step_output, attrs):
         return {attr: getattr(step_output, attr, None) for attr in attrs}
 
     if getattr(step_output, "thought", None) is not None:
         return log_step_output(step_output, attrs)
 
-@ag.instrument()
+#@ag.instrument()
 def run_pipeline(agents: list, tasks: list):
     parent_span = trace.get_current_span()
     parent_ctx = trace.set_span_in_context(parent_span)
@@ -106,18 +103,18 @@ def run_pipeline(agents: list, tasks: list):
         step_callback=step_cb_wrapped
     )
     final_output = crew.kickoff()
-    return final_output
+    return tasks[-1].output.raw #final_output.raw
 
 class ReviewLoop:
-    def __init__(self, worker, reviewer, task_description, expected_output, inputs=None, max_rounds=5):
+    def __init__(self, worker, reviewer, work_task, review_task, inputs=None, max_rounds=5):
         self.worker = worker
         self.reviewer = reviewer
-        self.task_description = task_description
-        self.expected_output = expected_output
+        self.work_task = work_task
+        self.review_task = review_task
         self.inputs=inputs
         self.max_rounds = max_rounds
     
-    @ag.instrument()
+    #@ag.instrument()
     def run(self):
         #parent_span = ag.tracing.get_current_span()
         #tracer = trace.get_tracer(__name__)
@@ -128,65 +125,27 @@ class ReviewLoop:
         review_result = None
 
         while round_num < self.max_rounds:
+            work_task = self.work_task
+            review_task = self.review_task
             round_num = round_num + 1
 
             if round_num == 1:
-                if self.inputs == None:
-                    description = self.task_description
-                else:
-                    description = self.task_description + \
+                if self.inputs is not None:
+                    work_task.description = work_task.description + \
                                   f"\nThere is the submission of previous agent: {self.inputs}"
-                work_task = Task(
-                    description = self.task_description,
-                    agent = self.worker,
-                    expected_output = self.expected_output
-                )
             else:
                 if self.inputs == None:
-                    description = "Your previous version submission was not approved. Please make the necessary changes based on the feedback provided\n" + \
+                    work_task.description = work_task.description + \
+                                  "Your previous version submission was not approved. Please make the necessary changes based on the feedback provided\n" + \
                                   f"The previous submission: {work_result}\n" + \
                                   f"The feedback: {review_result}"
                 else:
-                    description = "Your previous version submission was not approved. Please make the necessary changes based on the feedback provided\n" + \
+                    work_task.description = work_task.description + \
+                    "Your previous version submission was not approved. Please make the necessary changes based on the feedback provided\n" + \
                     f"The previous submission: {work_result}\n" + \
                     f"The feedback: {review_result}\n" + \
                     f"There is the submission of previous agent: {self.inputs}"
-                work_task = Task(
-                    description = description,
-                    agent = self.worker,
-                    expected_output = self.expected_output
-                )
-
-            '''    
-            work_crew = Crew(
-                agents=[self.worker],
-                tasks=[work_task],
-                process=Process.sequential,
-                verbose=True,
-                task_callback=log_task_output,
-                step_callback=log_step_output
-            )
-
-            work_crew.kickoff()
-            work_result = work_task.output.raw
-            '''
-            review_task = Task(
-                description=f"There is the submission of previous agent. You need to check it",
-                agent=self.reviewer,
-                expected_output = "Check Result"
-            )
-            '''
-            review_crew = Crew(
-                agents=[self.reviewer],
-                tasks=[review_task],
-                process=Process.sequential,
-                verbose=True,
-                task_callback=log_task_output,
-                step_callback=log_step_output
-            )
-            #with tracer.start_as_current_span("parent_span") as parent_span:
-            review_crew.kickoff()
-            '''
+            
             run_pipeline([self.worker, self.reviewer], [work_task, review_task])
             work_result = work_task.output.raw
             review_result = review_task.output.raw

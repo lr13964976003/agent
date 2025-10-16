@@ -1,0 +1,928 @@
+// MA Separation MoE Model with Attention/Expert Split
+digraph ma_separation_moe_model {
+	nodesep=0.5 rankdir=TB ranksep=1.0 splines=ortho
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	input [label="Input Embedding
+Input: [batch_size=1024, seq_len=2048, hidden=4096]
+GPU: all GPUs" fillcolor=lightgreen shape=ellipse]
+	l0_attn_to_moe [label="Broadcast to MoE
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 0-7 → 8-15" fillcolor=gray shape=parallelogram]
+	subgraph cluster_layer_0 {
+		color=purple label="Layer 0" style=dashed
+		subgraph cluster_attention_0 {
+			color=red label="Attention Group (GPUs 0-7)" style=rounded
+			l0_qkv_all_gather [label="All-Gather QKV
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]×8
+GPU: 0-7" fillcolor=lightcyan shape=parallelogram]
+			l0_qkv_gpu0 [label="QKV Projection GPU0
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 0" fillcolor=yellow]
+			l0_attn_gpu0 [label="Attention Heads GPU0
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 0" fillcolor=yellow]
+			l0_out_gpu0 [label="Output Projection GPU0
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 0" fillcolor=yellow]
+			l0_qkv_gpu1 [label="QKV Projection GPU1
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 1" fillcolor=yellow]
+			l0_attn_gpu1 [label="Attention Heads GPU1
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 1" fillcolor=yellow]
+			l0_out_gpu1 [label="Output Projection GPU1
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 1" fillcolor=yellow]
+			l0_qkv_gpu2 [label="QKV Projection GPU2
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 2" fillcolor=yellow]
+			l0_attn_gpu2 [label="Attention Heads GPU2
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 2" fillcolor=yellow]
+			l0_out_gpu2 [label="Output Projection GPU2
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 2" fillcolor=yellow]
+			l0_qkv_gpu3 [label="QKV Projection GPU3
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 3" fillcolor=yellow]
+			l0_attn_gpu3 [label="Attention Heads GPU3
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 3" fillcolor=yellow]
+			l0_out_gpu3 [label="Output Projection GPU3
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 3" fillcolor=yellow]
+			l0_qkv_gpu4 [label="QKV Projection GPU4
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 4" fillcolor=yellow]
+			l0_attn_gpu4 [label="Attention Heads GPU4
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 4" fillcolor=yellow]
+			l0_out_gpu4 [label="Output Projection GPU4
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 4" fillcolor=yellow]
+			l0_qkv_gpu5 [label="QKV Projection GPU5
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 5" fillcolor=yellow]
+			l0_attn_gpu5 [label="Attention Heads GPU5
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 5" fillcolor=yellow]
+			l0_out_gpu5 [label="Output Projection GPU5
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 5" fillcolor=yellow]
+			l0_qkv_gpu6 [label="QKV Projection GPU6
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 6" fillcolor=yellow]
+			l0_attn_gpu6 [label="Attention Heads GPU6
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 6" fillcolor=yellow]
+			l0_out_gpu6 [label="Output Projection GPU6
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 6" fillcolor=yellow]
+			l0_qkv_gpu7 [label="QKV Projection GPU7
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 7" fillcolor=yellow]
+			l0_attn_gpu7 [label="Attention Heads GPU7
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 7" fillcolor=yellow]
+			l0_out_gpu7 [label="Output Projection GPU7
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 7" fillcolor=yellow]
+			l0_attn_all_reduce [label="All-Reduce Attention
+Input: [1024,2048,4096]×8
+Output: [1024,2048,4096]
+GPU: 0-7" fillcolor=lightcyan shape=parallelogram]
+			l0_attn_res [label="Residual Add
+Input: [1024,2048,4096], [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 0-7" fillcolor=orange]
+		}
+		subgraph cluster_moe_0 {
+			color=blue label="MoE Group (GPUs 8-15)" style=rounded
+			l0_moe_gate [label="Gate Network
+Input: [1024,2048,4096]
+Output: [1024,2048,16]
+GPU: 8-15" fillcolor=lightcoral]
+			l0_exp_gpu8 [label="Experts 0,1
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 8" fillcolor=lightpink]
+			l0_exp_gpu9 [label="Experts 2,3
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 9" fillcolor=lightpink]
+			l0_exp_gpu10 [label="Experts 4,5
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 10" fillcolor=lightpink]
+			l0_exp_gpu11 [label="Experts 6,7
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 11" fillcolor=lightpink]
+			l0_exp_gpu12 [label="Experts 8,9
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 12" fillcolor=lightpink]
+			l0_exp_gpu13 [label="Experts 10,11
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 13" fillcolor=lightpink]
+			l0_exp_gpu14 [label="Experts 12,13
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 14" fillcolor=lightpink]
+			l0_exp_gpu15 [label="Experts 14,15
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 15" fillcolor=lightpink]
+			l0_moe_agg [label="Expert Aggregation
+Input: [1024,2048,4096]×2
+Output: [1024,2048,4096]
+GPU: 8-15" fillcolor=lightcyan]
+			l0_moe_res [label="Residual Add
+Input: [1024,2048,4096], [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 8-15" fillcolor=orange]
+		}
+	}
+	l1_attn_to_moe [label="Broadcast to MoE
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 0-7 → 8-15" fillcolor=gray shape=parallelogram]
+	subgraph cluster_layer_1 {
+		color=purple label="Layer 1" style=dashed
+		subgraph cluster_attention_1 {
+			color=red label="Attention Group (GPUs 0-7)" style=rounded
+			l1_qkv_all_gather [label="All-Gather QKV
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]×8
+GPU: 0-7" fillcolor=lightcyan shape=parallelogram]
+			l1_qkv_gpu0 [label="QKV Projection GPU0
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 0" fillcolor=yellow]
+			l1_attn_gpu0 [label="Attention Heads GPU0
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 0" fillcolor=yellow]
+			l1_out_gpu0 [label="Output Projection GPU0
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 0" fillcolor=yellow]
+			l1_qkv_gpu1 [label="QKV Projection GPU1
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 1" fillcolor=yellow]
+			l1_attn_gpu1 [label="Attention Heads GPU1
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 1" fillcolor=yellow]
+			l1_out_gpu1 [label="Output Projection GPU1
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 1" fillcolor=yellow]
+			l1_qkv_gpu2 [label="QKV Projection GPU2
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 2" fillcolor=yellow]
+			l1_attn_gpu2 [label="Attention Heads GPU2
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 2" fillcolor=yellow]
+			l1_out_gpu2 [label="Output Projection GPU2
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 2" fillcolor=yellow]
+			l1_qkv_gpu3 [label="QKV Projection GPU3
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 3" fillcolor=yellow]
+			l1_attn_gpu3 [label="Attention Heads GPU3
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 3" fillcolor=yellow]
+			l1_out_gpu3 [label="Output Projection GPU3
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 3" fillcolor=yellow]
+			l1_qkv_gpu4 [label="QKV Projection GPU4
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 4" fillcolor=yellow]
+			l1_attn_gpu4 [label="Attention Heads GPU4
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 4" fillcolor=yellow]
+			l1_out_gpu4 [label="Output Projection GPU4
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 4" fillcolor=yellow]
+			l1_qkv_gpu5 [label="QKV Projection GPU5
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 5" fillcolor=yellow]
+			l1_attn_gpu5 [label="Attention Heads GPU5
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 5" fillcolor=yellow]
+			l1_out_gpu5 [label="Output Projection GPU5
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 5" fillcolor=yellow]
+			l1_qkv_gpu6 [label="QKV Projection GPU6
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 6" fillcolor=yellow]
+			l1_attn_gpu6 [label="Attention Heads GPU6
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 6" fillcolor=yellow]
+			l1_out_gpu6 [label="Output Projection GPU6
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 6" fillcolor=yellow]
+			l1_qkv_gpu7 [label="QKV Projection GPU7
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 7" fillcolor=yellow]
+			l1_attn_gpu7 [label="Attention Heads GPU7
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 7" fillcolor=yellow]
+			l1_out_gpu7 [label="Output Projection GPU7
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 7" fillcolor=yellow]
+			l1_attn_all_reduce [label="All-Reduce Attention
+Input: [1024,2048,4096]×8
+Output: [1024,2048,4096]
+GPU: 0-7" fillcolor=lightcyan shape=parallelogram]
+			l1_attn_res [label="Residual Add
+Input: [1024,2048,4096], [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 0-7" fillcolor=orange]
+		}
+		subgraph cluster_moe_1 {
+			color=blue label="MoE Group (GPUs 8-15)" style=rounded
+			l1_moe_gate [label="Gate Network
+Input: [1024,2048,4096]
+Output: [1024,2048,16]
+GPU: 8-15" fillcolor=lightcoral]
+			l1_exp_gpu8 [label="Experts 0,1
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 8" fillcolor=lightpink]
+			l1_exp_gpu9 [label="Experts 2,3
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 9" fillcolor=lightpink]
+			l1_exp_gpu10 [label="Experts 4,5
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 10" fillcolor=lightpink]
+			l1_exp_gpu11 [label="Experts 6,7
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 11" fillcolor=lightpink]
+			l1_exp_gpu12 [label="Experts 8,9
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 12" fillcolor=lightpink]
+			l1_exp_gpu13 [label="Experts 10,11
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 13" fillcolor=lightpink]
+			l1_exp_gpu14 [label="Experts 12,13
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 14" fillcolor=lightpink]
+			l1_exp_gpu15 [label="Experts 14,15
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 15" fillcolor=lightpink]
+			l1_moe_agg [label="Expert Aggregation
+Input: [1024,2048,4096]×2
+Output: [1024,2048,4096]
+GPU: 8-15" fillcolor=lightcyan]
+			l1_moe_res [label="Residual Add
+Input: [1024,2048,4096], [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 8-15" fillcolor=orange]
+		}
+	}
+	l2_attn_to_moe [label="Broadcast to MoE
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 0-7 → 8-15" fillcolor=gray shape=parallelogram]
+	subgraph cluster_layer_2 {
+		color=purple label="Layer 2" style=dashed
+		subgraph cluster_attention_2 {
+			color=red label="Attention Group (GPUs 0-7)" style=rounded
+			l2_qkv_all_gather [label="All-Gather QKV
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]×8
+GPU: 0-7" fillcolor=lightcyan shape=parallelogram]
+			l2_qkv_gpu0 [label="QKV Projection GPU0
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 0" fillcolor=yellow]
+			l2_attn_gpu0 [label="Attention Heads GPU0
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 0" fillcolor=yellow]
+			l2_out_gpu0 [label="Output Projection GPU0
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 0" fillcolor=yellow]
+			l2_qkv_gpu1 [label="QKV Projection GPU1
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 1" fillcolor=yellow]
+			l2_attn_gpu1 [label="Attention Heads GPU1
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 1" fillcolor=yellow]
+			l2_out_gpu1 [label="Output Projection GPU1
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 1" fillcolor=yellow]
+			l2_qkv_gpu2 [label="QKV Projection GPU2
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 2" fillcolor=yellow]
+			l2_attn_gpu2 [label="Attention Heads GPU2
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 2" fillcolor=yellow]
+			l2_out_gpu2 [label="Output Projection GPU2
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 2" fillcolor=yellow]
+			l2_qkv_gpu3 [label="QKV Projection GPU3
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 3" fillcolor=yellow]
+			l2_attn_gpu3 [label="Attention Heads GPU3
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 3" fillcolor=yellow]
+			l2_out_gpu3 [label="Output Projection GPU3
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 3" fillcolor=yellow]
+			l2_qkv_gpu4 [label="QKV Projection GPU4
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 4" fillcolor=yellow]
+			l2_attn_gpu4 [label="Attention Heads GPU4
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 4" fillcolor=yellow]
+			l2_out_gpu4 [label="Output Projection GPU4
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 4" fillcolor=yellow]
+			l2_qkv_gpu5 [label="QKV Projection GPU5
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 5" fillcolor=yellow]
+			l2_attn_gpu5 [label="Attention Heads GPU5
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 5" fillcolor=yellow]
+			l2_out_gpu5 [label="Output Projection GPU5
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 5" fillcolor=yellow]
+			l2_qkv_gpu6 [label="QKV Projection GPU6
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 6" fillcolor=yellow]
+			l2_attn_gpu6 [label="Attention Heads GPU6
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 6" fillcolor=yellow]
+			l2_out_gpu6 [label="Output Projection GPU6
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 6" fillcolor=yellow]
+			l2_qkv_gpu7 [label="QKV Projection GPU7
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 7" fillcolor=yellow]
+			l2_attn_gpu7 [label="Attention Heads GPU7
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 7" fillcolor=yellow]
+			l2_out_gpu7 [label="Output Projection GPU7
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 7" fillcolor=yellow]
+			l2_attn_all_reduce [label="All-Reduce Attention
+Input: [1024,2048,4096]×8
+Output: [1024,2048,4096]
+GPU: 0-7" fillcolor=lightcyan shape=parallelogram]
+			l2_attn_res [label="Residual Add
+Input: [1024,2048,4096], [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 0-7" fillcolor=orange]
+		}
+		subgraph cluster_moe_2 {
+			color=blue label="MoE Group (GPUs 8-15)" style=rounded
+			l2_moe_gate [label="Gate Network
+Input: [1024,2048,4096]
+Output: [1024,2048,16]
+GPU: 8-15" fillcolor=lightcoral]
+			l2_exp_gpu8 [label="Experts 0,1
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 8" fillcolor=lightpink]
+			l2_exp_gpu9 [label="Experts 2,3
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 9" fillcolor=lightpink]
+			l2_exp_gpu10 [label="Experts 4,5
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 10" fillcolor=lightpink]
+			l2_exp_gpu11 [label="Experts 6,7
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 11" fillcolor=lightpink]
+			l2_exp_gpu12 [label="Experts 8,9
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 12" fillcolor=lightpink]
+			l2_exp_gpu13 [label="Experts 10,11
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 13" fillcolor=lightpink]
+			l2_exp_gpu14 [label="Experts 12,13
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 14" fillcolor=lightpink]
+			l2_exp_gpu15 [label="Experts 14,15
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 15" fillcolor=lightpink]
+			l2_moe_agg [label="Expert Aggregation
+Input: [1024,2048,4096]×2
+Output: [1024,2048,4096]
+GPU: 8-15" fillcolor=lightcyan]
+			l2_moe_res [label="Residual Add
+Input: [1024,2048,4096], [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 8-15" fillcolor=orange]
+		}
+	}
+	l3_attn_to_moe [label="Broadcast to MoE
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 0-7 → 8-15" fillcolor=gray shape=parallelogram]
+	subgraph cluster_layer_3 {
+		color=purple label="Layer 3" style=dashed
+		subgraph cluster_attention_3 {
+			color=red label="Attention Group (GPUs 0-7)" style=rounded
+			l3_qkv_all_gather [label="All-Gather QKV
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]×8
+GPU: 0-7" fillcolor=lightcyan shape=parallelogram]
+			l3_qkv_gpu0 [label="QKV Projection GPU0
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 0" fillcolor=yellow]
+			l3_attn_gpu0 [label="Attention Heads GPU0
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 0" fillcolor=yellow]
+			l3_out_gpu0 [label="Output Projection GPU0
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 0" fillcolor=yellow]
+			l3_qkv_gpu1 [label="QKV Projection GPU1
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 1" fillcolor=yellow]
+			l3_attn_gpu1 [label="Attention Heads GPU1
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 1" fillcolor=yellow]
+			l3_out_gpu1 [label="Output Projection GPU1
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 1" fillcolor=yellow]
+			l3_qkv_gpu2 [label="QKV Projection GPU2
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 2" fillcolor=yellow]
+			l3_attn_gpu2 [label="Attention Heads GPU2
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 2" fillcolor=yellow]
+			l3_out_gpu2 [label="Output Projection GPU2
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 2" fillcolor=yellow]
+			l3_qkv_gpu3 [label="QKV Projection GPU3
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 3" fillcolor=yellow]
+			l3_attn_gpu3 [label="Attention Heads GPU3
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 3" fillcolor=yellow]
+			l3_out_gpu3 [label="Output Projection GPU3
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 3" fillcolor=yellow]
+			l3_qkv_gpu4 [label="QKV Projection GPU4
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 4" fillcolor=yellow]
+			l3_attn_gpu4 [label="Attention Heads GPU4
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 4" fillcolor=yellow]
+			l3_out_gpu4 [label="Output Projection GPU4
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 4" fillcolor=yellow]
+			l3_qkv_gpu5 [label="QKV Projection GPU5
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 5" fillcolor=yellow]
+			l3_attn_gpu5 [label="Attention Heads GPU5
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 5" fillcolor=yellow]
+			l3_out_gpu5 [label="Output Projection GPU5
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 5" fillcolor=yellow]
+			l3_qkv_gpu6 [label="QKV Projection GPU6
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 6" fillcolor=yellow]
+			l3_attn_gpu6 [label="Attention Heads GPU6
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 6" fillcolor=yellow]
+			l3_out_gpu6 [label="Output Projection GPU6
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 6" fillcolor=yellow]
+			l3_qkv_gpu7 [label="QKV Projection GPU7
+Input: [1024,2048,4096]
+Output: [1024,2048,512]
+GPU: 7" fillcolor=yellow]
+			l3_attn_gpu7 [label="Attention Heads GPU7
+Input: [1024,2048,512]
+Output: [1024,2048,512]
+GPU: 7" fillcolor=yellow]
+			l3_out_gpu7 [label="Output Projection GPU7
+Input: [1024,2048,512]
+Output: [1024,2048,4096]
+GPU: 7" fillcolor=yellow]
+			l3_attn_all_reduce [label="All-Reduce Attention
+Input: [1024,2048,4096]×8
+Output: [1024,2048,4096]
+GPU: 0-7" fillcolor=lightcyan shape=parallelogram]
+			l3_attn_res [label="Residual Add
+Input: [1024,2048,4096], [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 0-7" fillcolor=orange]
+		}
+		subgraph cluster_moe_3 {
+			color=blue label="MoE Group (GPUs 8-15)" style=rounded
+			l3_moe_gate [label="Gate Network
+Input: [1024,2048,4096]
+Output: [1024,2048,16]
+GPU: 8-15" fillcolor=lightcoral]
+			l3_exp_gpu8 [label="Experts 0,1
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 8" fillcolor=lightpink]
+			l3_exp_gpu9 [label="Experts 2,3
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 9" fillcolor=lightpink]
+			l3_exp_gpu10 [label="Experts 4,5
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 10" fillcolor=lightpink]
+			l3_exp_gpu11 [label="Experts 6,7
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 11" fillcolor=lightpink]
+			l3_exp_gpu12 [label="Experts 8,9
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 12" fillcolor=lightpink]
+			l3_exp_gpu13 [label="Experts 10,11
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 13" fillcolor=lightpink]
+			l3_exp_gpu14 [label="Experts 12,13
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 14" fillcolor=lightpink]
+			l3_exp_gpu15 [label="Experts 14,15
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 15" fillcolor=lightpink]
+			l3_moe_agg [label="Expert Aggregation
+Input: [1024,2048,4096]×2
+Output: [1024,2048,4096]
+GPU: 8-15" fillcolor=lightcyan]
+			l3_moe_res [label="Residual Add
+Input: [1024,2048,4096], [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 8-15" fillcolor=orange]
+		}
+	}
+	output [label="Final Output
+Input: [1024,2048,4096]
+Output: [1024,2048,4096]
+GPU: 8-15" fillcolor=lightgreen shape=ellipse]
+	input -> l0_qkv_all_gather
+	l0_qkv_all_gather -> l0_qkv_gpu0
+	l0_qkv_all_gather -> l0_qkv_gpu1
+	l0_qkv_all_gather -> l0_qkv_gpu2
+	l0_qkv_all_gather -> l0_qkv_gpu3
+	l0_qkv_all_gather -> l0_qkv_gpu4
+	l0_qkv_all_gather -> l0_qkv_gpu5
+	l0_qkv_all_gather -> l0_qkv_gpu6
+	l0_qkv_all_gather -> l0_qkv_gpu7
+	l0_qkv_gpu0 -> l0_attn_gpu0
+	l0_attn_gpu0 -> l0_out_gpu0
+	l0_out_gpu0 -> l0_attn_all_reduce
+	l0_qkv_gpu1 -> l0_attn_gpu1
+	l0_attn_gpu1 -> l0_out_gpu1
+	l0_out_gpu1 -> l0_attn_all_reduce
+	l0_qkv_gpu2 -> l0_attn_gpu2
+	l0_attn_gpu2 -> l0_out_gpu2
+	l0_out_gpu2 -> l0_attn_all_reduce
+	l0_qkv_gpu3 -> l0_attn_gpu3
+	l0_attn_gpu3 -> l0_out_gpu3
+	l0_out_gpu3 -> l0_attn_all_reduce
+	l0_qkv_gpu4 -> l0_attn_gpu4
+	l0_attn_gpu4 -> l0_out_gpu4
+	l0_out_gpu4 -> l0_attn_all_reduce
+	l0_qkv_gpu5 -> l0_attn_gpu5
+	l0_attn_gpu5 -> l0_out_gpu5
+	l0_out_gpu5 -> l0_attn_all_reduce
+	l0_qkv_gpu6 -> l0_attn_gpu6
+	l0_attn_gpu6 -> l0_out_gpu6
+	l0_out_gpu6 -> l0_attn_all_reduce
+	l0_qkv_gpu7 -> l0_attn_gpu7
+	l0_attn_gpu7 -> l0_out_gpu7
+	l0_out_gpu7 -> l0_attn_all_reduce
+	input -> l0_attn_res
+	l0_attn_all_reduce -> l0_attn_res
+	l0_attn_res -> l0_attn_to_moe
+	l0_attn_to_moe -> l0_moe_gate
+	l0_moe_gate -> l0_exp_gpu8 [style=dashed]
+	l0_attn_to_moe -> l0_exp_gpu8
+	l0_exp_gpu8 -> l0_moe_agg
+	l0_moe_gate -> l0_exp_gpu9 [style=dashed]
+	l0_attn_to_moe -> l0_exp_gpu9
+	l0_exp_gpu9 -> l0_moe_agg
+	l0_moe_gate -> l0_exp_gpu10 [style=dashed]
+	l0_attn_to_moe -> l0_exp_gpu10
+	l0_exp_gpu10 -> l0_moe_agg
+	l0_moe_gate -> l0_exp_gpu11 [style=dashed]
+	l0_attn_to_moe -> l0_exp_gpu11
+	l0_exp_gpu11 -> l0_moe_agg
+	l0_moe_gate -> l0_exp_gpu12 [style=dashed]
+	l0_attn_to_moe -> l0_exp_gpu12
+	l0_exp_gpu12 -> l0_moe_agg
+	l0_moe_gate -> l0_exp_gpu13 [style=dashed]
+	l0_attn_to_moe -> l0_exp_gpu13
+	l0_exp_gpu13 -> l0_moe_agg
+	l0_moe_gate -> l0_exp_gpu14 [style=dashed]
+	l0_attn_to_moe -> l0_exp_gpu14
+	l0_exp_gpu14 -> l0_moe_agg
+	l0_moe_gate -> l0_exp_gpu15 [style=dashed]
+	l0_attn_to_moe -> l0_exp_gpu15
+	l0_exp_gpu15 -> l0_moe_agg
+	l0_moe_agg -> l0_moe_res
+	l0_attn_to_moe -> l0_moe_res
+	l0_moe_res -> prev_layer_0
+	prev_layer_0 -> l1_qkv_all_gather
+	l1_qkv_all_gather -> l1_qkv_gpu0
+	l1_qkv_all_gather -> l1_qkv_gpu1
+	l1_qkv_all_gather -> l1_qkv_gpu2
+	l1_qkv_all_gather -> l1_qkv_gpu3
+	l1_qkv_all_gather -> l1_qkv_gpu4
+	l1_qkv_all_gather -> l1_qkv_gpu5
+	l1_qkv_all_gather -> l1_qkv_gpu6
+	l1_qkv_all_gather -> l1_qkv_gpu7
+	l1_qkv_gpu0 -> l1_attn_gpu0
+	l1_attn_gpu0 -> l1_out_gpu0
+	l1_out_gpu0 -> l1_attn_all_reduce
+	l1_qkv_gpu1 -> l1_attn_gpu1
+	l1_attn_gpu1 -> l1_out_gpu1
+	l1_out_gpu1 -> l1_attn_all_reduce
+	l1_qkv_gpu2 -> l1_attn_gpu2
+	l1_attn_gpu2 -> l1_out_gpu2
+	l1_out_gpu2 -> l1_attn_all_reduce
+	l1_qkv_gpu3 -> l1_attn_gpu3
+	l1_attn_gpu3 -> l1_out_gpu3
+	l1_out_gpu3 -> l1_attn_all_reduce
+	l1_qkv_gpu4 -> l1_attn_gpu4
+	l1_attn_gpu4 -> l1_out_gpu4
+	l1_out_gpu4 -> l1_attn_all_reduce
+	l1_qkv_gpu5 -> l1_attn_gpu5
+	l1_attn_gpu5 -> l1_out_gpu5
+	l1_out_gpu5 -> l1_attn_all_reduce
+	l1_qkv_gpu6 -> l1_attn_gpu6
+	l1_attn_gpu6 -> l1_out_gpu6
+	l1_out_gpu6 -> l1_attn_all_reduce
+	l1_qkv_gpu7 -> l1_attn_gpu7
+	l1_attn_gpu7 -> l1_out_gpu7
+	l1_out_gpu7 -> l1_attn_all_reduce
+	prev_layer_0 -> l1_attn_res
+	l1_attn_all_reduce -> l1_attn_res
+	l1_attn_res -> l1_attn_to_moe
+	l1_attn_to_moe -> l1_moe_gate
+	l1_moe_gate -> l1_exp_gpu8 [style=dashed]
+	l1_attn_to_moe -> l1_exp_gpu8
+	l1_exp_gpu8 -> l1_moe_agg
+	l1_moe_gate -> l1_exp_gpu9 [style=dashed]
+	l1_attn_to_moe -> l1_exp_gpu9
+	l1_exp_gpu9 -> l1_moe_agg
+	l1_moe_gate -> l1_exp_gpu10 [style=dashed]
+	l1_attn_to_moe -> l1_exp_gpu10
+	l1_exp_gpu10 -> l1_moe_agg
+	l1_moe_gate -> l1_exp_gpu11 [style=dashed]
+	l1_attn_to_moe -> l1_exp_gpu11
+	l1_exp_gpu11 -> l1_moe_agg
+	l1_moe_gate -> l1_exp_gpu12 [style=dashed]
+	l1_attn_to_moe -> l1_exp_gpu12
+	l1_exp_gpu12 -> l1_moe_agg
+	l1_moe_gate -> l1_exp_gpu13 [style=dashed]
+	l1_attn_to_moe -> l1_exp_gpu13
+	l1_exp_gpu13 -> l1_moe_agg
+	l1_moe_gate -> l1_exp_gpu14 [style=dashed]
+	l1_attn_to_moe -> l1_exp_gpu14
+	l1_exp_gpu14 -> l1_moe_agg
+	l1_moe_gate -> l1_exp_gpu15 [style=dashed]
+	l1_attn_to_moe -> l1_exp_gpu15
+	l1_exp_gpu15 -> l1_moe_agg
+	l1_moe_agg -> l1_moe_res
+	l1_attn_to_moe -> l1_moe_res
+	l1_moe_res -> prev_layer_1
+	prev_layer_1 -> l2_qkv_all_gather
+	l2_qkv_all_gather -> l2_qkv_gpu0
+	l2_qkv_all_gather -> l2_qkv_gpu1
+	l2_qkv_all_gather -> l2_qkv_gpu2
+	l2_qkv_all_gather -> l2_qkv_gpu3
+	l2_qkv_all_gather -> l2_qkv_gpu4
+	l2_qkv_all_gather -> l2_qkv_gpu5
+	l2_qkv_all_gather -> l2_qkv_gpu6
+	l2_qkv_all_gather -> l2_qkv_gpu7
+	l2_qkv_gpu0 -> l2_attn_gpu0
+	l2_attn_gpu0 -> l2_out_gpu0
+	l2_out_gpu0 -> l2_attn_all_reduce
+	l2_qkv_gpu1 -> l2_attn_gpu1
+	l2_attn_gpu1 -> l2_out_gpu1
+	l2_out_gpu1 -> l2_attn_all_reduce
+	l2_qkv_gpu2 -> l2_attn_gpu2
+	l2_attn_gpu2 -> l2_out_gpu2
+	l2_out_gpu2 -> l2_attn_all_reduce
+	l2_qkv_gpu3 -> l2_attn_gpu3
+	l2_attn_gpu3 -> l2_out_gpu3
+	l2_out_gpu3 -> l2_attn_all_reduce
+	l2_qkv_gpu4 -> l2_attn_gpu4
+	l2_attn_gpu4 -> l2_out_gpu4
+	l2_out_gpu4 -> l2_attn_all_reduce
+	l2_qkv_gpu5 -> l2_attn_gpu5
+	l2_attn_gpu5 -> l2_out_gpu5
+	l2_out_gpu5 -> l2_attn_all_reduce
+	l2_qkv_gpu6 -> l2_attn_gpu6
+	l2_attn_gpu6 -> l2_out_gpu6
+	l2_out_gpu6 -> l2_attn_all_reduce
+	l2_qkv_gpu7 -> l2_attn_gpu7
+	l2_attn_gpu7 -> l2_out_gpu7
+	l2_out_gpu7 -> l2_attn_all_reduce
+	prev_layer_1 -> l2_attn_res
+	l2_attn_all_reduce -> l2_attn_res
+	l2_attn_res -> l2_attn_to_moe
+	l2_attn_to_moe -> l2_moe_gate
+	l2_moe_gate -> l2_exp_gpu8 [style=dashed]
+	l2_attn_to_moe -> l2_exp_gpu8
+	l2_exp_gpu8 -> l2_moe_agg
+	l2_moe_gate -> l2_exp_gpu9 [style=dashed]
+	l2_attn_to_moe -> l2_exp_gpu9
+	l2_exp_gpu9 -> l2_moe_agg
+	l2_moe_gate -> l2_exp_gpu10 [style=dashed]
+	l2_attn_to_moe -> l2_exp_gpu10
+	l2_exp_gpu10 -> l2_moe_agg
+	l2_moe_gate -> l2_exp_gpu11 [style=dashed]
+	l2_attn_to_moe -> l2_exp_gpu11
+	l2_exp_gpu11 -> l2_moe_agg
+	l2_moe_gate -> l2_exp_gpu12 [style=dashed]
+	l2_attn_to_moe -> l2_exp_gpu12
+	l2_exp_gpu12 -> l2_moe_agg
+	l2_moe_gate -> l2_exp_gpu13 [style=dashed]
+	l2_attn_to_moe -> l2_exp_gpu13
+	l2_exp_gpu13 -> l2_moe_agg
+	l2_moe_gate -> l2_exp_gpu14 [style=dashed]
+	l2_attn_to_moe -> l2_exp_gpu14
+	l2_exp_gpu14 -> l2_moe_agg
+	l2_moe_gate -> l2_exp_gpu15 [style=dashed]
+	l2_attn_to_moe -> l2_exp_gpu15
+	l2_exp_gpu15 -> l2_moe_agg
+	l2_moe_agg -> l2_moe_res
+	l2_attn_to_moe -> l2_moe_res
+	l2_moe_res -> prev_layer_2
+	prev_layer_2 -> l3_qkv_all_gather
+	l3_qkv_all_gather -> l3_qkv_gpu0
+	l3_qkv_all_gather -> l3_qkv_gpu1
+	l3_qkv_all_gather -> l3_qkv_gpu2
+	l3_qkv_all_gather -> l3_qkv_gpu3
+	l3_qkv_all_gather -> l3_qkv_gpu4
+	l3_qkv_all_gather -> l3_qkv_gpu5
+	l3_qkv_all_gather -> l3_qkv_gpu6
+	l3_qkv_all_gather -> l3_qkv_gpu7
+	l3_qkv_gpu0 -> l3_attn_gpu0
+	l3_attn_gpu0 -> l3_out_gpu0
+	l3_out_gpu0 -> l3_attn_all_reduce
+	l3_qkv_gpu1 -> l3_attn_gpu1
+	l3_attn_gpu1 -> l3_out_gpu1
+	l3_out_gpu1 -> l3_attn_all_reduce
+	l3_qkv_gpu2 -> l3_attn_gpu2
+	l3_attn_gpu2 -> l3_out_gpu2
+	l3_out_gpu2 -> l3_attn_all_reduce
+	l3_qkv_gpu3 -> l3_attn_gpu3
+	l3_attn_gpu3 -> l3_out_gpu3
+	l3_out_gpu3 -> l3_attn_all_reduce
+	l3_qkv_gpu4 -> l3_attn_gpu4
+	l3_attn_gpu4 -> l3_out_gpu4
+	l3_out_gpu4 -> l3_attn_all_reduce
+	l3_qkv_gpu5 -> l3_attn_gpu5
+	l3_attn_gpu5 -> l3_out_gpu5
+	l3_out_gpu5 -> l3_attn_all_reduce
+	l3_qkv_gpu6 -> l3_attn_gpu6
+	l3_attn_gpu6 -> l3_out_gpu6
+	l3_out_gpu6 -> l3_attn_all_reduce
+	l3_qkv_gpu7 -> l3_attn_gpu7
+	l3_attn_gpu7 -> l3_out_gpu7
+	l3_out_gpu7 -> l3_attn_all_reduce
+	prev_layer_2 -> l3_attn_res
+	l3_attn_all_reduce -> l3_attn_res
+	l3_attn_res -> l3_attn_to_moe
+	l3_attn_to_moe -> l3_moe_gate
+	l3_moe_gate -> l3_exp_gpu8 [style=dashed]
+	l3_attn_to_moe -> l3_exp_gpu8
+	l3_exp_gpu8 -> l3_moe_agg
+	l3_moe_gate -> l3_exp_gpu9 [style=dashed]
+	l3_attn_to_moe -> l3_exp_gpu9
+	l3_exp_gpu9 -> l3_moe_agg
+	l3_moe_gate -> l3_exp_gpu10 [style=dashed]
+	l3_attn_to_moe -> l3_exp_gpu10
+	l3_exp_gpu10 -> l3_moe_agg
+	l3_moe_gate -> l3_exp_gpu11 [style=dashed]
+	l3_attn_to_moe -> l3_exp_gpu11
+	l3_exp_gpu11 -> l3_moe_agg
+	l3_moe_gate -> l3_exp_gpu12 [style=dashed]
+	l3_attn_to_moe -> l3_exp_gpu12
+	l3_exp_gpu12 -> l3_moe_agg
+	l3_moe_gate -> l3_exp_gpu13 [style=dashed]
+	l3_attn_to_moe -> l3_exp_gpu13
+	l3_exp_gpu13 -> l3_moe_agg
+	l3_moe_gate -> l3_exp_gpu14 [style=dashed]
+	l3_attn_to_moe -> l3_exp_gpu14
+	l3_exp_gpu14 -> l3_moe_agg
+	l3_moe_gate -> l3_exp_gpu15 [style=dashed]
+	l3_attn_to_moe -> l3_exp_gpu15
+	l3_exp_gpu15 -> l3_moe_agg
+	l3_moe_agg -> l3_moe_res
+	l3_attn_to_moe -> l3_moe_res
+	l3_moe_res -> output
+}

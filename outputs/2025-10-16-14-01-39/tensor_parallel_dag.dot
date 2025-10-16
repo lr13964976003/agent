@@ -1,0 +1,1240 @@
+digraph Tensor_Parallel_DAG {
+	nodesep=0.8 rankdir=TB ranksep=1.2 splines=ortho
+	tp_input [label="Model Input\nInput: Raw tokens\nOutput: [batch_size=batch_size, seq_len=2048]\nGPU: CPU" fillcolor=lightblue shape=ellipse style=filled]
+	tp_embed [label="Token + Position Embedding\nInput: [batch_size=batch_size, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_input -> tp_embed
+	tp_layer0_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_embed -> tp_layer0_norm
+	tp_layer0_q_proj_gpu0 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_q_proj_gpu0
+	tp_layer0_k_proj_gpu0 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_k_proj_gpu0
+	tp_layer0_v_proj_gpu0 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_v_proj_gpu0
+	tp_layer0_attn_scores_gpu0 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_k_gpu0 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_gather_q_gpu0 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_q_proj_gpu0 -> tp_layer0_gather_q_gpu0
+	tp_layer0_k_proj_gpu0 -> tp_layer0_gather_k_gpu0
+	tp_layer0_gather_q_gpu0 -> tp_layer0_attn_scores_gpu0
+	tp_layer0_gather_k_gpu0 -> tp_layer0_attn_scores_gpu0
+	tp_layer0_softmax_gpu0 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_attn_scores_gpu0 -> tp_layer0_softmax_gpu0
+	tp_layer0_attn_out_gpu0 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_v_gpu0 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_v_proj_gpu0 -> tp_layer0_gather_v_gpu0
+	tp_layer0_softmax_gpu0 -> tp_layer0_attn_out_gpu0
+	tp_layer0_gather_v_gpu0 -> tp_layer0_attn_out_gpu0
+	tp_layer0_out_proj_gpu0 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_attn_out_gpu0 -> tp_layer0_out_proj_gpu0
+	tp_layer0_q_proj_gpu1 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_q_proj_gpu1
+	tp_layer0_k_proj_gpu1 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_k_proj_gpu1
+	tp_layer0_v_proj_gpu1 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_v_proj_gpu1
+	tp_layer0_attn_scores_gpu1 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_k_gpu1 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_gather_q_gpu1 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_q_proj_gpu1 -> tp_layer0_gather_q_gpu1
+	tp_layer0_k_proj_gpu1 -> tp_layer0_gather_k_gpu1
+	tp_layer0_gather_q_gpu1 -> tp_layer0_attn_scores_gpu1
+	tp_layer0_gather_k_gpu1 -> tp_layer0_attn_scores_gpu1
+	tp_layer0_softmax_gpu1 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_attn_scores_gpu1 -> tp_layer0_softmax_gpu1
+	tp_layer0_attn_out_gpu1 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_v_gpu1 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_v_proj_gpu1 -> tp_layer0_gather_v_gpu1
+	tp_layer0_softmax_gpu1 -> tp_layer0_attn_out_gpu1
+	tp_layer0_gather_v_gpu1 -> tp_layer0_attn_out_gpu1
+	tp_layer0_out_proj_gpu1 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_attn_out_gpu1 -> tp_layer0_out_proj_gpu1
+	tp_layer0_q_proj_gpu2 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_q_proj_gpu2
+	tp_layer0_k_proj_gpu2 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_k_proj_gpu2
+	tp_layer0_v_proj_gpu2 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_v_proj_gpu2
+	tp_layer0_attn_scores_gpu2 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_k_gpu2 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_gather_q_gpu2 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_q_proj_gpu2 -> tp_layer0_gather_q_gpu2
+	tp_layer0_k_proj_gpu2 -> tp_layer0_gather_k_gpu2
+	tp_layer0_gather_q_gpu2 -> tp_layer0_attn_scores_gpu2
+	tp_layer0_gather_k_gpu2 -> tp_layer0_attn_scores_gpu2
+	tp_layer0_softmax_gpu2 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_attn_scores_gpu2 -> tp_layer0_softmax_gpu2
+	tp_layer0_attn_out_gpu2 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_v_gpu2 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_v_proj_gpu2 -> tp_layer0_gather_v_gpu2
+	tp_layer0_softmax_gpu2 -> tp_layer0_attn_out_gpu2
+	tp_layer0_gather_v_gpu2 -> tp_layer0_attn_out_gpu2
+	tp_layer0_out_proj_gpu2 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_attn_out_gpu2 -> tp_layer0_out_proj_gpu2
+	tp_layer0_q_proj_gpu3 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_q_proj_gpu3
+	tp_layer0_k_proj_gpu3 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_k_proj_gpu3
+	tp_layer0_v_proj_gpu3 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_v_proj_gpu3
+	tp_layer0_attn_scores_gpu3 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_k_gpu3 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_gather_q_gpu3 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_q_proj_gpu3 -> tp_layer0_gather_q_gpu3
+	tp_layer0_k_proj_gpu3 -> tp_layer0_gather_k_gpu3
+	tp_layer0_gather_q_gpu3 -> tp_layer0_attn_scores_gpu3
+	tp_layer0_gather_k_gpu3 -> tp_layer0_attn_scores_gpu3
+	tp_layer0_softmax_gpu3 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_attn_scores_gpu3 -> tp_layer0_softmax_gpu3
+	tp_layer0_attn_out_gpu3 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_v_gpu3 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_v_proj_gpu3 -> tp_layer0_gather_v_gpu3
+	tp_layer0_softmax_gpu3 -> tp_layer0_attn_out_gpu3
+	tp_layer0_gather_v_gpu3 -> tp_layer0_attn_out_gpu3
+	tp_layer0_out_proj_gpu3 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_attn_out_gpu3 -> tp_layer0_out_proj_gpu3
+	tp_layer0_q_proj_gpu4 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_q_proj_gpu4
+	tp_layer0_k_proj_gpu4 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_k_proj_gpu4
+	tp_layer0_v_proj_gpu4 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_v_proj_gpu4
+	tp_layer0_attn_scores_gpu4 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_k_gpu4 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_gather_q_gpu4 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_q_proj_gpu4 -> tp_layer0_gather_q_gpu4
+	tp_layer0_k_proj_gpu4 -> tp_layer0_gather_k_gpu4
+	tp_layer0_gather_q_gpu4 -> tp_layer0_attn_scores_gpu4
+	tp_layer0_gather_k_gpu4 -> tp_layer0_attn_scores_gpu4
+	tp_layer0_softmax_gpu4 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_attn_scores_gpu4 -> tp_layer0_softmax_gpu4
+	tp_layer0_attn_out_gpu4 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_v_gpu4 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_v_proj_gpu4 -> tp_layer0_gather_v_gpu4
+	tp_layer0_softmax_gpu4 -> tp_layer0_attn_out_gpu4
+	tp_layer0_gather_v_gpu4 -> tp_layer0_attn_out_gpu4
+	tp_layer0_out_proj_gpu4 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_attn_out_gpu4 -> tp_layer0_out_proj_gpu4
+	tp_layer0_q_proj_gpu5 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_q_proj_gpu5
+	tp_layer0_k_proj_gpu5 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_k_proj_gpu5
+	tp_layer0_v_proj_gpu5 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_v_proj_gpu5
+	tp_layer0_attn_scores_gpu5 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_k_gpu5 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_gather_q_gpu5 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_q_proj_gpu5 -> tp_layer0_gather_q_gpu5
+	tp_layer0_k_proj_gpu5 -> tp_layer0_gather_k_gpu5
+	tp_layer0_gather_q_gpu5 -> tp_layer0_attn_scores_gpu5
+	tp_layer0_gather_k_gpu5 -> tp_layer0_attn_scores_gpu5
+	tp_layer0_softmax_gpu5 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_attn_scores_gpu5 -> tp_layer0_softmax_gpu5
+	tp_layer0_attn_out_gpu5 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_v_gpu5 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_v_proj_gpu5 -> tp_layer0_gather_v_gpu5
+	tp_layer0_softmax_gpu5 -> tp_layer0_attn_out_gpu5
+	tp_layer0_gather_v_gpu5 -> tp_layer0_attn_out_gpu5
+	tp_layer0_out_proj_gpu5 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_attn_out_gpu5 -> tp_layer0_out_proj_gpu5
+	tp_layer0_q_proj_gpu6 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_q_proj_gpu6
+	tp_layer0_k_proj_gpu6 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_k_proj_gpu6
+	tp_layer0_v_proj_gpu6 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_v_proj_gpu6
+	tp_layer0_attn_scores_gpu6 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_k_gpu6 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_gather_q_gpu6 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_q_proj_gpu6 -> tp_layer0_gather_q_gpu6
+	tp_layer0_k_proj_gpu6 -> tp_layer0_gather_k_gpu6
+	tp_layer0_gather_q_gpu6 -> tp_layer0_attn_scores_gpu6
+	tp_layer0_gather_k_gpu6 -> tp_layer0_attn_scores_gpu6
+	tp_layer0_softmax_gpu6 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_attn_scores_gpu6 -> tp_layer0_softmax_gpu6
+	tp_layer0_attn_out_gpu6 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_v_gpu6 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_v_proj_gpu6 -> tp_layer0_gather_v_gpu6
+	tp_layer0_softmax_gpu6 -> tp_layer0_attn_out_gpu6
+	tp_layer0_gather_v_gpu6 -> tp_layer0_attn_out_gpu6
+	tp_layer0_out_proj_gpu6 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_attn_out_gpu6 -> tp_layer0_out_proj_gpu6
+	tp_layer0_q_proj_gpu7 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_q_proj_gpu7
+	tp_layer0_k_proj_gpu7 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_k_proj_gpu7
+	tp_layer0_v_proj_gpu7 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_norm -> tp_layer0_v_proj_gpu7
+	tp_layer0_attn_scores_gpu7 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_k_gpu7 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_gather_q_gpu7 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_q_proj_gpu7 -> tp_layer0_gather_q_gpu7
+	tp_layer0_k_proj_gpu7 -> tp_layer0_gather_k_gpu7
+	tp_layer0_gather_q_gpu7 -> tp_layer0_attn_scores_gpu7
+	tp_layer0_gather_k_gpu7 -> tp_layer0_attn_scores_gpu7
+	tp_layer0_softmax_gpu7 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_attn_scores_gpu7 -> tp_layer0_softmax_gpu7
+	tp_layer0_attn_out_gpu7 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_gather_v_gpu7 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_v_proj_gpu7 -> tp_layer0_gather_v_gpu7
+	tp_layer0_softmax_gpu7 -> tp_layer0_attn_out_gpu7
+	tp_layer0_gather_v_gpu7 -> tp_layer0_attn_out_gpu7
+	tp_layer0_out_proj_gpu7 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer0_attn_out_gpu7 -> tp_layer0_out_proj_gpu7
+	tp_layer0_attn_all_reduce [label="All-Reduce Attention\nInput: 8×[512]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_out_proj_gpu0 -> tp_layer0_attn_all_reduce
+	tp_layer0_out_proj_gpu1 -> tp_layer0_attn_all_reduce
+	tp_layer0_out_proj_gpu2 -> tp_layer0_attn_all_reduce
+	tp_layer0_out_proj_gpu3 -> tp_layer0_attn_all_reduce
+	tp_layer0_out_proj_gpu4 -> tp_layer0_attn_all_reduce
+	tp_layer0_out_proj_gpu5 -> tp_layer0_attn_all_reduce
+	tp_layer0_out_proj_gpu6 -> tp_layer0_attn_all_reduce
+	tp_layer0_out_proj_gpu7 -> tp_layer0_attn_all_reduce
+	tp_layer0_attn_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_embed -> tp_layer0_attn_residual
+	tp_layer0_attn_all_reduce -> tp_layer0_attn_residual
+	tp_layer0_moe_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_attn_residual -> tp_layer0_moe_norm
+	tp_layer0_expert0_up [label="Expert 0 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert0_up
+	tp_layer0_expert0_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert0_up -> tp_layer0_expert0_activation
+	tp_layer0_expert0_down [label="Expert 0 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert0_activation -> tp_layer0_expert0_down
+	tp_layer0_expert1_up [label="Expert 1 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert1_up
+	tp_layer0_expert1_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert1_up -> tp_layer0_expert1_activation
+	tp_layer0_expert1_down [label="Expert 1 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert1_activation -> tp_layer0_expert1_down
+	tp_layer0_expert2_up [label="Expert 2 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert2_up
+	tp_layer0_expert2_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert2_up -> tp_layer0_expert2_activation
+	tp_layer0_expert2_down [label="Expert 2 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert2_activation -> tp_layer0_expert2_down
+	tp_layer0_expert3_up [label="Expert 3 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert3_up
+	tp_layer0_expert3_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert3_up -> tp_layer0_expert3_activation
+	tp_layer0_expert3_down [label="Expert 3 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert3_activation -> tp_layer0_expert3_down
+	tp_layer0_expert4_up [label="Expert 4 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert4_up
+	tp_layer0_expert4_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert4_up -> tp_layer0_expert4_activation
+	tp_layer0_expert4_down [label="Expert 4 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert4_activation -> tp_layer0_expert4_down
+	tp_layer0_expert5_up [label="Expert 5 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert5_up
+	tp_layer0_expert5_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert5_up -> tp_layer0_expert5_activation
+	tp_layer0_expert5_down [label="Expert 5 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert5_activation -> tp_layer0_expert5_down
+	tp_layer0_expert6_up [label="Expert 6 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert6_up
+	tp_layer0_expert6_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert6_up -> tp_layer0_expert6_activation
+	tp_layer0_expert6_down [label="Expert 6 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert6_activation -> tp_layer0_expert6_down
+	tp_layer0_expert7_up [label="Expert 7 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert7_up
+	tp_layer0_expert7_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert7_up -> tp_layer0_expert7_activation
+	tp_layer0_expert7_down [label="Expert 7 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert7_activation -> tp_layer0_expert7_down
+	tp_layer0_expert8_up [label="Expert 8 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert8_up
+	tp_layer0_expert8_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert8_up -> tp_layer0_expert8_activation
+	tp_layer0_expert8_down [label="Expert 8 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert8_activation -> tp_layer0_expert8_down
+	tp_layer0_expert9_up [label="Expert 9 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert9_up
+	tp_layer0_expert9_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert9_up -> tp_layer0_expert9_activation
+	tp_layer0_expert9_down [label="Expert 9 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert9_activation -> tp_layer0_expert9_down
+	tp_layer0_expert10_up [label="Expert 10 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert10_up
+	tp_layer0_expert10_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert10_up -> tp_layer0_expert10_activation
+	tp_layer0_expert10_down [label="Expert 10 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert10_activation -> tp_layer0_expert10_down
+	tp_layer0_expert11_up [label="Expert 11 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert11_up
+	tp_layer0_expert11_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert11_up -> tp_layer0_expert11_activation
+	tp_layer0_expert11_down [label="Expert 11 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert11_activation -> tp_layer0_expert11_down
+	tp_layer0_expert12_up [label="Expert 12 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert12_up
+	tp_layer0_expert12_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert12_up -> tp_layer0_expert12_activation
+	tp_layer0_expert12_down [label="Expert 12 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert12_activation -> tp_layer0_expert12_down
+	tp_layer0_expert13_up [label="Expert 13 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert13_up
+	tp_layer0_expert13_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert13_up -> tp_layer0_expert13_activation
+	tp_layer0_expert13_down [label="Expert 13 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert13_activation -> tp_layer0_expert13_down
+	tp_layer0_expert14_up [label="Expert 14 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert14_up
+	tp_layer0_expert14_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert14_up -> tp_layer0_expert14_activation
+	tp_layer0_expert14_down [label="Expert 14 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert14_activation -> tp_layer0_expert14_down
+	tp_layer0_expert15_up [label="Expert 15 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_moe_norm -> tp_layer0_expert15_up
+	tp_layer0_expert15_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_expert15_up -> tp_layer0_expert15_activation
+	tp_layer0_expert15_down [label="Expert 15 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer0_expert15_activation -> tp_layer0_expert15_down
+	tp_layer0_moe_all_reduce [label="All-Reduce MoE\nInput: 8×[512]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_expert0_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert1_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert2_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert3_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert4_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert5_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert6_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert7_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert8_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert9_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert10_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert11_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert12_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert13_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert14_down -> tp_layer0_moe_all_reduce
+	tp_layer0_expert15_down -> tp_layer0_moe_all_reduce
+	tp_layer0_final_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_attn_residual -> tp_layer0_final_residual
+	tp_layer0_moe_all_reduce -> tp_layer0_final_residual
+	tp_layer1_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer0_final_residual -> tp_layer1_norm
+	tp_layer1_q_proj_gpu0 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_q_proj_gpu0
+	tp_layer1_k_proj_gpu0 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_k_proj_gpu0
+	tp_layer1_v_proj_gpu0 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_v_proj_gpu0
+	tp_layer1_attn_scores_gpu0 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_k_gpu0 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_gather_q_gpu0 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_q_proj_gpu0 -> tp_layer1_gather_q_gpu0
+	tp_layer1_k_proj_gpu0 -> tp_layer1_gather_k_gpu0
+	tp_layer1_gather_q_gpu0 -> tp_layer1_attn_scores_gpu0
+	tp_layer1_gather_k_gpu0 -> tp_layer1_attn_scores_gpu0
+	tp_layer1_softmax_gpu0 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_attn_scores_gpu0 -> tp_layer1_softmax_gpu0
+	tp_layer1_attn_out_gpu0 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_v_gpu0 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_v_proj_gpu0 -> tp_layer1_gather_v_gpu0
+	tp_layer1_softmax_gpu0 -> tp_layer1_attn_out_gpu0
+	tp_layer1_gather_v_gpu0 -> tp_layer1_attn_out_gpu0
+	tp_layer1_out_proj_gpu0 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_attn_out_gpu0 -> tp_layer1_out_proj_gpu0
+	tp_layer1_q_proj_gpu1 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_q_proj_gpu1
+	tp_layer1_k_proj_gpu1 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_k_proj_gpu1
+	tp_layer1_v_proj_gpu1 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_v_proj_gpu1
+	tp_layer1_attn_scores_gpu1 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_k_gpu1 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_gather_q_gpu1 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_q_proj_gpu1 -> tp_layer1_gather_q_gpu1
+	tp_layer1_k_proj_gpu1 -> tp_layer1_gather_k_gpu1
+	tp_layer1_gather_q_gpu1 -> tp_layer1_attn_scores_gpu1
+	tp_layer1_gather_k_gpu1 -> tp_layer1_attn_scores_gpu1
+	tp_layer1_softmax_gpu1 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_attn_scores_gpu1 -> tp_layer1_softmax_gpu1
+	tp_layer1_attn_out_gpu1 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_v_gpu1 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_v_proj_gpu1 -> tp_layer1_gather_v_gpu1
+	tp_layer1_softmax_gpu1 -> tp_layer1_attn_out_gpu1
+	tp_layer1_gather_v_gpu1 -> tp_layer1_attn_out_gpu1
+	tp_layer1_out_proj_gpu1 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_attn_out_gpu1 -> tp_layer1_out_proj_gpu1
+	tp_layer1_q_proj_gpu2 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_q_proj_gpu2
+	tp_layer1_k_proj_gpu2 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_k_proj_gpu2
+	tp_layer1_v_proj_gpu2 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_v_proj_gpu2
+	tp_layer1_attn_scores_gpu2 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_k_gpu2 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_gather_q_gpu2 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_q_proj_gpu2 -> tp_layer1_gather_q_gpu2
+	tp_layer1_k_proj_gpu2 -> tp_layer1_gather_k_gpu2
+	tp_layer1_gather_q_gpu2 -> tp_layer1_attn_scores_gpu2
+	tp_layer1_gather_k_gpu2 -> tp_layer1_attn_scores_gpu2
+	tp_layer1_softmax_gpu2 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_attn_scores_gpu2 -> tp_layer1_softmax_gpu2
+	tp_layer1_attn_out_gpu2 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_v_gpu2 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_v_proj_gpu2 -> tp_layer1_gather_v_gpu2
+	tp_layer1_softmax_gpu2 -> tp_layer1_attn_out_gpu2
+	tp_layer1_gather_v_gpu2 -> tp_layer1_attn_out_gpu2
+	tp_layer1_out_proj_gpu2 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_attn_out_gpu2 -> tp_layer1_out_proj_gpu2
+	tp_layer1_q_proj_gpu3 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_q_proj_gpu3
+	tp_layer1_k_proj_gpu3 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_k_proj_gpu3
+	tp_layer1_v_proj_gpu3 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_v_proj_gpu3
+	tp_layer1_attn_scores_gpu3 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_k_gpu3 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_gather_q_gpu3 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_q_proj_gpu3 -> tp_layer1_gather_q_gpu3
+	tp_layer1_k_proj_gpu3 -> tp_layer1_gather_k_gpu3
+	tp_layer1_gather_q_gpu3 -> tp_layer1_attn_scores_gpu3
+	tp_layer1_gather_k_gpu3 -> tp_layer1_attn_scores_gpu3
+	tp_layer1_softmax_gpu3 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_attn_scores_gpu3 -> tp_layer1_softmax_gpu3
+	tp_layer1_attn_out_gpu3 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_v_gpu3 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_v_proj_gpu3 -> tp_layer1_gather_v_gpu3
+	tp_layer1_softmax_gpu3 -> tp_layer1_attn_out_gpu3
+	tp_layer1_gather_v_gpu3 -> tp_layer1_attn_out_gpu3
+	tp_layer1_out_proj_gpu3 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_attn_out_gpu3 -> tp_layer1_out_proj_gpu3
+	tp_layer1_q_proj_gpu4 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_q_proj_gpu4
+	tp_layer1_k_proj_gpu4 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_k_proj_gpu4
+	tp_layer1_v_proj_gpu4 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_v_proj_gpu4
+	tp_layer1_attn_scores_gpu4 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_k_gpu4 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_gather_q_gpu4 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_q_proj_gpu4 -> tp_layer1_gather_q_gpu4
+	tp_layer1_k_proj_gpu4 -> tp_layer1_gather_k_gpu4
+	tp_layer1_gather_q_gpu4 -> tp_layer1_attn_scores_gpu4
+	tp_layer1_gather_k_gpu4 -> tp_layer1_attn_scores_gpu4
+	tp_layer1_softmax_gpu4 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_attn_scores_gpu4 -> tp_layer1_softmax_gpu4
+	tp_layer1_attn_out_gpu4 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_v_gpu4 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_v_proj_gpu4 -> tp_layer1_gather_v_gpu4
+	tp_layer1_softmax_gpu4 -> tp_layer1_attn_out_gpu4
+	tp_layer1_gather_v_gpu4 -> tp_layer1_attn_out_gpu4
+	tp_layer1_out_proj_gpu4 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_attn_out_gpu4 -> tp_layer1_out_proj_gpu4
+	tp_layer1_q_proj_gpu5 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_q_proj_gpu5
+	tp_layer1_k_proj_gpu5 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_k_proj_gpu5
+	tp_layer1_v_proj_gpu5 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_v_proj_gpu5
+	tp_layer1_attn_scores_gpu5 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_k_gpu5 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_gather_q_gpu5 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_q_proj_gpu5 -> tp_layer1_gather_q_gpu5
+	tp_layer1_k_proj_gpu5 -> tp_layer1_gather_k_gpu5
+	tp_layer1_gather_q_gpu5 -> tp_layer1_attn_scores_gpu5
+	tp_layer1_gather_k_gpu5 -> tp_layer1_attn_scores_gpu5
+	tp_layer1_softmax_gpu5 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_attn_scores_gpu5 -> tp_layer1_softmax_gpu5
+	tp_layer1_attn_out_gpu5 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_v_gpu5 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_v_proj_gpu5 -> tp_layer1_gather_v_gpu5
+	tp_layer1_softmax_gpu5 -> tp_layer1_attn_out_gpu5
+	tp_layer1_gather_v_gpu5 -> tp_layer1_attn_out_gpu5
+	tp_layer1_out_proj_gpu5 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_attn_out_gpu5 -> tp_layer1_out_proj_gpu5
+	tp_layer1_q_proj_gpu6 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_q_proj_gpu6
+	tp_layer1_k_proj_gpu6 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_k_proj_gpu6
+	tp_layer1_v_proj_gpu6 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_v_proj_gpu6
+	tp_layer1_attn_scores_gpu6 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_k_gpu6 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_gather_q_gpu6 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_q_proj_gpu6 -> tp_layer1_gather_q_gpu6
+	tp_layer1_k_proj_gpu6 -> tp_layer1_gather_k_gpu6
+	tp_layer1_gather_q_gpu6 -> tp_layer1_attn_scores_gpu6
+	tp_layer1_gather_k_gpu6 -> tp_layer1_attn_scores_gpu6
+	tp_layer1_softmax_gpu6 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_attn_scores_gpu6 -> tp_layer1_softmax_gpu6
+	tp_layer1_attn_out_gpu6 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_v_gpu6 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_v_proj_gpu6 -> tp_layer1_gather_v_gpu6
+	tp_layer1_softmax_gpu6 -> tp_layer1_attn_out_gpu6
+	tp_layer1_gather_v_gpu6 -> tp_layer1_attn_out_gpu6
+	tp_layer1_out_proj_gpu6 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_attn_out_gpu6 -> tp_layer1_out_proj_gpu6
+	tp_layer1_q_proj_gpu7 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_q_proj_gpu7
+	tp_layer1_k_proj_gpu7 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_k_proj_gpu7
+	tp_layer1_v_proj_gpu7 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_norm -> tp_layer1_v_proj_gpu7
+	tp_layer1_attn_scores_gpu7 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_k_gpu7 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_gather_q_gpu7 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_q_proj_gpu7 -> tp_layer1_gather_q_gpu7
+	tp_layer1_k_proj_gpu7 -> tp_layer1_gather_k_gpu7
+	tp_layer1_gather_q_gpu7 -> tp_layer1_attn_scores_gpu7
+	tp_layer1_gather_k_gpu7 -> tp_layer1_attn_scores_gpu7
+	tp_layer1_softmax_gpu7 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_attn_scores_gpu7 -> tp_layer1_softmax_gpu7
+	tp_layer1_attn_out_gpu7 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_gather_v_gpu7 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_v_proj_gpu7 -> tp_layer1_gather_v_gpu7
+	tp_layer1_softmax_gpu7 -> tp_layer1_attn_out_gpu7
+	tp_layer1_gather_v_gpu7 -> tp_layer1_attn_out_gpu7
+	tp_layer1_out_proj_gpu7 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer1_attn_out_gpu7 -> tp_layer1_out_proj_gpu7
+	tp_layer1_attn_all_reduce [label="All-Reduce Attention\nInput: 8×[512]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_out_proj_gpu0 -> tp_layer1_attn_all_reduce
+	tp_layer1_out_proj_gpu1 -> tp_layer1_attn_all_reduce
+	tp_layer1_out_proj_gpu2 -> tp_layer1_attn_all_reduce
+	tp_layer1_out_proj_gpu3 -> tp_layer1_attn_all_reduce
+	tp_layer1_out_proj_gpu4 -> tp_layer1_attn_all_reduce
+	tp_layer1_out_proj_gpu5 -> tp_layer1_attn_all_reduce
+	tp_layer1_out_proj_gpu6 -> tp_layer1_attn_all_reduce
+	tp_layer1_out_proj_gpu7 -> tp_layer1_attn_all_reduce
+	tp_layer1_attn_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer0_final_residual -> tp_layer1_attn_residual
+	tp_layer1_attn_all_reduce -> tp_layer1_attn_residual
+	tp_layer1_moe_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_attn_residual -> tp_layer1_moe_norm
+	tp_layer1_expert0_up [label="Expert 0 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert0_up
+	tp_layer1_expert0_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert0_up -> tp_layer1_expert0_activation
+	tp_layer1_expert0_down [label="Expert 0 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert0_activation -> tp_layer1_expert0_down
+	tp_layer1_expert1_up [label="Expert 1 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert1_up
+	tp_layer1_expert1_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert1_up -> tp_layer1_expert1_activation
+	tp_layer1_expert1_down [label="Expert 1 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert1_activation -> tp_layer1_expert1_down
+	tp_layer1_expert2_up [label="Expert 2 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert2_up
+	tp_layer1_expert2_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert2_up -> tp_layer1_expert2_activation
+	tp_layer1_expert2_down [label="Expert 2 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert2_activation -> tp_layer1_expert2_down
+	tp_layer1_expert3_up [label="Expert 3 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert3_up
+	tp_layer1_expert3_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert3_up -> tp_layer1_expert3_activation
+	tp_layer1_expert3_down [label="Expert 3 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert3_activation -> tp_layer1_expert3_down
+	tp_layer1_expert4_up [label="Expert 4 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert4_up
+	tp_layer1_expert4_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert4_up -> tp_layer1_expert4_activation
+	tp_layer1_expert4_down [label="Expert 4 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert4_activation -> tp_layer1_expert4_down
+	tp_layer1_expert5_up [label="Expert 5 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert5_up
+	tp_layer1_expert5_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert5_up -> tp_layer1_expert5_activation
+	tp_layer1_expert5_down [label="Expert 5 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert5_activation -> tp_layer1_expert5_down
+	tp_layer1_expert6_up [label="Expert 6 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert6_up
+	tp_layer1_expert6_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert6_up -> tp_layer1_expert6_activation
+	tp_layer1_expert6_down [label="Expert 6 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert6_activation -> tp_layer1_expert6_down
+	tp_layer1_expert7_up [label="Expert 7 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert7_up
+	tp_layer1_expert7_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert7_up -> tp_layer1_expert7_activation
+	tp_layer1_expert7_down [label="Expert 7 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert7_activation -> tp_layer1_expert7_down
+	tp_layer1_expert8_up [label="Expert 8 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert8_up
+	tp_layer1_expert8_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert8_up -> tp_layer1_expert8_activation
+	tp_layer1_expert8_down [label="Expert 8 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert8_activation -> tp_layer1_expert8_down
+	tp_layer1_expert9_up [label="Expert 9 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert9_up
+	tp_layer1_expert9_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert9_up -> tp_layer1_expert9_activation
+	tp_layer1_expert9_down [label="Expert 9 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert9_activation -> tp_layer1_expert9_down
+	tp_layer1_expert10_up [label="Expert 10 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert10_up
+	tp_layer1_expert10_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert10_up -> tp_layer1_expert10_activation
+	tp_layer1_expert10_down [label="Expert 10 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert10_activation -> tp_layer1_expert10_down
+	tp_layer1_expert11_up [label="Expert 11 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert11_up
+	tp_layer1_expert11_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert11_up -> tp_layer1_expert11_activation
+	tp_layer1_expert11_down [label="Expert 11 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert11_activation -> tp_layer1_expert11_down
+	tp_layer1_expert12_up [label="Expert 12 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert12_up
+	tp_layer1_expert12_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert12_up -> tp_layer1_expert12_activation
+	tp_layer1_expert12_down [label="Expert 12 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert12_activation -> tp_layer1_expert12_down
+	tp_layer1_expert13_up [label="Expert 13 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert13_up
+	tp_layer1_expert13_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert13_up -> tp_layer1_expert13_activation
+	tp_layer1_expert13_down [label="Expert 13 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert13_activation -> tp_layer1_expert13_down
+	tp_layer1_expert14_up [label="Expert 14 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert14_up
+	tp_layer1_expert14_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert14_up -> tp_layer1_expert14_activation
+	tp_layer1_expert14_down [label="Expert 14 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert14_activation -> tp_layer1_expert14_down
+	tp_layer1_expert15_up [label="Expert 15 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_moe_norm -> tp_layer1_expert15_up
+	tp_layer1_expert15_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_expert15_up -> tp_layer1_expert15_activation
+	tp_layer1_expert15_down [label="Expert 15 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer1_expert15_activation -> tp_layer1_expert15_down
+	tp_layer1_moe_all_reduce [label="All-Reduce MoE\nInput: 8×[512]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_expert0_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert1_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert2_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert3_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert4_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert5_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert6_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert7_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert8_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert9_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert10_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert11_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert12_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert13_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert14_down -> tp_layer1_moe_all_reduce
+	tp_layer1_expert15_down -> tp_layer1_moe_all_reduce
+	tp_layer1_final_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_attn_residual -> tp_layer1_final_residual
+	tp_layer1_moe_all_reduce -> tp_layer1_final_residual
+	tp_layer2_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer1_final_residual -> tp_layer2_norm
+	tp_layer2_q_proj_gpu0 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_q_proj_gpu0
+	tp_layer2_k_proj_gpu0 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_k_proj_gpu0
+	tp_layer2_v_proj_gpu0 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_v_proj_gpu0
+	tp_layer2_attn_scores_gpu0 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_k_gpu0 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_gather_q_gpu0 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_q_proj_gpu0 -> tp_layer2_gather_q_gpu0
+	tp_layer2_k_proj_gpu0 -> tp_layer2_gather_k_gpu0
+	tp_layer2_gather_q_gpu0 -> tp_layer2_attn_scores_gpu0
+	tp_layer2_gather_k_gpu0 -> tp_layer2_attn_scores_gpu0
+	tp_layer2_softmax_gpu0 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_attn_scores_gpu0 -> tp_layer2_softmax_gpu0
+	tp_layer2_attn_out_gpu0 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_v_gpu0 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_v_proj_gpu0 -> tp_layer2_gather_v_gpu0
+	tp_layer2_softmax_gpu0 -> tp_layer2_attn_out_gpu0
+	tp_layer2_gather_v_gpu0 -> tp_layer2_attn_out_gpu0
+	tp_layer2_out_proj_gpu0 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_attn_out_gpu0 -> tp_layer2_out_proj_gpu0
+	tp_layer2_q_proj_gpu1 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_q_proj_gpu1
+	tp_layer2_k_proj_gpu1 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_k_proj_gpu1
+	tp_layer2_v_proj_gpu1 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_v_proj_gpu1
+	tp_layer2_attn_scores_gpu1 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_k_gpu1 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_gather_q_gpu1 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_q_proj_gpu1 -> tp_layer2_gather_q_gpu1
+	tp_layer2_k_proj_gpu1 -> tp_layer2_gather_k_gpu1
+	tp_layer2_gather_q_gpu1 -> tp_layer2_attn_scores_gpu1
+	tp_layer2_gather_k_gpu1 -> tp_layer2_attn_scores_gpu1
+	tp_layer2_softmax_gpu1 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_attn_scores_gpu1 -> tp_layer2_softmax_gpu1
+	tp_layer2_attn_out_gpu1 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_v_gpu1 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_v_proj_gpu1 -> tp_layer2_gather_v_gpu1
+	tp_layer2_softmax_gpu1 -> tp_layer2_attn_out_gpu1
+	tp_layer2_gather_v_gpu1 -> tp_layer2_attn_out_gpu1
+	tp_layer2_out_proj_gpu1 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_attn_out_gpu1 -> tp_layer2_out_proj_gpu1
+	tp_layer2_q_proj_gpu2 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_q_proj_gpu2
+	tp_layer2_k_proj_gpu2 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_k_proj_gpu2
+	tp_layer2_v_proj_gpu2 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_v_proj_gpu2
+	tp_layer2_attn_scores_gpu2 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_k_gpu2 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_gather_q_gpu2 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_q_proj_gpu2 -> tp_layer2_gather_q_gpu2
+	tp_layer2_k_proj_gpu2 -> tp_layer2_gather_k_gpu2
+	tp_layer2_gather_q_gpu2 -> tp_layer2_attn_scores_gpu2
+	tp_layer2_gather_k_gpu2 -> tp_layer2_attn_scores_gpu2
+	tp_layer2_softmax_gpu2 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_attn_scores_gpu2 -> tp_layer2_softmax_gpu2
+	tp_layer2_attn_out_gpu2 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_v_gpu2 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_v_proj_gpu2 -> tp_layer2_gather_v_gpu2
+	tp_layer2_softmax_gpu2 -> tp_layer2_attn_out_gpu2
+	tp_layer2_gather_v_gpu2 -> tp_layer2_attn_out_gpu2
+	tp_layer2_out_proj_gpu2 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_attn_out_gpu2 -> tp_layer2_out_proj_gpu2
+	tp_layer2_q_proj_gpu3 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_q_proj_gpu3
+	tp_layer2_k_proj_gpu3 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_k_proj_gpu3
+	tp_layer2_v_proj_gpu3 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_v_proj_gpu3
+	tp_layer2_attn_scores_gpu3 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_k_gpu3 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_gather_q_gpu3 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_q_proj_gpu3 -> tp_layer2_gather_q_gpu3
+	tp_layer2_k_proj_gpu3 -> tp_layer2_gather_k_gpu3
+	tp_layer2_gather_q_gpu3 -> tp_layer2_attn_scores_gpu3
+	tp_layer2_gather_k_gpu3 -> tp_layer2_attn_scores_gpu3
+	tp_layer2_softmax_gpu3 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_attn_scores_gpu3 -> tp_layer2_softmax_gpu3
+	tp_layer2_attn_out_gpu3 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_v_gpu3 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_v_proj_gpu3 -> tp_layer2_gather_v_gpu3
+	tp_layer2_softmax_gpu3 -> tp_layer2_attn_out_gpu3
+	tp_layer2_gather_v_gpu3 -> tp_layer2_attn_out_gpu3
+	tp_layer2_out_proj_gpu3 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_attn_out_gpu3 -> tp_layer2_out_proj_gpu3
+	tp_layer2_q_proj_gpu4 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_q_proj_gpu4
+	tp_layer2_k_proj_gpu4 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_k_proj_gpu4
+	tp_layer2_v_proj_gpu4 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_v_proj_gpu4
+	tp_layer2_attn_scores_gpu4 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_k_gpu4 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_gather_q_gpu4 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_q_proj_gpu4 -> tp_layer2_gather_q_gpu4
+	tp_layer2_k_proj_gpu4 -> tp_layer2_gather_k_gpu4
+	tp_layer2_gather_q_gpu4 -> tp_layer2_attn_scores_gpu4
+	tp_layer2_gather_k_gpu4 -> tp_layer2_attn_scores_gpu4
+	tp_layer2_softmax_gpu4 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_attn_scores_gpu4 -> tp_layer2_softmax_gpu4
+	tp_layer2_attn_out_gpu4 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_v_gpu4 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_v_proj_gpu4 -> tp_layer2_gather_v_gpu4
+	tp_layer2_softmax_gpu4 -> tp_layer2_attn_out_gpu4
+	tp_layer2_gather_v_gpu4 -> tp_layer2_attn_out_gpu4
+	tp_layer2_out_proj_gpu4 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_attn_out_gpu4 -> tp_layer2_out_proj_gpu4
+	tp_layer2_q_proj_gpu5 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_q_proj_gpu5
+	tp_layer2_k_proj_gpu5 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_k_proj_gpu5
+	tp_layer2_v_proj_gpu5 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_v_proj_gpu5
+	tp_layer2_attn_scores_gpu5 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_k_gpu5 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_gather_q_gpu5 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_q_proj_gpu5 -> tp_layer2_gather_q_gpu5
+	tp_layer2_k_proj_gpu5 -> tp_layer2_gather_k_gpu5
+	tp_layer2_gather_q_gpu5 -> tp_layer2_attn_scores_gpu5
+	tp_layer2_gather_k_gpu5 -> tp_layer2_attn_scores_gpu5
+	tp_layer2_softmax_gpu5 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_attn_scores_gpu5 -> tp_layer2_softmax_gpu5
+	tp_layer2_attn_out_gpu5 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_v_gpu5 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_v_proj_gpu5 -> tp_layer2_gather_v_gpu5
+	tp_layer2_softmax_gpu5 -> tp_layer2_attn_out_gpu5
+	tp_layer2_gather_v_gpu5 -> tp_layer2_attn_out_gpu5
+	tp_layer2_out_proj_gpu5 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_attn_out_gpu5 -> tp_layer2_out_proj_gpu5
+	tp_layer2_q_proj_gpu6 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_q_proj_gpu6
+	tp_layer2_k_proj_gpu6 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_k_proj_gpu6
+	tp_layer2_v_proj_gpu6 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_v_proj_gpu6
+	tp_layer2_attn_scores_gpu6 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_k_gpu6 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_gather_q_gpu6 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_q_proj_gpu6 -> tp_layer2_gather_q_gpu6
+	tp_layer2_k_proj_gpu6 -> tp_layer2_gather_k_gpu6
+	tp_layer2_gather_q_gpu6 -> tp_layer2_attn_scores_gpu6
+	tp_layer2_gather_k_gpu6 -> tp_layer2_attn_scores_gpu6
+	tp_layer2_softmax_gpu6 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_attn_scores_gpu6 -> tp_layer2_softmax_gpu6
+	tp_layer2_attn_out_gpu6 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_v_gpu6 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_v_proj_gpu6 -> tp_layer2_gather_v_gpu6
+	tp_layer2_softmax_gpu6 -> tp_layer2_attn_out_gpu6
+	tp_layer2_gather_v_gpu6 -> tp_layer2_attn_out_gpu6
+	tp_layer2_out_proj_gpu6 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_attn_out_gpu6 -> tp_layer2_out_proj_gpu6
+	tp_layer2_q_proj_gpu7 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_q_proj_gpu7
+	tp_layer2_k_proj_gpu7 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_k_proj_gpu7
+	tp_layer2_v_proj_gpu7 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_norm -> tp_layer2_v_proj_gpu7
+	tp_layer2_attn_scores_gpu7 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_k_gpu7 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_gather_q_gpu7 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_q_proj_gpu7 -> tp_layer2_gather_q_gpu7
+	tp_layer2_k_proj_gpu7 -> tp_layer2_gather_k_gpu7
+	tp_layer2_gather_q_gpu7 -> tp_layer2_attn_scores_gpu7
+	tp_layer2_gather_k_gpu7 -> tp_layer2_attn_scores_gpu7
+	tp_layer2_softmax_gpu7 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_attn_scores_gpu7 -> tp_layer2_softmax_gpu7
+	tp_layer2_attn_out_gpu7 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_gather_v_gpu7 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_v_proj_gpu7 -> tp_layer2_gather_v_gpu7
+	tp_layer2_softmax_gpu7 -> tp_layer2_attn_out_gpu7
+	tp_layer2_gather_v_gpu7 -> tp_layer2_attn_out_gpu7
+	tp_layer2_out_proj_gpu7 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer2_attn_out_gpu7 -> tp_layer2_out_proj_gpu7
+	tp_layer2_attn_all_reduce [label="All-Reduce Attention\nInput: 8×[512]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_out_proj_gpu0 -> tp_layer2_attn_all_reduce
+	tp_layer2_out_proj_gpu1 -> tp_layer2_attn_all_reduce
+	tp_layer2_out_proj_gpu2 -> tp_layer2_attn_all_reduce
+	tp_layer2_out_proj_gpu3 -> tp_layer2_attn_all_reduce
+	tp_layer2_out_proj_gpu4 -> tp_layer2_attn_all_reduce
+	tp_layer2_out_proj_gpu5 -> tp_layer2_attn_all_reduce
+	tp_layer2_out_proj_gpu6 -> tp_layer2_attn_all_reduce
+	tp_layer2_out_proj_gpu7 -> tp_layer2_attn_all_reduce
+	tp_layer2_attn_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer1_final_residual -> tp_layer2_attn_residual
+	tp_layer2_attn_all_reduce -> tp_layer2_attn_residual
+	tp_layer2_moe_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_attn_residual -> tp_layer2_moe_norm
+	tp_layer2_expert0_up [label="Expert 0 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert0_up
+	tp_layer2_expert0_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert0_up -> tp_layer2_expert0_activation
+	tp_layer2_expert0_down [label="Expert 0 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert0_activation -> tp_layer2_expert0_down
+	tp_layer2_expert1_up [label="Expert 1 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert1_up
+	tp_layer2_expert1_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert1_up -> tp_layer2_expert1_activation
+	tp_layer2_expert1_down [label="Expert 1 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert1_activation -> tp_layer2_expert1_down
+	tp_layer2_expert2_up [label="Expert 2 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert2_up
+	tp_layer2_expert2_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert2_up -> tp_layer2_expert2_activation
+	tp_layer2_expert2_down [label="Expert 2 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert2_activation -> tp_layer2_expert2_down
+	tp_layer2_expert3_up [label="Expert 3 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert3_up
+	tp_layer2_expert3_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert3_up -> tp_layer2_expert3_activation
+	tp_layer2_expert3_down [label="Expert 3 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert3_activation -> tp_layer2_expert3_down
+	tp_layer2_expert4_up [label="Expert 4 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert4_up
+	tp_layer2_expert4_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert4_up -> tp_layer2_expert4_activation
+	tp_layer2_expert4_down [label="Expert 4 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert4_activation -> tp_layer2_expert4_down
+	tp_layer2_expert5_up [label="Expert 5 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert5_up
+	tp_layer2_expert5_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert5_up -> tp_layer2_expert5_activation
+	tp_layer2_expert5_down [label="Expert 5 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert5_activation -> tp_layer2_expert5_down
+	tp_layer2_expert6_up [label="Expert 6 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert6_up
+	tp_layer2_expert6_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert6_up -> tp_layer2_expert6_activation
+	tp_layer2_expert6_down [label="Expert 6 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert6_activation -> tp_layer2_expert6_down
+	tp_layer2_expert7_up [label="Expert 7 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert7_up
+	tp_layer2_expert7_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert7_up -> tp_layer2_expert7_activation
+	tp_layer2_expert7_down [label="Expert 7 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert7_activation -> tp_layer2_expert7_down
+	tp_layer2_expert8_up [label="Expert 8 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert8_up
+	tp_layer2_expert8_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert8_up -> tp_layer2_expert8_activation
+	tp_layer2_expert8_down [label="Expert 8 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert8_activation -> tp_layer2_expert8_down
+	tp_layer2_expert9_up [label="Expert 9 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert9_up
+	tp_layer2_expert9_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert9_up -> tp_layer2_expert9_activation
+	tp_layer2_expert9_down [label="Expert 9 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert9_activation -> tp_layer2_expert9_down
+	tp_layer2_expert10_up [label="Expert 10 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert10_up
+	tp_layer2_expert10_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert10_up -> tp_layer2_expert10_activation
+	tp_layer2_expert10_down [label="Expert 10 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert10_activation -> tp_layer2_expert10_down
+	tp_layer2_expert11_up [label="Expert 11 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert11_up
+	tp_layer2_expert11_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert11_up -> tp_layer2_expert11_activation
+	tp_layer2_expert11_down [label="Expert 11 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert11_activation -> tp_layer2_expert11_down
+	tp_layer2_expert12_up [label="Expert 12 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert12_up
+	tp_layer2_expert12_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert12_up -> tp_layer2_expert12_activation
+	tp_layer2_expert12_down [label="Expert 12 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert12_activation -> tp_layer2_expert12_down
+	tp_layer2_expert13_up [label="Expert 13 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert13_up
+	tp_layer2_expert13_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert13_up -> tp_layer2_expert13_activation
+	tp_layer2_expert13_down [label="Expert 13 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert13_activation -> tp_layer2_expert13_down
+	tp_layer2_expert14_up [label="Expert 14 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert14_up
+	tp_layer2_expert14_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert14_up -> tp_layer2_expert14_activation
+	tp_layer2_expert14_down [label="Expert 14 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert14_activation -> tp_layer2_expert14_down
+	tp_layer2_expert15_up [label="Expert 15 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_moe_norm -> tp_layer2_expert15_up
+	tp_layer2_expert15_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_expert15_up -> tp_layer2_expert15_activation
+	tp_layer2_expert15_down [label="Expert 15 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer2_expert15_activation -> tp_layer2_expert15_down
+	tp_layer2_moe_all_reduce [label="All-Reduce MoE\nInput: 8×[512]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_expert0_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert1_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert2_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert3_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert4_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert5_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert6_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert7_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert8_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert9_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert10_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert11_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert12_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert13_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert14_down -> tp_layer2_moe_all_reduce
+	tp_layer2_expert15_down -> tp_layer2_moe_all_reduce
+	tp_layer2_final_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_attn_residual -> tp_layer2_final_residual
+	tp_layer2_moe_all_reduce -> tp_layer2_final_residual
+	tp_layer3_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer2_final_residual -> tp_layer3_norm
+	tp_layer3_q_proj_gpu0 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_q_proj_gpu0
+	tp_layer3_k_proj_gpu0 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_k_proj_gpu0
+	tp_layer3_v_proj_gpu0 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_v_proj_gpu0
+	tp_layer3_attn_scores_gpu0 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_k_gpu0 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_gather_q_gpu0 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_q_proj_gpu0 -> tp_layer3_gather_q_gpu0
+	tp_layer3_k_proj_gpu0 -> tp_layer3_gather_k_gpu0
+	tp_layer3_gather_q_gpu0 -> tp_layer3_attn_scores_gpu0
+	tp_layer3_gather_k_gpu0 -> tp_layer3_attn_scores_gpu0
+	tp_layer3_softmax_gpu0 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_attn_scores_gpu0 -> tp_layer3_softmax_gpu0
+	tp_layer3_attn_out_gpu0 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_v_gpu0 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_v_proj_gpu0 -> tp_layer3_gather_v_gpu0
+	tp_layer3_softmax_gpu0 -> tp_layer3_attn_out_gpu0
+	tp_layer3_gather_v_gpu0 -> tp_layer3_attn_out_gpu0
+	tp_layer3_out_proj_gpu0 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_attn_out_gpu0 -> tp_layer3_out_proj_gpu0
+	tp_layer3_q_proj_gpu1 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_q_proj_gpu1
+	tp_layer3_k_proj_gpu1 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_k_proj_gpu1
+	tp_layer3_v_proj_gpu1 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_v_proj_gpu1
+	tp_layer3_attn_scores_gpu1 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_k_gpu1 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_gather_q_gpu1 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_q_proj_gpu1 -> tp_layer3_gather_q_gpu1
+	tp_layer3_k_proj_gpu1 -> tp_layer3_gather_k_gpu1
+	tp_layer3_gather_q_gpu1 -> tp_layer3_attn_scores_gpu1
+	tp_layer3_gather_k_gpu1 -> tp_layer3_attn_scores_gpu1
+	tp_layer3_softmax_gpu1 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_attn_scores_gpu1 -> tp_layer3_softmax_gpu1
+	tp_layer3_attn_out_gpu1 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_v_gpu1 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_v_proj_gpu1 -> tp_layer3_gather_v_gpu1
+	tp_layer3_softmax_gpu1 -> tp_layer3_attn_out_gpu1
+	tp_layer3_gather_v_gpu1 -> tp_layer3_attn_out_gpu1
+	tp_layer3_out_proj_gpu1 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_attn_out_gpu1 -> tp_layer3_out_proj_gpu1
+	tp_layer3_q_proj_gpu2 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_q_proj_gpu2
+	tp_layer3_k_proj_gpu2 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_k_proj_gpu2
+	tp_layer3_v_proj_gpu2 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_v_proj_gpu2
+	tp_layer3_attn_scores_gpu2 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_k_gpu2 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_gather_q_gpu2 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_q_proj_gpu2 -> tp_layer3_gather_q_gpu2
+	tp_layer3_k_proj_gpu2 -> tp_layer3_gather_k_gpu2
+	tp_layer3_gather_q_gpu2 -> tp_layer3_attn_scores_gpu2
+	tp_layer3_gather_k_gpu2 -> tp_layer3_attn_scores_gpu2
+	tp_layer3_softmax_gpu2 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_attn_scores_gpu2 -> tp_layer3_softmax_gpu2
+	tp_layer3_attn_out_gpu2 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_v_gpu2 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 2" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_v_proj_gpu2 -> tp_layer3_gather_v_gpu2
+	tp_layer3_softmax_gpu2 -> tp_layer3_attn_out_gpu2
+	tp_layer3_gather_v_gpu2 -> tp_layer3_attn_out_gpu2
+	tp_layer3_out_proj_gpu2 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_attn_out_gpu2 -> tp_layer3_out_proj_gpu2
+	tp_layer3_q_proj_gpu3 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_q_proj_gpu3
+	tp_layer3_k_proj_gpu3 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_k_proj_gpu3
+	tp_layer3_v_proj_gpu3 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_v_proj_gpu3
+	tp_layer3_attn_scores_gpu3 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_k_gpu3 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_gather_q_gpu3 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_q_proj_gpu3 -> tp_layer3_gather_q_gpu3
+	tp_layer3_k_proj_gpu3 -> tp_layer3_gather_k_gpu3
+	tp_layer3_gather_q_gpu3 -> tp_layer3_attn_scores_gpu3
+	tp_layer3_gather_k_gpu3 -> tp_layer3_attn_scores_gpu3
+	tp_layer3_softmax_gpu3 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_attn_scores_gpu3 -> tp_layer3_softmax_gpu3
+	tp_layer3_attn_out_gpu3 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_v_gpu3 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 3" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_v_proj_gpu3 -> tp_layer3_gather_v_gpu3
+	tp_layer3_softmax_gpu3 -> tp_layer3_attn_out_gpu3
+	tp_layer3_gather_v_gpu3 -> tp_layer3_attn_out_gpu3
+	tp_layer3_out_proj_gpu3 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_attn_out_gpu3 -> tp_layer3_out_proj_gpu3
+	tp_layer3_q_proj_gpu4 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_q_proj_gpu4
+	tp_layer3_k_proj_gpu4 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_k_proj_gpu4
+	tp_layer3_v_proj_gpu4 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_v_proj_gpu4
+	tp_layer3_attn_scores_gpu4 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_k_gpu4 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_gather_q_gpu4 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_q_proj_gpu4 -> tp_layer3_gather_q_gpu4
+	tp_layer3_k_proj_gpu4 -> tp_layer3_gather_k_gpu4
+	tp_layer3_gather_q_gpu4 -> tp_layer3_attn_scores_gpu4
+	tp_layer3_gather_k_gpu4 -> tp_layer3_attn_scores_gpu4
+	tp_layer3_softmax_gpu4 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_attn_scores_gpu4 -> tp_layer3_softmax_gpu4
+	tp_layer3_attn_out_gpu4 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_v_gpu4 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 4" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_v_proj_gpu4 -> tp_layer3_gather_v_gpu4
+	tp_layer3_softmax_gpu4 -> tp_layer3_attn_out_gpu4
+	tp_layer3_gather_v_gpu4 -> tp_layer3_attn_out_gpu4
+	tp_layer3_out_proj_gpu4 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_attn_out_gpu4 -> tp_layer3_out_proj_gpu4
+	tp_layer3_q_proj_gpu5 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_q_proj_gpu5
+	tp_layer3_k_proj_gpu5 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_k_proj_gpu5
+	tp_layer3_v_proj_gpu5 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_v_proj_gpu5
+	tp_layer3_attn_scores_gpu5 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_k_gpu5 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_gather_q_gpu5 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_q_proj_gpu5 -> tp_layer3_gather_q_gpu5
+	tp_layer3_k_proj_gpu5 -> tp_layer3_gather_k_gpu5
+	tp_layer3_gather_q_gpu5 -> tp_layer3_attn_scores_gpu5
+	tp_layer3_gather_k_gpu5 -> tp_layer3_attn_scores_gpu5
+	tp_layer3_softmax_gpu5 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_attn_scores_gpu5 -> tp_layer3_softmax_gpu5
+	tp_layer3_attn_out_gpu5 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_v_gpu5 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 5" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_v_proj_gpu5 -> tp_layer3_gather_v_gpu5
+	tp_layer3_softmax_gpu5 -> tp_layer3_attn_out_gpu5
+	tp_layer3_gather_v_gpu5 -> tp_layer3_attn_out_gpu5
+	tp_layer3_out_proj_gpu5 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_attn_out_gpu5 -> tp_layer3_out_proj_gpu5
+	tp_layer3_q_proj_gpu6 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_q_proj_gpu6
+	tp_layer3_k_proj_gpu6 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_k_proj_gpu6
+	tp_layer3_v_proj_gpu6 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_v_proj_gpu6
+	tp_layer3_attn_scores_gpu6 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_k_gpu6 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_gather_q_gpu6 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_q_proj_gpu6 -> tp_layer3_gather_q_gpu6
+	tp_layer3_k_proj_gpu6 -> tp_layer3_gather_k_gpu6
+	tp_layer3_gather_q_gpu6 -> tp_layer3_attn_scores_gpu6
+	tp_layer3_gather_k_gpu6 -> tp_layer3_attn_scores_gpu6
+	tp_layer3_softmax_gpu6 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_attn_scores_gpu6 -> tp_layer3_softmax_gpu6
+	tp_layer3_attn_out_gpu6 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_v_gpu6 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 6" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_v_proj_gpu6 -> tp_layer3_gather_v_gpu6
+	tp_layer3_softmax_gpu6 -> tp_layer3_attn_out_gpu6
+	tp_layer3_gather_v_gpu6 -> tp_layer3_attn_out_gpu6
+	tp_layer3_out_proj_gpu6 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_attn_out_gpu6 -> tp_layer3_out_proj_gpu6
+	tp_layer3_q_proj_gpu7 [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_q_proj_gpu7
+	tp_layer3_k_proj_gpu7 [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_k_proj_gpu7
+	tp_layer3_v_proj_gpu7 [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_norm -> tp_layer3_v_proj_gpu7
+	tp_layer3_attn_scores_gpu7 [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_k_gpu7 [label="All-Gather K\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_gather_q_gpu7 [label="All-Gather Q\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_q_proj_gpu7 -> tp_layer3_gather_q_gpu7
+	tp_layer3_k_proj_gpu7 -> tp_layer3_gather_k_gpu7
+	tp_layer3_gather_q_gpu7 -> tp_layer3_attn_scores_gpu7
+	tp_layer3_gather_k_gpu7 -> tp_layer3_attn_scores_gpu7
+	tp_layer3_softmax_gpu7 [label="Softmax\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_attn_scores_gpu7 -> tp_layer3_softmax_gpu7
+	tp_layer3_attn_out_gpu7 [label="Attention×V\nInput: [batch_size=batch_size, heads=4, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_gather_v_gpu7 [label="All-Gather V\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nGPU: 7" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_v_proj_gpu7 -> tp_layer3_gather_v_gpu7
+	tp_layer3_softmax_gpu7 -> tp_layer3_attn_out_gpu7
+	tp_layer3_gather_v_gpu7 -> tp_layer3_attn_out_gpu7
+	tp_layer3_out_proj_gpu7 [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=4, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_attn_out_gpu7 -> tp_layer3_out_proj_gpu7
+	tp_layer3_attn_all_reduce [label="All-Reduce Attention\nInput: 8×[512]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_out_proj_gpu0 -> tp_layer3_attn_all_reduce
+	tp_layer3_out_proj_gpu1 -> tp_layer3_attn_all_reduce
+	tp_layer3_out_proj_gpu2 -> tp_layer3_attn_all_reduce
+	tp_layer3_out_proj_gpu3 -> tp_layer3_attn_all_reduce
+	tp_layer3_out_proj_gpu4 -> tp_layer3_attn_all_reduce
+	tp_layer3_out_proj_gpu5 -> tp_layer3_attn_all_reduce
+	tp_layer3_out_proj_gpu6 -> tp_layer3_attn_all_reduce
+	tp_layer3_out_proj_gpu7 -> tp_layer3_attn_all_reduce
+	tp_layer3_attn_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer2_final_residual -> tp_layer3_attn_residual
+	tp_layer3_attn_all_reduce -> tp_layer3_attn_residual
+	tp_layer3_moe_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_attn_residual -> tp_layer3_moe_norm
+	tp_layer3_expert0_up [label="Expert 0 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert0_up
+	tp_layer3_expert0_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert0_up -> tp_layer3_expert0_activation
+	tp_layer3_expert0_down [label="Expert 0 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert0_activation -> tp_layer3_expert0_down
+	tp_layer3_expert1_up [label="Expert 1 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert1_up
+	tp_layer3_expert1_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert1_up -> tp_layer3_expert1_activation
+	tp_layer3_expert1_down [label="Expert 1 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert1_activation -> tp_layer3_expert1_down
+	tp_layer3_expert2_up [label="Expert 2 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert2_up
+	tp_layer3_expert2_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert2_up -> tp_layer3_expert2_activation
+	tp_layer3_expert2_down [label="Expert 2 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert2_activation -> tp_layer3_expert2_down
+	tp_layer3_expert3_up [label="Expert 3 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert3_up
+	tp_layer3_expert3_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert3_up -> tp_layer3_expert3_activation
+	tp_layer3_expert3_down [label="Expert 3 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert3_activation -> tp_layer3_expert3_down
+	tp_layer3_expert4_up [label="Expert 4 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert4_up
+	tp_layer3_expert4_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert4_up -> tp_layer3_expert4_activation
+	tp_layer3_expert4_down [label="Expert 4 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert4_activation -> tp_layer3_expert4_down
+	tp_layer3_expert5_up [label="Expert 5 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert5_up
+	tp_layer3_expert5_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 2" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert5_up -> tp_layer3_expert5_activation
+	tp_layer3_expert5_down [label="Expert 5 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 2" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert5_activation -> tp_layer3_expert5_down
+	tp_layer3_expert6_up [label="Expert 6 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert6_up
+	tp_layer3_expert6_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert6_up -> tp_layer3_expert6_activation
+	tp_layer3_expert6_down [label="Expert 6 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert6_activation -> tp_layer3_expert6_down
+	tp_layer3_expert7_up [label="Expert 7 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert7_up
+	tp_layer3_expert7_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 3" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert7_up -> tp_layer3_expert7_activation
+	tp_layer3_expert7_down [label="Expert 7 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 3" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert7_activation -> tp_layer3_expert7_down
+	tp_layer3_expert8_up [label="Expert 8 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert8_up
+	tp_layer3_expert8_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert8_up -> tp_layer3_expert8_activation
+	tp_layer3_expert8_down [label="Expert 8 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert8_activation -> tp_layer3_expert8_down
+	tp_layer3_expert9_up [label="Expert 9 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert9_up
+	tp_layer3_expert9_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 4" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert9_up -> tp_layer3_expert9_activation
+	tp_layer3_expert9_down [label="Expert 9 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 4" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert9_activation -> tp_layer3_expert9_down
+	tp_layer3_expert10_up [label="Expert 10 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert10_up
+	tp_layer3_expert10_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert10_up -> tp_layer3_expert10_activation
+	tp_layer3_expert10_down [label="Expert 10 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert10_activation -> tp_layer3_expert10_down
+	tp_layer3_expert11_up [label="Expert 11 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert11_up
+	tp_layer3_expert11_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 5" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert11_up -> tp_layer3_expert11_activation
+	tp_layer3_expert11_down [label="Expert 11 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 5" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert11_activation -> tp_layer3_expert11_down
+	tp_layer3_expert12_up [label="Expert 12 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert12_up
+	tp_layer3_expert12_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert12_up -> tp_layer3_expert12_activation
+	tp_layer3_expert12_down [label="Expert 12 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert12_activation -> tp_layer3_expert12_down
+	tp_layer3_expert13_up [label="Expert 13 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert13_up
+	tp_layer3_expert13_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 6" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert13_up -> tp_layer3_expert13_activation
+	tp_layer3_expert13_down [label="Expert 13 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 6" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert13_activation -> tp_layer3_expert13_down
+	tp_layer3_expert14_up [label="Expert 14 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert14_up
+	tp_layer3_expert14_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert14_up -> tp_layer3_expert14_activation
+	tp_layer3_expert14_down [label="Expert 14 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert14_activation -> tp_layer3_expert14_down
+	tp_layer3_expert15_up [label="Expert 15 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_moe_norm -> tp_layer3_expert15_up
+	tp_layer3_expert15_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 7" fillcolor=lightyellow shape=rectangle style=filled]
+	tp_layer3_expert15_up -> tp_layer3_expert15_activation
+	tp_layer3_expert15_down [label="Expert 15 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=512]\nGPU: 7" fillcolor=lightcoral shape=rectangle style=filled]
+	tp_layer3_expert15_activation -> tp_layer3_expert15_down
+	tp_layer3_moe_all_reduce [label="All-Reduce MoE\nInput: 8×[512]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_expert0_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert1_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert2_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert3_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert4_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert5_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert6_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert7_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert8_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert9_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert10_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert11_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert12_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert13_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert14_down -> tp_layer3_moe_all_reduce
+	tp_layer3_expert15_down -> tp_layer3_moe_all_reduce
+	tp_layer3_final_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	tp_layer3_attn_residual -> tp_layer3_final_residual
+	tp_layer3_moe_all_reduce -> tp_layer3_final_residual
+	tp_output [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, vocab_size=vocab_size]\nGPU: all GPUs" fillcolor=lightgreen shape=rectangle style=filled]
+	tp_layer3_final_residual -> tp_output
+}

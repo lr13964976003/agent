@@ -1,0 +1,207 @@
+digraph optimized_complete_moe {
+    graph [rankdir=TB, ranksep=1.0, nodesep=0.5];
+    node [shape=rectangle, style=filled, fillcolor=lightblue];
+
+    // Input and Output nodes
+    input [fillcolor=lightgreen, shape=ellipse, label="Input\\n[1024,2048,4096]"];
+    output [fillcolor=lightgreen, shape=ellipse, label="Output\\n[1024,2048,4096]"];
+
+    // ===== LAYER 0 (GPUs 0-7) =====
+    subgraph cluster_layer_0 {
+        label="Layer 0 (GPUs 0-7)";
+        style=dashed; color=red;
+
+        l0_token_split [fillcolor=lightcyan, shape=parallelogram, label="Token Split\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 0-7"];
+        l0_qkv_proj [fillcolor=yellow, label="QKV Projections\\n8×[128,2048,4096]\\n×[4096,1536]\\nGPU: 0-7"];
+        l0_attention [fillcolor=yellow, label="Multi-Head Attention\\n8×[128,2048,1536]\\n→ 8×[128,2048,512]\\nGPU: 0-7"];
+        l0_out_proj [fillcolor=yellow, label="Output Projections\\n8×[128,2048,512]\\n×[512,4096]\\nGPU: 0-7"];
+        l0_gather [fillcolor=lightcyan, shape=parallelogram, label="Token Gather\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 0-7"];
+        l0_attn_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 0-7"];
+
+        l0_gate [fillcolor=lightcoral, label="Gate Network\\n[1024,2048,4096]\\n×[4096,16]\\nGPU: 0-7"];
+        l0_router [fillcolor=lightcyan, shape=parallelogram, label="Token Router\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 0-7"];
+        l0_exp0 [fillcolor=lightpink, label="Expert 0\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 0"];
+        l0_exp1 [fillcolor=lightpink, label="Expert 1\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 1"];
+        l0_exp2 [fillcolor=lightpink, label="Expert 2\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 2"];
+        l0_exp3 [fillcolor=lightpink, label="Expert 3\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 3"];
+        l0_exp4 [fillcolor=lightpink, label="Expert 4\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 4"];
+        l0_exp5 [fillcolor=lightpink, label="Expert 5\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 5"];
+        l0_exp6 [fillcolor=lightpink, label="Expert 6\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 6"];
+        l0_exp7 [fillcolor=lightpink, label="Expert 7\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 7"];
+        l0_agg [fillcolor=lightcyan, shape=parallelogram, label="Expert Aggregation\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 0-7"];
+        l0_moe_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 0-7"];
+    }
+
+    // ===== LAYER 1 (GPUs 0-7) =====
+    subgraph cluster_layer_1 {
+        label="Layer 1 (GPUs 0-7)";
+        style=dashed; color=red;
+
+        l1_token_split [fillcolor=lightcyan, shape=parallelogram, label="Token Split\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 0-7"];
+        l1_qkv_proj [fillcolor=yellow, label="QKV Projections\\n8×[128,2048,4096]\\n×[4096,1536]\\nGPU: 0-7"];
+        l1_attention [fillcolor=yellow, label="Multi-Head Attention\\n8×[128,2048,1536]\\n→ 8×[128,2048,512]\\nGPU: 0-7"];
+        l1_out_proj [fillcolor=yellow, label="Output Projections\\n8×[128,2048,512]\\n×[512,4096]\\nGPU: 0-7"];
+        l1_gather [fillcolor=lightcyan, shape=parallelogram, label="Token Gather\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 0-7"];
+        l1_attn_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 0-7"];
+
+        l1_gate [fillcolor=lightcoral, label="Gate Network\\n[1024,2048,4096]\\n×[4096,16]\\nGPU: 0-7"];
+        l1_router [fillcolor=lightcyan, shape=parallelogram, label="Token Router\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 0-7"];
+        l1_exp0 [fillcolor=lightpink, label="Expert 0\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 0"];
+        l1_exp1 [fillcolor=lightpink, label="Expert 1\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 1"];
+        l1_exp2 [fillcolor=lightpink, label="Expert 2\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 2"];
+        l1_exp3 [fillcolor=lightpink, label="Expert 3\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 3"];
+        l1_exp4 [fillcolor=lightpink, label="Expert 4\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 4"];
+        l1_exp5 [fillcolor=lightpink, label="Expert 5\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 5"];
+        l1_exp6 [fillcolor=lightpink, label="Expert 6\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 6"];
+        l1_exp7 [fillcolor=lightpink, label="Expert 7\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 7"];
+        l1_agg [fillcolor=lightcyan, shape=parallelogram, label="Expert Aggregation\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 0-7"];
+        l1_moe_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 0-7"];
+    }
+
+    // ===== LAYER 2 (GPUs 8-15) =====
+    subgraph cluster_layer_2 {
+        label="Layer 2 (GPUs 8-15)";
+        style=dashed; color=blue;
+
+        l2_token_split [fillcolor=lightcyan, shape=parallelogram, label="Token Split\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 8-15"];
+        l2_qkv_proj [fillcolor=yellow, label="QKV Projections\\n8×[128,2048,4096]\\n×[4096,1536]\\nGPU: 8-15"];
+        l2_attention [fillcolor=yellow, label="Multi-Head Attention\\n8×[128,2048,1536]\\n→ 8×[128,2048,512]\\nGPU: 8-15"];
+        l2_out_proj [fillcolor=yellow, label="Output Projections\\n8×[128,2048,512]\\n×[512,4096]\\nGPU: 8-15"];
+        l2_gather [fillcolor=lightcyan, shape=parallelogram, label="Token Gather\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 8-15"];
+        l2_attn_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 8-15"];
+
+        l2_gate [fillcolor=lightcoral, label="Gate Network\\n[1024,2048,4096]\\n×[4096,16]\\nGPU: 8-15"];
+        l2_router [fillcolor=lightcyan, shape=parallelogram, label="Token Router\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 8-15"];
+        l2_exp0 [fillcolor=lightpink, label="Expert 0\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 8"];
+        l2_exp1 [fillcolor=lightpink, label="Expert 1\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 9"];
+        l2_exp2 [fillcolor=lightpink, label="Expert 2\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 10"];
+        l2_exp3 [fillcolor=lightpink, label="Expert 3\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 11"];
+        l2_exp4 [fillcolor=lightpink, label="Expert 4\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 12"];
+        l2_exp5 [fillcolor=lightpink, label="Expert 5\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 13"];
+        l2_exp6 [fillcolor=lightpink, label="Expert 6\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 14"];
+        l2_exp7 [fillcolor=lightpink, label="Expert 7\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 15"];
+        l2_agg [fillcolor=lightcyan, shape=parallelogram, label="Expert Aggregation\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 8-15"];
+        l2_moe_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 8-15"];
+    }
+
+    // ===== LAYER 3 (GPUs 8-15) =====
+    subgraph cluster_layer_3 {
+        label="Layer 3 (GPUs 8-15)";
+        style=dashed; color=blue;
+
+        l3_token_split [fillcolor=lightcyan, shape=parallelogram, label="Token Split\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 8-15"];
+        l3_qkv_proj [fillcolor=yellow, label="QKV Projections\\n8×[128,2048,4096]\\n×[4096,1536]\\nGPU: 8-15"];
+        l3_attention [fillcolor=yellow, label="Multi-Head Attention\\n8×[128,2048,1536]\\n→ 8×[128,2048,512]\\nGPU: 8-15"];
+        l3_out_proj [fillcolor=yellow, label="Output Projections\\n8×[128,2048,512]\\n×[512,4096]\\nGPU: 8-15"];
+        l3_gather [fillcolor=lightcyan, shape=parallelogram, label="Token Gather\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 8-15"];
+        l3_attn_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 8-15"];
+
+        l3_gate [fillcolor=lightcoral, label="Gate Network\\n[1024,2048,4096]\\n×[4096,16]\\nGPU: 8-15"];
+        l3_router [fillcolor=lightcyan, shape=parallelogram, label="Token Router\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 8-15"];
+        l3_exp0 [fillcolor=lightpink, label="Expert 0\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 8"];
+        l3_exp1 [fillcolor=lightpink, label="Expert 1\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 9"];
+        l3_exp2 [fillcolor=lightpink, label="Expert 2\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 10"];
+        l3_exp3 [fillcolor=lightpink, label="Expert 3\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 11"];
+        l3_exp4 [fillcolor=lightpink, label="Expert 4\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 12"];
+        l3_exp5 [fillcolor=lightpink, label="Expert 5\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 13"];
+        l3_exp6 [fillcolor=lightpink, label="Expert 6\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 14"];
+        l3_exp7 [fillcolor=lightpink, label="Expert 7\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 15"];
+        l3_agg [fillcolor=lightcyan, shape=parallelogram, label="Expert Aggregation\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 8-15"];
+        l3_moe_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 8-15"];
+    }
+
+    // ===== PIPELINE COMMUNICATION =====
+    stage0_to_stage1 [fillcolor=gray, shape=parallelogram, label="Pipeline Communication\\nStage 0 (GPUs 0-7)\\n→ Stage 1 (GPUs 8-15)\\n[1024,2048,4096]"];
+
+    // ===== COMPLETE CONNECTIONS =====
+    // Input to Layer 0
+    input -> l0_token_split;
+
+    // Layer 0 Attention flow
+    l0_token_split -> l0_qkv_proj -> l0_attention -> l0_out_proj -> l0_gather -> l0_attn_res;
+    input -> l0_attn_res [style=dashed, color=red, label="Residual"];
+
+    // Layer 0 MoE flow
+    l0_attn_res -> l0_gate;
+    l0_attn_res -> l0_router;
+    l0_router -> l0_exp0 -> l0_agg;
+    l0_router -> l0_exp1 -> l0_agg;
+    l0_router -> l0_exp2 -> l0_agg;
+    l0_router -> l0_exp3 -> l0_agg;
+    l0_router -> l0_exp4 -> l0_agg;
+    l0_router -> l0_exp5 -> l0_agg;
+    l0_router -> l0_exp6 -> l0_agg;
+    l0_router -> l0_exp7 -> l0_agg;
+    l0_agg -> l0_moe_res;
+    l0_attn_res -> l0_moe_res [style=dashed, color=red, label="Residual"];
+
+    // Layer 0 to Layer 1
+    l0_moe_res -> l1_token_split;
+    l0_moe_res -> l1_attn_res [style=dashed, color=red, label="Residual"];
+
+    // Layer 1 Attention flow
+    l1_token_split -> l1_qkv_proj -> l1_attention -> l1_out_proj -> l1_gather -> l1_attn_res;
+    l0_moe_res -> l1_attn_res [style=dashed, color=red, label="Residual"];
+
+    // Layer 1 MoE flow
+    l1_attn_res -> l1_gate;
+    l1_attn_res -> l1_router;
+    l1_router -> l1_exp0 -> l1_agg;
+    l1_router -> l1_exp1 -> l1_agg;
+    l1_router -> l1_exp2 -> l1_agg;
+    l1_router -> l1_exp3 -> l1_agg;
+    l1_router -> l1_exp4 -> l1_agg;
+    l1_router -> l1_exp5 -> l1_agg;
+    l1_router -> l1_exp6 -> l1_agg;
+    l1_router -> l1_exp7 -> l1_agg;
+    l1_agg -> l1_moe_res;
+    l1_attn_res -> l1_moe_res [style=dashed, color=red, label="Residual"];
+
+    // Pipeline communication
+    l1_moe_res -> stage0_to_stage1;
+    stage0_to_stage1 -> l2_token_split;
+    stage0_to_stage1 -> l2_attn_res [style=dashed, color=blue, label="Residual"];
+
+    // Layer 2 Attention flow
+    l2_token_split -> l2_qkv_proj -> l2_attention -> l2_out_proj -> l2_gather -> l2_attn_res;
+    stage0_to_stage1 -> l2_attn_res [style=dashed, color=blue, label="Residual"];
+
+    // Layer 2 MoE flow
+    l2_attn_res -> l2_gate;
+    l2_attn_res -> l2_router;
+    l2_router -> l2_exp0 -> l2_agg;
+    l2_router -> l2_exp1 -> l2_agg;
+    l2_router -> l2_exp2 -> l2_agg;
+    l2_router -> l2_exp3 -> l2_agg;
+    l2_router -> l2_exp4 -> l2_agg;
+    l2_router -> l2_exp5 -> l2_agg;
+    l2_router -> l2_exp6 -> l2_agg;
+    l2_router -> l2_exp7 -> l2_agg;
+    l2_agg -> l2_moe_res;
+    l2_attn_res -> l2_moe_res [style=dashed, color=blue, label="Residual"];
+
+    // Layer 2 to Layer 3
+    l2_moe_res -> l3_token_split;
+    l2_moe_res -> l3_attn_res [style=dashed, color=blue, label="Residual"];
+
+    // Layer 3 Attention flow
+    l3_token_split -> l3_qkv_proj -> l3_attention -> l3_out_proj -> l3_gather -> l3_attn_res;
+    l2_moe_res -> l3_attn_res [style=dashed, color=blue, label="Residual"];
+
+    // Layer 3 MoE flow
+    l3_attn_res -> l3_gate;
+    l3_attn_res -> l3_router;
+    l3_router -> l3_exp0 -> l3_agg;
+    l3_router -> l3_exp1 -> l3_agg;
+    l3_router -> l3_exp2 -> l3_agg;
+    l3_router -> l3_exp3 -> l3_agg;
+    l3_router -> l3_exp4 -> l3_agg;
+    l3_router -> l3_exp5 -> l3_agg;
+    l3_router -> l3_exp6 -> l3_agg;
+    l3_router -> l3_exp7 -> l3_agg;
+    l3_agg -> l3_moe_res;
+    l3_attn_res -> l3_moe_res [style=dashed, color=blue, label="Residual"];
+
+    // Final output
+    l3_moe_res -> output;
+}

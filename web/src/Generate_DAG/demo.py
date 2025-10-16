@@ -67,6 +67,17 @@ def main():
 
 
     variant = {
+            "Check_Topic": {
+                "slug": "Check_Topic",
+                "version": prompts_json["Check_Topic/Check_Topic"],
+                "inputs": {
+                    "paper_path": f"./papers/{arxiv_id}/paper.md",
+                    "score_path": "./knowledges/llm_parallelism_classification_schema.json"
+                },
+                "tools": [
+                FileReadTool()
+                ]
+             },
             "read_paper": {
                 "slug": "Read_Paper",
                 "version": prompts_json["Read_Paper/Read_Paper"],
@@ -139,7 +150,8 @@ def main():
             }
     agents = []
     tasks = []
-    expected_outputs = ["The file path of concise paper and new idea", \
+    expected_outputs = ["Check Result", \
+                        "The file path of concise paper and new idea", \
                         "Check Result", \
                         "The path of Python code of implement methods", \
                         "Check Result", \
@@ -148,17 +160,21 @@ def main():
     for k in variant.keys():
         prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["version"], variant[k]["inputs"])
         tools = variant[k]["tools"]
-        agents.append(build_agent(tools))
+        agents.append(build_agent("openai/Kimi-K2",tools))
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
     
-    paper_loop = ReviewLoop(worker=agents[0], reviewer=agents[1], work_task=tasks[0], review_task=tasks[1])
+    check_result = run_pipeline([agents[0]], [tasks[0]])
+    if "failed" in check_result.lower():
+        return "The paper is not relevant to the topic"
+
+    paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], work_task=tasks[1], review_task=tasks[2])
     paper_result = paper_loop.run()
-    dag_loop = ReviewLoop(worker=agents[2], reviewer=agents[3], work_task=tasks[2], review_task=tasks[3], inputs=paper_result)
+    dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=paper_result)
     dag_result = dag_loop.run()
 
-    tasks[4].description = tasks[4].description + f"There are the submissions of previous agents: \n\n{dag_result}"
-    run_pipeline([agents[4]], [perf_task])
+    tasks[5].description = tasks[5].description + f"There are the submissions of previous agents: \n\n{dag_result}"
+    run_pipeline([agents[5]], [perf_task])
 
     print("Run Success")
 

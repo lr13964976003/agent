@@ -66,6 +66,17 @@ def main():
 
 
     variant = {
+            "check_topic": {
+                "slug": "Check_Topic",
+                "version": prompts_json["Check_Topic/Check_Topic"],
+                "inputs": {
+                    "paper_path": f"./papers/{arxiv_id}/paper.md",
+                    "score_path": "./knowledges/llm_module_optimization_classification_schema.json"
+                },
+                "tools": [
+                FileReadTool()
+                ]
+            },
             "read_paper": {
                 "slug": "Idea",
                 "version": prompts_json['Idea/Idea'],
@@ -109,18 +120,23 @@ def main():
             }
     agents = []
     tasks = []
-    expected_outputs = ["The file path of concise paper and new idea", \
+    expected_outputs = ["Check Result", \
+                        "The file path of concise paper and new idea", \
                         "The path of Python code of implement methods", \
                             "The path of testing result"]
     i = 0
     for k in variant.keys():
         prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["version"], variant[k]["inputs"])
         tools = variant[k]["tools"]
-        agents.append(build_agent(tools))
+        agents.append(build_agent("openai/Kimi-K2",tools))
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
     
-    run_pipeline(agents, tasks)
+    check_result = run_pipeline([agents[0]], [tasks[0]])
+    if "failed" in check_result.lower():
+        return "The paper is not relevant to the topic"
+
+    run_pipeline(agents[1:], tasks[1:])
 
     slug_list = []
     for k,v in variant.items():

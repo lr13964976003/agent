@@ -1,0 +1,768 @@
+digraph Pipeline_Parallel_DAG {
+	nodesep=0.8 rankdir=TB ranksep=1.2 splines=ortho
+	pp_input [label="Model Input\nInput: Raw tokens\nOutput: [batch_size=batch_size, seq_len=2048]\nGPU: CPU" fillcolor=lightblue shape=ellipse style=filled]
+	pp_embed [label="Token + Position Embedding\nInput: [batch_size=batch_size, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: GPU 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_input -> pp_embed
+	pp_stage0_layer0_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_embed -> pp_stage0_layer0_norm
+	pp_stage0_layer0_q_proj [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage0_layer0_norm -> pp_stage0_layer0_q_proj
+	pp_stage0_layer0_k_proj [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage0_layer0_norm -> pp_stage0_layer0_k_proj
+	pp_stage0_layer0_v_proj [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage0_layer0_norm -> pp_stage0_layer0_v_proj
+	pp_stage0_layer0_attn_scores [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_q_proj -> pp_stage0_layer0_attn_scores
+	pp_stage0_layer0_k_proj -> pp_stage0_layer0_attn_scores
+	pp_stage0_layer0_softmax [label="Softmax\nInput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_attn_scores -> pp_stage0_layer0_softmax
+	pp_stage0_layer0_attn_out [label="Attention×V\nInput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_softmax -> pp_stage0_layer0_attn_out
+	pp_stage0_layer0_v_proj -> pp_stage0_layer0_attn_out
+	pp_stage0_layer0_out_proj [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage0_layer0_attn_out -> pp_stage0_layer0_out_proj
+	pp_stage0_layer0_attn_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	pp_embed -> pp_stage0_layer0_attn_residual
+	pp_stage0_layer0_out_proj -> pp_stage0_layer0_attn_residual
+	pp_stage0_layer0_moe_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_attn_residual -> pp_stage0_layer0_moe_norm
+	pp_stage0_layer0_gate [label="Gate Network\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, experts=16]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_gate
+	pp_stage0_layer0_expert0_up [label="Expert 0 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert0_up
+	pp_stage0_layer0_expert0_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert0_up -> pp_stage0_layer0_expert0_activation
+	pp_stage0_layer0_expert0_down [label="Expert 0 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert0_activation -> pp_stage0_layer0_expert0_down
+	pp_stage0_layer0_route_back_expert0 [label="Route Back Expert 0\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert0_down -> pp_stage0_layer0_route_back_expert0
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert0 [style=dashed]
+	pp_stage0_layer0_expert1_up [label="Expert 1 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert1_up
+	pp_stage0_layer0_expert1_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert1_up -> pp_stage0_layer0_expert1_activation
+	pp_stage0_layer0_expert1_down [label="Expert 1 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert1_activation -> pp_stage0_layer0_expert1_down
+	pp_stage0_layer0_route_back_expert1 [label="Route Back Expert 1\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert1_down -> pp_stage0_layer0_route_back_expert1
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert1 [style=dashed]
+	pp_stage0_layer0_expert2_up [label="Expert 2 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert2_up
+	pp_stage0_layer0_expert2_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert2_up -> pp_stage0_layer0_expert2_activation
+	pp_stage0_layer0_expert2_down [label="Expert 2 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert2_activation -> pp_stage0_layer0_expert2_down
+	pp_stage0_layer0_route_back_expert2 [label="Route Back Expert 2\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert2_down -> pp_stage0_layer0_route_back_expert2
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert2 [style=dashed]
+	pp_stage0_layer0_expert3_up [label="Expert 3 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert3_up
+	pp_stage0_layer0_expert3_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert3_up -> pp_stage0_layer0_expert3_activation
+	pp_stage0_layer0_expert3_down [label="Expert 3 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert3_activation -> pp_stage0_layer0_expert3_down
+	pp_stage0_layer0_route_back_expert3 [label="Route Back Expert 3\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert3_down -> pp_stage0_layer0_route_back_expert3
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert3 [style=dashed]
+	pp_stage0_layer0_expert4_up [label="Expert 4 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert4_up
+	pp_stage0_layer0_expert4_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert4_up -> pp_stage0_layer0_expert4_activation
+	pp_stage0_layer0_expert4_down [label="Expert 4 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert4_activation -> pp_stage0_layer0_expert4_down
+	pp_stage0_layer0_route_back_expert4 [label="Route Back Expert 4\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert4_down -> pp_stage0_layer0_route_back_expert4
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert4 [style=dashed]
+	pp_stage0_layer0_expert5_up [label="Expert 5 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert5_up
+	pp_stage0_layer0_expert5_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert5_up -> pp_stage0_layer0_expert5_activation
+	pp_stage0_layer0_expert5_down [label="Expert 5 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert5_activation -> pp_stage0_layer0_expert5_down
+	pp_stage0_layer0_route_back_expert5 [label="Route Back Expert 5\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert5_down -> pp_stage0_layer0_route_back_expert5
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert5 [style=dashed]
+	pp_stage0_layer0_expert6_up [label="Expert 6 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert6_up
+	pp_stage0_layer0_expert6_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert6_up -> pp_stage0_layer0_expert6_activation
+	pp_stage0_layer0_expert6_down [label="Expert 6 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert6_activation -> pp_stage0_layer0_expert6_down
+	pp_stage0_layer0_route_back_expert6 [label="Route Back Expert 6\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert6_down -> pp_stage0_layer0_route_back_expert6
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert6 [style=dashed]
+	pp_stage0_layer0_expert7_up [label="Expert 7 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert7_up
+	pp_stage0_layer0_expert7_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert7_up -> pp_stage0_layer0_expert7_activation
+	pp_stage0_layer0_expert7_down [label="Expert 7 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert7_activation -> pp_stage0_layer0_expert7_down
+	pp_stage0_layer0_route_back_expert7 [label="Route Back Expert 7\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert7_down -> pp_stage0_layer0_route_back_expert7
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert7 [style=dashed]
+	pp_stage0_layer0_expert8_up [label="Expert 8 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert8_up
+	pp_stage0_layer0_expert8_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert8_up -> pp_stage0_layer0_expert8_activation
+	pp_stage0_layer0_expert8_down [label="Expert 8 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert8_activation -> pp_stage0_layer0_expert8_down
+	pp_stage0_layer0_route_back_expert8 [label="Route Back Expert 8\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert8_down -> pp_stage0_layer0_route_back_expert8
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert8 [style=dashed]
+	pp_stage0_layer0_expert9_up [label="Expert 9 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert9_up
+	pp_stage0_layer0_expert9_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert9_up -> pp_stage0_layer0_expert9_activation
+	pp_stage0_layer0_expert9_down [label="Expert 9 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert9_activation -> pp_stage0_layer0_expert9_down
+	pp_stage0_layer0_route_back_expert9 [label="Route Back Expert 9\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert9_down -> pp_stage0_layer0_route_back_expert9
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert9 [style=dashed]
+	pp_stage0_layer0_expert10_up [label="Expert 10 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert10_up
+	pp_stage0_layer0_expert10_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert10_up -> pp_stage0_layer0_expert10_activation
+	pp_stage0_layer0_expert10_down [label="Expert 10 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert10_activation -> pp_stage0_layer0_expert10_down
+	pp_stage0_layer0_route_back_expert10 [label="Route Back Expert 10\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert10_down -> pp_stage0_layer0_route_back_expert10
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert10 [style=dashed]
+	pp_stage0_layer0_expert11_up [label="Expert 11 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert11_up
+	pp_stage0_layer0_expert11_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert11_up -> pp_stage0_layer0_expert11_activation
+	pp_stage0_layer0_expert11_down [label="Expert 11 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert11_activation -> pp_stage0_layer0_expert11_down
+	pp_stage0_layer0_route_back_expert11 [label="Route Back Expert 11\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert11_down -> pp_stage0_layer0_route_back_expert11
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert11 [style=dashed]
+	pp_stage0_layer0_expert12_up [label="Expert 12 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert12_up
+	pp_stage0_layer0_expert12_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert12_up -> pp_stage0_layer0_expert12_activation
+	pp_stage0_layer0_expert12_down [label="Expert 12 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert12_activation -> pp_stage0_layer0_expert12_down
+	pp_stage0_layer0_route_back_expert12 [label="Route Back Expert 12\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert12_down -> pp_stage0_layer0_route_back_expert12
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert12 [style=dashed]
+	pp_stage0_layer0_expert13_up [label="Expert 13 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert13_up
+	pp_stage0_layer0_expert13_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert13_up -> pp_stage0_layer0_expert13_activation
+	pp_stage0_layer0_expert13_down [label="Expert 13 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert13_activation -> pp_stage0_layer0_expert13_down
+	pp_stage0_layer0_route_back_expert13 [label="Route Back Expert 13\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert13_down -> pp_stage0_layer0_route_back_expert13
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert13 [style=dashed]
+	pp_stage0_layer0_expert14_up [label="Expert 14 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert14_up
+	pp_stage0_layer0_expert14_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert14_up -> pp_stage0_layer0_expert14_activation
+	pp_stage0_layer0_expert14_down [label="Expert 14 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert14_activation -> pp_stage0_layer0_expert14_down
+	pp_stage0_layer0_route_back_expert14 [label="Route Back Expert 14\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert14_down -> pp_stage0_layer0_route_back_expert14
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert14 [style=dashed]
+	pp_stage0_layer0_expert15_up [label="Expert 15 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_moe_norm -> pp_stage0_layer0_expert15_up
+	pp_stage0_layer0_expert15_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_expert15_up -> pp_stage0_layer0_expert15_activation
+	pp_stage0_layer0_expert15_down [label="Expert 15 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer0_expert15_activation -> pp_stage0_layer0_expert15_down
+	pp_stage0_layer0_route_back_expert15 [label="Route Back Expert 15\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer0_expert15_down -> pp_stage0_layer0_route_back_expert15
+	pp_stage0_layer0_gate -> pp_stage0_layer0_route_back_expert15 [style=dashed]
+	pp_stage0_layer0_expert_agg [label="Aggregate Experts\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage0_layer0_route_back_expert0 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert1 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert2 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert3 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert4 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert5 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert6 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert7 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert8 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert9 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert10 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert11 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert12 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert13 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert14 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_route_back_expert15 -> pp_stage0_layer0_expert_agg
+	pp_stage0_layer0_final_residual [label="Final Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage0_layer0_attn_residual -> pp_stage0_layer0_final_residual
+	pp_stage0_layer0_expert_agg -> pp_stage0_layer0_final_residual
+	pp_stage0_layer0_pipeline_comm [label="Pipeline Communication\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: GPU 1" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage0_layer0_final_residual -> pp_stage0_layer0_pipeline_comm
+	pp_stage0_layer1_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer0_pipeline_comm -> pp_stage0_layer1_norm
+	pp_stage0_layer1_q_proj [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage0_layer1_norm -> pp_stage0_layer1_q_proj
+	pp_stage0_layer1_k_proj [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage0_layer1_norm -> pp_stage0_layer1_k_proj
+	pp_stage0_layer1_v_proj [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage0_layer1_norm -> pp_stage0_layer1_v_proj
+	pp_stage0_layer1_attn_scores [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_q_proj -> pp_stage0_layer1_attn_scores
+	pp_stage0_layer1_k_proj -> pp_stage0_layer1_attn_scores
+	pp_stage0_layer1_softmax [label="Softmax\nInput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_attn_scores -> pp_stage0_layer1_softmax
+	pp_stage0_layer1_attn_out [label="Attention×V\nInput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_softmax -> pp_stage0_layer1_attn_out
+	pp_stage0_layer1_v_proj -> pp_stage0_layer1_attn_out
+	pp_stage0_layer1_out_proj [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage0_layer1_attn_out -> pp_stage0_layer1_out_proj
+	pp_stage0_layer1_attn_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage0_layer0_pipeline_comm -> pp_stage0_layer1_attn_residual
+	pp_stage0_layer1_out_proj -> pp_stage0_layer1_attn_residual
+	pp_stage0_layer1_moe_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_attn_residual -> pp_stage0_layer1_moe_norm
+	pp_stage0_layer1_gate [label="Gate Network\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, experts=16]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_gate
+	pp_stage0_layer1_expert0_up [label="Expert 0 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert0_up
+	pp_stage0_layer1_expert0_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert0_up -> pp_stage0_layer1_expert0_activation
+	pp_stage0_layer1_expert0_down [label="Expert 0 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert0_activation -> pp_stage0_layer1_expert0_down
+	pp_stage0_layer1_route_back_expert0 [label="Route Back Expert 0\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert0_down -> pp_stage0_layer1_route_back_expert0
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert0 [style=dashed]
+	pp_stage0_layer1_expert1_up [label="Expert 1 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert1_up
+	pp_stage0_layer1_expert1_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert1_up -> pp_stage0_layer1_expert1_activation
+	pp_stage0_layer1_expert1_down [label="Expert 1 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert1_activation -> pp_stage0_layer1_expert1_down
+	pp_stage0_layer1_route_back_expert1 [label="Route Back Expert 1\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert1_down -> pp_stage0_layer1_route_back_expert1
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert1 [style=dashed]
+	pp_stage0_layer1_expert2_up [label="Expert 2 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert2_up
+	pp_stage0_layer1_expert2_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert2_up -> pp_stage0_layer1_expert2_activation
+	pp_stage0_layer1_expert2_down [label="Expert 2 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert2_activation -> pp_stage0_layer1_expert2_down
+	pp_stage0_layer1_route_back_expert2 [label="Route Back Expert 2\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert2_down -> pp_stage0_layer1_route_back_expert2
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert2 [style=dashed]
+	pp_stage0_layer1_expert3_up [label="Expert 3 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert3_up
+	pp_stage0_layer1_expert3_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert3_up -> pp_stage0_layer1_expert3_activation
+	pp_stage0_layer1_expert3_down [label="Expert 3 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert3_activation -> pp_stage0_layer1_expert3_down
+	pp_stage0_layer1_route_back_expert3 [label="Route Back Expert 3\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert3_down -> pp_stage0_layer1_route_back_expert3
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert3 [style=dashed]
+	pp_stage0_layer1_expert4_up [label="Expert 4 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert4_up
+	pp_stage0_layer1_expert4_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert4_up -> pp_stage0_layer1_expert4_activation
+	pp_stage0_layer1_expert4_down [label="Expert 4 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert4_activation -> pp_stage0_layer1_expert4_down
+	pp_stage0_layer1_route_back_expert4 [label="Route Back Expert 4\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert4_down -> pp_stage0_layer1_route_back_expert4
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert4 [style=dashed]
+	pp_stage0_layer1_expert5_up [label="Expert 5 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert5_up
+	pp_stage0_layer1_expert5_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert5_up -> pp_stage0_layer1_expert5_activation
+	pp_stage0_layer1_expert5_down [label="Expert 5 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert5_activation -> pp_stage0_layer1_expert5_down
+	pp_stage0_layer1_route_back_expert5 [label="Route Back Expert 5\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert5_down -> pp_stage0_layer1_route_back_expert5
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert5 [style=dashed]
+	pp_stage0_layer1_expert6_up [label="Expert 6 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert6_up
+	pp_stage0_layer1_expert6_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert6_up -> pp_stage0_layer1_expert6_activation
+	pp_stage0_layer1_expert6_down [label="Expert 6 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert6_activation -> pp_stage0_layer1_expert6_down
+	pp_stage0_layer1_route_back_expert6 [label="Route Back Expert 6\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert6_down -> pp_stage0_layer1_route_back_expert6
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert6 [style=dashed]
+	pp_stage0_layer1_expert7_up [label="Expert 7 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert7_up
+	pp_stage0_layer1_expert7_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert7_up -> pp_stage0_layer1_expert7_activation
+	pp_stage0_layer1_expert7_down [label="Expert 7 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert7_activation -> pp_stage0_layer1_expert7_down
+	pp_stage0_layer1_route_back_expert7 [label="Route Back Expert 7\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert7_down -> pp_stage0_layer1_route_back_expert7
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert7 [style=dashed]
+	pp_stage0_layer1_expert8_up [label="Expert 8 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert8_up
+	pp_stage0_layer1_expert8_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert8_up -> pp_stage0_layer1_expert8_activation
+	pp_stage0_layer1_expert8_down [label="Expert 8 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert8_activation -> pp_stage0_layer1_expert8_down
+	pp_stage0_layer1_route_back_expert8 [label="Route Back Expert 8\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert8_down -> pp_stage0_layer1_route_back_expert8
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert8 [style=dashed]
+	pp_stage0_layer1_expert9_up [label="Expert 9 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert9_up
+	pp_stage0_layer1_expert9_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert9_up -> pp_stage0_layer1_expert9_activation
+	pp_stage0_layer1_expert9_down [label="Expert 9 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert9_activation -> pp_stage0_layer1_expert9_down
+	pp_stage0_layer1_route_back_expert9 [label="Route Back Expert 9\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert9_down -> pp_stage0_layer1_route_back_expert9
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert9 [style=dashed]
+	pp_stage0_layer1_expert10_up [label="Expert 10 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert10_up
+	pp_stage0_layer1_expert10_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert10_up -> pp_stage0_layer1_expert10_activation
+	pp_stage0_layer1_expert10_down [label="Expert 10 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert10_activation -> pp_stage0_layer1_expert10_down
+	pp_stage0_layer1_route_back_expert10 [label="Route Back Expert 10\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert10_down -> pp_stage0_layer1_route_back_expert10
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert10 [style=dashed]
+	pp_stage0_layer1_expert11_up [label="Expert 11 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert11_up
+	pp_stage0_layer1_expert11_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert11_up -> pp_stage0_layer1_expert11_activation
+	pp_stage0_layer1_expert11_down [label="Expert 11 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert11_activation -> pp_stage0_layer1_expert11_down
+	pp_stage0_layer1_route_back_expert11 [label="Route Back Expert 11\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert11_down -> pp_stage0_layer1_route_back_expert11
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert11 [style=dashed]
+	pp_stage0_layer1_expert12_up [label="Expert 12 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert12_up
+	pp_stage0_layer1_expert12_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert12_up -> pp_stage0_layer1_expert12_activation
+	pp_stage0_layer1_expert12_down [label="Expert 12 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert12_activation -> pp_stage0_layer1_expert12_down
+	pp_stage0_layer1_route_back_expert12 [label="Route Back Expert 12\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert12_down -> pp_stage0_layer1_route_back_expert12
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert12 [style=dashed]
+	pp_stage0_layer1_expert13_up [label="Expert 13 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert13_up
+	pp_stage0_layer1_expert13_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert13_up -> pp_stage0_layer1_expert13_activation
+	pp_stage0_layer1_expert13_down [label="Expert 13 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert13_activation -> pp_stage0_layer1_expert13_down
+	pp_stage0_layer1_route_back_expert13 [label="Route Back Expert 13\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert13_down -> pp_stage0_layer1_route_back_expert13
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert13 [style=dashed]
+	pp_stage0_layer1_expert14_up [label="Expert 14 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert14_up
+	pp_stage0_layer1_expert14_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert14_up -> pp_stage0_layer1_expert14_activation
+	pp_stage0_layer1_expert14_down [label="Expert 14 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert14_activation -> pp_stage0_layer1_expert14_down
+	pp_stage0_layer1_route_back_expert14 [label="Route Back Expert 14\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert14_down -> pp_stage0_layer1_route_back_expert14
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert14 [style=dashed]
+	pp_stage0_layer1_expert15_up [label="Expert 15 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_moe_norm -> pp_stage0_layer1_expert15_up
+	pp_stage0_layer1_expert15_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 0" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_expert15_up -> pp_stage0_layer1_expert15_activation
+	pp_stage0_layer1_expert15_down [label="Expert 15 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage0_layer1_expert15_activation -> pp_stage0_layer1_expert15_down
+	pp_stage0_layer1_route_back_expert15 [label="Route Back Expert 15\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage0_layer1_expert15_down -> pp_stage0_layer1_route_back_expert15
+	pp_stage0_layer1_gate -> pp_stage0_layer1_route_back_expert15 [style=dashed]
+	pp_stage0_layer1_expert_agg [label="Aggregate Experts\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage0_layer1_route_back_expert0 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert1 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert2 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert3 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert4 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert5 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert6 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert7 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert8 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert9 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert10 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert11 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert12 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert13 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert14 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_route_back_expert15 -> pp_stage0_layer1_expert_agg
+	pp_stage0_layer1_final_residual [label="Final Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 0" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage0_layer1_attn_residual -> pp_stage0_layer1_final_residual
+	pp_stage0_layer1_expert_agg -> pp_stage0_layer1_final_residual
+	pp_stage0_layer1_pipeline_comm [label="Pipeline Communication\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: GPU 1" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage0_layer1_final_residual -> pp_stage0_layer1_pipeline_comm
+	pp_stage1_layer2_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage0_layer1_pipeline_comm -> pp_stage1_layer2_norm
+	pp_stage1_layer2_q_proj [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage1_layer2_norm -> pp_stage1_layer2_q_proj
+	pp_stage1_layer2_k_proj [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage1_layer2_norm -> pp_stage1_layer2_k_proj
+	pp_stage1_layer2_v_proj [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage1_layer2_norm -> pp_stage1_layer2_v_proj
+	pp_stage1_layer2_attn_scores [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_q_proj -> pp_stage1_layer2_attn_scores
+	pp_stage1_layer2_k_proj -> pp_stage1_layer2_attn_scores
+	pp_stage1_layer2_softmax [label="Softmax\nInput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_attn_scores -> pp_stage1_layer2_softmax
+	pp_stage1_layer2_attn_out [label="Attention×V\nInput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_softmax -> pp_stage1_layer2_attn_out
+	pp_stage1_layer2_v_proj -> pp_stage1_layer2_attn_out
+	pp_stage1_layer2_out_proj [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage1_layer2_attn_out -> pp_stage1_layer2_out_proj
+	pp_stage1_layer2_attn_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage0_layer1_pipeline_comm -> pp_stage1_layer2_attn_residual
+	pp_stage1_layer2_out_proj -> pp_stage1_layer2_attn_residual
+	pp_stage1_layer2_moe_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_attn_residual -> pp_stage1_layer2_moe_norm
+	pp_stage1_layer2_gate [label="Gate Network\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, experts=16]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_gate
+	pp_stage1_layer2_expert0_up [label="Expert 0 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert0_up
+	pp_stage1_layer2_expert0_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert0_up -> pp_stage1_layer2_expert0_activation
+	pp_stage1_layer2_expert0_down [label="Expert 0 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert0_activation -> pp_stage1_layer2_expert0_down
+	pp_stage1_layer2_route_back_expert0 [label="Route Back Expert 0\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert0_down -> pp_stage1_layer2_route_back_expert0
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert0 [style=dashed]
+	pp_stage1_layer2_expert1_up [label="Expert 1 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert1_up
+	pp_stage1_layer2_expert1_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert1_up -> pp_stage1_layer2_expert1_activation
+	pp_stage1_layer2_expert1_down [label="Expert 1 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert1_activation -> pp_stage1_layer2_expert1_down
+	pp_stage1_layer2_route_back_expert1 [label="Route Back Expert 1\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert1_down -> pp_stage1_layer2_route_back_expert1
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert1 [style=dashed]
+	pp_stage1_layer2_expert2_up [label="Expert 2 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert2_up
+	pp_stage1_layer2_expert2_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert2_up -> pp_stage1_layer2_expert2_activation
+	pp_stage1_layer2_expert2_down [label="Expert 2 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert2_activation -> pp_stage1_layer2_expert2_down
+	pp_stage1_layer2_route_back_expert2 [label="Route Back Expert 2\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert2_down -> pp_stage1_layer2_route_back_expert2
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert2 [style=dashed]
+	pp_stage1_layer2_expert3_up [label="Expert 3 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert3_up
+	pp_stage1_layer2_expert3_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert3_up -> pp_stage1_layer2_expert3_activation
+	pp_stage1_layer2_expert3_down [label="Expert 3 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert3_activation -> pp_stage1_layer2_expert3_down
+	pp_stage1_layer2_route_back_expert3 [label="Route Back Expert 3\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert3_down -> pp_stage1_layer2_route_back_expert3
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert3 [style=dashed]
+	pp_stage1_layer2_expert4_up [label="Expert 4 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert4_up
+	pp_stage1_layer2_expert4_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert4_up -> pp_stage1_layer2_expert4_activation
+	pp_stage1_layer2_expert4_down [label="Expert 4 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert4_activation -> pp_stage1_layer2_expert4_down
+	pp_stage1_layer2_route_back_expert4 [label="Route Back Expert 4\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert4_down -> pp_stage1_layer2_route_back_expert4
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert4 [style=dashed]
+	pp_stage1_layer2_expert5_up [label="Expert 5 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert5_up
+	pp_stage1_layer2_expert5_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert5_up -> pp_stage1_layer2_expert5_activation
+	pp_stage1_layer2_expert5_down [label="Expert 5 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert5_activation -> pp_stage1_layer2_expert5_down
+	pp_stage1_layer2_route_back_expert5 [label="Route Back Expert 5\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert5_down -> pp_stage1_layer2_route_back_expert5
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert5 [style=dashed]
+	pp_stage1_layer2_expert6_up [label="Expert 6 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert6_up
+	pp_stage1_layer2_expert6_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert6_up -> pp_stage1_layer2_expert6_activation
+	pp_stage1_layer2_expert6_down [label="Expert 6 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert6_activation -> pp_stage1_layer2_expert6_down
+	pp_stage1_layer2_route_back_expert6 [label="Route Back Expert 6\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert6_down -> pp_stage1_layer2_route_back_expert6
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert6 [style=dashed]
+	pp_stage1_layer2_expert7_up [label="Expert 7 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert7_up
+	pp_stage1_layer2_expert7_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert7_up -> pp_stage1_layer2_expert7_activation
+	pp_stage1_layer2_expert7_down [label="Expert 7 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert7_activation -> pp_stage1_layer2_expert7_down
+	pp_stage1_layer2_route_back_expert7 [label="Route Back Expert 7\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert7_down -> pp_stage1_layer2_route_back_expert7
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert7 [style=dashed]
+	pp_stage1_layer2_expert8_up [label="Expert 8 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert8_up
+	pp_stage1_layer2_expert8_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert8_up -> pp_stage1_layer2_expert8_activation
+	pp_stage1_layer2_expert8_down [label="Expert 8 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert8_activation -> pp_stage1_layer2_expert8_down
+	pp_stage1_layer2_route_back_expert8 [label="Route Back Expert 8\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert8_down -> pp_stage1_layer2_route_back_expert8
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert8 [style=dashed]
+	pp_stage1_layer2_expert9_up [label="Expert 9 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert9_up
+	pp_stage1_layer2_expert9_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert9_up -> pp_stage1_layer2_expert9_activation
+	pp_stage1_layer2_expert9_down [label="Expert 9 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert9_activation -> pp_stage1_layer2_expert9_down
+	pp_stage1_layer2_route_back_expert9 [label="Route Back Expert 9\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert9_down -> pp_stage1_layer2_route_back_expert9
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert9 [style=dashed]
+	pp_stage1_layer2_expert10_up [label="Expert 10 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert10_up
+	pp_stage1_layer2_expert10_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert10_up -> pp_stage1_layer2_expert10_activation
+	pp_stage1_layer2_expert10_down [label="Expert 10 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert10_activation -> pp_stage1_layer2_expert10_down
+	pp_stage1_layer2_route_back_expert10 [label="Route Back Expert 10\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert10_down -> pp_stage1_layer2_route_back_expert10
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert10 [style=dashed]
+	pp_stage1_layer2_expert11_up [label="Expert 11 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert11_up
+	pp_stage1_layer2_expert11_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert11_up -> pp_stage1_layer2_expert11_activation
+	pp_stage1_layer2_expert11_down [label="Expert 11 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert11_activation -> pp_stage1_layer2_expert11_down
+	pp_stage1_layer2_route_back_expert11 [label="Route Back Expert 11\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert11_down -> pp_stage1_layer2_route_back_expert11
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert11 [style=dashed]
+	pp_stage1_layer2_expert12_up [label="Expert 12 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert12_up
+	pp_stage1_layer2_expert12_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert12_up -> pp_stage1_layer2_expert12_activation
+	pp_stage1_layer2_expert12_down [label="Expert 12 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert12_activation -> pp_stage1_layer2_expert12_down
+	pp_stage1_layer2_route_back_expert12 [label="Route Back Expert 12\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert12_down -> pp_stage1_layer2_route_back_expert12
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert12 [style=dashed]
+	pp_stage1_layer2_expert13_up [label="Expert 13 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert13_up
+	pp_stage1_layer2_expert13_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert13_up -> pp_stage1_layer2_expert13_activation
+	pp_stage1_layer2_expert13_down [label="Expert 13 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert13_activation -> pp_stage1_layer2_expert13_down
+	pp_stage1_layer2_route_back_expert13 [label="Route Back Expert 13\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert13_down -> pp_stage1_layer2_route_back_expert13
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert13 [style=dashed]
+	pp_stage1_layer2_expert14_up [label="Expert 14 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert14_up
+	pp_stage1_layer2_expert14_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert14_up -> pp_stage1_layer2_expert14_activation
+	pp_stage1_layer2_expert14_down [label="Expert 14 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert14_activation -> pp_stage1_layer2_expert14_down
+	pp_stage1_layer2_route_back_expert14 [label="Route Back Expert 14\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert14_down -> pp_stage1_layer2_route_back_expert14
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert14 [style=dashed]
+	pp_stage1_layer2_expert15_up [label="Expert 15 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_moe_norm -> pp_stage1_layer2_expert15_up
+	pp_stage1_layer2_expert15_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_expert15_up -> pp_stage1_layer2_expert15_activation
+	pp_stage1_layer2_expert15_down [label="Expert 15 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer2_expert15_activation -> pp_stage1_layer2_expert15_down
+	pp_stage1_layer2_route_back_expert15 [label="Route Back Expert 15\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer2_expert15_down -> pp_stage1_layer2_route_back_expert15
+	pp_stage1_layer2_gate -> pp_stage1_layer2_route_back_expert15 [style=dashed]
+	pp_stage1_layer2_expert_agg [label="Aggregate Experts\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage1_layer2_route_back_expert0 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert1 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert2 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert3 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert4 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert5 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert6 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert7 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert8 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert9 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert10 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert11 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert12 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert13 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert14 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_route_back_expert15 -> pp_stage1_layer2_expert_agg
+	pp_stage1_layer2_final_residual [label="Final Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage1_layer2_attn_residual -> pp_stage1_layer2_final_residual
+	pp_stage1_layer2_expert_agg -> pp_stage1_layer2_final_residual
+	pp_stage1_layer3_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer2_final_residual -> pp_stage1_layer3_norm
+	pp_stage1_layer3_q_proj [label="Q Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage1_layer3_norm -> pp_stage1_layer3_q_proj
+	pp_stage1_layer3_k_proj [label="K Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage1_layer3_norm -> pp_stage1_layer3_k_proj
+	pp_stage1_layer3_v_proj [label="V Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage1_layer3_norm -> pp_stage1_layer3_v_proj
+	pp_stage1_layer3_attn_scores [label="QK^T / sqrt(d_k)\nInput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_q_proj -> pp_stage1_layer3_attn_scores
+	pp_stage1_layer3_k_proj -> pp_stage1_layer3_attn_scores
+	pp_stage1_layer3_softmax [label="Softmax\nInput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_attn_scores -> pp_stage1_layer3_softmax
+	pp_stage1_layer3_attn_out [label="Attention×V\nInput: [batch_size=batch_size, heads=32, seq_len=2048, seq_len=2048]\nOutput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_softmax -> pp_stage1_layer3_attn_out
+	pp_stage1_layer3_v_proj -> pp_stage1_layer3_attn_out
+	pp_stage1_layer3_out_proj [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, heads=32, d_k=128]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage1_layer3_attn_out -> pp_stage1_layer3_out_proj
+	pp_stage1_layer3_attn_residual [label="Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage1_layer2_final_residual -> pp_stage1_layer3_attn_residual
+	pp_stage1_layer3_out_proj -> pp_stage1_layer3_attn_residual
+	pp_stage1_layer3_moe_norm [label="Layer Norm\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_attn_residual -> pp_stage1_layer3_moe_norm
+	pp_stage1_layer3_gate [label="Gate Network\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, experts=16]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_gate
+	pp_stage1_layer3_expert0_up [label="Expert 0 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert0_up
+	pp_stage1_layer3_expert0_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert0_up -> pp_stage1_layer3_expert0_activation
+	pp_stage1_layer3_expert0_down [label="Expert 0 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert0_activation -> pp_stage1_layer3_expert0_down
+	pp_stage1_layer3_route_back_expert0 [label="Route Back Expert 0\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert0_down -> pp_stage1_layer3_route_back_expert0
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert0 [style=dashed]
+	pp_stage1_layer3_expert1_up [label="Expert 1 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert1_up
+	pp_stage1_layer3_expert1_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert1_up -> pp_stage1_layer3_expert1_activation
+	pp_stage1_layer3_expert1_down [label="Expert 1 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert1_activation -> pp_stage1_layer3_expert1_down
+	pp_stage1_layer3_route_back_expert1 [label="Route Back Expert 1\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert1_down -> pp_stage1_layer3_route_back_expert1
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert1 [style=dashed]
+	pp_stage1_layer3_expert2_up [label="Expert 2 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert2_up
+	pp_stage1_layer3_expert2_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert2_up -> pp_stage1_layer3_expert2_activation
+	pp_stage1_layer3_expert2_down [label="Expert 2 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert2_activation -> pp_stage1_layer3_expert2_down
+	pp_stage1_layer3_route_back_expert2 [label="Route Back Expert 2\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert2_down -> pp_stage1_layer3_route_back_expert2
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert2 [style=dashed]
+	pp_stage1_layer3_expert3_up [label="Expert 3 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert3_up
+	pp_stage1_layer3_expert3_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert3_up -> pp_stage1_layer3_expert3_activation
+	pp_stage1_layer3_expert3_down [label="Expert 3 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert3_activation -> pp_stage1_layer3_expert3_down
+	pp_stage1_layer3_route_back_expert3 [label="Route Back Expert 3\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert3_down -> pp_stage1_layer3_route_back_expert3
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert3 [style=dashed]
+	pp_stage1_layer3_expert4_up [label="Expert 4 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert4_up
+	pp_stage1_layer3_expert4_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert4_up -> pp_stage1_layer3_expert4_activation
+	pp_stage1_layer3_expert4_down [label="Expert 4 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert4_activation -> pp_stage1_layer3_expert4_down
+	pp_stage1_layer3_route_back_expert4 [label="Route Back Expert 4\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert4_down -> pp_stage1_layer3_route_back_expert4
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert4 [style=dashed]
+	pp_stage1_layer3_expert5_up [label="Expert 5 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert5_up
+	pp_stage1_layer3_expert5_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert5_up -> pp_stage1_layer3_expert5_activation
+	pp_stage1_layer3_expert5_down [label="Expert 5 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert5_activation -> pp_stage1_layer3_expert5_down
+	pp_stage1_layer3_route_back_expert5 [label="Route Back Expert 5\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert5_down -> pp_stage1_layer3_route_back_expert5
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert5 [style=dashed]
+	pp_stage1_layer3_expert6_up [label="Expert 6 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert6_up
+	pp_stage1_layer3_expert6_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert6_up -> pp_stage1_layer3_expert6_activation
+	pp_stage1_layer3_expert6_down [label="Expert 6 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert6_activation -> pp_stage1_layer3_expert6_down
+	pp_stage1_layer3_route_back_expert6 [label="Route Back Expert 6\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert6_down -> pp_stage1_layer3_route_back_expert6
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert6 [style=dashed]
+	pp_stage1_layer3_expert7_up [label="Expert 7 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert7_up
+	pp_stage1_layer3_expert7_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert7_up -> pp_stage1_layer3_expert7_activation
+	pp_stage1_layer3_expert7_down [label="Expert 7 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert7_activation -> pp_stage1_layer3_expert7_down
+	pp_stage1_layer3_route_back_expert7 [label="Route Back Expert 7\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert7_down -> pp_stage1_layer3_route_back_expert7
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert7 [style=dashed]
+	pp_stage1_layer3_expert8_up [label="Expert 8 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert8_up
+	pp_stage1_layer3_expert8_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert8_up -> pp_stage1_layer3_expert8_activation
+	pp_stage1_layer3_expert8_down [label="Expert 8 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert8_activation -> pp_stage1_layer3_expert8_down
+	pp_stage1_layer3_route_back_expert8 [label="Route Back Expert 8\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert8_down -> pp_stage1_layer3_route_back_expert8
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert8 [style=dashed]
+	pp_stage1_layer3_expert9_up [label="Expert 9 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert9_up
+	pp_stage1_layer3_expert9_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert9_up -> pp_stage1_layer3_expert9_activation
+	pp_stage1_layer3_expert9_down [label="Expert 9 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert9_activation -> pp_stage1_layer3_expert9_down
+	pp_stage1_layer3_route_back_expert9 [label="Route Back Expert 9\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert9_down -> pp_stage1_layer3_route_back_expert9
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert9 [style=dashed]
+	pp_stage1_layer3_expert10_up [label="Expert 10 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert10_up
+	pp_stage1_layer3_expert10_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert10_up -> pp_stage1_layer3_expert10_activation
+	pp_stage1_layer3_expert10_down [label="Expert 10 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert10_activation -> pp_stage1_layer3_expert10_down
+	pp_stage1_layer3_route_back_expert10 [label="Route Back Expert 10\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert10_down -> pp_stage1_layer3_route_back_expert10
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert10 [style=dashed]
+	pp_stage1_layer3_expert11_up [label="Expert 11 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert11_up
+	pp_stage1_layer3_expert11_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert11_up -> pp_stage1_layer3_expert11_activation
+	pp_stage1_layer3_expert11_down [label="Expert 11 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert11_activation -> pp_stage1_layer3_expert11_down
+	pp_stage1_layer3_route_back_expert11 [label="Route Back Expert 11\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert11_down -> pp_stage1_layer3_route_back_expert11
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert11 [style=dashed]
+	pp_stage1_layer3_expert12_up [label="Expert 12 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert12_up
+	pp_stage1_layer3_expert12_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert12_up -> pp_stage1_layer3_expert12_activation
+	pp_stage1_layer3_expert12_down [label="Expert 12 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert12_activation -> pp_stage1_layer3_expert12_down
+	pp_stage1_layer3_route_back_expert12 [label="Route Back Expert 12\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert12_down -> pp_stage1_layer3_route_back_expert12
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert12 [style=dashed]
+	pp_stage1_layer3_expert13_up [label="Expert 13 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert13_up
+	pp_stage1_layer3_expert13_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert13_up -> pp_stage1_layer3_expert13_activation
+	pp_stage1_layer3_expert13_down [label="Expert 13 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert13_activation -> pp_stage1_layer3_expert13_down
+	pp_stage1_layer3_route_back_expert13 [label="Route Back Expert 13\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert13_down -> pp_stage1_layer3_route_back_expert13
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert13 [style=dashed]
+	pp_stage1_layer3_expert14_up [label="Expert 14 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert14_up
+	pp_stage1_layer3_expert14_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert14_up -> pp_stage1_layer3_expert14_activation
+	pp_stage1_layer3_expert14_down [label="Expert 14 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert14_activation -> pp_stage1_layer3_expert14_down
+	pp_stage1_layer3_route_back_expert14 [label="Route Back Expert 14\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert14_down -> pp_stage1_layer3_route_back_expert14
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert14 [style=dashed]
+	pp_stage1_layer3_expert15_up [label="Expert 15 Up\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_moe_norm -> pp_stage1_layer3_expert15_up
+	pp_stage1_layer3_expert15_activation [label="GELU\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nGPU: 1" fillcolor=lightyellow shape=rectangle style=filled]
+	pp_stage1_layer3_expert15_up -> pp_stage1_layer3_expert15_activation
+	pp_stage1_layer3_expert15_down [label="Expert 15 Down\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=16384]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle style=filled]
+	pp_stage1_layer3_expert15_activation -> pp_stage1_layer3_expert15_down
+	pp_stage1_layer3_route_back_expert15 [label="Route Back Expert 15\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightpink shape=parallelogram style=filled]
+	pp_stage1_layer3_expert15_down -> pp_stage1_layer3_route_back_expert15
+	pp_stage1_layer3_gate -> pp_stage1_layer3_route_back_expert15 [style=dashed]
+	pp_stage1_layer3_expert_agg [label="Aggregate Experts\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage1_layer3_route_back_expert0 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert1 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert2 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert3 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert4 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert5 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert6 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert7 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert8 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert9 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert10 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert11 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert12 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert13 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert14 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_route_back_expert15 -> pp_stage1_layer3_expert_agg
+	pp_stage1_layer3_final_residual [label="Final Residual Add\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096], [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nGPU: 1" fillcolor=lightblue shape=ellipse style=filled]
+	pp_stage1_layer3_attn_residual -> pp_stage1_layer3_final_residual
+	pp_stage1_layer3_expert_agg -> pp_stage1_layer3_final_residual
+	pp_output [label="Output Projection\nInput: [batch_size=batch_size, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=batch_size, seq_len=2048, vocab_size=vocab_size]\nGPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	pp_stage1_layer3_final_residual -> pp_output
+}

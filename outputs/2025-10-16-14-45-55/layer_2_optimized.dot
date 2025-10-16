@@ -1,0 +1,48 @@
+digraph layer_2_optimized {
+    graph [rankdir=TB, ranksep=1.0, nodesep=0.5];
+    node [shape=rectangle, style=filled, fillcolor=lightblue];
+
+    input [fillcolor=lightgreen, shape=ellipse, label="Input\\n[1024,2048,4096]"];
+    output [fillcolor=lightgreen, shape=ellipse, label="Layer 2 Output\\n[1024,2048,4096]"];
+
+    // Layer 2 components
+    l2_token_split [fillcolor=lightcyan, shape=parallelogram, label="Token Split\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 8-15"];
+    l2_qkv_proj [fillcolor=yellow, label="QKV Projections\\n8×[128,2048,4096]\\n×[4096,1536]\\nGPU: 8-15"];
+    l2_attention [fillcolor=yellow, label="Multi-Head Attention\\n8×[128,2048,1536]\\n→ 8×[128,2048,512]\\nGPU: 8-15"];
+    l2_out_proj [fillcolor=yellow, label="Output Projections\\n8×[128,2048,512]\\n×[512,4096]\\nGPU: 8-15"];
+    l2_gather [fillcolor=lightcyan, shape=parallelogram, label="Token Gather\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 8-15"];
+    l2_attn_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 8-15"];
+
+    l2_gate [fillcolor=lightcoral, label="Gate Network\\n[1024,2048,4096]\\n×[4096,16]\\nGPU: 8-15"];
+    l2_router [fillcolor=lightcyan, shape=parallelogram, label="Token Router\\n[1024,2048,4096]\\n→ 8×[128,2048,4096]\\nGPU: 8-15"];
+    l2_exp0 [fillcolor=lightpink, label="Expert 0\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 8"];
+    l2_exp1 [fillcolor=lightpink, label="Expert 1\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 9"];
+    l2_exp2 [fillcolor=lightpink, label="Expert 2\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 10"];
+    l2_exp3 [fillcolor=lightpink, label="Expert 3\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 11"];
+    l2_exp4 [fillcolor=lightpink, label="Expert 4\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 12"];
+    l2_exp5 [fillcolor=lightpink, label="Expert 5\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 13"];
+    l2_exp6 [fillcolor=lightpink, label="Expert 6\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 14"];
+    l2_exp7 [fillcolor=lightpink, label="Expert 7\\n[128,2048,4096]\\n×[4096,4096]\\nGPU: 15"];
+    l2_agg [fillcolor=lightcyan, shape=parallelogram, label="Expert Aggregation\\n8×[128,2048,4096]\\n→ [1024,2048,4096]\\nGPU: 8-15"];
+    l2_moe_res [fillcolor=orange, label="Residual Add\\n[1024,2048,4096]\\nGPU: 8-15"];
+
+    // Connections
+    input -> l2_token_split;
+    l2_token_split -> l2_qkv_proj -> l2_attention -> l2_out_proj -> l2_gather -> l2_attn_res;
+    input -> l2_attn_res [style=dashed, color=blue, label="Residual"];
+
+    l2_attn_res -> l2_gate;
+    l2_attn_res -> l2_router;
+    l2_router -> l2_exp0 -> l2_agg;
+    l2_router -> l2_exp1 -> l2_agg;
+    l2_router -> l2_exp2 -> l2_agg;
+    l2_router -> l2_exp3 -> l2_agg;
+    l2_router -> l2_exp4 -> l2_agg;
+    l2_router -> l2_exp5 -> l2_agg;
+    l2_router -> l2_exp6 -> l2_agg;
+    l2_router -> l2_exp7 -> l2_agg;
+    l2_agg -> l2_moe_res;
+    l2_attn_res -> l2_moe_res [style=dashed, color=blue, label="Residual"];
+
+    l2_moe_res -> output;
+}
