@@ -1,0 +1,2125 @@
+// FA Pool Dynamic Parallel Strategy DAG
+digraph fa_pool_model_dag {
+	rankdir=TB size="40,50" splines=ortho
+	node [fontname=Arial fontsize=10]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	node [fillcolor=lightgray shape=diamond style=filled]
+	node [fillcolor=lightcoral shape=hexagon style=filled]
+	input [label="<b>Model Input</b><br/>Input: [batch_size=1024, seq_len=?, vocab_size=32000]" fillcolor=lightblue shape=ellipse]
+	resource_manager [label="<b>Resource Manager</b><br/>Monitors sequence length<br/>Allocates attention pool GPUs<br/>Threshold: 4096 tokens" fillcolor=lightcoral shape=hexagon]
+	subgraph cluster_base_layer {
+		color=blue fontsize=14 label="Base Layer (8 GPUs - Static)" style=rounded
+		subgraph cluster_base_embedding {
+			fontsize=12 label="Token Embedding" style=rounded
+			base_embed_0 [label="<b>Token Embedding</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_embed_1 [label="<b>Token Embedding</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_embed_2 [label="<b>Token Embedding</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_embed_3 [label="<b>Token Embedding</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_embed_4 [label="<b>Token Embedding</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_embed_5 [label="<b>Token Embedding</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_embed_6 [label="<b>Token Embedding</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_embed_7 [label="<b>Token Embedding</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_base_pos {
+			fontsize=12 label="Positional Encoding" style=rounded
+			base_pos_0 [label="<b>Positional Encoding</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_pos_1 [label="<b>Positional Encoding</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_pos_2 [label="<b>Positional Encoding</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_pos_3 [label="<b>Positional Encoding</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_pos_4 [label="<b>Positional Encoding</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_pos_5 [label="<b>Positional Encoding</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_pos_6 [label="<b>Positional Encoding</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+			base_pos_7 [label="<b>Positional Encoding</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		}
+	}
+	subgraph cluster_attention_pool {
+		color=red fontsize=14 label="Dynamic Attention Pool (0-32 GPUs)" style=rounded
+		seq_router [label="<b>Sequence Router</b><br/>Routes attention based on sequence length<br/>Short: base GPUs<br/>Long: attention pool" fillcolor=lightyellow shape=parallelogram]
+		subgraph cluster_pool_0 {
+			fontsize=10 label="Use base GPUs for <4096 tokens" style=dashed
+			subgraph cluster_layer0_0 {
+				fontsize=8 label="Layer 0 Attention"
+				attn_block_0_0_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_0<br/>Block: 1/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_0_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_1_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_1<br/>Block: 2/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_1_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_2_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_2<br/>Block: 3/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_2_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_3_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_3<br/>Block: 4/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_3_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_4_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_4<br/>Block: 5/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_4_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_5_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_5<br/>Block: 6/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_5_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_6_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_6<br/>Block: 7/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_6_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_7_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_7<br/>Block: 8/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_7_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer1_0 {
+				fontsize=8 label="Layer 1 Attention"
+				attn_block_1_0_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_0<br/>Block: 1/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_0_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_1_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_1<br/>Block: 2/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_1_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_2_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_2<br/>Block: 3/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_2_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_3_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_3<br/>Block: 4/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_3_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_4_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_4<br/>Block: 5/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_4_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_5_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_5<br/>Block: 6/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_5_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_6_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_6<br/>Block: 7/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_6_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_7_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_7<br/>Block: 8/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_7_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer2_0 {
+				fontsize=8 label="Layer 2 Attention"
+				attn_block_2_0_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_0<br/>Block: 1/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_0_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_1_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_1<br/>Block: 2/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_1_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_2_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_2<br/>Block: 3/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_2_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_3_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_3<br/>Block: 4/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_3_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_4_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_4<br/>Block: 5/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_4_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_5_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_5<br/>Block: 6/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_5_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_6_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_6<br/>Block: 7/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_6_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_7_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_7<br/>Block: 8/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_7_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer3_0 {
+				fontsize=8 label="Layer 3 Attention"
+				attn_block_3_0_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_0<br/>Block: 1/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_0_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_1_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_1<br/>Block: 2/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_1_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_2_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_2<br/>Block: 3/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_2_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_3_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_3<br/>Block: 4/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_3_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_4_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_4<br/>Block: 5/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_4_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_5_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_5<br/>Block: 6/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_5_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_6_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_6<br/>Block: 7/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_6_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_7_0 [label="<b>Attention Block</b><br/>GPU: base_gpu_7<br/>Block: 8/8<br/>Input: [batch=1024, block_seq=ceil(seq/0), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/0), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_7_0 [label="<b>KV Cache Share</b><br/>GPU: base_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+		}
+		subgraph cluster_pool_8 {
+			fontsize=10 label="8 pool GPUs for 4096-8192 tokens" style=dashed
+			subgraph cluster_layer0_8 {
+				fontsize=8 label="Layer 0 Attention"
+				attn_block_0_0_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_0_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_1_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_1_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_2_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_2_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_3_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_3_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_4_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_4_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_5_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_5_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_6_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_6_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_7_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_7_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer1_8 {
+				fontsize=8 label="Layer 1 Attention"
+				attn_block_1_0_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_0_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_1_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_1_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_2_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_2_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_3_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_3_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_4_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_4_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_5_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_5_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_6_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_6_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_7_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_7_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer2_8 {
+				fontsize=8 label="Layer 2 Attention"
+				attn_block_2_0_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_0_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_1_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_1_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_2_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_2_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_3_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_3_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_4_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_4_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_5_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_5_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_6_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_6_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_7_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_7_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer3_8 {
+				fontsize=8 label="Layer 3 Attention"
+				attn_block_3_0_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_0_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_1_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_1_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_2_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_2_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_3_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_3_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_4_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_4_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_5_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_5_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_6_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_6_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_7_8 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/8<br/>Input: [batch=1024, block_seq=ceil(seq/8), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/8), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_7_8 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+		}
+		subgraph cluster_pool_16 {
+			fontsize=10 label="16 pool GPUs for 8192-16384 tokens" style=dashed
+			subgraph cluster_layer0_16 {
+				fontsize=8 label="Layer 0 Attention"
+				attn_block_0_0_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_0_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_1_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_1_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_2_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_2_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_3_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_3_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_4_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_4_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_5_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_5_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_6_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_6_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_7_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_7_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_8_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_8<br/>Block: 9/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_8_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_8<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_9_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_9<br/>Block: 10/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_9_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_9<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_10_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_10<br/>Block: 11/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_10_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_10<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_11_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_11<br/>Block: 12/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_11_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_11<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_12_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_12<br/>Block: 13/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_12_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_12<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_13_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_13<br/>Block: 14/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_13_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_13<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_14_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_14<br/>Block: 15/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_14_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_14<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_15_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_15<br/>Block: 16/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_15_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_15<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer1_16 {
+				fontsize=8 label="Layer 1 Attention"
+				attn_block_1_0_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_0_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_1_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_1_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_2_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_2_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_3_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_3_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_4_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_4_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_5_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_5_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_6_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_6_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_7_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_7_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_8_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_8<br/>Block: 9/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_8_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_8<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_9_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_9<br/>Block: 10/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_9_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_9<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_10_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_10<br/>Block: 11/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_10_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_10<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_11_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_11<br/>Block: 12/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_11_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_11<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_12_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_12<br/>Block: 13/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_12_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_12<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_13_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_13<br/>Block: 14/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_13_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_13<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_14_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_14<br/>Block: 15/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_14_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_14<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_15_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_15<br/>Block: 16/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_15_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_15<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer2_16 {
+				fontsize=8 label="Layer 2 Attention"
+				attn_block_2_0_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_0_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_1_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_1_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_2_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_2_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_3_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_3_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_4_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_4_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_5_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_5_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_6_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_6_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_7_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_7_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_8_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_8<br/>Block: 9/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_8_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_8<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_9_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_9<br/>Block: 10/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_9_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_9<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_10_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_10<br/>Block: 11/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_10_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_10<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_11_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_11<br/>Block: 12/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_11_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_11<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_12_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_12<br/>Block: 13/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_12_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_12<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_13_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_13<br/>Block: 14/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_13_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_13<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_14_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_14<br/>Block: 15/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_14_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_14<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_15_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_15<br/>Block: 16/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_15_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_15<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer3_16 {
+				fontsize=8 label="Layer 3 Attention"
+				attn_block_3_0_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_0_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_1_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_1_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_2_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_2_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_3_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_3_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_4_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_4_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_5_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_5_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_6_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_6_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_7_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_7_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_8_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_8<br/>Block: 9/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_8_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_8<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_9_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_9<br/>Block: 10/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_9_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_9<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_10_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_10<br/>Block: 11/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_10_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_10<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_11_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_11<br/>Block: 12/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_11_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_11<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_12_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_12<br/>Block: 13/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_12_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_12<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_13_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_13<br/>Block: 14/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_13_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_13<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_14_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_14<br/>Block: 15/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_14_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_14<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_15_16 [label="<b>Attention Block</b><br/>GPU: pool_gpu_15<br/>Block: 16/16<br/>Input: [batch=1024, block_seq=ceil(seq/16), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/16), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_15_16 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_15<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+		}
+		subgraph cluster_pool_24 {
+			fontsize=10 label="24 pool GPUs for >16384 tokens" style=dashed
+			subgraph cluster_layer0_24 {
+				fontsize=8 label="Layer 0 Attention"
+				attn_block_0_0_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_0_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_1_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_1_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_2_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_2_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_3_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_3_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_4_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_4_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_5_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_5_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_6_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_6_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_7_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_7_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_8_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_8<br/>Block: 9/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_8_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_8<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_9_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_9<br/>Block: 10/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_9_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_9<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_10_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_10<br/>Block: 11/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_10_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_10<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_11_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_11<br/>Block: 12/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_11_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_11<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_12_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_12<br/>Block: 13/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_12_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_12<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_13_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_13<br/>Block: 14/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_13_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_13<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_14_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_14<br/>Block: 15/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_14_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_14<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_15_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_15<br/>Block: 16/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_15_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_15<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_16_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_16<br/>Block: 17/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_16_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_16<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_17_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_17<br/>Block: 18/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_17_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_17<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_18_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_18<br/>Block: 19/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_18_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_18<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_19_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_19<br/>Block: 20/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_19_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_19<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_20_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_20<br/>Block: 21/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_20_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_20<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_21_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_21<br/>Block: 22/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_21_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_21<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_22_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_22<br/>Block: 23/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_22_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_22<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_0_23_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_23<br/>Block: 24/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_0_23_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_23<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer1_24 {
+				fontsize=8 label="Layer 1 Attention"
+				attn_block_1_0_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_0_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_1_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_1_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_2_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_2_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_3_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_3_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_4_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_4_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_5_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_5_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_6_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_6_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_7_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_7_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_8_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_8<br/>Block: 9/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_8_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_8<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_9_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_9<br/>Block: 10/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_9_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_9<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_10_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_10<br/>Block: 11/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_10_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_10<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_11_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_11<br/>Block: 12/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_11_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_11<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_12_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_12<br/>Block: 13/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_12_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_12<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_13_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_13<br/>Block: 14/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_13_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_13<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_14_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_14<br/>Block: 15/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_14_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_14<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_15_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_15<br/>Block: 16/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_15_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_15<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_16_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_16<br/>Block: 17/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_16_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_16<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_17_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_17<br/>Block: 18/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_17_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_17<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_18_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_18<br/>Block: 19/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_18_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_18<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_19_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_19<br/>Block: 20/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_19_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_19<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_20_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_20<br/>Block: 21/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_20_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_20<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_21_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_21<br/>Block: 22/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_21_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_21<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_22_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_22<br/>Block: 23/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_22_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_22<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_1_23_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_23<br/>Block: 24/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_1_23_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_23<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer2_24 {
+				fontsize=8 label="Layer 2 Attention"
+				attn_block_2_0_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_0_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_1_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_1_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_2_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_2_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_3_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_3_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_4_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_4_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_5_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_5_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_6_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_6_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_7_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_7_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_8_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_8<br/>Block: 9/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_8_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_8<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_9_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_9<br/>Block: 10/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_9_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_9<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_10_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_10<br/>Block: 11/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_10_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_10<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_11_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_11<br/>Block: 12/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_11_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_11<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_12_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_12<br/>Block: 13/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_12_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_12<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_13_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_13<br/>Block: 14/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_13_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_13<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_14_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_14<br/>Block: 15/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_14_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_14<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_15_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_15<br/>Block: 16/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_15_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_15<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_16_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_16<br/>Block: 17/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_16_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_16<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_17_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_17<br/>Block: 18/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_17_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_17<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_18_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_18<br/>Block: 19/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_18_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_18<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_19_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_19<br/>Block: 20/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_19_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_19<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_20_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_20<br/>Block: 21/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_20_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_20<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_21_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_21<br/>Block: 22/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_21_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_21<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_22_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_22<br/>Block: 23/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_22_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_22<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_2_23_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_23<br/>Block: 24/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_2_23_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_23<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+			subgraph cluster_layer3_24 {
+				fontsize=8 label="Layer 3 Attention"
+				attn_block_3_0_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_0<br/>Block: 1/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_0_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_0<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_1_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_1<br/>Block: 2/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_1_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_1<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_2_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_2<br/>Block: 3/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_2_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_2<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_3_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_3<br/>Block: 4/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_3_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_3<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_4_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_4<br/>Block: 5/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_4_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_4<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_5_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_5<br/>Block: 6/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_5_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_5<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_6_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_6<br/>Block: 7/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_6_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_6<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_7_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_7<br/>Block: 8/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_7_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_7<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_8_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_8<br/>Block: 9/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_8_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_8<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_9_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_9<br/>Block: 10/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_9_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_9<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_10_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_10<br/>Block: 11/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_10_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_10<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_11_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_11<br/>Block: 12/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_11_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_11<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_12_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_12<br/>Block: 13/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_12_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_12<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_13_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_13<br/>Block: 14/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_13_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_13<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_14_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_14<br/>Block: 15/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_14_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_14<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_15_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_15<br/>Block: 16/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_15_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_15<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_16_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_16<br/>Block: 17/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_16_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_16<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_17_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_17<br/>Block: 18/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_17_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_17<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_18_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_18<br/>Block: 19/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_18_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_18<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_19_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_19<br/>Block: 20/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_19_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_19<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_20_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_20<br/>Block: 21/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_20_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_20<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_21_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_21<br/>Block: 22/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_21_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_21<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_22_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_22<br/>Block: 23/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_22_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_22<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+				attn_block_3_23_24 [label="<b>Attention Block</b><br/>GPU: pool_gpu_23<br/>Block: 24/24<br/>Input: [batch=1024, block_seq=ceil(seq/24), hidden=4096]<br/>Output: [batch=1024, block_seq=ceil(seq/24), hidden=4096]" fillcolor=lightgreen shape=rectangle]
+				kv_cache_3_23_24 [label="<b>KV Cache Share</b><br/>GPU: pool_gpu_23<br/>Replicates K,V across all GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram style=dashed]
+			}
+		}
+	}
+	subgraph cluster_layer0_ffn {
+		fontsize=12 label="Layer 0 FFN (Base GPUs)" style=rounded
+		l0_ffn_up_0 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_0 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_res_0 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ffn_ln_0 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_1 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_1 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_res_1 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ffn_ln_1 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_2 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_2 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_res_2 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ffn_ln_2 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_3 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_3 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_res_3 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ffn_ln_3 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_4 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_4 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_res_4 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ffn_ln_4 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_5 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_5 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_res_5 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ffn_ln_5 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_6 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_6 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_res_6 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ffn_ln_6 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_7 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_7 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_res_7 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ffn_ln_7 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer1_ffn {
+		fontsize=12 label="Layer 1 FFN (Base GPUs)" style=rounded
+		l1_ffn_up_0 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_0 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_res_0 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ffn_ln_0 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_1 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_1 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_res_1 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ffn_ln_1 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_2 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_2 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_res_2 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ffn_ln_2 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_3 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_3 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_res_3 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ffn_ln_3 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_4 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_4 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_res_4 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ffn_ln_4 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_5 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_5 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_res_5 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ffn_ln_5 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_6 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_6 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_res_6 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ffn_ln_6 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_7 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_7 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_res_7 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ffn_ln_7 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer2_ffn {
+		fontsize=12 label="Layer 2 FFN (Base GPUs)" style=rounded
+		l2_ffn_up_0 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_0 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_res_0 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ffn_ln_0 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_1 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_1 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_res_1 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ffn_ln_1 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_2 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_2 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_res_2 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ffn_ln_2 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_3 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_3 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_res_3 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ffn_ln_3 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_4 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_4 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_res_4 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ffn_ln_4 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_5 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_5 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_res_5 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ffn_ln_5 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_6 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_6 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_res_6 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ffn_ln_6 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_7 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_7 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_res_7 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ffn_ln_7 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer3_ffn {
+		fontsize=12 label="Layer 3 FFN (Base GPUs)" style=rounded
+		l3_ffn_up_0 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_0 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_res_0 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ffn_ln_0 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_1 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_1 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_res_1 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ffn_ln_1 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_2 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_2 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_res_2 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ffn_ln_2 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_3 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_3 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_res_3 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ffn_ln_3 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_4 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_4 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_res_4 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ffn_ln_4 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_5 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_5 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_res_5 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ffn_ln_5 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_6 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_6 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_res_6 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ffn_ln_6 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_7 [label="<b>FFN Up Projection</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_7 [label="<b>FFN Down Projection</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_res_7 [label="<b>FFN Residual Add</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ffn_ln_7 [label="<b>FFN Layer Norm</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	hier_reduce_0_8 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 8 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_0_16 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 16 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_0_24 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 24 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_1_8 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 8 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_1_16 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 16 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_1_24 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 24 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_2_8 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 8 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_2_16 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 16 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_2_24 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 24 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_3_8 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 8 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_3_16 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 16 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	hier_reduce_3_24 [label="<b>Hierarchical Reduction</b><br/>Aggregates attention results<br/>From 24 GPUs to 8 base GPUs<br/>[batch=1024, seq=?, hidden=4096]" fillcolor=lightgray shape=diamond]
+	kv_sync_0 [label="<b>KV Cache Sync</b><br/>Synchronizes K,V tensors<br/>Across attention pool GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram]
+	kv_sync_1 [label="<b>KV Cache Sync</b><br/>Synchronizes K,V tensors<br/>Across attention pool GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram]
+	kv_sync_2 [label="<b>KV Cache Sync</b><br/>Synchronizes K,V tensors<br/>Across attention pool GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram]
+	kv_sync_3 [label="<b>KV Cache Sync</b><br/>Synchronizes K,V tensors<br/>Across attention pool GPUs<br/>[batch=1024, seq=?, heads=32, d_k=128]" fillcolor=lightyellow shape=parallelogram]
+	async_comm [label="<b>Asynchronous Communication</b><br/>Overlaps attention computation<br/>With FFN operations<br/>85% overlap efficiency" fillcolor=lightyellow shape=parallelogram]
+	subgraph cluster_output {
+		fontsize=12 label="Output Layer (Base GPUs)" style=rounded
+		final_output_0 [label="<b>Linear Output</b><br/>GPU: base_gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		final_output_1 [label="<b>Linear Output</b><br/>GPU: base_gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		final_output_2 [label="<b>Linear Output</b><br/>GPU: base_gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		final_output_3 [label="<b>Linear Output</b><br/>GPU: base_gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		final_output_4 [label="<b>Linear Output</b><br/>GPU: base_gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		final_output_5 [label="<b>Linear Output</b><br/>GPU: base_gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		final_output_6 [label="<b>Linear Output</b><br/>GPU: base_gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		final_output_7 [label="<b>Linear Output</b><br/>GPU: base_gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+	}
+	final_output [label="<b>Final Output</b><br/>Aggregated across 8 base GPUs<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, vocab=32000]" fillcolor=lightblue shape=ellipse]
+	allreduce_embed [label="<b>All-Reduce</b><br/>TP across 8 base GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_pos [label="<b>All-Reduce</b><br/>TP across 8 base GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_ffn_up [label="<b>All-Reduce</b><br/>TP across 8 base GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_ffn_down [label="<b>All-Reduce</b><br/>TP across 8 base GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_final_output [label="<b>All-Reduce</b><br/>TP across 8 base GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	input -> resource_manager
+	resource_manager -> seq_router
+	input -> base_embed_0
+	base_embed_0 -> base_pos_0
+	base_pos_0 -> allreduce_embed
+	input -> base_embed_1
+	base_embed_1 -> base_pos_1
+	base_pos_1 -> allreduce_embed
+	input -> base_embed_2
+	base_embed_2 -> base_pos_2
+	base_pos_2 -> allreduce_embed
+	input -> base_embed_3
+	base_embed_3 -> base_pos_3
+	base_pos_3 -> allreduce_embed
+	input -> base_embed_4
+	base_embed_4 -> base_pos_4
+	base_pos_4 -> allreduce_embed
+	input -> base_embed_5
+	base_embed_5 -> base_pos_5
+	base_pos_5 -> allreduce_embed
+	input -> base_embed_6
+	base_embed_6 -> base_pos_6
+	base_pos_6 -> allreduce_embed
+	input -> base_embed_7
+	base_embed_7 -> base_pos_7
+	base_pos_7 -> allreduce_embed
+	seq_router -> kv_sync_0
+	base_pos_0 -> l0_ffn_ln_0
+	l0_ffn_ln_0 -> l0_ffn_up_0
+	l0_ffn_up_0 -> l0_ffn_down_0
+	l0_ffn_down_0 -> l0_ffn_res_0
+	l0_ffn_ln_0 -> l0_ffn_res_0
+	l0_ffn_res_0 -> l0_ffn_ln_0
+	base_pos_1 -> l0_ffn_ln_1
+	l0_ffn_ln_1 -> l0_ffn_up_1
+	l0_ffn_up_1 -> l0_ffn_down_1
+	l0_ffn_down_1 -> l0_ffn_res_1
+	l0_ffn_ln_1 -> l0_ffn_res_1
+	l0_ffn_res_1 -> l0_ffn_ln_1
+	base_pos_2 -> l0_ffn_ln_2
+	l0_ffn_ln_2 -> l0_ffn_up_2
+	l0_ffn_up_2 -> l0_ffn_down_2
+	l0_ffn_down_2 -> l0_ffn_res_2
+	l0_ffn_ln_2 -> l0_ffn_res_2
+	l0_ffn_res_2 -> l0_ffn_ln_2
+	base_pos_3 -> l0_ffn_ln_3
+	l0_ffn_ln_3 -> l0_ffn_up_3
+	l0_ffn_up_3 -> l0_ffn_down_3
+	l0_ffn_down_3 -> l0_ffn_res_3
+	l0_ffn_ln_3 -> l0_ffn_res_3
+	l0_ffn_res_3 -> l0_ffn_ln_3
+	base_pos_4 -> l0_ffn_ln_4
+	l0_ffn_ln_4 -> l0_ffn_up_4
+	l0_ffn_up_4 -> l0_ffn_down_4
+	l0_ffn_down_4 -> l0_ffn_res_4
+	l0_ffn_ln_4 -> l0_ffn_res_4
+	l0_ffn_res_4 -> l0_ffn_ln_4
+	base_pos_5 -> l0_ffn_ln_5
+	l0_ffn_ln_5 -> l0_ffn_up_5
+	l0_ffn_up_5 -> l0_ffn_down_5
+	l0_ffn_down_5 -> l0_ffn_res_5
+	l0_ffn_ln_5 -> l0_ffn_res_5
+	l0_ffn_res_5 -> l0_ffn_ln_5
+	base_pos_6 -> l0_ffn_ln_6
+	l0_ffn_ln_6 -> l0_ffn_up_6
+	l0_ffn_up_6 -> l0_ffn_down_6
+	l0_ffn_down_6 -> l0_ffn_res_6
+	l0_ffn_ln_6 -> l0_ffn_res_6
+	l0_ffn_res_6 -> l0_ffn_ln_6
+	base_pos_7 -> l0_ffn_ln_7
+	l0_ffn_ln_7 -> l0_ffn_up_7
+	l0_ffn_up_7 -> l0_ffn_down_7
+	l0_ffn_down_7 -> l0_ffn_res_7
+	l0_ffn_ln_7 -> l0_ffn_res_7
+	l0_ffn_res_7 -> l0_ffn_ln_7
+	kv_sync_0 -> kv_cache_0_0_8
+	kv_cache_0_0_8 -> attn_block_0_0_8
+	attn_block_0_0_8 -> hier_reduce_0_8
+	kv_sync_0 -> kv_cache_0_1_8
+	kv_cache_0_1_8 -> attn_block_0_1_8
+	attn_block_0_1_8 -> hier_reduce_0_8
+	kv_sync_0 -> kv_cache_0_2_8
+	kv_cache_0_2_8 -> attn_block_0_2_8
+	attn_block_0_2_8 -> hier_reduce_0_8
+	kv_sync_0 -> kv_cache_0_3_8
+	kv_cache_0_3_8 -> attn_block_0_3_8
+	attn_block_0_3_8 -> hier_reduce_0_8
+	kv_sync_0 -> kv_cache_0_4_8
+	kv_cache_0_4_8 -> attn_block_0_4_8
+	attn_block_0_4_8 -> hier_reduce_0_8
+	kv_sync_0 -> kv_cache_0_5_8
+	kv_cache_0_5_8 -> attn_block_0_5_8
+	attn_block_0_5_8 -> hier_reduce_0_8
+	kv_sync_0 -> kv_cache_0_6_8
+	kv_cache_0_6_8 -> attn_block_0_6_8
+	attn_block_0_6_8 -> hier_reduce_0_8
+	kv_sync_0 -> kv_cache_0_7_8
+	kv_cache_0_7_8 -> attn_block_0_7_8
+	attn_block_0_7_8 -> hier_reduce_0_8
+	hier_reduce_0_8 -> l0_ffn_ln_0
+	l0_ffn_ln_0 -> l0_ffn_up_0
+	l0_ffn_up_0 -> l0_ffn_down_0
+	l0_ffn_down_0 -> l0_ffn_res_0
+	l0_ffn_ln_0 -> l0_ffn_res_0
+	l0_ffn_res_0 -> l0_ffn_ln_0
+	hier_reduce_0_8 -> l0_ffn_ln_1
+	l0_ffn_ln_1 -> l0_ffn_up_1
+	l0_ffn_up_1 -> l0_ffn_down_1
+	l0_ffn_down_1 -> l0_ffn_res_1
+	l0_ffn_ln_1 -> l0_ffn_res_1
+	l0_ffn_res_1 -> l0_ffn_ln_1
+	hier_reduce_0_8 -> l0_ffn_ln_2
+	l0_ffn_ln_2 -> l0_ffn_up_2
+	l0_ffn_up_2 -> l0_ffn_down_2
+	l0_ffn_down_2 -> l0_ffn_res_2
+	l0_ffn_ln_2 -> l0_ffn_res_2
+	l0_ffn_res_2 -> l0_ffn_ln_2
+	hier_reduce_0_8 -> l0_ffn_ln_3
+	l0_ffn_ln_3 -> l0_ffn_up_3
+	l0_ffn_up_3 -> l0_ffn_down_3
+	l0_ffn_down_3 -> l0_ffn_res_3
+	l0_ffn_ln_3 -> l0_ffn_res_3
+	l0_ffn_res_3 -> l0_ffn_ln_3
+	hier_reduce_0_8 -> l0_ffn_ln_4
+	l0_ffn_ln_4 -> l0_ffn_up_4
+	l0_ffn_up_4 -> l0_ffn_down_4
+	l0_ffn_down_4 -> l0_ffn_res_4
+	l0_ffn_ln_4 -> l0_ffn_res_4
+	l0_ffn_res_4 -> l0_ffn_ln_4
+	hier_reduce_0_8 -> l0_ffn_ln_5
+	l0_ffn_ln_5 -> l0_ffn_up_5
+	l0_ffn_up_5 -> l0_ffn_down_5
+	l0_ffn_down_5 -> l0_ffn_res_5
+	l0_ffn_ln_5 -> l0_ffn_res_5
+	l0_ffn_res_5 -> l0_ffn_ln_5
+	hier_reduce_0_8 -> l0_ffn_ln_6
+	l0_ffn_ln_6 -> l0_ffn_up_6
+	l0_ffn_up_6 -> l0_ffn_down_6
+	l0_ffn_down_6 -> l0_ffn_res_6
+	l0_ffn_ln_6 -> l0_ffn_res_6
+	l0_ffn_res_6 -> l0_ffn_ln_6
+	hier_reduce_0_8 -> l0_ffn_ln_7
+	l0_ffn_ln_7 -> l0_ffn_up_7
+	l0_ffn_up_7 -> l0_ffn_down_7
+	l0_ffn_down_7 -> l0_ffn_res_7
+	l0_ffn_ln_7 -> l0_ffn_res_7
+	l0_ffn_res_7 -> l0_ffn_ln_7
+	kv_sync_0 -> kv_cache_0_0_16
+	kv_cache_0_0_16 -> attn_block_0_0_16
+	attn_block_0_0_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_1_16
+	kv_cache_0_1_16 -> attn_block_0_1_16
+	attn_block_0_1_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_2_16
+	kv_cache_0_2_16 -> attn_block_0_2_16
+	attn_block_0_2_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_3_16
+	kv_cache_0_3_16 -> attn_block_0_3_16
+	attn_block_0_3_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_4_16
+	kv_cache_0_4_16 -> attn_block_0_4_16
+	attn_block_0_4_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_5_16
+	kv_cache_0_5_16 -> attn_block_0_5_16
+	attn_block_0_5_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_6_16
+	kv_cache_0_6_16 -> attn_block_0_6_16
+	attn_block_0_6_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_7_16
+	kv_cache_0_7_16 -> attn_block_0_7_16
+	attn_block_0_7_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_8_16
+	kv_cache_0_8_16 -> attn_block_0_8_16
+	attn_block_0_8_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_9_16
+	kv_cache_0_9_16 -> attn_block_0_9_16
+	attn_block_0_9_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_10_16
+	kv_cache_0_10_16 -> attn_block_0_10_16
+	attn_block_0_10_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_11_16
+	kv_cache_0_11_16 -> attn_block_0_11_16
+	attn_block_0_11_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_12_16
+	kv_cache_0_12_16 -> attn_block_0_12_16
+	attn_block_0_12_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_13_16
+	kv_cache_0_13_16 -> attn_block_0_13_16
+	attn_block_0_13_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_14_16
+	kv_cache_0_14_16 -> attn_block_0_14_16
+	attn_block_0_14_16 -> hier_reduce_0_16
+	kv_sync_0 -> kv_cache_0_15_16
+	kv_cache_0_15_16 -> attn_block_0_15_16
+	attn_block_0_15_16 -> hier_reduce_0_16
+	hier_reduce_0_16 -> l0_ffn_ln_0
+	l0_ffn_ln_0 -> l0_ffn_up_0
+	l0_ffn_up_0 -> l0_ffn_down_0
+	l0_ffn_down_0 -> l0_ffn_res_0
+	l0_ffn_ln_0 -> l0_ffn_res_0
+	l0_ffn_res_0 -> l0_ffn_ln_0
+	hier_reduce_0_16 -> l0_ffn_ln_1
+	l0_ffn_ln_1 -> l0_ffn_up_1
+	l0_ffn_up_1 -> l0_ffn_down_1
+	l0_ffn_down_1 -> l0_ffn_res_1
+	l0_ffn_ln_1 -> l0_ffn_res_1
+	l0_ffn_res_1 -> l0_ffn_ln_1
+	hier_reduce_0_16 -> l0_ffn_ln_2
+	l0_ffn_ln_2 -> l0_ffn_up_2
+	l0_ffn_up_2 -> l0_ffn_down_2
+	l0_ffn_down_2 -> l0_ffn_res_2
+	l0_ffn_ln_2 -> l0_ffn_res_2
+	l0_ffn_res_2 -> l0_ffn_ln_2
+	hier_reduce_0_16 -> l0_ffn_ln_3
+	l0_ffn_ln_3 -> l0_ffn_up_3
+	l0_ffn_up_3 -> l0_ffn_down_3
+	l0_ffn_down_3 -> l0_ffn_res_3
+	l0_ffn_ln_3 -> l0_ffn_res_3
+	l0_ffn_res_3 -> l0_ffn_ln_3
+	hier_reduce_0_16 -> l0_ffn_ln_4
+	l0_ffn_ln_4 -> l0_ffn_up_4
+	l0_ffn_up_4 -> l0_ffn_down_4
+	l0_ffn_down_4 -> l0_ffn_res_4
+	l0_ffn_ln_4 -> l0_ffn_res_4
+	l0_ffn_res_4 -> l0_ffn_ln_4
+	hier_reduce_0_16 -> l0_ffn_ln_5
+	l0_ffn_ln_5 -> l0_ffn_up_5
+	l0_ffn_up_5 -> l0_ffn_down_5
+	l0_ffn_down_5 -> l0_ffn_res_5
+	l0_ffn_ln_5 -> l0_ffn_res_5
+	l0_ffn_res_5 -> l0_ffn_ln_5
+	hier_reduce_0_16 -> l0_ffn_ln_6
+	l0_ffn_ln_6 -> l0_ffn_up_6
+	l0_ffn_up_6 -> l0_ffn_down_6
+	l0_ffn_down_6 -> l0_ffn_res_6
+	l0_ffn_ln_6 -> l0_ffn_res_6
+	l0_ffn_res_6 -> l0_ffn_ln_6
+	hier_reduce_0_16 -> l0_ffn_ln_7
+	l0_ffn_ln_7 -> l0_ffn_up_7
+	l0_ffn_up_7 -> l0_ffn_down_7
+	l0_ffn_down_7 -> l0_ffn_res_7
+	l0_ffn_ln_7 -> l0_ffn_res_7
+	l0_ffn_res_7 -> l0_ffn_ln_7
+	kv_sync_0 -> kv_cache_0_0_24
+	kv_cache_0_0_24 -> attn_block_0_0_24
+	attn_block_0_0_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_1_24
+	kv_cache_0_1_24 -> attn_block_0_1_24
+	attn_block_0_1_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_2_24
+	kv_cache_0_2_24 -> attn_block_0_2_24
+	attn_block_0_2_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_3_24
+	kv_cache_0_3_24 -> attn_block_0_3_24
+	attn_block_0_3_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_4_24
+	kv_cache_0_4_24 -> attn_block_0_4_24
+	attn_block_0_4_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_5_24
+	kv_cache_0_5_24 -> attn_block_0_5_24
+	attn_block_0_5_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_6_24
+	kv_cache_0_6_24 -> attn_block_0_6_24
+	attn_block_0_6_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_7_24
+	kv_cache_0_7_24 -> attn_block_0_7_24
+	attn_block_0_7_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_8_24
+	kv_cache_0_8_24 -> attn_block_0_8_24
+	attn_block_0_8_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_9_24
+	kv_cache_0_9_24 -> attn_block_0_9_24
+	attn_block_0_9_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_10_24
+	kv_cache_0_10_24 -> attn_block_0_10_24
+	attn_block_0_10_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_11_24
+	kv_cache_0_11_24 -> attn_block_0_11_24
+	attn_block_0_11_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_12_24
+	kv_cache_0_12_24 -> attn_block_0_12_24
+	attn_block_0_12_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_13_24
+	kv_cache_0_13_24 -> attn_block_0_13_24
+	attn_block_0_13_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_14_24
+	kv_cache_0_14_24 -> attn_block_0_14_24
+	attn_block_0_14_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_15_24
+	kv_cache_0_15_24 -> attn_block_0_15_24
+	attn_block_0_15_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_16_24
+	kv_cache_0_16_24 -> attn_block_0_16_24
+	attn_block_0_16_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_17_24
+	kv_cache_0_17_24 -> attn_block_0_17_24
+	attn_block_0_17_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_18_24
+	kv_cache_0_18_24 -> attn_block_0_18_24
+	attn_block_0_18_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_19_24
+	kv_cache_0_19_24 -> attn_block_0_19_24
+	attn_block_0_19_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_20_24
+	kv_cache_0_20_24 -> attn_block_0_20_24
+	attn_block_0_20_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_21_24
+	kv_cache_0_21_24 -> attn_block_0_21_24
+	attn_block_0_21_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_22_24
+	kv_cache_0_22_24 -> attn_block_0_22_24
+	attn_block_0_22_24 -> hier_reduce_0_24
+	kv_sync_0 -> kv_cache_0_23_24
+	kv_cache_0_23_24 -> attn_block_0_23_24
+	attn_block_0_23_24 -> hier_reduce_0_24
+	hier_reduce_0_24 -> l0_ffn_ln_0
+	l0_ffn_ln_0 -> l0_ffn_up_0
+	l0_ffn_up_0 -> l0_ffn_down_0
+	l0_ffn_down_0 -> l0_ffn_res_0
+	l0_ffn_ln_0 -> l0_ffn_res_0
+	l0_ffn_res_0 -> l0_ffn_ln_0
+	hier_reduce_0_24 -> l0_ffn_ln_1
+	l0_ffn_ln_1 -> l0_ffn_up_1
+	l0_ffn_up_1 -> l0_ffn_down_1
+	l0_ffn_down_1 -> l0_ffn_res_1
+	l0_ffn_ln_1 -> l0_ffn_res_1
+	l0_ffn_res_1 -> l0_ffn_ln_1
+	hier_reduce_0_24 -> l0_ffn_ln_2
+	l0_ffn_ln_2 -> l0_ffn_up_2
+	l0_ffn_up_2 -> l0_ffn_down_2
+	l0_ffn_down_2 -> l0_ffn_res_2
+	l0_ffn_ln_2 -> l0_ffn_res_2
+	l0_ffn_res_2 -> l0_ffn_ln_2
+	hier_reduce_0_24 -> l0_ffn_ln_3
+	l0_ffn_ln_3 -> l0_ffn_up_3
+	l0_ffn_up_3 -> l0_ffn_down_3
+	l0_ffn_down_3 -> l0_ffn_res_3
+	l0_ffn_ln_3 -> l0_ffn_res_3
+	l0_ffn_res_3 -> l0_ffn_ln_3
+	hier_reduce_0_24 -> l0_ffn_ln_4
+	l0_ffn_ln_4 -> l0_ffn_up_4
+	l0_ffn_up_4 -> l0_ffn_down_4
+	l0_ffn_down_4 -> l0_ffn_res_4
+	l0_ffn_ln_4 -> l0_ffn_res_4
+	l0_ffn_res_4 -> l0_ffn_ln_4
+	hier_reduce_0_24 -> l0_ffn_ln_5
+	l0_ffn_ln_5 -> l0_ffn_up_5
+	l0_ffn_up_5 -> l0_ffn_down_5
+	l0_ffn_down_5 -> l0_ffn_res_5
+	l0_ffn_ln_5 -> l0_ffn_res_5
+	l0_ffn_res_5 -> l0_ffn_ln_5
+	hier_reduce_0_24 -> l0_ffn_ln_6
+	l0_ffn_ln_6 -> l0_ffn_up_6
+	l0_ffn_up_6 -> l0_ffn_down_6
+	l0_ffn_down_6 -> l0_ffn_res_6
+	l0_ffn_ln_6 -> l0_ffn_res_6
+	l0_ffn_res_6 -> l0_ffn_ln_6
+	hier_reduce_0_24 -> l0_ffn_ln_7
+	l0_ffn_ln_7 -> l0_ffn_up_7
+	l0_ffn_up_7 -> l0_ffn_down_7
+	l0_ffn_down_7 -> l0_ffn_res_7
+	l0_ffn_ln_7 -> l0_ffn_res_7
+	l0_ffn_res_7 -> l0_ffn_ln_7
+	seq_router -> kv_sync_1
+	base_pos_0 -> l1_ffn_ln_0
+	l1_ffn_ln_0 -> l1_ffn_up_0
+	l1_ffn_up_0 -> l1_ffn_down_0
+	l1_ffn_down_0 -> l1_ffn_res_0
+	l1_ffn_ln_0 -> l1_ffn_res_0
+	l1_ffn_res_0 -> l1_ffn_ln_0
+	base_pos_1 -> l1_ffn_ln_1
+	l1_ffn_ln_1 -> l1_ffn_up_1
+	l1_ffn_up_1 -> l1_ffn_down_1
+	l1_ffn_down_1 -> l1_ffn_res_1
+	l1_ffn_ln_1 -> l1_ffn_res_1
+	l1_ffn_res_1 -> l1_ffn_ln_1
+	base_pos_2 -> l1_ffn_ln_2
+	l1_ffn_ln_2 -> l1_ffn_up_2
+	l1_ffn_up_2 -> l1_ffn_down_2
+	l1_ffn_down_2 -> l1_ffn_res_2
+	l1_ffn_ln_2 -> l1_ffn_res_2
+	l1_ffn_res_2 -> l1_ffn_ln_2
+	base_pos_3 -> l1_ffn_ln_3
+	l1_ffn_ln_3 -> l1_ffn_up_3
+	l1_ffn_up_3 -> l1_ffn_down_3
+	l1_ffn_down_3 -> l1_ffn_res_3
+	l1_ffn_ln_3 -> l1_ffn_res_3
+	l1_ffn_res_3 -> l1_ffn_ln_3
+	base_pos_4 -> l1_ffn_ln_4
+	l1_ffn_ln_4 -> l1_ffn_up_4
+	l1_ffn_up_4 -> l1_ffn_down_4
+	l1_ffn_down_4 -> l1_ffn_res_4
+	l1_ffn_ln_4 -> l1_ffn_res_4
+	l1_ffn_res_4 -> l1_ffn_ln_4
+	base_pos_5 -> l1_ffn_ln_5
+	l1_ffn_ln_5 -> l1_ffn_up_5
+	l1_ffn_up_5 -> l1_ffn_down_5
+	l1_ffn_down_5 -> l1_ffn_res_5
+	l1_ffn_ln_5 -> l1_ffn_res_5
+	l1_ffn_res_5 -> l1_ffn_ln_5
+	base_pos_6 -> l1_ffn_ln_6
+	l1_ffn_ln_6 -> l1_ffn_up_6
+	l1_ffn_up_6 -> l1_ffn_down_6
+	l1_ffn_down_6 -> l1_ffn_res_6
+	l1_ffn_ln_6 -> l1_ffn_res_6
+	l1_ffn_res_6 -> l1_ffn_ln_6
+	base_pos_7 -> l1_ffn_ln_7
+	l1_ffn_ln_7 -> l1_ffn_up_7
+	l1_ffn_up_7 -> l1_ffn_down_7
+	l1_ffn_down_7 -> l1_ffn_res_7
+	l1_ffn_ln_7 -> l1_ffn_res_7
+	l1_ffn_res_7 -> l1_ffn_ln_7
+	kv_sync_1 -> kv_cache_1_0_8
+	kv_cache_1_0_8 -> attn_block_1_0_8
+	attn_block_1_0_8 -> hier_reduce_1_8
+	kv_sync_1 -> kv_cache_1_1_8
+	kv_cache_1_1_8 -> attn_block_1_1_8
+	attn_block_1_1_8 -> hier_reduce_1_8
+	kv_sync_1 -> kv_cache_1_2_8
+	kv_cache_1_2_8 -> attn_block_1_2_8
+	attn_block_1_2_8 -> hier_reduce_1_8
+	kv_sync_1 -> kv_cache_1_3_8
+	kv_cache_1_3_8 -> attn_block_1_3_8
+	attn_block_1_3_8 -> hier_reduce_1_8
+	kv_sync_1 -> kv_cache_1_4_8
+	kv_cache_1_4_8 -> attn_block_1_4_8
+	attn_block_1_4_8 -> hier_reduce_1_8
+	kv_sync_1 -> kv_cache_1_5_8
+	kv_cache_1_5_8 -> attn_block_1_5_8
+	attn_block_1_5_8 -> hier_reduce_1_8
+	kv_sync_1 -> kv_cache_1_6_8
+	kv_cache_1_6_8 -> attn_block_1_6_8
+	attn_block_1_6_8 -> hier_reduce_1_8
+	kv_sync_1 -> kv_cache_1_7_8
+	kv_cache_1_7_8 -> attn_block_1_7_8
+	attn_block_1_7_8 -> hier_reduce_1_8
+	hier_reduce_1_8 -> l1_ffn_ln_0
+	l1_ffn_ln_0 -> l1_ffn_up_0
+	l1_ffn_up_0 -> l1_ffn_down_0
+	l1_ffn_down_0 -> l1_ffn_res_0
+	l1_ffn_ln_0 -> l1_ffn_res_0
+	l1_ffn_res_0 -> l1_ffn_ln_0
+	hier_reduce_1_8 -> l1_ffn_ln_1
+	l1_ffn_ln_1 -> l1_ffn_up_1
+	l1_ffn_up_1 -> l1_ffn_down_1
+	l1_ffn_down_1 -> l1_ffn_res_1
+	l1_ffn_ln_1 -> l1_ffn_res_1
+	l1_ffn_res_1 -> l1_ffn_ln_1
+	hier_reduce_1_8 -> l1_ffn_ln_2
+	l1_ffn_ln_2 -> l1_ffn_up_2
+	l1_ffn_up_2 -> l1_ffn_down_2
+	l1_ffn_down_2 -> l1_ffn_res_2
+	l1_ffn_ln_2 -> l1_ffn_res_2
+	l1_ffn_res_2 -> l1_ffn_ln_2
+	hier_reduce_1_8 -> l1_ffn_ln_3
+	l1_ffn_ln_3 -> l1_ffn_up_3
+	l1_ffn_up_3 -> l1_ffn_down_3
+	l1_ffn_down_3 -> l1_ffn_res_3
+	l1_ffn_ln_3 -> l1_ffn_res_3
+	l1_ffn_res_3 -> l1_ffn_ln_3
+	hier_reduce_1_8 -> l1_ffn_ln_4
+	l1_ffn_ln_4 -> l1_ffn_up_4
+	l1_ffn_up_4 -> l1_ffn_down_4
+	l1_ffn_down_4 -> l1_ffn_res_4
+	l1_ffn_ln_4 -> l1_ffn_res_4
+	l1_ffn_res_4 -> l1_ffn_ln_4
+	hier_reduce_1_8 -> l1_ffn_ln_5
+	l1_ffn_ln_5 -> l1_ffn_up_5
+	l1_ffn_up_5 -> l1_ffn_down_5
+	l1_ffn_down_5 -> l1_ffn_res_5
+	l1_ffn_ln_5 -> l1_ffn_res_5
+	l1_ffn_res_5 -> l1_ffn_ln_5
+	hier_reduce_1_8 -> l1_ffn_ln_6
+	l1_ffn_ln_6 -> l1_ffn_up_6
+	l1_ffn_up_6 -> l1_ffn_down_6
+	l1_ffn_down_6 -> l1_ffn_res_6
+	l1_ffn_ln_6 -> l1_ffn_res_6
+	l1_ffn_res_6 -> l1_ffn_ln_6
+	hier_reduce_1_8 -> l1_ffn_ln_7
+	l1_ffn_ln_7 -> l1_ffn_up_7
+	l1_ffn_up_7 -> l1_ffn_down_7
+	l1_ffn_down_7 -> l1_ffn_res_7
+	l1_ffn_ln_7 -> l1_ffn_res_7
+	l1_ffn_res_7 -> l1_ffn_ln_7
+	kv_sync_1 -> kv_cache_1_0_16
+	kv_cache_1_0_16 -> attn_block_1_0_16
+	attn_block_1_0_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_1_16
+	kv_cache_1_1_16 -> attn_block_1_1_16
+	attn_block_1_1_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_2_16
+	kv_cache_1_2_16 -> attn_block_1_2_16
+	attn_block_1_2_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_3_16
+	kv_cache_1_3_16 -> attn_block_1_3_16
+	attn_block_1_3_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_4_16
+	kv_cache_1_4_16 -> attn_block_1_4_16
+	attn_block_1_4_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_5_16
+	kv_cache_1_5_16 -> attn_block_1_5_16
+	attn_block_1_5_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_6_16
+	kv_cache_1_6_16 -> attn_block_1_6_16
+	attn_block_1_6_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_7_16
+	kv_cache_1_7_16 -> attn_block_1_7_16
+	attn_block_1_7_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_8_16
+	kv_cache_1_8_16 -> attn_block_1_8_16
+	attn_block_1_8_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_9_16
+	kv_cache_1_9_16 -> attn_block_1_9_16
+	attn_block_1_9_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_10_16
+	kv_cache_1_10_16 -> attn_block_1_10_16
+	attn_block_1_10_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_11_16
+	kv_cache_1_11_16 -> attn_block_1_11_16
+	attn_block_1_11_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_12_16
+	kv_cache_1_12_16 -> attn_block_1_12_16
+	attn_block_1_12_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_13_16
+	kv_cache_1_13_16 -> attn_block_1_13_16
+	attn_block_1_13_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_14_16
+	kv_cache_1_14_16 -> attn_block_1_14_16
+	attn_block_1_14_16 -> hier_reduce_1_16
+	kv_sync_1 -> kv_cache_1_15_16
+	kv_cache_1_15_16 -> attn_block_1_15_16
+	attn_block_1_15_16 -> hier_reduce_1_16
+	hier_reduce_1_16 -> l1_ffn_ln_0
+	l1_ffn_ln_0 -> l1_ffn_up_0
+	l1_ffn_up_0 -> l1_ffn_down_0
+	l1_ffn_down_0 -> l1_ffn_res_0
+	l1_ffn_ln_0 -> l1_ffn_res_0
+	l1_ffn_res_0 -> l1_ffn_ln_0
+	hier_reduce_1_16 -> l1_ffn_ln_1
+	l1_ffn_ln_1 -> l1_ffn_up_1
+	l1_ffn_up_1 -> l1_ffn_down_1
+	l1_ffn_down_1 -> l1_ffn_res_1
+	l1_ffn_ln_1 -> l1_ffn_res_1
+	l1_ffn_res_1 -> l1_ffn_ln_1
+	hier_reduce_1_16 -> l1_ffn_ln_2
+	l1_ffn_ln_2 -> l1_ffn_up_2
+	l1_ffn_up_2 -> l1_ffn_down_2
+	l1_ffn_down_2 -> l1_ffn_res_2
+	l1_ffn_ln_2 -> l1_ffn_res_2
+	l1_ffn_res_2 -> l1_ffn_ln_2
+	hier_reduce_1_16 -> l1_ffn_ln_3
+	l1_ffn_ln_3 -> l1_ffn_up_3
+	l1_ffn_up_3 -> l1_ffn_down_3
+	l1_ffn_down_3 -> l1_ffn_res_3
+	l1_ffn_ln_3 -> l1_ffn_res_3
+	l1_ffn_res_3 -> l1_ffn_ln_3
+	hier_reduce_1_16 -> l1_ffn_ln_4
+	l1_ffn_ln_4 -> l1_ffn_up_4
+	l1_ffn_up_4 -> l1_ffn_down_4
+	l1_ffn_down_4 -> l1_ffn_res_4
+	l1_ffn_ln_4 -> l1_ffn_res_4
+	l1_ffn_res_4 -> l1_ffn_ln_4
+	hier_reduce_1_16 -> l1_ffn_ln_5
+	l1_ffn_ln_5 -> l1_ffn_up_5
+	l1_ffn_up_5 -> l1_ffn_down_5
+	l1_ffn_down_5 -> l1_ffn_res_5
+	l1_ffn_ln_5 -> l1_ffn_res_5
+	l1_ffn_res_5 -> l1_ffn_ln_5
+	hier_reduce_1_16 -> l1_ffn_ln_6
+	l1_ffn_ln_6 -> l1_ffn_up_6
+	l1_ffn_up_6 -> l1_ffn_down_6
+	l1_ffn_down_6 -> l1_ffn_res_6
+	l1_ffn_ln_6 -> l1_ffn_res_6
+	l1_ffn_res_6 -> l1_ffn_ln_6
+	hier_reduce_1_16 -> l1_ffn_ln_7
+	l1_ffn_ln_7 -> l1_ffn_up_7
+	l1_ffn_up_7 -> l1_ffn_down_7
+	l1_ffn_down_7 -> l1_ffn_res_7
+	l1_ffn_ln_7 -> l1_ffn_res_7
+	l1_ffn_res_7 -> l1_ffn_ln_7
+	kv_sync_1 -> kv_cache_1_0_24
+	kv_cache_1_0_24 -> attn_block_1_0_24
+	attn_block_1_0_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_1_24
+	kv_cache_1_1_24 -> attn_block_1_1_24
+	attn_block_1_1_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_2_24
+	kv_cache_1_2_24 -> attn_block_1_2_24
+	attn_block_1_2_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_3_24
+	kv_cache_1_3_24 -> attn_block_1_3_24
+	attn_block_1_3_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_4_24
+	kv_cache_1_4_24 -> attn_block_1_4_24
+	attn_block_1_4_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_5_24
+	kv_cache_1_5_24 -> attn_block_1_5_24
+	attn_block_1_5_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_6_24
+	kv_cache_1_6_24 -> attn_block_1_6_24
+	attn_block_1_6_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_7_24
+	kv_cache_1_7_24 -> attn_block_1_7_24
+	attn_block_1_7_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_8_24
+	kv_cache_1_8_24 -> attn_block_1_8_24
+	attn_block_1_8_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_9_24
+	kv_cache_1_9_24 -> attn_block_1_9_24
+	attn_block_1_9_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_10_24
+	kv_cache_1_10_24 -> attn_block_1_10_24
+	attn_block_1_10_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_11_24
+	kv_cache_1_11_24 -> attn_block_1_11_24
+	attn_block_1_11_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_12_24
+	kv_cache_1_12_24 -> attn_block_1_12_24
+	attn_block_1_12_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_13_24
+	kv_cache_1_13_24 -> attn_block_1_13_24
+	attn_block_1_13_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_14_24
+	kv_cache_1_14_24 -> attn_block_1_14_24
+	attn_block_1_14_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_15_24
+	kv_cache_1_15_24 -> attn_block_1_15_24
+	attn_block_1_15_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_16_24
+	kv_cache_1_16_24 -> attn_block_1_16_24
+	attn_block_1_16_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_17_24
+	kv_cache_1_17_24 -> attn_block_1_17_24
+	attn_block_1_17_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_18_24
+	kv_cache_1_18_24 -> attn_block_1_18_24
+	attn_block_1_18_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_19_24
+	kv_cache_1_19_24 -> attn_block_1_19_24
+	attn_block_1_19_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_20_24
+	kv_cache_1_20_24 -> attn_block_1_20_24
+	attn_block_1_20_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_21_24
+	kv_cache_1_21_24 -> attn_block_1_21_24
+	attn_block_1_21_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_22_24
+	kv_cache_1_22_24 -> attn_block_1_22_24
+	attn_block_1_22_24 -> hier_reduce_1_24
+	kv_sync_1 -> kv_cache_1_23_24
+	kv_cache_1_23_24 -> attn_block_1_23_24
+	attn_block_1_23_24 -> hier_reduce_1_24
+	hier_reduce_1_24 -> l1_ffn_ln_0
+	l1_ffn_ln_0 -> l1_ffn_up_0
+	l1_ffn_up_0 -> l1_ffn_down_0
+	l1_ffn_down_0 -> l1_ffn_res_0
+	l1_ffn_ln_0 -> l1_ffn_res_0
+	l1_ffn_res_0 -> l1_ffn_ln_0
+	hier_reduce_1_24 -> l1_ffn_ln_1
+	l1_ffn_ln_1 -> l1_ffn_up_1
+	l1_ffn_up_1 -> l1_ffn_down_1
+	l1_ffn_down_1 -> l1_ffn_res_1
+	l1_ffn_ln_1 -> l1_ffn_res_1
+	l1_ffn_res_1 -> l1_ffn_ln_1
+	hier_reduce_1_24 -> l1_ffn_ln_2
+	l1_ffn_ln_2 -> l1_ffn_up_2
+	l1_ffn_up_2 -> l1_ffn_down_2
+	l1_ffn_down_2 -> l1_ffn_res_2
+	l1_ffn_ln_2 -> l1_ffn_res_2
+	l1_ffn_res_2 -> l1_ffn_ln_2
+	hier_reduce_1_24 -> l1_ffn_ln_3
+	l1_ffn_ln_3 -> l1_ffn_up_3
+	l1_ffn_up_3 -> l1_ffn_down_3
+	l1_ffn_down_3 -> l1_ffn_res_3
+	l1_ffn_ln_3 -> l1_ffn_res_3
+	l1_ffn_res_3 -> l1_ffn_ln_3
+	hier_reduce_1_24 -> l1_ffn_ln_4
+	l1_ffn_ln_4 -> l1_ffn_up_4
+	l1_ffn_up_4 -> l1_ffn_down_4
+	l1_ffn_down_4 -> l1_ffn_res_4
+	l1_ffn_ln_4 -> l1_ffn_res_4
+	l1_ffn_res_4 -> l1_ffn_ln_4
+	hier_reduce_1_24 -> l1_ffn_ln_5
+	l1_ffn_ln_5 -> l1_ffn_up_5
+	l1_ffn_up_5 -> l1_ffn_down_5
+	l1_ffn_down_5 -> l1_ffn_res_5
+	l1_ffn_ln_5 -> l1_ffn_res_5
+	l1_ffn_res_5 -> l1_ffn_ln_5
+	hier_reduce_1_24 -> l1_ffn_ln_6
+	l1_ffn_ln_6 -> l1_ffn_up_6
+	l1_ffn_up_6 -> l1_ffn_down_6
+	l1_ffn_down_6 -> l1_ffn_res_6
+	l1_ffn_ln_6 -> l1_ffn_res_6
+	l1_ffn_res_6 -> l1_ffn_ln_6
+	hier_reduce_1_24 -> l1_ffn_ln_7
+	l1_ffn_ln_7 -> l1_ffn_up_7
+	l1_ffn_up_7 -> l1_ffn_down_7
+	l1_ffn_down_7 -> l1_ffn_res_7
+	l1_ffn_ln_7 -> l1_ffn_res_7
+	l1_ffn_res_7 -> l1_ffn_ln_7
+	seq_router -> kv_sync_2
+	base_pos_0 -> l2_ffn_ln_0
+	l2_ffn_ln_0 -> l2_ffn_up_0
+	l2_ffn_up_0 -> l2_ffn_down_0
+	l2_ffn_down_0 -> l2_ffn_res_0
+	l2_ffn_ln_0 -> l2_ffn_res_0
+	l2_ffn_res_0 -> l2_ffn_ln_0
+	base_pos_1 -> l2_ffn_ln_1
+	l2_ffn_ln_1 -> l2_ffn_up_1
+	l2_ffn_up_1 -> l2_ffn_down_1
+	l2_ffn_down_1 -> l2_ffn_res_1
+	l2_ffn_ln_1 -> l2_ffn_res_1
+	l2_ffn_res_1 -> l2_ffn_ln_1
+	base_pos_2 -> l2_ffn_ln_2
+	l2_ffn_ln_2 -> l2_ffn_up_2
+	l2_ffn_up_2 -> l2_ffn_down_2
+	l2_ffn_down_2 -> l2_ffn_res_2
+	l2_ffn_ln_2 -> l2_ffn_res_2
+	l2_ffn_res_2 -> l2_ffn_ln_2
+	base_pos_3 -> l2_ffn_ln_3
+	l2_ffn_ln_3 -> l2_ffn_up_3
+	l2_ffn_up_3 -> l2_ffn_down_3
+	l2_ffn_down_3 -> l2_ffn_res_3
+	l2_ffn_ln_3 -> l2_ffn_res_3
+	l2_ffn_res_3 -> l2_ffn_ln_3
+	base_pos_4 -> l2_ffn_ln_4
+	l2_ffn_ln_4 -> l2_ffn_up_4
+	l2_ffn_up_4 -> l2_ffn_down_4
+	l2_ffn_down_4 -> l2_ffn_res_4
+	l2_ffn_ln_4 -> l2_ffn_res_4
+	l2_ffn_res_4 -> l2_ffn_ln_4
+	base_pos_5 -> l2_ffn_ln_5
+	l2_ffn_ln_5 -> l2_ffn_up_5
+	l2_ffn_up_5 -> l2_ffn_down_5
+	l2_ffn_down_5 -> l2_ffn_res_5
+	l2_ffn_ln_5 -> l2_ffn_res_5
+	l2_ffn_res_5 -> l2_ffn_ln_5
+	base_pos_6 -> l2_ffn_ln_6
+	l2_ffn_ln_6 -> l2_ffn_up_6
+	l2_ffn_up_6 -> l2_ffn_down_6
+	l2_ffn_down_6 -> l2_ffn_res_6
+	l2_ffn_ln_6 -> l2_ffn_res_6
+	l2_ffn_res_6 -> l2_ffn_ln_6
+	base_pos_7 -> l2_ffn_ln_7
+	l2_ffn_ln_7 -> l2_ffn_up_7
+	l2_ffn_up_7 -> l2_ffn_down_7
+	l2_ffn_down_7 -> l2_ffn_res_7
+	l2_ffn_ln_7 -> l2_ffn_res_7
+	l2_ffn_res_7 -> l2_ffn_ln_7
+	kv_sync_2 -> kv_cache_2_0_8
+	kv_cache_2_0_8 -> attn_block_2_0_8
+	attn_block_2_0_8 -> hier_reduce_2_8
+	kv_sync_2 -> kv_cache_2_1_8
+	kv_cache_2_1_8 -> attn_block_2_1_8
+	attn_block_2_1_8 -> hier_reduce_2_8
+	kv_sync_2 -> kv_cache_2_2_8
+	kv_cache_2_2_8 -> attn_block_2_2_8
+	attn_block_2_2_8 -> hier_reduce_2_8
+	kv_sync_2 -> kv_cache_2_3_8
+	kv_cache_2_3_8 -> attn_block_2_3_8
+	attn_block_2_3_8 -> hier_reduce_2_8
+	kv_sync_2 -> kv_cache_2_4_8
+	kv_cache_2_4_8 -> attn_block_2_4_8
+	attn_block_2_4_8 -> hier_reduce_2_8
+	kv_sync_2 -> kv_cache_2_5_8
+	kv_cache_2_5_8 -> attn_block_2_5_8
+	attn_block_2_5_8 -> hier_reduce_2_8
+	kv_sync_2 -> kv_cache_2_6_8
+	kv_cache_2_6_8 -> attn_block_2_6_8
+	attn_block_2_6_8 -> hier_reduce_2_8
+	kv_sync_2 -> kv_cache_2_7_8
+	kv_cache_2_7_8 -> attn_block_2_7_8
+	attn_block_2_7_8 -> hier_reduce_2_8
+	hier_reduce_2_8 -> l2_ffn_ln_0
+	l2_ffn_ln_0 -> l2_ffn_up_0
+	l2_ffn_up_0 -> l2_ffn_down_0
+	l2_ffn_down_0 -> l2_ffn_res_0
+	l2_ffn_ln_0 -> l2_ffn_res_0
+	l2_ffn_res_0 -> l2_ffn_ln_0
+	hier_reduce_2_8 -> l2_ffn_ln_1
+	l2_ffn_ln_1 -> l2_ffn_up_1
+	l2_ffn_up_1 -> l2_ffn_down_1
+	l2_ffn_down_1 -> l2_ffn_res_1
+	l2_ffn_ln_1 -> l2_ffn_res_1
+	l2_ffn_res_1 -> l2_ffn_ln_1
+	hier_reduce_2_8 -> l2_ffn_ln_2
+	l2_ffn_ln_2 -> l2_ffn_up_2
+	l2_ffn_up_2 -> l2_ffn_down_2
+	l2_ffn_down_2 -> l2_ffn_res_2
+	l2_ffn_ln_2 -> l2_ffn_res_2
+	l2_ffn_res_2 -> l2_ffn_ln_2
+	hier_reduce_2_8 -> l2_ffn_ln_3
+	l2_ffn_ln_3 -> l2_ffn_up_3
+	l2_ffn_up_3 -> l2_ffn_down_3
+	l2_ffn_down_3 -> l2_ffn_res_3
+	l2_ffn_ln_3 -> l2_ffn_res_3
+	l2_ffn_res_3 -> l2_ffn_ln_3
+	hier_reduce_2_8 -> l2_ffn_ln_4
+	l2_ffn_ln_4 -> l2_ffn_up_4
+	l2_ffn_up_4 -> l2_ffn_down_4
+	l2_ffn_down_4 -> l2_ffn_res_4
+	l2_ffn_ln_4 -> l2_ffn_res_4
+	l2_ffn_res_4 -> l2_ffn_ln_4
+	hier_reduce_2_8 -> l2_ffn_ln_5
+	l2_ffn_ln_5 -> l2_ffn_up_5
+	l2_ffn_up_5 -> l2_ffn_down_5
+	l2_ffn_down_5 -> l2_ffn_res_5
+	l2_ffn_ln_5 -> l2_ffn_res_5
+	l2_ffn_res_5 -> l2_ffn_ln_5
+	hier_reduce_2_8 -> l2_ffn_ln_6
+	l2_ffn_ln_6 -> l2_ffn_up_6
+	l2_ffn_up_6 -> l2_ffn_down_6
+	l2_ffn_down_6 -> l2_ffn_res_6
+	l2_ffn_ln_6 -> l2_ffn_res_6
+	l2_ffn_res_6 -> l2_ffn_ln_6
+	hier_reduce_2_8 -> l2_ffn_ln_7
+	l2_ffn_ln_7 -> l2_ffn_up_7
+	l2_ffn_up_7 -> l2_ffn_down_7
+	l2_ffn_down_7 -> l2_ffn_res_7
+	l2_ffn_ln_7 -> l2_ffn_res_7
+	l2_ffn_res_7 -> l2_ffn_ln_7
+	kv_sync_2 -> kv_cache_2_0_16
+	kv_cache_2_0_16 -> attn_block_2_0_16
+	attn_block_2_0_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_1_16
+	kv_cache_2_1_16 -> attn_block_2_1_16
+	attn_block_2_1_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_2_16
+	kv_cache_2_2_16 -> attn_block_2_2_16
+	attn_block_2_2_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_3_16
+	kv_cache_2_3_16 -> attn_block_2_3_16
+	attn_block_2_3_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_4_16
+	kv_cache_2_4_16 -> attn_block_2_4_16
+	attn_block_2_4_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_5_16
+	kv_cache_2_5_16 -> attn_block_2_5_16
+	attn_block_2_5_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_6_16
+	kv_cache_2_6_16 -> attn_block_2_6_16
+	attn_block_2_6_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_7_16
+	kv_cache_2_7_16 -> attn_block_2_7_16
+	attn_block_2_7_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_8_16
+	kv_cache_2_8_16 -> attn_block_2_8_16
+	attn_block_2_8_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_9_16
+	kv_cache_2_9_16 -> attn_block_2_9_16
+	attn_block_2_9_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_10_16
+	kv_cache_2_10_16 -> attn_block_2_10_16
+	attn_block_2_10_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_11_16
+	kv_cache_2_11_16 -> attn_block_2_11_16
+	attn_block_2_11_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_12_16
+	kv_cache_2_12_16 -> attn_block_2_12_16
+	attn_block_2_12_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_13_16
+	kv_cache_2_13_16 -> attn_block_2_13_16
+	attn_block_2_13_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_14_16
+	kv_cache_2_14_16 -> attn_block_2_14_16
+	attn_block_2_14_16 -> hier_reduce_2_16
+	kv_sync_2 -> kv_cache_2_15_16
+	kv_cache_2_15_16 -> attn_block_2_15_16
+	attn_block_2_15_16 -> hier_reduce_2_16
+	hier_reduce_2_16 -> l2_ffn_ln_0
+	l2_ffn_ln_0 -> l2_ffn_up_0
+	l2_ffn_up_0 -> l2_ffn_down_0
+	l2_ffn_down_0 -> l2_ffn_res_0
+	l2_ffn_ln_0 -> l2_ffn_res_0
+	l2_ffn_res_0 -> l2_ffn_ln_0
+	hier_reduce_2_16 -> l2_ffn_ln_1
+	l2_ffn_ln_1 -> l2_ffn_up_1
+	l2_ffn_up_1 -> l2_ffn_down_1
+	l2_ffn_down_1 -> l2_ffn_res_1
+	l2_ffn_ln_1 -> l2_ffn_res_1
+	l2_ffn_res_1 -> l2_ffn_ln_1
+	hier_reduce_2_16 -> l2_ffn_ln_2
+	l2_ffn_ln_2 -> l2_ffn_up_2
+	l2_ffn_up_2 -> l2_ffn_down_2
+	l2_ffn_down_2 -> l2_ffn_res_2
+	l2_ffn_ln_2 -> l2_ffn_res_2
+	l2_ffn_res_2 -> l2_ffn_ln_2
+	hier_reduce_2_16 -> l2_ffn_ln_3
+	l2_ffn_ln_3 -> l2_ffn_up_3
+	l2_ffn_up_3 -> l2_ffn_down_3
+	l2_ffn_down_3 -> l2_ffn_res_3
+	l2_ffn_ln_3 -> l2_ffn_res_3
+	l2_ffn_res_3 -> l2_ffn_ln_3
+	hier_reduce_2_16 -> l2_ffn_ln_4
+	l2_ffn_ln_4 -> l2_ffn_up_4
+	l2_ffn_up_4 -> l2_ffn_down_4
+	l2_ffn_down_4 -> l2_ffn_res_4
+	l2_ffn_ln_4 -> l2_ffn_res_4
+	l2_ffn_res_4 -> l2_ffn_ln_4
+	hier_reduce_2_16 -> l2_ffn_ln_5
+	l2_ffn_ln_5 -> l2_ffn_up_5
+	l2_ffn_up_5 -> l2_ffn_down_5
+	l2_ffn_down_5 -> l2_ffn_res_5
+	l2_ffn_ln_5 -> l2_ffn_res_5
+	l2_ffn_res_5 -> l2_ffn_ln_5
+	hier_reduce_2_16 -> l2_ffn_ln_6
+	l2_ffn_ln_6 -> l2_ffn_up_6
+	l2_ffn_up_6 -> l2_ffn_down_6
+	l2_ffn_down_6 -> l2_ffn_res_6
+	l2_ffn_ln_6 -> l2_ffn_res_6
+	l2_ffn_res_6 -> l2_ffn_ln_6
+	hier_reduce_2_16 -> l2_ffn_ln_7
+	l2_ffn_ln_7 -> l2_ffn_up_7
+	l2_ffn_up_7 -> l2_ffn_down_7
+	l2_ffn_down_7 -> l2_ffn_res_7
+	l2_ffn_ln_7 -> l2_ffn_res_7
+	l2_ffn_res_7 -> l2_ffn_ln_7
+	kv_sync_2 -> kv_cache_2_0_24
+	kv_cache_2_0_24 -> attn_block_2_0_24
+	attn_block_2_0_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_1_24
+	kv_cache_2_1_24 -> attn_block_2_1_24
+	attn_block_2_1_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_2_24
+	kv_cache_2_2_24 -> attn_block_2_2_24
+	attn_block_2_2_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_3_24
+	kv_cache_2_3_24 -> attn_block_2_3_24
+	attn_block_2_3_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_4_24
+	kv_cache_2_4_24 -> attn_block_2_4_24
+	attn_block_2_4_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_5_24
+	kv_cache_2_5_24 -> attn_block_2_5_24
+	attn_block_2_5_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_6_24
+	kv_cache_2_6_24 -> attn_block_2_6_24
+	attn_block_2_6_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_7_24
+	kv_cache_2_7_24 -> attn_block_2_7_24
+	attn_block_2_7_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_8_24
+	kv_cache_2_8_24 -> attn_block_2_8_24
+	attn_block_2_8_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_9_24
+	kv_cache_2_9_24 -> attn_block_2_9_24
+	attn_block_2_9_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_10_24
+	kv_cache_2_10_24 -> attn_block_2_10_24
+	attn_block_2_10_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_11_24
+	kv_cache_2_11_24 -> attn_block_2_11_24
+	attn_block_2_11_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_12_24
+	kv_cache_2_12_24 -> attn_block_2_12_24
+	attn_block_2_12_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_13_24
+	kv_cache_2_13_24 -> attn_block_2_13_24
+	attn_block_2_13_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_14_24
+	kv_cache_2_14_24 -> attn_block_2_14_24
+	attn_block_2_14_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_15_24
+	kv_cache_2_15_24 -> attn_block_2_15_24
+	attn_block_2_15_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_16_24
+	kv_cache_2_16_24 -> attn_block_2_16_24
+	attn_block_2_16_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_17_24
+	kv_cache_2_17_24 -> attn_block_2_17_24
+	attn_block_2_17_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_18_24
+	kv_cache_2_18_24 -> attn_block_2_18_24
+	attn_block_2_18_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_19_24
+	kv_cache_2_19_24 -> attn_block_2_19_24
+	attn_block_2_19_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_20_24
+	kv_cache_2_20_24 -> attn_block_2_20_24
+	attn_block_2_20_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_21_24
+	kv_cache_2_21_24 -> attn_block_2_21_24
+	attn_block_2_21_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_22_24
+	kv_cache_2_22_24 -> attn_block_2_22_24
+	attn_block_2_22_24 -> hier_reduce_2_24
+	kv_sync_2 -> kv_cache_2_23_24
+	kv_cache_2_23_24 -> attn_block_2_23_24
+	attn_block_2_23_24 -> hier_reduce_2_24
+	hier_reduce_2_24 -> l2_ffn_ln_0
+	l2_ffn_ln_0 -> l2_ffn_up_0
+	l2_ffn_up_0 -> l2_ffn_down_0
+	l2_ffn_down_0 -> l2_ffn_res_0
+	l2_ffn_ln_0 -> l2_ffn_res_0
+	l2_ffn_res_0 -> l2_ffn_ln_0
+	hier_reduce_2_24 -> l2_ffn_ln_1
+	l2_ffn_ln_1 -> l2_ffn_up_1
+	l2_ffn_up_1 -> l2_ffn_down_1
+	l2_ffn_down_1 -> l2_ffn_res_1
+	l2_ffn_ln_1 -> l2_ffn_res_1
+	l2_ffn_res_1 -> l2_ffn_ln_1
+	hier_reduce_2_24 -> l2_ffn_ln_2
+	l2_ffn_ln_2 -> l2_ffn_up_2
+	l2_ffn_up_2 -> l2_ffn_down_2
+	l2_ffn_down_2 -> l2_ffn_res_2
+	l2_ffn_ln_2 -> l2_ffn_res_2
+	l2_ffn_res_2 -> l2_ffn_ln_2
+	hier_reduce_2_24 -> l2_ffn_ln_3
+	l2_ffn_ln_3 -> l2_ffn_up_3
+	l2_ffn_up_3 -> l2_ffn_down_3
+	l2_ffn_down_3 -> l2_ffn_res_3
+	l2_ffn_ln_3 -> l2_ffn_res_3
+	l2_ffn_res_3 -> l2_ffn_ln_3
+	hier_reduce_2_24 -> l2_ffn_ln_4
+	l2_ffn_ln_4 -> l2_ffn_up_4
+	l2_ffn_up_4 -> l2_ffn_down_4
+	l2_ffn_down_4 -> l2_ffn_res_4
+	l2_ffn_ln_4 -> l2_ffn_res_4
+	l2_ffn_res_4 -> l2_ffn_ln_4
+	hier_reduce_2_24 -> l2_ffn_ln_5
+	l2_ffn_ln_5 -> l2_ffn_up_5
+	l2_ffn_up_5 -> l2_ffn_down_5
+	l2_ffn_down_5 -> l2_ffn_res_5
+	l2_ffn_ln_5 -> l2_ffn_res_5
+	l2_ffn_res_5 -> l2_ffn_ln_5
+	hier_reduce_2_24 -> l2_ffn_ln_6
+	l2_ffn_ln_6 -> l2_ffn_up_6
+	l2_ffn_up_6 -> l2_ffn_down_6
+	l2_ffn_down_6 -> l2_ffn_res_6
+	l2_ffn_ln_6 -> l2_ffn_res_6
+	l2_ffn_res_6 -> l2_ffn_ln_6
+	hier_reduce_2_24 -> l2_ffn_ln_7
+	l2_ffn_ln_7 -> l2_ffn_up_7
+	l2_ffn_up_7 -> l2_ffn_down_7
+	l2_ffn_down_7 -> l2_ffn_res_7
+	l2_ffn_ln_7 -> l2_ffn_res_7
+	l2_ffn_res_7 -> l2_ffn_ln_7
+	seq_router -> kv_sync_3
+	base_pos_0 -> l3_ffn_ln_0
+	l3_ffn_ln_0 -> l3_ffn_up_0
+	l3_ffn_up_0 -> l3_ffn_down_0
+	l3_ffn_down_0 -> l3_ffn_res_0
+	l3_ffn_ln_0 -> l3_ffn_res_0
+	l3_ffn_res_0 -> l3_ffn_ln_0
+	base_pos_1 -> l3_ffn_ln_1
+	l3_ffn_ln_1 -> l3_ffn_up_1
+	l3_ffn_up_1 -> l3_ffn_down_1
+	l3_ffn_down_1 -> l3_ffn_res_1
+	l3_ffn_ln_1 -> l3_ffn_res_1
+	l3_ffn_res_1 -> l3_ffn_ln_1
+	base_pos_2 -> l3_ffn_ln_2
+	l3_ffn_ln_2 -> l3_ffn_up_2
+	l3_ffn_up_2 -> l3_ffn_down_2
+	l3_ffn_down_2 -> l3_ffn_res_2
+	l3_ffn_ln_2 -> l3_ffn_res_2
+	l3_ffn_res_2 -> l3_ffn_ln_2
+	base_pos_3 -> l3_ffn_ln_3
+	l3_ffn_ln_3 -> l3_ffn_up_3
+	l3_ffn_up_3 -> l3_ffn_down_3
+	l3_ffn_down_3 -> l3_ffn_res_3
+	l3_ffn_ln_3 -> l3_ffn_res_3
+	l3_ffn_res_3 -> l3_ffn_ln_3
+	base_pos_4 -> l3_ffn_ln_4
+	l3_ffn_ln_4 -> l3_ffn_up_4
+	l3_ffn_up_4 -> l3_ffn_down_4
+	l3_ffn_down_4 -> l3_ffn_res_4
+	l3_ffn_ln_4 -> l3_ffn_res_4
+	l3_ffn_res_4 -> l3_ffn_ln_4
+	base_pos_5 -> l3_ffn_ln_5
+	l3_ffn_ln_5 -> l3_ffn_up_5
+	l3_ffn_up_5 -> l3_ffn_down_5
+	l3_ffn_down_5 -> l3_ffn_res_5
+	l3_ffn_ln_5 -> l3_ffn_res_5
+	l3_ffn_res_5 -> l3_ffn_ln_5
+	base_pos_6 -> l3_ffn_ln_6
+	l3_ffn_ln_6 -> l3_ffn_up_6
+	l3_ffn_up_6 -> l3_ffn_down_6
+	l3_ffn_down_6 -> l3_ffn_res_6
+	l3_ffn_ln_6 -> l3_ffn_res_6
+	l3_ffn_res_6 -> l3_ffn_ln_6
+	base_pos_7 -> l3_ffn_ln_7
+	l3_ffn_ln_7 -> l3_ffn_up_7
+	l3_ffn_up_7 -> l3_ffn_down_7
+	l3_ffn_down_7 -> l3_ffn_res_7
+	l3_ffn_ln_7 -> l3_ffn_res_7
+	l3_ffn_res_7 -> l3_ffn_ln_7
+	kv_sync_3 -> kv_cache_3_0_8
+	kv_cache_3_0_8 -> attn_block_3_0_8
+	attn_block_3_0_8 -> hier_reduce_3_8
+	kv_sync_3 -> kv_cache_3_1_8
+	kv_cache_3_1_8 -> attn_block_3_1_8
+	attn_block_3_1_8 -> hier_reduce_3_8
+	kv_sync_3 -> kv_cache_3_2_8
+	kv_cache_3_2_8 -> attn_block_3_2_8
+	attn_block_3_2_8 -> hier_reduce_3_8
+	kv_sync_3 -> kv_cache_3_3_8
+	kv_cache_3_3_8 -> attn_block_3_3_8
+	attn_block_3_3_8 -> hier_reduce_3_8
+	kv_sync_3 -> kv_cache_3_4_8
+	kv_cache_3_4_8 -> attn_block_3_4_8
+	attn_block_3_4_8 -> hier_reduce_3_8
+	kv_sync_3 -> kv_cache_3_5_8
+	kv_cache_3_5_8 -> attn_block_3_5_8
+	attn_block_3_5_8 -> hier_reduce_3_8
+	kv_sync_3 -> kv_cache_3_6_8
+	kv_cache_3_6_8 -> attn_block_3_6_8
+	attn_block_3_6_8 -> hier_reduce_3_8
+	kv_sync_3 -> kv_cache_3_7_8
+	kv_cache_3_7_8 -> attn_block_3_7_8
+	attn_block_3_7_8 -> hier_reduce_3_8
+	hier_reduce_3_8 -> l3_ffn_ln_0
+	l3_ffn_ln_0 -> l3_ffn_up_0
+	l3_ffn_up_0 -> l3_ffn_down_0
+	l3_ffn_down_0 -> l3_ffn_res_0
+	l3_ffn_ln_0 -> l3_ffn_res_0
+	l3_ffn_res_0 -> l3_ffn_ln_0
+	hier_reduce_3_8 -> l3_ffn_ln_1
+	l3_ffn_ln_1 -> l3_ffn_up_1
+	l3_ffn_up_1 -> l3_ffn_down_1
+	l3_ffn_down_1 -> l3_ffn_res_1
+	l3_ffn_ln_1 -> l3_ffn_res_1
+	l3_ffn_res_1 -> l3_ffn_ln_1
+	hier_reduce_3_8 -> l3_ffn_ln_2
+	l3_ffn_ln_2 -> l3_ffn_up_2
+	l3_ffn_up_2 -> l3_ffn_down_2
+	l3_ffn_down_2 -> l3_ffn_res_2
+	l3_ffn_ln_2 -> l3_ffn_res_2
+	l3_ffn_res_2 -> l3_ffn_ln_2
+	hier_reduce_3_8 -> l3_ffn_ln_3
+	l3_ffn_ln_3 -> l3_ffn_up_3
+	l3_ffn_up_3 -> l3_ffn_down_3
+	l3_ffn_down_3 -> l3_ffn_res_3
+	l3_ffn_ln_3 -> l3_ffn_res_3
+	l3_ffn_res_3 -> l3_ffn_ln_3
+	hier_reduce_3_8 -> l3_ffn_ln_4
+	l3_ffn_ln_4 -> l3_ffn_up_4
+	l3_ffn_up_4 -> l3_ffn_down_4
+	l3_ffn_down_4 -> l3_ffn_res_4
+	l3_ffn_ln_4 -> l3_ffn_res_4
+	l3_ffn_res_4 -> l3_ffn_ln_4
+	hier_reduce_3_8 -> l3_ffn_ln_5
+	l3_ffn_ln_5 -> l3_ffn_up_5
+	l3_ffn_up_5 -> l3_ffn_down_5
+	l3_ffn_down_5 -> l3_ffn_res_5
+	l3_ffn_ln_5 -> l3_ffn_res_5
+	l3_ffn_res_5 -> l3_ffn_ln_5
+	hier_reduce_3_8 -> l3_ffn_ln_6
+	l3_ffn_ln_6 -> l3_ffn_up_6
+	l3_ffn_up_6 -> l3_ffn_down_6
+	l3_ffn_down_6 -> l3_ffn_res_6
+	l3_ffn_ln_6 -> l3_ffn_res_6
+	l3_ffn_res_6 -> l3_ffn_ln_6
+	hier_reduce_3_8 -> l3_ffn_ln_7
+	l3_ffn_ln_7 -> l3_ffn_up_7
+	l3_ffn_up_7 -> l3_ffn_down_7
+	l3_ffn_down_7 -> l3_ffn_res_7
+	l3_ffn_ln_7 -> l3_ffn_res_7
+	l3_ffn_res_7 -> l3_ffn_ln_7
+	kv_sync_3 -> kv_cache_3_0_16
+	kv_cache_3_0_16 -> attn_block_3_0_16
+	attn_block_3_0_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_1_16
+	kv_cache_3_1_16 -> attn_block_3_1_16
+	attn_block_3_1_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_2_16
+	kv_cache_3_2_16 -> attn_block_3_2_16
+	attn_block_3_2_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_3_16
+	kv_cache_3_3_16 -> attn_block_3_3_16
+	attn_block_3_3_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_4_16
+	kv_cache_3_4_16 -> attn_block_3_4_16
+	attn_block_3_4_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_5_16
+	kv_cache_3_5_16 -> attn_block_3_5_16
+	attn_block_3_5_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_6_16
+	kv_cache_3_6_16 -> attn_block_3_6_16
+	attn_block_3_6_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_7_16
+	kv_cache_3_7_16 -> attn_block_3_7_16
+	attn_block_3_7_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_8_16
+	kv_cache_3_8_16 -> attn_block_3_8_16
+	attn_block_3_8_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_9_16
+	kv_cache_3_9_16 -> attn_block_3_9_16
+	attn_block_3_9_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_10_16
+	kv_cache_3_10_16 -> attn_block_3_10_16
+	attn_block_3_10_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_11_16
+	kv_cache_3_11_16 -> attn_block_3_11_16
+	attn_block_3_11_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_12_16
+	kv_cache_3_12_16 -> attn_block_3_12_16
+	attn_block_3_12_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_13_16
+	kv_cache_3_13_16 -> attn_block_3_13_16
+	attn_block_3_13_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_14_16
+	kv_cache_3_14_16 -> attn_block_3_14_16
+	attn_block_3_14_16 -> hier_reduce_3_16
+	kv_sync_3 -> kv_cache_3_15_16
+	kv_cache_3_15_16 -> attn_block_3_15_16
+	attn_block_3_15_16 -> hier_reduce_3_16
+	hier_reduce_3_16 -> l3_ffn_ln_0
+	l3_ffn_ln_0 -> l3_ffn_up_0
+	l3_ffn_up_0 -> l3_ffn_down_0
+	l3_ffn_down_0 -> l3_ffn_res_0
+	l3_ffn_ln_0 -> l3_ffn_res_0
+	l3_ffn_res_0 -> l3_ffn_ln_0
+	hier_reduce_3_16 -> l3_ffn_ln_1
+	l3_ffn_ln_1 -> l3_ffn_up_1
+	l3_ffn_up_1 -> l3_ffn_down_1
+	l3_ffn_down_1 -> l3_ffn_res_1
+	l3_ffn_ln_1 -> l3_ffn_res_1
+	l3_ffn_res_1 -> l3_ffn_ln_1
+	hier_reduce_3_16 -> l3_ffn_ln_2
+	l3_ffn_ln_2 -> l3_ffn_up_2
+	l3_ffn_up_2 -> l3_ffn_down_2
+	l3_ffn_down_2 -> l3_ffn_res_2
+	l3_ffn_ln_2 -> l3_ffn_res_2
+	l3_ffn_res_2 -> l3_ffn_ln_2
+	hier_reduce_3_16 -> l3_ffn_ln_3
+	l3_ffn_ln_3 -> l3_ffn_up_3
+	l3_ffn_up_3 -> l3_ffn_down_3
+	l3_ffn_down_3 -> l3_ffn_res_3
+	l3_ffn_ln_3 -> l3_ffn_res_3
+	l3_ffn_res_3 -> l3_ffn_ln_3
+	hier_reduce_3_16 -> l3_ffn_ln_4
+	l3_ffn_ln_4 -> l3_ffn_up_4
+	l3_ffn_up_4 -> l3_ffn_down_4
+	l3_ffn_down_4 -> l3_ffn_res_4
+	l3_ffn_ln_4 -> l3_ffn_res_4
+	l3_ffn_res_4 -> l3_ffn_ln_4
+	hier_reduce_3_16 -> l3_ffn_ln_5
+	l3_ffn_ln_5 -> l3_ffn_up_5
+	l3_ffn_up_5 -> l3_ffn_down_5
+	l3_ffn_down_5 -> l3_ffn_res_5
+	l3_ffn_ln_5 -> l3_ffn_res_5
+	l3_ffn_res_5 -> l3_ffn_ln_5
+	hier_reduce_3_16 -> l3_ffn_ln_6
+	l3_ffn_ln_6 -> l3_ffn_up_6
+	l3_ffn_up_6 -> l3_ffn_down_6
+	l3_ffn_down_6 -> l3_ffn_res_6
+	l3_ffn_ln_6 -> l3_ffn_res_6
+	l3_ffn_res_6 -> l3_ffn_ln_6
+	hier_reduce_3_16 -> l3_ffn_ln_7
+	l3_ffn_ln_7 -> l3_ffn_up_7
+	l3_ffn_up_7 -> l3_ffn_down_7
+	l3_ffn_down_7 -> l3_ffn_res_7
+	l3_ffn_ln_7 -> l3_ffn_res_7
+	l3_ffn_res_7 -> l3_ffn_ln_7
+	kv_sync_3 -> kv_cache_3_0_24
+	kv_cache_3_0_24 -> attn_block_3_0_24
+	attn_block_3_0_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_1_24
+	kv_cache_3_1_24 -> attn_block_3_1_24
+	attn_block_3_1_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_2_24
+	kv_cache_3_2_24 -> attn_block_3_2_24
+	attn_block_3_2_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_3_24
+	kv_cache_3_3_24 -> attn_block_3_3_24
+	attn_block_3_3_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_4_24
+	kv_cache_3_4_24 -> attn_block_3_4_24
+	attn_block_3_4_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_5_24
+	kv_cache_3_5_24 -> attn_block_3_5_24
+	attn_block_3_5_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_6_24
+	kv_cache_3_6_24 -> attn_block_3_6_24
+	attn_block_3_6_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_7_24
+	kv_cache_3_7_24 -> attn_block_3_7_24
+	attn_block_3_7_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_8_24
+	kv_cache_3_8_24 -> attn_block_3_8_24
+	attn_block_3_8_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_9_24
+	kv_cache_3_9_24 -> attn_block_3_9_24
+	attn_block_3_9_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_10_24
+	kv_cache_3_10_24 -> attn_block_3_10_24
+	attn_block_3_10_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_11_24
+	kv_cache_3_11_24 -> attn_block_3_11_24
+	attn_block_3_11_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_12_24
+	kv_cache_3_12_24 -> attn_block_3_12_24
+	attn_block_3_12_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_13_24
+	kv_cache_3_13_24 -> attn_block_3_13_24
+	attn_block_3_13_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_14_24
+	kv_cache_3_14_24 -> attn_block_3_14_24
+	attn_block_3_14_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_15_24
+	kv_cache_3_15_24 -> attn_block_3_15_24
+	attn_block_3_15_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_16_24
+	kv_cache_3_16_24 -> attn_block_3_16_24
+	attn_block_3_16_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_17_24
+	kv_cache_3_17_24 -> attn_block_3_17_24
+	attn_block_3_17_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_18_24
+	kv_cache_3_18_24 -> attn_block_3_18_24
+	attn_block_3_18_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_19_24
+	kv_cache_3_19_24 -> attn_block_3_19_24
+	attn_block_3_19_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_20_24
+	kv_cache_3_20_24 -> attn_block_3_20_24
+	attn_block_3_20_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_21_24
+	kv_cache_3_21_24 -> attn_block_3_21_24
+	attn_block_3_21_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_22_24
+	kv_cache_3_22_24 -> attn_block_3_22_24
+	attn_block_3_22_24 -> hier_reduce_3_24
+	kv_sync_3 -> kv_cache_3_23_24
+	kv_cache_3_23_24 -> attn_block_3_23_24
+	attn_block_3_23_24 -> hier_reduce_3_24
+	hier_reduce_3_24 -> l3_ffn_ln_0
+	l3_ffn_ln_0 -> l3_ffn_up_0
+	l3_ffn_up_0 -> l3_ffn_down_0
+	l3_ffn_down_0 -> l3_ffn_res_0
+	l3_ffn_ln_0 -> l3_ffn_res_0
+	l3_ffn_res_0 -> l3_ffn_ln_0
+	hier_reduce_3_24 -> l3_ffn_ln_1
+	l3_ffn_ln_1 -> l3_ffn_up_1
+	l3_ffn_up_1 -> l3_ffn_down_1
+	l3_ffn_down_1 -> l3_ffn_res_1
+	l3_ffn_ln_1 -> l3_ffn_res_1
+	l3_ffn_res_1 -> l3_ffn_ln_1
+	hier_reduce_3_24 -> l3_ffn_ln_2
+	l3_ffn_ln_2 -> l3_ffn_up_2
+	l3_ffn_up_2 -> l3_ffn_down_2
+	l3_ffn_down_2 -> l3_ffn_res_2
+	l3_ffn_ln_2 -> l3_ffn_res_2
+	l3_ffn_res_2 -> l3_ffn_ln_2
+	hier_reduce_3_24 -> l3_ffn_ln_3
+	l3_ffn_ln_3 -> l3_ffn_up_3
+	l3_ffn_up_3 -> l3_ffn_down_3
+	l3_ffn_down_3 -> l3_ffn_res_3
+	l3_ffn_ln_3 -> l3_ffn_res_3
+	l3_ffn_res_3 -> l3_ffn_ln_3
+	hier_reduce_3_24 -> l3_ffn_ln_4
+	l3_ffn_ln_4 -> l3_ffn_up_4
+	l3_ffn_up_4 -> l3_ffn_down_4
+	l3_ffn_down_4 -> l3_ffn_res_4
+	l3_ffn_ln_4 -> l3_ffn_res_4
+	l3_ffn_res_4 -> l3_ffn_ln_4
+	hier_reduce_3_24 -> l3_ffn_ln_5
+	l3_ffn_ln_5 -> l3_ffn_up_5
+	l3_ffn_up_5 -> l3_ffn_down_5
+	l3_ffn_down_5 -> l3_ffn_res_5
+	l3_ffn_ln_5 -> l3_ffn_res_5
+	l3_ffn_res_5 -> l3_ffn_ln_5
+	hier_reduce_3_24 -> l3_ffn_ln_6
+	l3_ffn_ln_6 -> l3_ffn_up_6
+	l3_ffn_up_6 -> l3_ffn_down_6
+	l3_ffn_down_6 -> l3_ffn_res_6
+	l3_ffn_ln_6 -> l3_ffn_res_6
+	l3_ffn_res_6 -> l3_ffn_ln_6
+	hier_reduce_3_24 -> l3_ffn_ln_7
+	l3_ffn_ln_7 -> l3_ffn_up_7
+	l3_ffn_up_7 -> l3_ffn_down_7
+	l3_ffn_down_7 -> l3_ffn_res_7
+	l3_ffn_ln_7 -> l3_ffn_res_7
+	l3_ffn_res_7 -> l3_ffn_ln_7
+	async_comm -> hier_reduce_0_24
+	async_comm -> hier_reduce_1_24
+	async_comm -> hier_reduce_2_24
+	async_comm -> hier_reduce_3_24
+	l3_ffn_ln_0 -> final_output_0
+	final_output_0 -> allreduce_final_output
+	allreduce_final_output -> final_output
+	l3_ffn_ln_1 -> final_output_1
+	final_output_1 -> allreduce_final_output
+	allreduce_final_output -> final_output
+	l3_ffn_ln_2 -> final_output_2
+	final_output_2 -> allreduce_final_output
+	allreduce_final_output -> final_output
+	l3_ffn_ln_3 -> final_output_3
+	final_output_3 -> allreduce_final_output
+	allreduce_final_output -> final_output
+	l3_ffn_ln_4 -> final_output_4
+	final_output_4 -> allreduce_final_output
+	allreduce_final_output -> final_output
+	l3_ffn_ln_5 -> final_output_5
+	final_output_5 -> allreduce_final_output
+	allreduce_final_output -> final_output
+	l3_ffn_ln_6 -> final_output_6
+	final_output_6 -> allreduce_final_output
+	allreduce_final_output -> final_output
+	l3_ffn_ln_7 -> final_output_7
+	final_output_7 -> allreduce_final_output
+	allreduce_final_output -> final_output
+}

@@ -1,0 +1,32 @@
+// FA Pool Practical Implementation DAG
+digraph fa_pool_practical_dag {
+	rankdir=TB size="25,35" splines=ortho
+	node [fontname=Arial fontsize=10]
+	input [label="Input<br/>[batch=1024, seq_len=?, vocab=32000]" fillcolor=lightblue shape=ellipse]
+	decision [label="Sequence Length Decision<br/>
+             < 4096: Base only<br/>
+             ≥ 4096: Activate pool" fillcolor=lightcoral shape=diamond]
+	base_processing [label="Base Layer (8 GPUs)<br/>
+             Embedding + FFN<br/>
+             Always active" fillcolor=lightgreen shape=rectangle]
+	base_attention [label="Base Attention<br/>
+             8 GPUs<br/>
+             TP=8 across base" fillcolor=lightgreen shape=rectangle]
+	pool_attention [label="Attention Pool<br/>
+             8-32 GPUs<br/>
+             Block-wise parallel<br/>
+             Sequence length / GPUs blocks" fillcolor=lightyellow shape=rectangle]
+	communication [label="Communication<br/>
+             KV cache sharing<br/>
+             Hierarchical reduction<br/>
+             Async overlap" fillcolor=lightyellow shape=parallelogram]
+	output [label="Output<br/>[batch=1024, seq_len=?, vocab=32000]" fillcolor=lightblue shape=ellipse]
+	input -> decision
+	decision -> base_processing
+	decision -> base_attention [label="< 4096"]
+	decision -> pool_attention [label="≥ 4096"]
+	base_processing -> communication
+	base_attention -> communication
+	pool_attention -> communication
+	communication -> output
+}

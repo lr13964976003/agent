@@ -1,0 +1,968 @@
+// Baseline 4-layer Dense Model DAG (TP=8, PP=2)
+digraph baseline_model_dag {
+	rankdir=TB size="30,40" splines=ortho
+	node [fontname=Arial fontsize=10]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	node [fillcolor=lightgray shape=diamond style=filled]
+	input [label="<b>Input</b><br/>Input: [batch_size=1024, seq_len=?, vocab_size=32000]" fillcolor=lightblue shape=ellipse]
+	subgraph cluster_embedding {
+		fontsize=12 label="Embedding Layer (Pipeline Stage 0, TP=8)" style=rounded
+		embed_0 [label="<b>Token Embedding</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		embed_1 [label="<b>Token Embedding</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		embed_2 [label="<b>Token Embedding</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		embed_3 [label="<b>Token Embedding</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		embed_4 [label="<b>Token Embedding</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		embed_5 [label="<b>Token Embedding</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		embed_6 [label="<b>Token Embedding</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		embed_7 [label="<b>Token Embedding</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		pos_enc_0 [label="<b>Positional Encoding</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		pos_enc_1 [label="<b>Positional Encoding</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		pos_enc_2 [label="<b>Positional Encoding</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		pos_enc_3 [label="<b>Positional Encoding</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		pos_enc_4 [label="<b>Positional Encoding</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		pos_enc_5 [label="<b>Positional Encoding</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		pos_enc_6 [label="<b>Positional Encoding</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		pos_enc_7 [label="<b>Positional Encoding</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer0 {
+		fontsize=12 label="Layer 0 (Pipeline Stage 0, TP=8)" style=rounded
+		l0_q_proj_0 [label="<b>Q Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_k_proj_0 [label="<b>K Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_v_proj_0 [label="<b>V Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_attn_0 [label="<b>Flash Attention</b><br/>GPU: gpu_0<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_out_proj_0 [label="<b>Output Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res_0 [label="<b>Residual Add</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln1_0 [label="<b>Layer Norm 1</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_0 [label="<b>FFN Up Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_0 [label="<b>FFN Down Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res2_0 [label="<b>Residual Add 2</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln2_0 [label="<b>Layer Norm 2</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_q_proj_1 [label="<b>Q Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_k_proj_1 [label="<b>K Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_v_proj_1 [label="<b>V Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_attn_1 [label="<b>Flash Attention</b><br/>GPU: gpu_1<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_out_proj_1 [label="<b>Output Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res_1 [label="<b>Residual Add</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln1_1 [label="<b>Layer Norm 1</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_1 [label="<b>FFN Up Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_1 [label="<b>FFN Down Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res2_1 [label="<b>Residual Add 2</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln2_1 [label="<b>Layer Norm 2</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_q_proj_2 [label="<b>Q Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_k_proj_2 [label="<b>K Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_v_proj_2 [label="<b>V Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_attn_2 [label="<b>Flash Attention</b><br/>GPU: gpu_2<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_out_proj_2 [label="<b>Output Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res_2 [label="<b>Residual Add</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln1_2 [label="<b>Layer Norm 1</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_2 [label="<b>FFN Up Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_2 [label="<b>FFN Down Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res2_2 [label="<b>Residual Add 2</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln2_2 [label="<b>Layer Norm 2</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_q_proj_3 [label="<b>Q Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_k_proj_3 [label="<b>K Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_v_proj_3 [label="<b>V Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_attn_3 [label="<b>Flash Attention</b><br/>GPU: gpu_3<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_out_proj_3 [label="<b>Output Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res_3 [label="<b>Residual Add</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln1_3 [label="<b>Layer Norm 1</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_3 [label="<b>FFN Up Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_3 [label="<b>FFN Down Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res2_3 [label="<b>Residual Add 2</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln2_3 [label="<b>Layer Norm 2</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_q_proj_4 [label="<b>Q Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_k_proj_4 [label="<b>K Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_v_proj_4 [label="<b>V Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_attn_4 [label="<b>Flash Attention</b><br/>GPU: gpu_4<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_out_proj_4 [label="<b>Output Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res_4 [label="<b>Residual Add</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln1_4 [label="<b>Layer Norm 1</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_4 [label="<b>FFN Up Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_4 [label="<b>FFN Down Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res2_4 [label="<b>Residual Add 2</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln2_4 [label="<b>Layer Norm 2</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_q_proj_5 [label="<b>Q Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_k_proj_5 [label="<b>K Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_v_proj_5 [label="<b>V Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_attn_5 [label="<b>Flash Attention</b><br/>GPU: gpu_5<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_out_proj_5 [label="<b>Output Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res_5 [label="<b>Residual Add</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln1_5 [label="<b>Layer Norm 1</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_5 [label="<b>FFN Up Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_5 [label="<b>FFN Down Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res2_5 [label="<b>Residual Add 2</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln2_5 [label="<b>Layer Norm 2</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_q_proj_6 [label="<b>Q Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_k_proj_6 [label="<b>K Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_v_proj_6 [label="<b>V Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_attn_6 [label="<b>Flash Attention</b><br/>GPU: gpu_6<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_out_proj_6 [label="<b>Output Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res_6 [label="<b>Residual Add</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln1_6 [label="<b>Layer Norm 1</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_6 [label="<b>FFN Up Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_6 [label="<b>FFN Down Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res2_6 [label="<b>Residual Add 2</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln2_6 [label="<b>Layer Norm 2</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_q_proj_7 [label="<b>Q Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_k_proj_7 [label="<b>K Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l0_v_proj_7 [label="<b>V Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_attn_7 [label="<b>Flash Attention</b><br/>GPU: gpu_7<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l0_out_proj_7 [label="<b>Output Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res_7 [label="<b>Residual Add</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln1_7 [label="<b>Layer Norm 1</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_up_7 [label="<b>FFN Up Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l0_ffn_down_7 [label="<b>FFN Down Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l0_res2_7 [label="<b>Residual Add 2</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l0_ln2_7 [label="<b>Layer Norm 2</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	comm_stage0_to_stage1 [label="<b>Pipeline Communication</b><br/>All GPUs 0-7 to All GPUs 8-15<br/>[batch=1024, seq=?, hidden=512]" fillcolor=lightyellow shape=parallelogram]
+	subgraph cluster_layer1 {
+		fontsize=12 label="Layer 1 (Pipeline Stage 1, TP=8)" style=rounded
+		l1_q_proj_0 [label="<b>Q Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_k_proj_0 [label="<b>K Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_v_proj_0 [label="<b>V Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_attn_0 [label="<b>Flash Attention</b><br/>GPU: gpu_8<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_out_proj_0 [label="<b>Output Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res_0 [label="<b>Residual Add</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln1_0 [label="<b>Layer Norm 1</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_0 [label="<b>FFN Up Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_0 [label="<b>FFN Down Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res2_0 [label="<b>Residual Add 2</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln2_0 [label="<b>Layer Norm 2</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_q_proj_1 [label="<b>Q Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_k_proj_1 [label="<b>K Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_v_proj_1 [label="<b>V Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_attn_1 [label="<b>Flash Attention</b><br/>GPU: gpu_9<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_out_proj_1 [label="<b>Output Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res_1 [label="<b>Residual Add</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln1_1 [label="<b>Layer Norm 1</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_1 [label="<b>FFN Up Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_1 [label="<b>FFN Down Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res2_1 [label="<b>Residual Add 2</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln2_1 [label="<b>Layer Norm 2</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_q_proj_2 [label="<b>Q Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_k_proj_2 [label="<b>K Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_v_proj_2 [label="<b>V Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_attn_2 [label="<b>Flash Attention</b><br/>GPU: gpu_10<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_out_proj_2 [label="<b>Output Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res_2 [label="<b>Residual Add</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln1_2 [label="<b>Layer Norm 1</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_2 [label="<b>FFN Up Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_2 [label="<b>FFN Down Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res2_2 [label="<b>Residual Add 2</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln2_2 [label="<b>Layer Norm 2</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_q_proj_3 [label="<b>Q Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_k_proj_3 [label="<b>K Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_v_proj_3 [label="<b>V Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_attn_3 [label="<b>Flash Attention</b><br/>GPU: gpu_11<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_out_proj_3 [label="<b>Output Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res_3 [label="<b>Residual Add</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln1_3 [label="<b>Layer Norm 1</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_3 [label="<b>FFN Up Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_3 [label="<b>FFN Down Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res2_3 [label="<b>Residual Add 2</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln2_3 [label="<b>Layer Norm 2</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_q_proj_4 [label="<b>Q Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_k_proj_4 [label="<b>K Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_v_proj_4 [label="<b>V Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_attn_4 [label="<b>Flash Attention</b><br/>GPU: gpu_12<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_out_proj_4 [label="<b>Output Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res_4 [label="<b>Residual Add</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln1_4 [label="<b>Layer Norm 1</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_4 [label="<b>FFN Up Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_4 [label="<b>FFN Down Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res2_4 [label="<b>Residual Add 2</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln2_4 [label="<b>Layer Norm 2</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_q_proj_5 [label="<b>Q Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_k_proj_5 [label="<b>K Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_v_proj_5 [label="<b>V Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_attn_5 [label="<b>Flash Attention</b><br/>GPU: gpu_13<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_out_proj_5 [label="<b>Output Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res_5 [label="<b>Residual Add</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln1_5 [label="<b>Layer Norm 1</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_5 [label="<b>FFN Up Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_5 [label="<b>FFN Down Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res2_5 [label="<b>Residual Add 2</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln2_5 [label="<b>Layer Norm 2</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_q_proj_6 [label="<b>Q Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_k_proj_6 [label="<b>K Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_v_proj_6 [label="<b>V Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_attn_6 [label="<b>Flash Attention</b><br/>GPU: gpu_14<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_out_proj_6 [label="<b>Output Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res_6 [label="<b>Residual Add</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln1_6 [label="<b>Layer Norm 1</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_6 [label="<b>FFN Up Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_6 [label="<b>FFN Down Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res2_6 [label="<b>Residual Add 2</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln2_6 [label="<b>Layer Norm 2</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_q_proj_7 [label="<b>Q Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_k_proj_7 [label="<b>K Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l1_v_proj_7 [label="<b>V Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_attn_7 [label="<b>Flash Attention</b><br/>GPU: gpu_15<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l1_out_proj_7 [label="<b>Output Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res_7 [label="<b>Residual Add</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln1_7 [label="<b>Layer Norm 1</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_up_7 [label="<b>FFN Up Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l1_ffn_down_7 [label="<b>FFN Down Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l1_res2_7 [label="<b>Residual Add 2</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l1_ln2_7 [label="<b>Layer Norm 2</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	comm_stage1_to_stage0 [label="<b>Pipeline Communication</b><br/>All GPUs 8-15 to All GPUs 0-7<br/>[batch=1024, seq=?, hidden=512]" fillcolor=lightyellow shape=parallelogram]
+	subgraph cluster_layer2 {
+		fontsize=12 label="Layer 2 (Pipeline Stage 0, TP=8)" style=rounded
+		l2_q_proj_0 [label="<b>Q Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_k_proj_0 [label="<b>K Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_v_proj_0 [label="<b>V Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_attn_0 [label="<b>Flash Attention</b><br/>GPU: gpu_0<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_out_proj_0 [label="<b>Output Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res_0 [label="<b>Residual Add</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln1_0 [label="<b>Layer Norm 1</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_0 [label="<b>FFN Up Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_0 [label="<b>FFN Down Projection</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res2_0 [label="<b>Residual Add 2</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln2_0 [label="<b>Layer Norm 2</b><br/>GPU: gpu_0<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_q_proj_1 [label="<b>Q Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_k_proj_1 [label="<b>K Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_v_proj_1 [label="<b>V Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_attn_1 [label="<b>Flash Attention</b><br/>GPU: gpu_1<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_out_proj_1 [label="<b>Output Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res_1 [label="<b>Residual Add</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln1_1 [label="<b>Layer Norm 1</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_1 [label="<b>FFN Up Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_1 [label="<b>FFN Down Projection</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res2_1 [label="<b>Residual Add 2</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln2_1 [label="<b>Layer Norm 2</b><br/>GPU: gpu_1<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_q_proj_2 [label="<b>Q Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_k_proj_2 [label="<b>K Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_v_proj_2 [label="<b>V Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_attn_2 [label="<b>Flash Attention</b><br/>GPU: gpu_2<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_out_proj_2 [label="<b>Output Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res_2 [label="<b>Residual Add</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln1_2 [label="<b>Layer Norm 1</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_2 [label="<b>FFN Up Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_2 [label="<b>FFN Down Projection</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res2_2 [label="<b>Residual Add 2</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln2_2 [label="<b>Layer Norm 2</b><br/>GPU: gpu_2<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_q_proj_3 [label="<b>Q Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_k_proj_3 [label="<b>K Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_v_proj_3 [label="<b>V Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_attn_3 [label="<b>Flash Attention</b><br/>GPU: gpu_3<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_out_proj_3 [label="<b>Output Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res_3 [label="<b>Residual Add</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln1_3 [label="<b>Layer Norm 1</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_3 [label="<b>FFN Up Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_3 [label="<b>FFN Down Projection</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res2_3 [label="<b>Residual Add 2</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln2_3 [label="<b>Layer Norm 2</b><br/>GPU: gpu_3<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_q_proj_4 [label="<b>Q Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_k_proj_4 [label="<b>K Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_v_proj_4 [label="<b>V Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_attn_4 [label="<b>Flash Attention</b><br/>GPU: gpu_4<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_out_proj_4 [label="<b>Output Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res_4 [label="<b>Residual Add</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln1_4 [label="<b>Layer Norm 1</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_4 [label="<b>FFN Up Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_4 [label="<b>FFN Down Projection</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res2_4 [label="<b>Residual Add 2</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln2_4 [label="<b>Layer Norm 2</b><br/>GPU: gpu_4<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_q_proj_5 [label="<b>Q Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_k_proj_5 [label="<b>K Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_v_proj_5 [label="<b>V Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_attn_5 [label="<b>Flash Attention</b><br/>GPU: gpu_5<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_out_proj_5 [label="<b>Output Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res_5 [label="<b>Residual Add</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln1_5 [label="<b>Layer Norm 1</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_5 [label="<b>FFN Up Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_5 [label="<b>FFN Down Projection</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res2_5 [label="<b>Residual Add 2</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln2_5 [label="<b>Layer Norm 2</b><br/>GPU: gpu_5<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_q_proj_6 [label="<b>Q Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_k_proj_6 [label="<b>K Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_v_proj_6 [label="<b>V Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_attn_6 [label="<b>Flash Attention</b><br/>GPU: gpu_6<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_out_proj_6 [label="<b>Output Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res_6 [label="<b>Residual Add</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln1_6 [label="<b>Layer Norm 1</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_6 [label="<b>FFN Up Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_6 [label="<b>FFN Down Projection</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res2_6 [label="<b>Residual Add 2</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln2_6 [label="<b>Layer Norm 2</b><br/>GPU: gpu_6<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_q_proj_7 [label="<b>Q Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_k_proj_7 [label="<b>K Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l2_v_proj_7 [label="<b>V Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_attn_7 [label="<b>Flash Attention</b><br/>GPU: gpu_7<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l2_out_proj_7 [label="<b>Output Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res_7 [label="<b>Residual Add</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln1_7 [label="<b>Layer Norm 1</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_up_7 [label="<b>FFN Up Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l2_ffn_down_7 [label="<b>FFN Down Projection</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l2_res2_7 [label="<b>Residual Add 2</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l2_ln2_7 [label="<b>Layer Norm 2</b><br/>GPU: gpu_7<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	comm_stage0_to_stage1_2 [label="<b>Pipeline Communication</b><br/>All GPUs 0-7 to All GPUs 8-15<br/>[batch=1024, seq=?, hidden=512]" fillcolor=lightyellow shape=parallelogram]
+	subgraph cluster_layer3 {
+		fontsize=12 label="Layer 3 (Pipeline Stage 1, TP=8)" style=rounded
+		l3_q_proj_0 [label="<b>Q Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_k_proj_0 [label="<b>K Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_v_proj_0 [label="<b>V Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_attn_0 [label="<b>Flash Attention</b><br/>GPU: gpu_8<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_out_proj_0 [label="<b>Output Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res_0 [label="<b>Residual Add</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln1_0 [label="<b>Layer Norm 1</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_0 [label="<b>FFN Up Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_0 [label="<b>FFN Down Projection</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res2_0 [label="<b>Residual Add 2</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln2_0 [label="<b>Layer Norm 2</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_q_proj_1 [label="<b>Q Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_k_proj_1 [label="<b>K Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_v_proj_1 [label="<b>V Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_attn_1 [label="<b>Flash Attention</b><br/>GPU: gpu_9<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_out_proj_1 [label="<b>Output Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res_1 [label="<b>Residual Add</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln1_1 [label="<b>Layer Norm 1</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_1 [label="<b>FFN Up Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_1 [label="<b>FFN Down Projection</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res2_1 [label="<b>Residual Add 2</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln2_1 [label="<b>Layer Norm 2</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_q_proj_2 [label="<b>Q Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_k_proj_2 [label="<b>K Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_v_proj_2 [label="<b>V Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_attn_2 [label="<b>Flash Attention</b><br/>GPU: gpu_10<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_out_proj_2 [label="<b>Output Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res_2 [label="<b>Residual Add</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln1_2 [label="<b>Layer Norm 1</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_2 [label="<b>FFN Up Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_2 [label="<b>FFN Down Projection</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res2_2 [label="<b>Residual Add 2</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln2_2 [label="<b>Layer Norm 2</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_q_proj_3 [label="<b>Q Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_k_proj_3 [label="<b>K Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_v_proj_3 [label="<b>V Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_attn_3 [label="<b>Flash Attention</b><br/>GPU: gpu_11<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_out_proj_3 [label="<b>Output Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res_3 [label="<b>Residual Add</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln1_3 [label="<b>Layer Norm 1</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_3 [label="<b>FFN Up Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_3 [label="<b>FFN Down Projection</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res2_3 [label="<b>Residual Add 2</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln2_3 [label="<b>Layer Norm 2</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_q_proj_4 [label="<b>Q Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_k_proj_4 [label="<b>K Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_v_proj_4 [label="<b>V Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_attn_4 [label="<b>Flash Attention</b><br/>GPU: gpu_12<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_out_proj_4 [label="<b>Output Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res_4 [label="<b>Residual Add</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln1_4 [label="<b>Layer Norm 1</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_4 [label="<b>FFN Up Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_4 [label="<b>FFN Down Projection</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res2_4 [label="<b>Residual Add 2</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln2_4 [label="<b>Layer Norm 2</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_q_proj_5 [label="<b>Q Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_k_proj_5 [label="<b>K Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_v_proj_5 [label="<b>V Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_attn_5 [label="<b>Flash Attention</b><br/>GPU: gpu_13<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_out_proj_5 [label="<b>Output Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res_5 [label="<b>Residual Add</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln1_5 [label="<b>Layer Norm 1</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_5 [label="<b>FFN Up Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_5 [label="<b>FFN Down Projection</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res2_5 [label="<b>Residual Add 2</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln2_5 [label="<b>Layer Norm 2</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_q_proj_6 [label="<b>Q Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_k_proj_6 [label="<b>K Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_v_proj_6 [label="<b>V Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_attn_6 [label="<b>Flash Attention</b><br/>GPU: gpu_14<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_out_proj_6 [label="<b>Output Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res_6 [label="<b>Residual Add</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln1_6 [label="<b>Layer Norm 1</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_6 [label="<b>FFN Up Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_6 [label="<b>FFN Down Projection</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res2_6 [label="<b>Residual Add 2</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln2_6 [label="<b>Layer Norm 2</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_q_proj_7 [label="<b>Q Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_k_proj_7 [label="<b>K Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_k=16]" fillcolor=lightgreen shape=rectangle]
+		l3_v_proj_7 [label="<b>V Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_attn_7 [label="<b>Flash Attention</b><br/>GPU: gpu_15<br/>Input: Q,K,V [batch=1024, seq=?, heads=32, d_k=16]<br/>Output: [batch=1024, seq=?, heads=32, d_v=16]" fillcolor=lightgreen shape=rectangle]
+		l3_out_proj_7 [label="<b>Output Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, heads=32, d_v=16]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res_7 [label="<b>Residual Add</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln1_7 [label="<b>Layer Norm 1</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_up_7 [label="<b>FFN Up Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, ffn_dim=2048]" fillcolor=lightgreen shape=rectangle]
+		l3_ffn_down_7 [label="<b>FFN Down Projection</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, ffn_dim=2048]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		l3_res2_7 [label="<b>Residual Add 2</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512] × 2<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgray shape=diamond]
+		l3_ln2_7 [label="<b>Layer Norm 2</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_output {
+		fontsize=12 label="Output Layer (Pipeline Stage 1, TP=8)" style=rounded
+		output_0 [label="<b>Linear Output</b><br/>GPU: gpu_8<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		output_1 [label="<b>Linear Output</b><br/>GPU: gpu_9<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		output_2 [label="<b>Linear Output</b><br/>GPU: gpu_10<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		output_3 [label="<b>Linear Output</b><br/>GPU: gpu_11<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		output_4 [label="<b>Linear Output</b><br/>GPU: gpu_12<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		output_5 [label="<b>Linear Output</b><br/>GPU: gpu_13<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		output_6 [label="<b>Linear Output</b><br/>GPU: gpu_14<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+		output_7 [label="<b>Linear Output</b><br/>GPU: gpu_15<br/>Input: [batch=1024, seq=?, hidden=512]<br/>Output: [batch=1024, seq=?, vocab=4000]" fillcolor=lightgreen shape=rectangle]
+	}
+	output [label="<b>Final Output</b><br/>Input: [batch=1024, seq=?, vocab=32000]<br/>Output: [batch=1024, seq=?, vocab=32000]" fillcolor=lightblue shape=ellipse]
+	allreduce_0_q_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_0_k_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_0_v_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_0_out_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_0_ffn_up [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_0_ffn_down [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_1_q_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_1_k_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_1_v_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_1_out_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_1_ffn_up [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_1_ffn_down [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_2_q_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_2_k_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_2_v_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_2_out_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_2_ffn_up [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_2_ffn_down [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_3_q_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_3_k_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_3_v_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_3_out_proj [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_3_ffn_up [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	allreduce_3_ffn_down [label="<b>All-Reduce</b><br/>TP across 8 GPUs<br/>[batch=1024, seq=?, dim=4096]" fillcolor=lightyellow shape=parallelogram]
+	input -> embed_0
+	embed_0 -> pos_enc_0
+	input -> embed_1
+	embed_1 -> pos_enc_1
+	input -> embed_2
+	embed_2 -> pos_enc_2
+	input -> embed_3
+	embed_3 -> pos_enc_3
+	input -> embed_4
+	embed_4 -> pos_enc_4
+	input -> embed_5
+	embed_5 -> pos_enc_5
+	input -> embed_6
+	embed_6 -> pos_enc_6
+	input -> embed_7
+	embed_7 -> pos_enc_7
+	pos_enc_0 -> l0_q_proj_0
+	pos_enc_0 -> l0_k_proj_0
+	pos_enc_0 -> l0_v_proj_0
+	l0_q_proj_0 -> l0_attn_0
+	l0_k_proj_0 -> l0_attn_0
+	l0_v_proj_0 -> l0_attn_0
+	l0_attn_0 -> l0_out_proj_0
+	l0_out_proj_0 -> l0_res_0
+	pos_enc_0 -> l0_res_0
+	l0_res_0 -> l0_ln1_0
+	l0_ln1_0 -> l0_ffn_up_0
+	l0_ffn_up_0 -> l0_ffn_down_0
+	l0_ffn_down_0 -> l0_res2_0
+	l0_ln1_0 -> l0_res2_0
+	l0_res2_0 -> l0_ln2_0
+	pos_enc_1 -> l0_q_proj_1
+	pos_enc_1 -> l0_k_proj_1
+	pos_enc_1 -> l0_v_proj_1
+	l0_q_proj_1 -> l0_attn_1
+	l0_k_proj_1 -> l0_attn_1
+	l0_v_proj_1 -> l0_attn_1
+	l0_attn_1 -> l0_out_proj_1
+	l0_out_proj_1 -> l0_res_1
+	pos_enc_1 -> l0_res_1
+	l0_res_1 -> l0_ln1_1
+	l0_ln1_1 -> l0_ffn_up_1
+	l0_ffn_up_1 -> l0_ffn_down_1
+	l0_ffn_down_1 -> l0_res2_1
+	l0_ln1_1 -> l0_res2_1
+	l0_res2_1 -> l0_ln2_1
+	pos_enc_2 -> l0_q_proj_2
+	pos_enc_2 -> l0_k_proj_2
+	pos_enc_2 -> l0_v_proj_2
+	l0_q_proj_2 -> l0_attn_2
+	l0_k_proj_2 -> l0_attn_2
+	l0_v_proj_2 -> l0_attn_2
+	l0_attn_2 -> l0_out_proj_2
+	l0_out_proj_2 -> l0_res_2
+	pos_enc_2 -> l0_res_2
+	l0_res_2 -> l0_ln1_2
+	l0_ln1_2 -> l0_ffn_up_2
+	l0_ffn_up_2 -> l0_ffn_down_2
+	l0_ffn_down_2 -> l0_res2_2
+	l0_ln1_2 -> l0_res2_2
+	l0_res2_2 -> l0_ln2_2
+	pos_enc_3 -> l0_q_proj_3
+	pos_enc_3 -> l0_k_proj_3
+	pos_enc_3 -> l0_v_proj_3
+	l0_q_proj_3 -> l0_attn_3
+	l0_k_proj_3 -> l0_attn_3
+	l0_v_proj_3 -> l0_attn_3
+	l0_attn_3 -> l0_out_proj_3
+	l0_out_proj_3 -> l0_res_3
+	pos_enc_3 -> l0_res_3
+	l0_res_3 -> l0_ln1_3
+	l0_ln1_3 -> l0_ffn_up_3
+	l0_ffn_up_3 -> l0_ffn_down_3
+	l0_ffn_down_3 -> l0_res2_3
+	l0_ln1_3 -> l0_res2_3
+	l0_res2_3 -> l0_ln2_3
+	pos_enc_4 -> l0_q_proj_4
+	pos_enc_4 -> l0_k_proj_4
+	pos_enc_4 -> l0_v_proj_4
+	l0_q_proj_4 -> l0_attn_4
+	l0_k_proj_4 -> l0_attn_4
+	l0_v_proj_4 -> l0_attn_4
+	l0_attn_4 -> l0_out_proj_4
+	l0_out_proj_4 -> l0_res_4
+	pos_enc_4 -> l0_res_4
+	l0_res_4 -> l0_ln1_4
+	l0_ln1_4 -> l0_ffn_up_4
+	l0_ffn_up_4 -> l0_ffn_down_4
+	l0_ffn_down_4 -> l0_res2_4
+	l0_ln1_4 -> l0_res2_4
+	l0_res2_4 -> l0_ln2_4
+	pos_enc_5 -> l0_q_proj_5
+	pos_enc_5 -> l0_k_proj_5
+	pos_enc_5 -> l0_v_proj_5
+	l0_q_proj_5 -> l0_attn_5
+	l0_k_proj_5 -> l0_attn_5
+	l0_v_proj_5 -> l0_attn_5
+	l0_attn_5 -> l0_out_proj_5
+	l0_out_proj_5 -> l0_res_5
+	pos_enc_5 -> l0_res_5
+	l0_res_5 -> l0_ln1_5
+	l0_ln1_5 -> l0_ffn_up_5
+	l0_ffn_up_5 -> l0_ffn_down_5
+	l0_ffn_down_5 -> l0_res2_5
+	l0_ln1_5 -> l0_res2_5
+	l0_res2_5 -> l0_ln2_5
+	pos_enc_6 -> l0_q_proj_6
+	pos_enc_6 -> l0_k_proj_6
+	pos_enc_6 -> l0_v_proj_6
+	l0_q_proj_6 -> l0_attn_6
+	l0_k_proj_6 -> l0_attn_6
+	l0_v_proj_6 -> l0_attn_6
+	l0_attn_6 -> l0_out_proj_6
+	l0_out_proj_6 -> l0_res_6
+	pos_enc_6 -> l0_res_6
+	l0_res_6 -> l0_ln1_6
+	l0_ln1_6 -> l0_ffn_up_6
+	l0_ffn_up_6 -> l0_ffn_down_6
+	l0_ffn_down_6 -> l0_res2_6
+	l0_ln1_6 -> l0_res2_6
+	l0_res2_6 -> l0_ln2_6
+	pos_enc_7 -> l0_q_proj_7
+	pos_enc_7 -> l0_k_proj_7
+	pos_enc_7 -> l0_v_proj_7
+	l0_q_proj_7 -> l0_attn_7
+	l0_k_proj_7 -> l0_attn_7
+	l0_v_proj_7 -> l0_attn_7
+	l0_attn_7 -> l0_out_proj_7
+	l0_out_proj_7 -> l0_res_7
+	pos_enc_7 -> l0_res_7
+	l0_res_7 -> l0_ln1_7
+	l0_ln1_7 -> l0_ffn_up_7
+	l0_ffn_up_7 -> l0_ffn_down_7
+	l0_ffn_down_7 -> l0_res2_7
+	l0_ln1_7 -> l0_res2_7
+	l0_res2_7 -> l0_ln2_7
+	l0_ln2_0 -> comm_stage0_to_stage1
+	l0_ln2_1 -> comm_stage0_to_stage1
+	l0_ln2_2 -> comm_stage0_to_stage1
+	l0_ln2_3 -> comm_stage0_to_stage1
+	l0_ln2_4 -> comm_stage0_to_stage1
+	l0_ln2_5 -> comm_stage0_to_stage1
+	l0_ln2_6 -> comm_stage0_to_stage1
+	l0_ln2_7 -> comm_stage0_to_stage1
+	comm_stage0_to_stage1 -> l1_q_proj_0
+	comm_stage0_to_stage1 -> l1_k_proj_0
+	comm_stage0_to_stage1 -> l1_v_proj_0
+	l1_q_proj_0 -> l1_attn_0
+	l1_k_proj_0 -> l1_attn_0
+	l1_v_proj_0 -> l1_attn_0
+	l1_attn_0 -> l1_out_proj_0
+	l1_out_proj_0 -> l1_res_0
+	comm_stage0_to_stage1 -> l1_res_0
+	l1_res_0 -> l1_ln1_0
+	l1_ln1_0 -> l1_ffn_up_0
+	l1_ffn_up_0 -> l1_ffn_down_0
+	l1_ffn_down_0 -> l1_res2_0
+	l1_ln1_0 -> l1_res2_0
+	l1_res2_0 -> l1_ln2_0
+	comm_stage0_to_stage1 -> l1_q_proj_1
+	comm_stage0_to_stage1 -> l1_k_proj_1
+	comm_stage0_to_stage1 -> l1_v_proj_1
+	l1_q_proj_1 -> l1_attn_1
+	l1_k_proj_1 -> l1_attn_1
+	l1_v_proj_1 -> l1_attn_1
+	l1_attn_1 -> l1_out_proj_1
+	l1_out_proj_1 -> l1_res_1
+	comm_stage0_to_stage1 -> l1_res_1
+	l1_res_1 -> l1_ln1_1
+	l1_ln1_1 -> l1_ffn_up_1
+	l1_ffn_up_1 -> l1_ffn_down_1
+	l1_ffn_down_1 -> l1_res2_1
+	l1_ln1_1 -> l1_res2_1
+	l1_res2_1 -> l1_ln2_1
+	comm_stage0_to_stage1 -> l1_q_proj_2
+	comm_stage0_to_stage1 -> l1_k_proj_2
+	comm_stage0_to_stage1 -> l1_v_proj_2
+	l1_q_proj_2 -> l1_attn_2
+	l1_k_proj_2 -> l1_attn_2
+	l1_v_proj_2 -> l1_attn_2
+	l1_attn_2 -> l1_out_proj_2
+	l1_out_proj_2 -> l1_res_2
+	comm_stage0_to_stage1 -> l1_res_2
+	l1_res_2 -> l1_ln1_2
+	l1_ln1_2 -> l1_ffn_up_2
+	l1_ffn_up_2 -> l1_ffn_down_2
+	l1_ffn_down_2 -> l1_res2_2
+	l1_ln1_2 -> l1_res2_2
+	l1_res2_2 -> l1_ln2_2
+	comm_stage0_to_stage1 -> l1_q_proj_3
+	comm_stage0_to_stage1 -> l1_k_proj_3
+	comm_stage0_to_stage1 -> l1_v_proj_3
+	l1_q_proj_3 -> l1_attn_3
+	l1_k_proj_3 -> l1_attn_3
+	l1_v_proj_3 -> l1_attn_3
+	l1_attn_3 -> l1_out_proj_3
+	l1_out_proj_3 -> l1_res_3
+	comm_stage0_to_stage1 -> l1_res_3
+	l1_res_3 -> l1_ln1_3
+	l1_ln1_3 -> l1_ffn_up_3
+	l1_ffn_up_3 -> l1_ffn_down_3
+	l1_ffn_down_3 -> l1_res2_3
+	l1_ln1_3 -> l1_res2_3
+	l1_res2_3 -> l1_ln2_3
+	comm_stage0_to_stage1 -> l1_q_proj_4
+	comm_stage0_to_stage1 -> l1_k_proj_4
+	comm_stage0_to_stage1 -> l1_v_proj_4
+	l1_q_proj_4 -> l1_attn_4
+	l1_k_proj_4 -> l1_attn_4
+	l1_v_proj_4 -> l1_attn_4
+	l1_attn_4 -> l1_out_proj_4
+	l1_out_proj_4 -> l1_res_4
+	comm_stage0_to_stage1 -> l1_res_4
+	l1_res_4 -> l1_ln1_4
+	l1_ln1_4 -> l1_ffn_up_4
+	l1_ffn_up_4 -> l1_ffn_down_4
+	l1_ffn_down_4 -> l1_res2_4
+	l1_ln1_4 -> l1_res2_4
+	l1_res2_4 -> l1_ln2_4
+	comm_stage0_to_stage1 -> l1_q_proj_5
+	comm_stage0_to_stage1 -> l1_k_proj_5
+	comm_stage0_to_stage1 -> l1_v_proj_5
+	l1_q_proj_5 -> l1_attn_5
+	l1_k_proj_5 -> l1_attn_5
+	l1_v_proj_5 -> l1_attn_5
+	l1_attn_5 -> l1_out_proj_5
+	l1_out_proj_5 -> l1_res_5
+	comm_stage0_to_stage1 -> l1_res_5
+	l1_res_5 -> l1_ln1_5
+	l1_ln1_5 -> l1_ffn_up_5
+	l1_ffn_up_5 -> l1_ffn_down_5
+	l1_ffn_down_5 -> l1_res2_5
+	l1_ln1_5 -> l1_res2_5
+	l1_res2_5 -> l1_ln2_5
+	comm_stage0_to_stage1 -> l1_q_proj_6
+	comm_stage0_to_stage1 -> l1_k_proj_6
+	comm_stage0_to_stage1 -> l1_v_proj_6
+	l1_q_proj_6 -> l1_attn_6
+	l1_k_proj_6 -> l1_attn_6
+	l1_v_proj_6 -> l1_attn_6
+	l1_attn_6 -> l1_out_proj_6
+	l1_out_proj_6 -> l1_res_6
+	comm_stage0_to_stage1 -> l1_res_6
+	l1_res_6 -> l1_ln1_6
+	l1_ln1_6 -> l1_ffn_up_6
+	l1_ffn_up_6 -> l1_ffn_down_6
+	l1_ffn_down_6 -> l1_res2_6
+	l1_ln1_6 -> l1_res2_6
+	l1_res2_6 -> l1_ln2_6
+	comm_stage0_to_stage1 -> l1_q_proj_7
+	comm_stage0_to_stage1 -> l1_k_proj_7
+	comm_stage0_to_stage1 -> l1_v_proj_7
+	l1_q_proj_7 -> l1_attn_7
+	l1_k_proj_7 -> l1_attn_7
+	l1_v_proj_7 -> l1_attn_7
+	l1_attn_7 -> l1_out_proj_7
+	l1_out_proj_7 -> l1_res_7
+	comm_stage0_to_stage1 -> l1_res_7
+	l1_res_7 -> l1_ln1_7
+	l1_ln1_7 -> l1_ffn_up_7
+	l1_ffn_up_7 -> l1_ffn_down_7
+	l1_ffn_down_7 -> l1_res2_7
+	l1_ln1_7 -> l1_res2_7
+	l1_res2_7 -> l1_ln2_7
+	l1_ln2_0 -> comm_stage1_to_stage0
+	l1_ln2_1 -> comm_stage1_to_stage0
+	l1_ln2_2 -> comm_stage1_to_stage0
+	l1_ln2_3 -> comm_stage1_to_stage0
+	l1_ln2_4 -> comm_stage1_to_stage0
+	l1_ln2_5 -> comm_stage1_to_stage0
+	l1_ln2_6 -> comm_stage1_to_stage0
+	l1_ln2_7 -> comm_stage1_to_stage0
+	comm_stage1_to_stage0 -> l2_q_proj_0
+	comm_stage1_to_stage0 -> l2_k_proj_0
+	comm_stage1_to_stage0 -> l2_v_proj_0
+	l2_q_proj_0 -> l2_attn_0
+	l2_k_proj_0 -> l2_attn_0
+	l2_v_proj_0 -> l2_attn_0
+	l2_attn_0 -> l2_out_proj_0
+	l2_out_proj_0 -> l2_res_0
+	comm_stage1_to_stage0 -> l2_res_0
+	l2_res_0 -> l2_ln1_0
+	l2_ln1_0 -> l2_ffn_up_0
+	l2_ffn_up_0 -> l2_ffn_down_0
+	l2_ffn_down_0 -> l2_res2_0
+	l2_ln1_0 -> l2_res2_0
+	l2_res2_0 -> l2_ln2_0
+	comm_stage1_to_stage0 -> l2_q_proj_1
+	comm_stage1_to_stage0 -> l2_k_proj_1
+	comm_stage1_to_stage0 -> l2_v_proj_1
+	l2_q_proj_1 -> l2_attn_1
+	l2_k_proj_1 -> l2_attn_1
+	l2_v_proj_1 -> l2_attn_1
+	l2_attn_1 -> l2_out_proj_1
+	l2_out_proj_1 -> l2_res_1
+	comm_stage1_to_stage0 -> l2_res_1
+	l2_res_1 -> l2_ln1_1
+	l2_ln1_1 -> l2_ffn_up_1
+	l2_ffn_up_1 -> l2_ffn_down_1
+	l2_ffn_down_1 -> l2_res2_1
+	l2_ln1_1 -> l2_res2_1
+	l2_res2_1 -> l2_ln2_1
+	comm_stage1_to_stage0 -> l2_q_proj_2
+	comm_stage1_to_stage0 -> l2_k_proj_2
+	comm_stage1_to_stage0 -> l2_v_proj_2
+	l2_q_proj_2 -> l2_attn_2
+	l2_k_proj_2 -> l2_attn_2
+	l2_v_proj_2 -> l2_attn_2
+	l2_attn_2 -> l2_out_proj_2
+	l2_out_proj_2 -> l2_res_2
+	comm_stage1_to_stage0 -> l2_res_2
+	l2_res_2 -> l2_ln1_2
+	l2_ln1_2 -> l2_ffn_up_2
+	l2_ffn_up_2 -> l2_ffn_down_2
+	l2_ffn_down_2 -> l2_res2_2
+	l2_ln1_2 -> l2_res2_2
+	l2_res2_2 -> l2_ln2_2
+	comm_stage1_to_stage0 -> l2_q_proj_3
+	comm_stage1_to_stage0 -> l2_k_proj_3
+	comm_stage1_to_stage0 -> l2_v_proj_3
+	l2_q_proj_3 -> l2_attn_3
+	l2_k_proj_3 -> l2_attn_3
+	l2_v_proj_3 -> l2_attn_3
+	l2_attn_3 -> l2_out_proj_3
+	l2_out_proj_3 -> l2_res_3
+	comm_stage1_to_stage0 -> l2_res_3
+	l2_res_3 -> l2_ln1_3
+	l2_ln1_3 -> l2_ffn_up_3
+	l2_ffn_up_3 -> l2_ffn_down_3
+	l2_ffn_down_3 -> l2_res2_3
+	l2_ln1_3 -> l2_res2_3
+	l2_res2_3 -> l2_ln2_3
+	comm_stage1_to_stage0 -> l2_q_proj_4
+	comm_stage1_to_stage0 -> l2_k_proj_4
+	comm_stage1_to_stage0 -> l2_v_proj_4
+	l2_q_proj_4 -> l2_attn_4
+	l2_k_proj_4 -> l2_attn_4
+	l2_v_proj_4 -> l2_attn_4
+	l2_attn_4 -> l2_out_proj_4
+	l2_out_proj_4 -> l2_res_4
+	comm_stage1_to_stage0 -> l2_res_4
+	l2_res_4 -> l2_ln1_4
+	l2_ln1_4 -> l2_ffn_up_4
+	l2_ffn_up_4 -> l2_ffn_down_4
+	l2_ffn_down_4 -> l2_res2_4
+	l2_ln1_4 -> l2_res2_4
+	l2_res2_4 -> l2_ln2_4
+	comm_stage1_to_stage0 -> l2_q_proj_5
+	comm_stage1_to_stage0 -> l2_k_proj_5
+	comm_stage1_to_stage0 -> l2_v_proj_5
+	l2_q_proj_5 -> l2_attn_5
+	l2_k_proj_5 -> l2_attn_5
+	l2_v_proj_5 -> l2_attn_5
+	l2_attn_5 -> l2_out_proj_5
+	l2_out_proj_5 -> l2_res_5
+	comm_stage1_to_stage0 -> l2_res_5
+	l2_res_5 -> l2_ln1_5
+	l2_ln1_5 -> l2_ffn_up_5
+	l2_ffn_up_5 -> l2_ffn_down_5
+	l2_ffn_down_5 -> l2_res2_5
+	l2_ln1_5 -> l2_res2_5
+	l2_res2_5 -> l2_ln2_5
+	comm_stage1_to_stage0 -> l2_q_proj_6
+	comm_stage1_to_stage0 -> l2_k_proj_6
+	comm_stage1_to_stage0 -> l2_v_proj_6
+	l2_q_proj_6 -> l2_attn_6
+	l2_k_proj_6 -> l2_attn_6
+	l2_v_proj_6 -> l2_attn_6
+	l2_attn_6 -> l2_out_proj_6
+	l2_out_proj_6 -> l2_res_6
+	comm_stage1_to_stage0 -> l2_res_6
+	l2_res_6 -> l2_ln1_6
+	l2_ln1_6 -> l2_ffn_up_6
+	l2_ffn_up_6 -> l2_ffn_down_6
+	l2_ffn_down_6 -> l2_res2_6
+	l2_ln1_6 -> l2_res2_6
+	l2_res2_6 -> l2_ln2_6
+	comm_stage1_to_stage0 -> l2_q_proj_7
+	comm_stage1_to_stage0 -> l2_k_proj_7
+	comm_stage1_to_stage0 -> l2_v_proj_7
+	l2_q_proj_7 -> l2_attn_7
+	l2_k_proj_7 -> l2_attn_7
+	l2_v_proj_7 -> l2_attn_7
+	l2_attn_7 -> l2_out_proj_7
+	l2_out_proj_7 -> l2_res_7
+	comm_stage1_to_stage0 -> l2_res_7
+	l2_res_7 -> l2_ln1_7
+	l2_ln1_7 -> l2_ffn_up_7
+	l2_ffn_up_7 -> l2_ffn_down_7
+	l2_ffn_down_7 -> l2_res2_7
+	l2_ln1_7 -> l2_res2_7
+	l2_res2_7 -> l2_ln2_7
+	l2_ln2_0 -> comm_stage0_to_stage1_2
+	l2_ln2_1 -> comm_stage0_to_stage1_2
+	l2_ln2_2 -> comm_stage0_to_stage1_2
+	l2_ln2_3 -> comm_stage0_to_stage1_2
+	l2_ln2_4 -> comm_stage0_to_stage1_2
+	l2_ln2_5 -> comm_stage0_to_stage1_2
+	l2_ln2_6 -> comm_stage0_to_stage1_2
+	l2_ln2_7 -> comm_stage0_to_stage1_2
+	comm_stage0_to_stage1_2 -> l3_q_proj_0
+	comm_stage0_to_stage1_2 -> l3_k_proj_0
+	comm_stage0_to_stage1_2 -> l3_v_proj_0
+	l3_q_proj_0 -> l3_attn_0
+	l3_k_proj_0 -> l3_attn_0
+	l3_v_proj_0 -> l3_attn_0
+	l3_attn_0 -> l3_out_proj_0
+	l3_out_proj_0 -> l3_res_0
+	comm_stage0_to_stage1_2 -> l3_res_0
+	l3_res_0 -> l3_ln1_0
+	l3_ln1_0 -> l3_ffn_up_0
+	l3_ffn_up_0 -> l3_ffn_down_0
+	l3_ffn_down_0 -> l3_res2_0
+	l3_ln1_0 -> l3_res2_0
+	l3_res2_0 -> l3_ln2_0
+	comm_stage0_to_stage1_2 -> l3_q_proj_1
+	comm_stage0_to_stage1_2 -> l3_k_proj_1
+	comm_stage0_to_stage1_2 -> l3_v_proj_1
+	l3_q_proj_1 -> l3_attn_1
+	l3_k_proj_1 -> l3_attn_1
+	l3_v_proj_1 -> l3_attn_1
+	l3_attn_1 -> l3_out_proj_1
+	l3_out_proj_1 -> l3_res_1
+	comm_stage0_to_stage1_2 -> l3_res_1
+	l3_res_1 -> l3_ln1_1
+	l3_ln1_1 -> l3_ffn_up_1
+	l3_ffn_up_1 -> l3_ffn_down_1
+	l3_ffn_down_1 -> l3_res2_1
+	l3_ln1_1 -> l3_res2_1
+	l3_res2_1 -> l3_ln2_1
+	comm_stage0_to_stage1_2 -> l3_q_proj_2
+	comm_stage0_to_stage1_2 -> l3_k_proj_2
+	comm_stage0_to_stage1_2 -> l3_v_proj_2
+	l3_q_proj_2 -> l3_attn_2
+	l3_k_proj_2 -> l3_attn_2
+	l3_v_proj_2 -> l3_attn_2
+	l3_attn_2 -> l3_out_proj_2
+	l3_out_proj_2 -> l3_res_2
+	comm_stage0_to_stage1_2 -> l3_res_2
+	l3_res_2 -> l3_ln1_2
+	l3_ln1_2 -> l3_ffn_up_2
+	l3_ffn_up_2 -> l3_ffn_down_2
+	l3_ffn_down_2 -> l3_res2_2
+	l3_ln1_2 -> l3_res2_2
+	l3_res2_2 -> l3_ln2_2
+	comm_stage0_to_stage1_2 -> l3_q_proj_3
+	comm_stage0_to_stage1_2 -> l3_k_proj_3
+	comm_stage0_to_stage1_2 -> l3_v_proj_3
+	l3_q_proj_3 -> l3_attn_3
+	l3_k_proj_3 -> l3_attn_3
+	l3_v_proj_3 -> l3_attn_3
+	l3_attn_3 -> l3_out_proj_3
+	l3_out_proj_3 -> l3_res_3
+	comm_stage0_to_stage1_2 -> l3_res_3
+	l3_res_3 -> l3_ln1_3
+	l3_ln1_3 -> l3_ffn_up_3
+	l3_ffn_up_3 -> l3_ffn_down_3
+	l3_ffn_down_3 -> l3_res2_3
+	l3_ln1_3 -> l3_res2_3
+	l3_res2_3 -> l3_ln2_3
+	comm_stage0_to_stage1_2 -> l3_q_proj_4
+	comm_stage0_to_stage1_2 -> l3_k_proj_4
+	comm_stage0_to_stage1_2 -> l3_v_proj_4
+	l3_q_proj_4 -> l3_attn_4
+	l3_k_proj_4 -> l3_attn_4
+	l3_v_proj_4 -> l3_attn_4
+	l3_attn_4 -> l3_out_proj_4
+	l3_out_proj_4 -> l3_res_4
+	comm_stage0_to_stage1_2 -> l3_res_4
+	l3_res_4 -> l3_ln1_4
+	l3_ln1_4 -> l3_ffn_up_4
+	l3_ffn_up_4 -> l3_ffn_down_4
+	l3_ffn_down_4 -> l3_res2_4
+	l3_ln1_4 -> l3_res2_4
+	l3_res2_4 -> l3_ln2_4
+	comm_stage0_to_stage1_2 -> l3_q_proj_5
+	comm_stage0_to_stage1_2 -> l3_k_proj_5
+	comm_stage0_to_stage1_2 -> l3_v_proj_5
+	l3_q_proj_5 -> l3_attn_5
+	l3_k_proj_5 -> l3_attn_5
+	l3_v_proj_5 -> l3_attn_5
+	l3_attn_5 -> l3_out_proj_5
+	l3_out_proj_5 -> l3_res_5
+	comm_stage0_to_stage1_2 -> l3_res_5
+	l3_res_5 -> l3_ln1_5
+	l3_ln1_5 -> l3_ffn_up_5
+	l3_ffn_up_5 -> l3_ffn_down_5
+	l3_ffn_down_5 -> l3_res2_5
+	l3_ln1_5 -> l3_res2_5
+	l3_res2_5 -> l3_ln2_5
+	comm_stage0_to_stage1_2 -> l3_q_proj_6
+	comm_stage0_to_stage1_2 -> l3_k_proj_6
+	comm_stage0_to_stage1_2 -> l3_v_proj_6
+	l3_q_proj_6 -> l3_attn_6
+	l3_k_proj_6 -> l3_attn_6
+	l3_v_proj_6 -> l3_attn_6
+	l3_attn_6 -> l3_out_proj_6
+	l3_out_proj_6 -> l3_res_6
+	comm_stage0_to_stage1_2 -> l3_res_6
+	l3_res_6 -> l3_ln1_6
+	l3_ln1_6 -> l3_ffn_up_6
+	l3_ffn_up_6 -> l3_ffn_down_6
+	l3_ffn_down_6 -> l3_res2_6
+	l3_ln1_6 -> l3_res2_6
+	l3_res2_6 -> l3_ln2_6
+	comm_stage0_to_stage1_2 -> l3_q_proj_7
+	comm_stage0_to_stage1_2 -> l3_k_proj_7
+	comm_stage0_to_stage1_2 -> l3_v_proj_7
+	l3_q_proj_7 -> l3_attn_7
+	l3_k_proj_7 -> l3_attn_7
+	l3_v_proj_7 -> l3_attn_7
+	l3_attn_7 -> l3_out_proj_7
+	l3_out_proj_7 -> l3_res_7
+	comm_stage0_to_stage1_2 -> l3_res_7
+	l3_res_7 -> l3_ln1_7
+	l3_ln1_7 -> l3_ffn_up_7
+	l3_ffn_up_7 -> l3_ffn_down_7
+	l3_ffn_down_7 -> l3_res2_7
+	l3_ln1_7 -> l3_res2_7
+	l3_res2_7 -> l3_ln2_7
+	l3_ln2_0 -> output_0
+	output_0 -> output
+	l3_ln2_1 -> output_1
+	output_1 -> output
+	l3_ln2_2 -> output_2
+	output_2 -> output
+	l3_ln2_3 -> output_3
+	output_3 -> output
+	l3_ln2_4 -> output_4
+	output_4 -> output
+	l3_ln2_5 -> output_5
+	output_5 -> output
+	l3_ln2_6 -> output_6
+	output_6 -> output
+	l3_ln2_7 -> output_7
+	output_7 -> output
+}
