@@ -1,0 +1,89 @@
+{
+  "generated_dags": [
+    {
+      "model": "baseline_tp8_pp2",
+      "description": "Baseline model with Tensor Parallelism (TP=8) and Pipeline Parallelism (PP=2) across 16 GPUs",
+      "files": [
+        {
+          "type": "dot",
+          "path": "../outputs/2025-10-16-20-29-23/baseline_dag.dot"
+        },
+        {
+          "type": "svg",
+          "path": "../outputs/2025-10-16-20-29-23/baseline_dag.svg"
+        }
+      ],
+      "gpu_allocation": {
+        "stage_0_gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+        "stage_1_gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+        "total_gpus": 16,
+        "strategy": "TP=8, PP=2"
+      },
+      "dimensions": {
+        "batch_size": 1024,
+        "seq_len": 2048,
+        "hidden_dim": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "vocab_size": 50265
+      }
+    },
+    {
+      "model": "ma_separation",
+      "description": "MA Separation model with 12 Attention GPUs and 4 MoE GPUs for synchronized co-execution",
+      "files": [
+        {
+          "type": "dot",
+          "path": "../outputs/2025-10-16-20-29-23/ma_separation_dag.dot"
+        },
+        {
+          "type": "svg",
+          "path": "../outputs/2025-10-16-20-29-23/ma_separation_dag.svg"
+        }
+      ],
+      "gpu_allocation": {
+        "attention_gpus": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        "moe_gpus": [12, 13, 14, 15],
+        "total_gpus": 16,
+        "strategy": "12:4 (Attention:MoE ratio)"
+      },
+      "dimensions": {
+        "batch_size": 1024,
+        "seq_len": 2048,
+        "hidden_dim": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "vocab_size": 50265,
+        "num_experts": 16,
+        "experts_per_gpu": 4,
+        "head_distribution": "[3,3,3,3,3,3,3,3,2,2,2,2]"
+      }
+    }
+  ],
+  "verification": {
+    "baseline_dag": {
+      "is_acyclic": true,
+      "input_node": "input_l0",
+      "output_node": "output",
+      "total_nodes": 45,
+      "communication_edges": 1
+    },
+    "ma_separation_dag": {
+      "is_acyclic": true,
+      "input_node": "input",
+      "output_node": "final_output",
+      "total_nodes": 85,
+      "communication_edges": 2
+    }
+  },
+  "compliance_check": {
+    "dimensions_specified": true,
+    "gpu_allocation_complete": true,
+    "communication_paths_defined": true,
+    "no_simplifications_made": true,
+    "residual_connections_included": true,
+    "all_layers_included": true,
+    "expert_details_specified": true,
+    "gate_routing_shown": true
+  }
+}

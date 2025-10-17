@@ -1,0 +1,307 @@
+digraph optimized_hybrid_parallel {
+    rankdir=TB;
+    compound=true;
+    ranksep=1.8;
+    nodesep=0.7;
+    fontname="Arial";
+    
+    // Graph attributes
+    graph [bgcolor=white, fontname="Arial", fontsize=12];
+    node [fontname="Arial", fontsize=10];
+    edge [fontname="Arial", fontsize=9];
+    
+    // Global configuration
+    subgraph cluster_config {
+        label="Optimized Hybrid Parallel Configuration\n16 GPUs | Micro-batching 8x128 | TP-Expert Hybrid";
+        style=rounded;
+        color=purple;
+        bgcolor=lightpurple;
+        
+        config [shape=note, style=filled, fillcolor=lightblue, 
+                label="Model Parameters\n• Batch: 1024×2048\n• Hidden: 4096\n• Heads: 32 (128 dim)\n• Experts: 96 (16 per GPU group)\n• Strategy: TP-Expert Hybrid\n• Overlap: Comm+Compute"];
+    }
+    
+    // Input preprocessing
+    subgraph cluster_preprocess {
+        label="Input Preprocessing (GPUs 0-1)";
+        style=rounded;
+        color=green;
+        bgcolor=lightgreen;
+        
+        input [shape=ellipse, style=filled, fillcolor=lightgreen, 
+               label="Model Input\nInput: [1024, 2048] tokens\nGPU: 0-1"];
+        
+        micro_batch_split [shape=parallelogram, style=filled, fillcolor=lightcyan,
+                          label="Micro-batch Split\n1024→8×128 micro-batches\nGPU: 0-1"];
+        
+        embed_gpu0 [label="Token Embedding\nGPU 0\n[4×128, 2048]→[4×128, 2048, 4096]"];
+        embed_gpu1 [label="Token Embedding\nGPU 1\n[4×128, 2048]→[4×128, 2048, 4096]"];
+        
+        broadcast_input [shape=ellipse, style=filled, fillcolor=yellow,
+                        label="Broadcast\n8×128 micro-batches to all GPUs"];
+    }
+    
+    // Layer 0 - L0
+    subgraph cluster_l0_attention {
+        label="L0 Attention Tensor Parallel";
+        style=rounded;
+        color=blue;
+        bgcolor=lightblue;
+        
+        // TP Group 0 (GPUs 2-3)
+        subgraph cluster_tp0_l0 {
+            label="TP Group 0 (GPUs 2-3)";
+            style=rounded;
+            color=darkblue;
+            
+            ln_l0_tp0 [label="LayerNorm L0\nGPU 2-3\n[128, 2048, 4096]"];
+            qkv_l0_gpu2 [label="QKV Projection\nGPU 2\n[128, 2048, 2048]→[128, 2048, 16×128×3]\nHeads: 8 heads"];
+            qkv_l0_gpu3 [label="QKV Projection\nGPU 3\n[128, 2048, 2048]→[128, 2048, 16×128×3]\nHeads: 8 heads"];
+            scores_l0_gpu2 [label="Attention Scores\nGPU 2\n[128, 2048, 8×128]→[128, 2048, 8×2048]"];
+            scores_l0_gpu3 [label="Attention Scores\nGPU 3\n[128, 2048, 8×128]→[128, 2048, 8×2048]"];
+            softmax_l0_gpu2 [label="Softmax\nGPU 2\n[128, 2048, 8×2048]"];
+            softmax_l0_gpu3 [label="Softmax\nGPU 3\n[128, 2048, 8×2048]"];
+            attn_out_l0_gpu2 [label="Attention Output\nGPU 2\n[128, 2048, 8×128]"];
+            attn_out_l0_gpu3 [label="Attention Output\nGPU 3\n[128, 2048, 8×128]"];
+            o_proj_l0_gpu2 [label="O Projection\nGPU 2\n[128, 2048, 2048]→[128, 2048, 2048]"];
+            o_proj_l0_gpu3 [label="O Projection\nGPU 3\n[128, 2048, 2048]→[128, 2048, 2048]"];
+            all_reduce_tp0_l0 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nTP Group 0"];
+        }
+        
+        // TP Group 1 (GPUs 4-5)
+        subgraph cluster_tp1_l0 {
+            label="TP Group 1 (GPUs 4-5)";
+            style=rounded;
+            color=darkblue;
+            ln_l0_tp1 [label="LayerNorm L0\nGPU 4-5\n[128, 2048, 4096]"];
+            qkv_l0_gpu4 [label="QKV Projection\nGPU 4\n[128, 2048, 2048]→[128, 2048, 16×128×3]\nHeads: 8 heads"];
+            qkv_l0_gpu5 [label="QKV Projection\nGPU 5\n[128, 2048, 2048]→[128, 2048, 16×128×3]\nHeads: 8 heads"];
+            all_reduce_tp1_l0 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nTP Group 1"];
+        }
+        
+        // TP Group 2 (GPUs 6-7)
+        subgraph cluster_tp2_l0 {
+            label="TP Group 2 (GPUs 6-7)";
+            style=rounded;
+            color=darkblue;
+            ln_l0_tp2 [label="LayerNorm L0\nGPU 6-7\n[128, 2048, 4096]"];
+            qkv_l0_gpu6 [label="QKV Projection\nGPU 6\n[128, 2048, 2048]→[128, 2048, 16×128×3]\nHeads: 8 heads"];
+            qkv_l0_gpu7 [label="QKV Projection\nGPU 7\n[128, 2048, 2048]→[128, 2048, 16×128×3]\nHeads: 8 heads"];
+            all_reduce_tp2_l0 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nTP Group 2"];
+        }
+        
+        // TP Group 3 (GPUs 8-9)
+        subgraph cluster_tp3_l0 {
+            label="TP Group 3 (GPUs 8-9)";
+            style=rounded;
+            color=darkblue;
+            ln_l0_tp3 [label="LayerNorm L0\nGPU 8-9\n[128, 2048, 4096]"];
+            qkv_l0_gpu8 [label="QKV Projection\nGPU 8\n[128, 2048, 2048]→[128, 2048, 16×128×3]\nHeads: 8 heads"];
+            qkv_l0_gpu9 [label="QKV Projection\nGPU 9\n[128, 2048, 2048]→[128, 2048, 16×128×3]\nHeads: 8 heads"];
+            all_reduce_tp3_l0 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nTP Group 3"];
+        }
+        
+        gather_attn_l0 [shape=ellipse, style=filled, fillcolor=orange, 
+                       label="Gather Results\nFrom 4 TP groups\n[128, 2048, 4096]"];
+        res1_l0 [shape=ellipse, style=filled, fillcolor=pink, 
+                label="Residual Add L0\nAttention path"];
+    }
+    
+    // Layer 0 - MoE
+    subgraph cluster_l0_moe {
+        label="L0 MoE Expert Parallel";
+        style=rounded;
+        color=red;
+        bgcolor=lightcoral;
+        
+        // Expert Groups 0-2 (GPUs 10-15)
+        subgraph cluster_expert0_l0 {
+            label="Expert Group 0 (GPUs 10-11)";
+            style=rounded;
+            color=darkred;
+            
+            recv_moe_l0_0 [shape=parallelogram, style=filled, fillcolor=lightcyan,
+                         label="Receive\nMicro-batch routing\nGPU 10-11"];
+            ln_moe_l0_gpu10 [label="LayerNorm L0\nGPU 10\n[128, 2048, 4096]"];
+            ln_moe_l0_gpu11 [label="LayerNorm L0\nGPU 11\n[128, 2048, 4096]"];
+            gate_l0_gpu10 [shape=parallelogram, style=filled, fillcolor=orange,
+                         label="Gate\nGPU 10\nRouting to experts"];
+            gate_l0_gpu11 [shape=parallelogram, style=filled, fillcolor=orange,
+                         label="Gate\nGPU 11\nRouting to experts"];
+            expert_l0_0_gpu10 [label="Experts 0-15\nGPU 10\n16 experts in TP2\n[128, 2048, 4096]"];
+            expert_l0_16_gpu11 [label="Experts 16-31\nGPU 11\n16 experts in TP2\n[128, 2048, 4096]"];
+            expert_agg_l0_gpu10 [shape=ellipse, style=filled, fillcolor=lightyellow,
+                               label="Expert Aggregation\nGPU 10"];
+            expert_agg_l0_gpu11 [shape=ellipse, style=filled, fillcolor=lightyellow,
+                               label="Expert Aggregation\nGPU 11"];
+            all_reduce_expert0_l0 [shape=ellipse, style=filled, fillcolor=yellow,
+                                 label="All-Reduce\nExpert Group 0"];
+        }
+        
+        subgraph cluster_expert1_l0 {
+            label="Expert Group 1 (GPUs 12-13)";
+            style=rounded;
+            color=darkred;
+            expert_l0_32_gpu12 [label="Experts 32-47\nGPU 12\n16 experts in TP2"];
+            expert_l0_48_gpu13 [label="Experts 48-63\nGPU 13\n16 experts in TP2"];
+            all_reduce_expert1_l0 [shape=ellipse, style=filled, fillcolor=yellow,
+                                 label="All-Reduce\nExpert Group 1"];
+        }
+        
+        subgraph cluster_expert2_l0 {
+            label="Expert Group 2 (GPUs 14-15)";
+            style=rounded;
+            color=darkred;
+            expert_l0_64_gpu14 [label="Experts 64-79\nGPU 14\n16 experts in TP2"];
+            expert_l0_80_gpu15 [label="Experts 80-95\nGPU 15\n16 experts in TP2"];
+            all_reduce_expert2_l0 [shape=ellipse, style=filled, fillcolor=yellow,
+                                 label="All-Reduce\nExpert Group 2"];
+        }
+        
+        gather_experts_l0 [shape=ellipse, style=filled, fillcolor=orange,
+                         label="Gather Expert Results\nFrom 3 expert groups"];
+        res2_l0 [shape=ellipse, style=filled, fillcolor=pink,
+                label="Residual Add L0\nMoE path"];
+    }
+    
+    // Layer 1, 2, 3 - Similar structure
+    subgraph cluster_layer1 {
+        label="Layer 1 (L1) - Identical Structure";
+        style=dashed;
+        color=grey;
+        
+        layer1_attn [label="L1 Attention\\nSame TP pattern\\n8 micro-batches"];
+        layer1_moe [label="L1 MoE\\nSame Expert pattern\\n8 micro-batches"];
+    }
+    
+    subgraph cluster_layer2 {
+        label="Layer 2 (L2) - Identical Structure";
+        style=dashed;
+        color=grey;
+        
+        layer2_attn [label="L2 Attention\\nSame TP pattern\\n8 micro-batches"];
+        layer2_moe [label="L2 MoE\\nSame Expert pattern\\n8 micro-batches"];
+    }
+    
+    subgraph cluster_layer3 {
+        label="Layer 3 (L3) - Identical Structure";
+        style=dashed;
+        color=grey;
+        
+        layer3_attn [label="L3 Attention\\nSame TP pattern\\n8 micro-batches"];
+        layer3_moe [label="L3 MoE\\nSame Expert pattern\\n8 micro-batches"];
+    }
+    
+    // Communication and overlap
+    subgraph cluster_comm {
+        label="Overlap Communication & Computation";
+        style=dashed;
+        color=purple;
+        
+        async_comm0 [shape=parallelogram, style=filled, fillcolor=lightcyan,
+                    label="Async Communication\\nOverlapped data transfer"];
+        sync_barrier [shape=ellipse, style=filled, fillcolor=lightyellow,
+                    label="Synchronization\\nAll 16 GPUs"];
+    }
+    
+    // Output processing
+    subgraph cluster_output {
+        label="Output Processing (GPUs 0-1)";
+        style=rounded;
+        color=green;
+        bgcolor=lightgreen;
+        
+        final_gather [shape=ellipse, style=filled, fillcolor=orange,
+                     label="Aggregate All Results\\n8 micro-batches×4 layers"];
+        output_projection [label="Output Projection\\n[1024, 2048, 4096]→[1024, 2048, 50265]"];
+        final_output [shape=ellipse, style=filled, fillcolor=lightgreen,
+                     label="Final Output\\nProcessed logits"];
+    }
+    
+    // Layer connections
+    input -> micro_batch_split;
+    micro_batch_split -> embed_gpu0;
+    micro_batch_split -> embed_gpu1;
+    embed_gpu0 -> broadcast_input;
+    embed_gpu1 -> broadcast_input;
+    
+    broadcast_input -> ln_l0_tp0 [lhead=cluster_l0_attention];
+    broadcast_input -> ln_l0_tp1 [lhead=cluster_l0_attention];
+    broadcast_input -> ln_l0_tp2 [lhead=cluster_l0_attention];
+    broadcast_input -> ln_l0_tp3 [lhead=cluster_l0_attention];
+    broadcast_input -> recv_moe_l0_0 [lhead=cluster_l0_moe];
+    
+    // L0 Attention flow
+    ln_l0_tp0 -> qkv_l0_gpu2;
+    ln_l0_tp0 -> qkv_l0_gpu3;
+    qkv_l0_gpu2 -> scores_l0_gpu2;
+    qkv_l0_gpu3 -> scores_l0_gpu3;
+    scores_l0_gpu2 -> softmax_l0_gpu2;
+    scores_l0_gpu3 -> softmax_l0_gpu3;
+    softmax_l0_gpu2 -> attn_out_l0_gpu2;
+    softmax_l0_gpu3 -> attn_out_l0_gpu3;
+    attn_out_l0_gpu2 -> o_proj_l0_gpu2;
+    attn_out_l0_gpu3 -> o_proj_l0_gpu3;
+    o_proj_l0_gpu2 -> all_reduce_tp0_l0;
+    o_proj_l0_gpu3 -> all_reduce_tp0_l0;
+    all_reduce_tp0_l0 -> gather_attn_l0;
+    all_reduce_tp1_l0 -> gather_attn_l0;
+    all_reduce_tp2_l0 -> gather_attn_l0;
+    all_reduce_tp3_l0 -> gather_attn_l0;
+    gather_attn_l0 -> res1_l0;
+    
+    // L0 MoE flow
+    recv_moe_l0_0 -> ln_moe_l0_gpu10;
+    recv_moe_l0_0 -> ln_moe_l0_gpu11;
+    recv_moe_l0_0 -> ln_moe_l0_gpu12;
+    recv_moe_l0_0 -> ln_moe_l0_gpu13;
+    recv_moe_l0_0 -> ln_moe_l0_gpu14;
+    recv_moe_l0_0 -> ln_moe_l0_gpu15;
+    
+    ln_moe_l0_gpu10 -> gate_l0_gpu10;
+    ln_moe_l0_gpu11 -> gate_l0_gpu11;
+    ln_moe_l0_gpu12 -> gate_l0_gpu12;
+    ln_moe_l0_gpu13 -> gate_l0_gpu13;
+    ln_moe_l0_gpu14 -> gate_l0_gpu14;
+    ln_moe_l0_gpu15 -> gate_l0_gpu15;
+    
+    gate_l0_gpu10 -> expert_l0_0_gpu10;
+    gate_l0_gpu11 -> expert_l0_16_gpu11;
+    gate_l0_gpu12 -> expert_l0_32_gpu12;
+    gate_l0_gpu13 -> expert_l0_48_gpu13;
+    gate_l0_gpu14 -> expert_l0_64_gpu14;
+    gate_l0_gpu15 -> expert_l0_80_gpu15;
+    
+    expert_l0_0_gpu10 -> expert_agg_l0_gpu10;
+    expert_l0_16_gpu11 -> expert_agg_l0_gpu11;
+    expert_l0_32_gpu12 -> expert_agg_l0_gpu12;
+    expert_l0_48_gpu13 -> expert_agg_l0_gpu13;
+    expert_l0_64_gpu14 -> expert_agg_l0_gpu14;
+    expert_l0_80_gpu15 -> expert_agg_l0_gpu15;
+    
+    expert_agg_l0_gpu10 -> all_reduce_expert0_l0;
+    expert_agg_l0_gpu11 -> all_reduce_expert0_l0;
+    expert_agg_l0_gpu12 -> all_reduce_expert1_l0;
+    expert_agg_l0_gpu13 -> all_reduce_expert1_l0;
+    expert_agg_l0_gpu14 -> all_reduce_expert2_l0;
+    expert_agg_l0_gpu15 -> all_reduce_expert2_l0;
+    
+    all_reduce_expert0_l0 -> gather_experts_l0;
+    all_reduce_expert1_l0 -> gather_experts_l0;
+    all_reduce_expert2_l0 -> gather_experts_l0;
+    gather_experts_l0 -> res2_l0;
+    
+    // Chain layers
+    res1_l0 -> layer1_attn [style=dashed];
+    res2_l0 -> layer1_moe [style=dashed];
+    layer1_attn -> layer2_attn [style=dashed];
+    layer1_moe -> layer2_moe [style=dashed];
+    layer2_attn -> layer3_attn [style=dashed];
+    layer2_moe -> layer3_moe [style=dashed];
+    
+    // Final output
+    layer3_attn -> final_gather [lhead=cluster_output];
+    layer3_moe -> final_gather [lhead=cluster_output];
+    final_gather -> output_projection;
+    output_projection -> final_output;
+}

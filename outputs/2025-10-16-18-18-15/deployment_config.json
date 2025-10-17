@@ -1,0 +1,546 @@
+{
+  "models": {
+    "baseline_model": {
+      "name": "4-layer-Dense-Transformer-Baseline",
+      "type": "dense_transformer",
+      "parameters": 13000000000,
+      "layers": 4,
+      "hidden_dimension": 4096,
+      "attention_heads": 32,
+      "feedforward_dimension": 16384,
+      "activation": "GELU",
+      "normalization": "RMSNorm",
+      "batch_size": 1024,
+      "parallel_strategy": {
+        "type": "static",
+        "tensor_parallelism": 8,
+        "pipeline_parallelism": 2,
+        "total_gpus": 16,
+        "gpu_model": "NVIDIA A100 80GB",
+        "interconnect": "NVLink 3.0 + InfiniBand"
+      },
+      "modules": {
+        "embedding": {
+          "type": "embedding",
+          "dimensions": [1024, 4096],
+          "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+        },
+        "positional_encoding": {
+          "type": "positional_encoding",
+          "dimensions": [4096],
+          "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+        },
+        "transformer_layers": [
+          {
+            "layer_id": 0,
+            "attention": {
+              "type": "multi_head_attention",
+              "dimensions": [4096, 4096, 4096],
+              "heads": 32,
+              "device_mapping": {
+                "group_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "group_1": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+              }
+            },
+            "ffn": {
+              "type": "feedforward",
+              "dimensions": [4096, 16384, 4096],
+              "device_mapping": {
+                "group_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "group_1": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+              }
+            }
+          },
+          {
+            "layer_id": 1,
+            "attention": {
+              "type": "multi_head_attention",
+              "dimensions": [4096, 4096, 4096],
+              "heads": 32,
+              "device_mapping": {
+                "group_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "group_1": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+              }
+            },
+            "ffn": {
+              "type": "feedforward",
+              "dimensions": [4096, 16384, 4096],
+              "device_mapping": {
+                "group_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "group_1": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+              }
+            }
+          },
+          {
+            "layer_id": 2,
+            "attention": {
+              "type": "multi_head_attention",
+              "dimensions": [4096, 4096, 4096],
+              "heads": 32,
+              "device_mapping": {
+                "group_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "group_1": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+              }
+            },
+            "ffn": {
+              "type": "feedforward",
+              "dimensions": [4096, 16384, 4096],
+              "device_mapping": {
+                "group_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "group_1": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+              }
+            }
+          },
+          {
+            "layer_id": 3,
+            "attention": {
+              "type": "multi_head_attention",
+              "dimensions": [4096, 4096, 4096],
+              "heads": 32,
+              "device_mapping": {
+                "group_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "group_1": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+              }
+            },
+            "ffn": {
+              "type": "feedforward",
+              "dimensions": [4096, 16384, 4096],
+              "device_mapping": {
+                "group_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "group_1": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+              }
+            }
+          }
+        ],
+        "output_layer": {
+          "type": "linear",
+          "dimensions": [4096, 32000],
+          "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+        }
+      }
+    },
+    "fa_pool_model": {
+      "name": "4-layer-Dense-Transformer-FA-Pool",
+      "type": "dense_transformer",
+      "parameters": 13000000000,
+      "layers": 4,
+      "hidden_dimension": 4096,
+      "attention_heads": 32,
+      "feedforward_dimension": 16384,
+      "activation": "GELU",
+      "normalization": "RMSNorm",
+      "batch_size": 1024,
+      "parallel_strategy": {
+        "type": "dynamic",
+        "name": "Flash Attention Pool",
+        "sequence_threshold": 4096,
+        "base_layer_gpus": 8,
+        "maximum_attention_pool_gpus": 32,
+        "gpu_model": "NVIDIA A100 80GB",
+        "interconnect": "NVLink 3.0 + InfiniBand",
+        "memory_per_gpu": {
+          "base_layer": 65000000000,
+          "attention_pool": 45000000000
+        }
+      },
+      "modules": {
+        "embedding": {
+          "type": "embedding",
+          "dimensions": [1024, 4096],
+          "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+          "always_on_base_layer": true
+        },
+        "positional_encoding": {
+          "type": "positional_encoding",
+          "dimensions": [4096],
+          "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+          "always_on_base_layer": true
+        },
+        "transformer_layers": [
+          {
+            "layer_id": 0,
+            "attention": {
+              "type": "multi_head_attention_flash",
+              "dimensions": [4096, 4096, 4096],
+              "heads": 32,
+              "parallel_strategy": "block_wise",
+              "block_size_formula": "ceil(sequence_length / num_attention_gpus)",
+              "dynamic_device_mapping": {
+                "short_sequences": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "long_sequences": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15", "gpu_16", "gpu_17", "gpu_18", "gpu_19", "gpu_20", "gpu_21", "gpu_22", "gpu_23", "gpu_24", "gpu_25", "gpu_26", "gpu_27", "gpu_28", "gpu_29", "gpu_30", "gpu_31", "gpu_32", "gpu_33", "gpu_34", "gpu_35", "gpu_36", "gpu_37", "gpu_38", "gpu_39"]
+              }
+            },
+            "ffn": {
+              "type": "feedforward",
+              "dimensions": [4096, 16384, 4096],
+              "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+              "always_on_base_layer": true
+            }
+          },
+          {
+            "layer_id": 1,
+            "attention": {
+              "type": "multi_head_attention_flash",
+              "dimensions": [4096, 4096, 4096],
+              "heads": 32,
+              "parallel_strategy": "block_wise",
+              "block_size_formula": "ceil(sequence_length / num_attention_gpus)",
+              "dynamic_device_mapping": {
+                "short_sequences": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "long_sequences": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15", "gpu_16", "gpu_17", "gpu_18", "gpu_19", "gpu_20", "gpu_21", "gpu_22", "gpu_23", "gpu_24", "gpu_25", "gpu_26", "gpu_27", "gpu_28", "gpu_29", "gpu_30", "gpu_31", "gpu_32", "gpu_33", "gpu_34", "gpu_35", "gpu_36", "gpu_37", "gpu_38", "gpu_39"]
+              }
+            },
+            "ffn": {
+              "type": "feedforward",
+              "dimensions": [4096, 16384, 4096],
+              "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+              "always_on_base_layer": true
+            }
+          },
+          {
+            "layer_id": 2,
+            "attention": {
+              "type": "multi_head_attention_flash",
+              "dimensions": [4096, 4096, 4096],
+              "heads": 32,
+              "parallel_strategy": "block_wise",
+              "block_size_formula": "ceil(sequence_length / num_attention_gpus)",
+              "dynamic_device_mapping": {
+                "short_sequences": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "long_sequences": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15", "gpu_16", "gpu_17", "gpu_18", "gpu_19", "gpu_20", "gpu_21", "gpu_22", "gpu_23", "gpu_24", "gpu_25", "gpu_26", "gpu_27", "gpu_28", "gpu_29", "gpu_30", "gpu_31", "gpu_32", "gpu_33", "gpu_34", "gpu_35", "gpu_36", "gpu_37", "gpu_38", "gpu_39"]
+              }
+            },
+            "ffn": {
+              "type": "feedforward",
+              "dimensions": [4096, 16384, 4096],
+              "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+              "always_on_base_layer": true
+            }
+          },
+          {
+            "layer_id": 3,
+            "attention": {
+              "type": "multi_head_attention_flash",
+              "dimensions": [4096, 4096, 4096],
+              "heads": 32,
+              "parallel_strategy": "block_wise",
+              "block_size_formula": "ceil(sequence_length / num_attention_gpus)",
+              "dynamic_device_mapping": {
+                "short_sequences": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+                "long_sequences": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15", "gpu_16", "gpu_17", "gpu_18", "gpu_19", "gpu_20", "gpu_21", "gpu_22", "gpu_23", "gpu_24", "gpu_25", "gpu_26", "gpu_27", "gpu_28", "gpu_29", "gpu_30", "gpu_31", "gpu_32", "gpu_33", "gpu_34", "gpu_35", "gpu_36", "gpu_37", "gpu_38", "gpu_39"]
+              }
+            },
+            "ffn": {
+              "type": "feedforward",
+              "dimensions": [4096, 16384, 4096],
+              "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+              "always_on_base_layer": true
+            }
+          }
+        ],
+        "output_layer": {
+          "type": "linear",
+          "dimensions": [4096, 32000],
+          "device_mapping": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+          "always_on_base_layer": true
+        }
+      },
+      "communication_optimization": {
+        "kv_cache_sharing": true,
+        "asynchronous_execution": true,
+        "hierarchical_reduction": true,
+        "communication_overhead_limit": 0.15
+      },
+      "resource_manager": {
+        "type": "dynamic_allocator",
+        "sequence_length_monitoring": true,
+        "threshold_detection": 4096,
+        "allocation_policy": {
+          "short_sequences": {
+            "gpus": 8,
+            "attention_devices": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+          },
+          "long_sequences": {
+            "min_gpus": 8,
+            "max_gpus": 32,
+            "attention_pool_devices": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15", "gpu_16", "gpu_17", "gpu_18", "gpu_19", "gpu_20", "gpu_21", "gpu_22", "gpu_23", "gpu_24", "gpu_25", "gpu_26", "gpu_27", "gpu_28", "gpu_29", "gpu_30", "gpu_31", "gpu_32", "gpu_33", "gpu_34", "gpu_35", "gpu_36", "gpu_37", "gpu_38", "gpu_39"]
+          }
+        }
+      }
+    }
+  },
+  "device_mapping": {
+    "gpu_0": {
+      "type": "NVIDIA A100 80GB",
+      "role": "base_layer",
+      "modules": ["embedding", "positional_encoding", "layer_0_ffn", "layer_0_attention_short", "output_layer"],
+      "memory_allocation": 65000000000
+    },
+    "gpu_1": {
+      "type": "NVIDIA A100 80GB",
+      "role": "base_layer",
+      "modules": ["embedding", "positional_encoding", "layer_0_ffn", "layer_0_attention_short", "output_layer"],
+      "memory_allocation": 65000000000
+    },
+    "gpu_2": {
+      "type": "NVIDIA A100 80GB",
+      "role": "base_layer",
+      "modules": ["embedding", "positional_encoding", "layer_1_ffn", "layer_1_attention_short", "output_layer"],
+      "memory_allocation": 65000000000
+    },
+    "gpu_3": {
+      "type": "NVIDIA A100 80GB",
+      "role": "base_layer",
+      "modules": ["embedding", "positional_encoding", "layer_1_ffn", "layer_1_attention_short", "output_layer"],
+      "memory_allocation": 65000000000
+    },
+    "gpu_4": {
+      "type": "NVIDIA A100 80GB",
+      "role": "base_layer",
+      "modules": ["embedding", "positional_encoding", "layer_2_ffn", "layer_2_attention_short", "output_layer"],
+      "memory_allocation": 65000000000
+    },
+    "gpu_5": {
+      "type": "NVIDIA A100 80GB",
+      "role": "base_layer",
+      "modules": ["embedding", "positional_encoding", "layer_2_ffn", "layer_2_attention_short", "output_layer"],
+      "memory_allocation": 65000000000
+    },
+    "gpu_6": {
+      "type": "NVIDIA A100 80GB",
+      "role": "base_layer",
+      "modules": ["embedding", "positional_encoding", "layer_3_ffn", "layer_3_attention_short", "output_layer"],
+      "memory_allocation": 65000000000
+    },
+    "gpu_7": {
+      "type": "NVIDIA A100 80GB",
+      "role": "base_layer",
+      "modules": ["embedding", "positional_encoding", "layer_3_ffn", "layer_3_attention_short", "output_layer"],
+      "memory_allocation": 65000000000
+    },
+    "gpu_8": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_9": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_10": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_11": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_12": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_13": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_14": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_15": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_16": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_17": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_18": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_19": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_20": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_21": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_att_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_22": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_23": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_24": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_25": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_26": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_27": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_28": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_29": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_30": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_31": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_32": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_33": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_34": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_35": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_36": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_37": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_38": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    },
+    "gpu_39": {
+      "type": "NVIDIA A100 80GB",
+      "role": "attention_pool",
+      "conditional_activation": "sequence_length > 4096",
+      "modules": ["layer_0_attention_long", "layer_1_attention_long", "layer_2_attention_long", "layer_3_attention_long"],
+      "memory_allocation": 45000000000
+    }
+  }
+}

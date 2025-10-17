@@ -1,0 +1,187 @@
+digraph ma_separation_complete {
+    rankdir=TB;
+    compound=true;
+    ranksep=1.8;
+    nodesep=0.7;
+    fontname="Arial";
+    
+    // Graph attributes
+    graph [bgcolor=white, fontname="Arial", fontsize=12];
+    node [fontname="Arial", fontsize=10];
+    edge [fontname="Arial", fontsize=9];
+    
+    // Input and Embedding
+    input [shape=ellipse, style=filled, fillcolor=lightgreen, 
+           label="Model Input\n[1024, 2048] tokens\nBroadcast to all GPUs"];
+    
+    embed [label="Token Embedding\nShared across GPUs\n[1024, 2048, 50265]→[1024, 2048, 4096]"];
+    
+    // === LAYER 0 ===
+    
+    // Layer 0 Attention Components
+    ln1_l0 [label="LayerNorm L0\n[1024, 2048, 4096]\nAll GPUs 0-11"];
+    
+    // Attention QKV Projections (GPUs 0-11)
+    subgraph cluster_attention_l0 {
+        label="Layer 0 Attention Parallel (GPUs 0-11)";
+        style=rounded;
+        color=blue;
+        bgcolor=lightblue;
+        
+        qkv_l0_gpu0 [label="QKV Projection\nGPU 0\n3 heads\n[1024, 2048, 4096]→[1024, 2048, 384]"];
+        qkv_l0_gpu1 [label="QKV Projection\nGPU 1\n3 heads\n[1024, 2048, 4096]→[1024, 2048, 384]"];
+        qkv_l0_gpu2 [label="QKV Projection\nGPU 2\n3 heads\n[1024, 2048, 4096]→[1024, 2048, 384]"];
+        qkv_l0_gpu3 [label="QKV Projection\nGPU 3\n3 heads\n[1024, 2048, 4096]→[1024, 2048, 384]"];
+        qkv_l0_gpu4 [label="QKV Projection\nGPU 4\n3 heads\n[1024, 2048, 4096]→[1024, 2048, 384]"];
+        qkv_l0_gpu5 [label="QKV Projection\nGPU 5\n3 heads\n[1024, 2048, 4096]→[1024, 2048, 384]"];
+        qkv_l0_gpu6 [label="QKV Projection\nGPU 6\n3 heads\n[1024, 2048, 4096]→[1024, 2048, 384]"];
+        qkv_l0_gpu7 [label="QKV Projection\nGPU 7\n3 heads\n[1024, 2048, 4096]→[1024, 2048, 384]"];
+        qkv_l0_gpu8 [label="QKV Projection\nGPU 8\n2 heads\n[1024, 2048, 4096]→[1024, 2048, 256]"];
+        qkv_l0_gpu9 [label="QKV Projection\nGPU 9\n2 heads\n[1024, 2048, 4096]→[1024, 2048, 256]"];
+        qkv_l0_gpu10 [label="QKV Projection\nGPU 10\n2 heads\n[1024, 2048, 4096]→[1024, 2048, 256]"];
+        qkv_l0_gpu11 [label="QKV Projection\nGPU 11\n2 heads\n[1024, 2048, 4096]→[1024, 2048, 256]"];
+        
+        scores_l0_gpu0 [label="Attention Scores\nGPU 0\n[1024, 2048, 3×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu1 [label="Attention Scores\nGPU 1\n[1024, 2048, 3×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu2 [label="Attention Scores\nGPU 2\n[1024, 2048, 3×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu3 [label="Attention Scores\nGPU 3\n[1024, 2048, 3×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu4 [label="Attention Scores\nGPU 4\n[1024, 2048, 3×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu5 [label="Attention Scores\nGPU 5\n[1024, 2048, 3×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu6 [label="Attention Scores\nGPU 6\n[1024, 2048, 3×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu7 [label="Attention Scores\nGPU 7\n[1024, 2048, 3×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu8 [label="Attention Scores\nGPU 8\n[1024, 2048, 2×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu9 [label="Attention Scores\nGPU 9\n[1024, 2048, 2×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu10 [label="Attention Scores\nGPU 10\n[1024, 2048, 2×128]×[1024, 2048, 128, 2048]"];
+        scores_l0_gpu11 [label="Attention Scores\nGPU 11\n[1024, 2048, 2×128]×[1024, 2048, 128, 2048]"];
+        
+        // Continue through attention computation chain...
+        // (Similar nodes for softmax, attention output, projections)
+    }
+    
+    // Layer 0 MoE Components
+    subgraph cluster_moe_l0 {
+        label="Layer 0 MoE Expert Parallel (GPUs 12-15)";
+        style=rounded;
+        color=red;
+        bgcolor=lightcoral;
+        
+        moe_recv_l0 [shape=parallelogram, style=filled, fillcolor=lightcyan, 
+                     label="Broadcast from Attention\nLayer 0\nGPUs 0-11 → GPUs 12-15"];
+        
+        ln_moe_l0 [label="LayerNorm MoE L0\n[1024, 2048, 4096]\nAll GPUs 12-15"];
+        
+        gate_l0 [shape=parallelogram, style=filled, fillcolor=orange, 
+                label="Gate Network\n[1024, 2048, 4096]→[1024, 2048, 16]\nAll GPUs 12-15"];
+        
+        // 16 experts distributed across 4 GPUs
+        expert_l0_0 [label="Expert 0\nGPU 12\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_1 [label="Expert 1\nGPU 12\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_2 [label="Expert 2\nGPU 12\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_3 [label="Expert 3\nGPU 12\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_4 [label="Expert 4\nGPU 13\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_5 [label="Expert 5\nGPU 13\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_6 [label="Expert 6\nGPU 13\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_7 [label="Expert 7\nGPU 13\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_8 [label="Expert 8\nGPU 14\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_9 [label="Expert 9\nGPU 14\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_10 [label="Expert 10\nGPU 14\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_11 [label="Expert 11\nGPU 14\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_12 [label="Expert 12\nGPU 15\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_13 [label="Expert 13\nGPU 15\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_14 [label="Expert 14\nGPU 15\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        expert_l0_15 [label="Expert 15\nGPU 15\n[1024, 2048, 4096]→[1024, 2048, 16384]→[1024, 2048, 4096]"];
+        
+        moe_agg_l0 [shape=ellipse, style=filled, fillcolor=lightyellow, 
+                   label="Expert Aggregation\n[1024, 2048, 4096]\nAll GPUs 12-15"];
+        
+        moe_alltoall_l0 [shape=ellipse, style=filled, fillcolor=yellow, 
+                        label="All-to-All Communication\nGPUs 12-15 → GPUs 0-11"];
+    }
+    
+    // === LAYER 1 ===
+    ln1_l1 [label="LayerNorm L1\n[1024, 2048, 4096]\nAll GPUs 0-11"];
+    
+    // === LAYER 2 ===
+    ln1_l2 [label="LayerNorm L2\n[1024, 2048, 4096]\nAll GPUs 0-11"];
+    
+    // === LAYER 3 ===
+    ln1_l3 [label="LayerNorm L3\n[1024, 2048, 4096]\nAll GPUs 0-11"];
+    
+    // === FINAL OUTPUT ===
+    final_ln [label="Final LayerNorm\n[1024, 2048, 4096]\nAll GPUs 0-11"];
+    final_output [shape=ellipse, style=filled, fillcolor=lightgreen, 
+                 label="Final Output\n[1024, 2048, 4096]→[1024, 2048, 50265]\nOutput Projection"];
+    
+    // === COMPLETE FLOW ===
+    // Input → Embedding
+    input -> embed;
+    
+    // Layer 0: Attention → Residual → MoE → Residual
+    embed -> ln1_l0;
+    
+    // Attention path (simplified representation)
+    ln1_l0 -> qkv_l0_gpu0;
+    ln1_l0 -> qkv_l0_gpu1;
+    ln1_l0 -> qkv_l0_gpu2;
+    ln1_l0 -> qkv_l0_gpu3;
+    ln1_l0 -> qkv_l0_gpu4;
+    ln1_l0 -> qkv_l0_gpu5;
+    ln1_l0 -> qkv_l0_gpu6;
+    ln1_l0 -> qkv_l0_gpu7;
+    ln1_l0 -> qkv_l0_gpu8;
+    ln1_l0 -> qkv_l0_gpu9;
+    ln1_l0 -> qkv_l0_gpu10;
+    ln1_l0 -> qkv_l0_gpu11;
+    
+    // Connect attention outputs to MoE
+    // (simplified connections for brevity)
+    ln1_l0 -> moe_recv_l0 [style=dashed, lhead=cluster_moe_l0];
+    
+    // MoE flow
+    moe_recv_l0 -> ln_moe_l0;
+    ln_moe_l0 -> gate_l0;
+    ln_moe_l0 -> expert_l0_0;
+    ln_moe_l0 -> expert_l0_1;
+    ln_moe_l0 -> expert_l0_2;
+    ln_moe_l0 -> expert_l0_3;
+    ln_moe_l0 -> expert_l0_4;
+    ln_moe_l0 -> expert_l0_5;
+    ln_moe_l0 -> expert_l0_6;
+    ln_moe_l0 -> expert_l0_7;
+    ln_moe_l0 -> expert_l0_8;
+    ln_moe_l0 -> expert_l0_9;
+    ln_moe_l0 -> expert_l0_10;
+    ln_moe_l0 -> expert_l0_11;
+    ln_moe_l0 -> expert_l0_12;
+    ln_moe_l0 -> expert_l0_13;
+    ln_moe_l0 -> expert_l0_14;
+    ln_moe_l0 -> expert_l0_15;
+    
+    expert_l0_0 -> moe_agg_l0;
+    expert_l0_1 -> moe_agg_l0;
+    expert_l0_2 -> moe_agg_l0;
+    expert_l0_3 -> moe_agg_l0;
+    expert_l0_4 -> moe_agg_l0;
+    expert_l0_5 -> moe_agg_l0;
+    expert_l0_6 -> moe_agg_l0;
+    expert_l0_7 -> moe_agg_l0;
+    expert_l0_8 -> moe_agg_l0;
+    expert_l0_9 -> moe_agg_l0;
+    expert_l0_10 -> moe_agg_l0;
+    expert_l0_11 -> moe_agg_l0;
+    expert_l0_12 -> moe_agg_l0;
+    expert_l0_13 -> moe_agg_l0;
+    expert_l0_14 -> moe_agg_l0;
+    expert_l0_15 -> moe_agg_l0;
+    
+    moe_agg_l0 -> moe_alltoall_l0;
+    moe_alltoall_l0 -> ln1_l1;
+    
+    // Layer 1 → Layer 2 → Layer 3
+    ln1_l1 -> ln1_l2 [style=dashed, label="Layer 1 Complete"];
+    ln1_l2 -> ln1_l3 [style=dashed, label="Layer 2 Complete"];
+    ln1_l3 -> final_ln [style=dashed, label="Layer 3 Complete"];
+    
+    // Final output
+    final_ln -> final_output;
+}

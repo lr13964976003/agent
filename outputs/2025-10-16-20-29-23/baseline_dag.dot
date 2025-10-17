@@ -1,0 +1,179 @@
+digraph baseline_tp8_pp2 {
+    rankdir=TB;
+    compound=true;
+    ranksep=2.0;
+    nodesep=0.8;
+    
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0 (GPUs 0-7)";
+        style=rounded;
+        color=blue;
+        bgcolor=lightblue;
+        
+        input_l0 [shape=ellipse, style=filled, fillcolor=lightgreen, label="Input\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: all GPUs"];
+        
+        embed_l0 [label="Token Embedding\nInput: [batch_size=1024, seq_len=2048]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7 (TP)"];
+        
+        ln1_l0 [label="LayerNorm\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7 (TP)"];
+        
+        qkv_l0 [label="QKV Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, num_heads=32, head_dim=128, 3]\nGPU: 0-7 (TP split: 512 dim per GPU)"];
+        
+        attn_scores_l0 [label="Attention Scores\nInput: [batch_size=1024, seq_len=2048, num_heads=4, head_dim=128]\nOutput: [batch_size=1024, seq_len=2048, num_heads=4, seq_len=2048]\nGPU: 0-7 (4 heads per GPU)"];
+        
+        attn_weights_l0 [label="Softmax\nInput: [batch_size=1024, seq_len=2048, num_heads=4, seq_len=2048]\nOutput: [batch_size=1024, seq_len=2048, num_heads=4, seq_len=2048]\nGPU: 0-7"];
+        
+        attn_output_l0 [label="Attention Output\nInput: [batch_size=1024, seq_len=2048, num_heads=4, head_dim=128]\nOutput: [batch_size=1024, seq_len=2048, num_heads=4, head_dim=128]\nGPU: 0-7"];
+        
+        o_proj_l0 [label="Output Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7 (TP row split)"];
+        
+        all_reduce_l0 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        res1_l0 [shape=ellipse, style=filled, fillcolor=pink, label="Residual Add\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        ln2_l0 [label="LayerNorm\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        mlp_up_l0 [label="MLP Up-Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, 16384]\nGPU: 0-7 (TP column split)"];
+        
+        mlp_act_l0 [label="GeLU Activation\nInput: [batch_size=1024, seq_len=2048, 16384]\nOutput: [batch_size=1024, seq_len=2048, 16384]\nGPU: 0-7"];
+        
+        mlp_down_l0 [label="MLP Down-Projection\nInput: [batch_size=1024, seq_len=2048, 16384]\nOutput: [batch_size=1024, seq_len=2048, 4096]\nGPU: 0-7 (TP row split)"];
+        
+        all_reduce_mlp_l0 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        res2_l0 [shape=ellipse, style=filled, fillcolor=pink, label="Residual Add\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        ln1_l1 [label="LayerNorm\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        qkv_l1 [label="QKV Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, num_heads=32, head_dim=128, 3]\nGPU: 0-7 (TP split)"];
+        
+        attn_scores_l1 [label="Attention Scores\nInput: [batch_size=1024, seq_len=2048, num_heads=4, head_dim=128]\nOutput: [batch_size=1024, seq_len=2048, num_heads=4, seq_len=2048]\nGPU: 0-7"];
+        
+        o_proj_l1 [label="Output Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        all_reduce_l1 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        res1_l1 [shape=ellipse, style=filled, fillcolor=pink, label="Residual Add\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        ln2_l1 [label="LayerNorm\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        mlp_up_l1 [label="MLP Up-Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, 16384]\nGPU: 0-7"];
+        
+        mlp_down_l1 [label="MLP Down-Projection\nInput: [batch_size=1024, seq_len=2048, 16384]\nOutput: [batch_size=1024, seq_len=2048, 4096]\nGPU: 0-7"];
+        
+        all_reduce_mlp_l1 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        res2_l1 [shape=ellipse, style=filled, fillcolor=pink, label="Residual Add\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 0-7"];
+        
+        send_stage1 [shape=parallelogram, style=filled, fillcolor=lightcyan, label="Send to Stage 1\nFrom: GPUs 0-7\nTo: GPUs 8-15\nData: [batch_size=1024, seq_len=2048, hidden_dim=4096]"];
+    }
+    
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1 (GPUs 8-15)";
+        style=rounded;
+        color=green;
+        bgcolor=lightgreen;
+        
+        recv_stage1 [shape=parallelogram, style=filled, fillcolor=lightcyan, label="Receive from Stage 0\nFrom: GPUs 0-7\nTo: GPUs 8-15\nData: [batch_size=1024, seq_len=2048, hidden_dim=4096]"];
+        
+        ln1_l2 [label="LayerNorm\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        qkv_l2 [label="QKV Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, num_heads=32, head_dim=128, 3]\nGPU: 8-15"];
+        
+        attn_scores_l2 [label="Attention Scores\nInput: [batch_size=1024, seq_len=2048, num_heads=4, head_dim=128]\nOutput: [batch_size=1024, seq_len=2048, num_heads=4, seq_len=2048]\nGPU: 8-15"];
+        
+        o_proj_l2 [label="Output Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        all_reduce_l2 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        res1_l2 [shape=ellipse, style=filled, fillcolor=pink, label="Residual Add\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        ln2_l2 [label="LayerNorm\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        mlp_up_l2 [label="MLP Up-Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, 16384]\nGPU: 8-15"];
+        
+        mlp_down_l2 [label="MLP Down-Projection\nInput: [batch_size=1024, seq_len=2048, 16384]\nOutput: [batch_size=1024, seq_len=2048, 4096]\nGPU: 8-15"];
+        
+        all_reduce_mlp_l2 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        res2_l2 [shape=ellipse, style=filled, fillcolor=pink, label="Residual Add\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        ln1_l3 [label="LayerNorm\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        qkv_l3 [label="QKV Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, num_heads=32, head_dim=128, 3]\nGPU: 8-15"];
+        
+        attn_scores_l3 [label="Attention Scores\nInput: [batch_size=1024, seq_len=2048, num_heads=4, head_dim=128]\nOutput: [batch_size=1024, seq_len=2048, num_heads=4, seq_len=2048]\nGPU: 8-15"];
+        
+        o_proj_l3 [label="Output Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        all_reduce_l3 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        res1_l3 [shape=ellipse, style=filled, fillcolor=pink, label="Residual Add\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        ln2_l3 [label="LayerNorm\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        mlp_up_l3 [label="MLP Up-Projection\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, 16384]\nGPU: 8-15"];
+        
+        mlp_down_l3 [label="MLP Down-Projection\nInput: [batch_size=1024, seq_len=2048, 16384]\nOutput: [batch_size=1024, seq_len=2048, 4096]\nGPU: 8-15"];
+        
+        all_reduce_mlp_l3 [shape=ellipse, style=filled, fillcolor=yellow, label="All-Reduce\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        res2_l3 [shape=ellipse, style=filled, fillcolor=pink, label="Residual Add\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nGPU: 8-15"];
+        
+        output [shape=ellipse, style=filled, fillcolor=lightgreen, label="Model Output\nInput: [batch_size=1024, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=2048, vocab_size=50265]\nGPU: 8-15"];
+    }
+    
+    input_l0 -> embed_l0;
+    embed_l0 -> ln1_l0;
+    ln1_l0 -> qkv_l0;
+    qkv_l0 -> attn_scores_l0;
+    attn_scores_l0 -> attn_weights_l0;
+    attn_weights_l0 -> attn_output_l0;
+    attn_output_l0 -> o_proj_l0;
+    o_proj_l0 -> all_reduce_l0;
+    all_reduce_l0 -> res1_l0;
+    res1_l0 -> ln2_l0;
+    ln2_l0 -> mlp_up_l0;
+    mlp_up_l0 -> mlp_act_l0;
+    mlp_act_l0 -> mlp_down_l0;
+    mlp_down_l0 -> all_reduce_mlp_l0;
+    all_reduce_mlp_l0 -> res2_l0;
+    
+    res2_l0 -> ln1_l1;
+    ln1_l1 -> qkv_l1;
+    qkv_l1 -> attn_scores_l1;
+    attn_scores_l1 -> o_proj_l1;
+    o_proj_l1 -> all_reduce_l1;
+    all_reduce_l1 -> res1_l1;
+    res1_l1 -> ln2_l1;
+    ln2_l1 -> mlp_up_l1;
+    mlp_up_l1 -> mlp_down_l1;
+    mlp_down_l1 -> all_reduce_mlp_l1;
+    all_reduce_mlp_l1 -> res2_l1;
+    res2_l1 -> send_stage1;
+    
+    send_stage1 -> recv_stage1 [lhead=cluster_stage1, ltail=cluster_stage0];
+    recv_stage1 -> ln1_l2;
+    ln1_l2 -> qkv_l2;
+    qkv_l2 -> attn_scores_l2;
+    attn_scores_l2 -> o_proj_l2;
+    o_proj_l2 -> all_reduce_l2;
+    all_reduce_l2 -> res1_l2;
+    res1_l2 -> ln2_l2;
+    ln2_l2 -> mlp_up_l2;
+    mlp_up_l2 -> mlp_down_l2;
+    mlp_down_l2 -> all_reduce_mlp_l2;
+    all_reduce_mlp_l2 -> res2_l2;
+    
+    res2_l2 -> ln1_l3;
+    ln1_l3 -> qkv_l3;
+    qkv_l3 -> attn_scores_l3;
+    attn_scores_l3 -> o_proj_l3;
+    o_proj_l3 -> all_reduce_l3;
+    all_reduce_l3 -> res1_l3;
+    res1_l3 -> ln2_l3;
+    ln2_l3 -> mlp_up_l3;
+    mlp_up_l3 -> mlp_down_l3;
+    mlp_down_l3 -> all_reduce_mlp_l3;
+    all_reduce_mlp_l3 -> res2_l3;
+    res2_l3 -> output;
+}

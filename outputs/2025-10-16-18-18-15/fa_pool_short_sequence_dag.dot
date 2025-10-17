@@ -1,0 +1,203 @@
+digraph fa_pool_short_sequence_dag {
+    rankdir=TB;
+    compound=true;
+    splines=ortho;
+    node [shape=rectangle, style=filled, fontname="monospace"];
+    
+    // Global attributes
+    graph [label="FA Pool - Short Sequence (≤4096 tokens)
+Base Layer GPUs: 8", fontsize=20];
+    
+    // Input node
+    input [shape=ellipse, label="Input (Short Seq)
+Input: [batch_size=1024, seq_len=≤4096, d_model=4096]
+GPU: Host", fillcolor="#E8F4FD"];
+    
+    // Sequence length check
+    seq_check [shape=parallelogram, label="Sequence Length Check
+Threshold: 4096 tokens
+Decision: Use Base Layer Only", fillcolor="#FFE4B5"];
+    
+    // Base layer components (always active)
+    subgraph cluster_base_layer {
+        label="Base Layer (Always Active - 8 GPUs)";
+        style=rounded;
+        fillcolor="#F0F8FF";
+        
+        // Embedding
+        embed_split [shape=parallelogram, label="Split Embedding (TP=8)
+Input: [batch_size=1024, seq_len=≤4096, d_model=4096]
+Output: 8×[batch_size=1024, seq_len=≤4096, d_model=512]
+GPU: 0-7", fillcolor="#FFE4B5"];
+        
+        embed_0 [label="Embedding GPU0
+Input: [batch_size=1024, seq_len=≤4096, d_model=512]
+Output: [batch_size=1024, seq_len=≤4096, d_model=512]
+GPU: gpu_0", fillcolor="#90EE90"];
+        embed_1 [label="Embedding GPU1
+Input: [batch_size=1024, seq_len=≤4096, d_model=512]
+Output: [batch_size=1024, seq_len=≤4096, d_model=512]
+GPU: gpu_1", fillcolor="#90EE90"];
+        embed_2 [label="Embedding GPU2
+Input: [batch_size=1024, seq_len=≤4096, d_model=512]
+Output: [batch_size=1024, seq_len=≤4096, d_model=512]
+GPU: gpu_2", fillcolor="#90EE90"];
+        embed_3 [label="Embedding GPU3
+Input: [batch_size=1024, seq_len=≤4096, d_model=512]
+Output: [batch_size=1024, seq_len=≤4096, d_model=512]
+GPU: gpu_3", fillcolor="#90EE90"];
+        embed_4 [label="Embedding GPU4
+Input: [batch_size=1024, seq_len=≤4096, d_model=512]
+Output: [batch_size=1024, seq_len=≤4096, d_model=512]
+GPU: gpu_4", fillcolor="#90EE90"];
+        embed_5 [label="Embedding GPU5
+Input: [batch_size=1024, seq_len=≤4096, d_model=512]
+Output: [batch_size=1024, seq_len=≤4096, d_model=512]
+GPU: gpu_5", fillcolor="#90EE90"];
+        embed_6 [label="Embedding GPU6
+Input: [batch_size=1024, seq_len=≤4096, d_model=512]
+Output: [batch_size=1024, seq_len=≤4096, d_model=512]
+GPU: gpu_6", fillcolor="#90EE90"];
+        embed_7 [label="Embedding GPU7
+Input: [batch_size=1024, seq_len=≤4096, d_model=512]
+Output: [batch_size=1024, seq_len=≤4096, d_model=512]
+GPU: gpu_7", fillcolor="#90EE90"];
+        
+        embed_gather [shape=parallelogram, label="All-Gather (TP=8)
+Input: 8×[batch_size=1024, seq_len=≤4096, d_model=512]
+Output: [batch_size=1024, seq_len=≤4096, d_model=4096]
+GPU: 0-7", fillcolor="#FFE4B5"];
+        
+        pos_enc [label="Positional Encoding
+Input: [batch_size=1024, seq_len=≤4096, d_model=4096]
+Output: [batch_size=1024, seq_len=≤4096, d_model=4096]
+GPU: 0-7", fillcolor="#87CEEB"];
+        
+        // Layer 0 - Base Layer
+        subgraph cluster_layer0_base {
+            label="Layer 0 - Base Layer";
+            style=dashed;
+            fillcolor="#E6F3FF";
+            
+            layernorm_0 [label="LayerNorm 0
+Input: [batch_size=1024, seq_len=≤4096, d_model=4096]
+Output: [batch_size=1024, seq_len=≤4096, d_model=4096]
+GPU: 0-7", fillcolor="#DDA0DD"];
+            
+            // Attention using base GPUs only
+            attn_base_0 [label="Flash Attention Base
+Input: [batch_size=1024, seq_len=≤4096, d_model=4096]
+Output: [batch_size=1024, seq_len=≤4096, d_model=4096]
+GPU: 0-7 (TP=8)", fillcolor="#FFD700"];
+            
+            residual_0 [label="Residual Add 0
+Input: [batch_size=1024, seq_len=≤4096, d_model=4096]
+Output: [batch_size=1024, seq_len=≤4096, d_model=4096]
+GPU: 0-7", fillcolor="#DDA0DD"];
+            
+            // FFN
+            ffn_0 [label="FFN 0
+Input: [batch_size=1024, seq_len=≤4096, d_model=4096]
+Output: [batch_size=1024, seq_len=≤4096, d_model=4096]
+GPU: 0-7 (TP=8)", fillcolor="#98FB98"];
+            residual_0_ffn [label="Residual Add 0 FFN
+Input: [batch_size=1024, seq_len=≤4096, d_model=4096]
+Output: [batch_size=1024, seq_len=≤4096, d_model=4096]
+GPU: 0-7", fillcolor="#DDA0DD"];
+        }
+        
+        // Layer 1 - Base Layer
+        subgraph cluster_layer1_base {
+            label="Layer 1 - Base Layer";
+            style=dashed;
+            fillcolor="#E6F3FF";
+            
+            layernorm_1 [label="LayerNorm 1
+GPU: 0-7", fillcolor="#DDA0DD"];
+            attn_base_1 [label="Flash Attention Base
+GPU: 0-7", fillcolor="#FFD700"];
+            residual_1 [label="Residual Add 1
+GPU: 0-7", fillcolor="#DDA0DD"];
+            ffn_1 [label="FFN 1
+GPU: 0-7", fillcolor="#98FB98"];
+            residual_1_ffn [label="Residual Add 1 FFN
+GPU: 0-7", fillcolor="#DDA0DD"];
+        }
+        
+        // Layer 2 - Base Layer
+        subgraph cluster_layer2_base {
+            label="Layer 2 - Base Layer";
+            style=dashed;
+            fillcolor="#E6F3FF";
+            
+            layernorm_2 [label="LayerNorm 2
+GPU: 0-7", fillcolor="#DDA0DD"];
+            attn_base_2 [label="Flash Attention Base
+GPU: 0-7", fillcolor="#FFD700"];
+            residual_2 [label="Residual Add 2
+GPU: 0-7", fillcolor="#DDA0DD"];
+            ffn_2 [label="FFN 2
+GPU: 0-7", fillcolor="#98FB98"];
+            residual_2_ffn [label="Residual Add 2 FFN
+GPU: 0-7", fillcolor="#DDA0DD"];
+        }
+        
+        // Layer 3 - Base Layer
+        subgraph cluster_layer3_base {
+            label="Layer 3 - Base Layer";
+            style=dashed;
+            fillcolor="#E6F3FF";
+            
+            layernorm_3 [label="LayerNorm 3
+GPU: 0-7", fillcolor="#DDA0DD"];
+            attn_base_3 [label="Flash Attention Base
+GPU: 0-7", fillcolor="#FFD700"];
+            residual_3 [label="Residual Add 3
+GPU: 0-7", fillcolor="#DDA0DD"];
+            ffn_3 [label="FFN 3
+GPU: 0-7", fillcolor="#98FB98"];
+            residual_3_ffn [label="Residual Add 3 FFN
+GPU: 0-7", fillcolor="#DDA0DD"];
+        }
+        
+        // Output layer
+        output_split [shape=parallelogram, label="Split Output (TP=8)
+GPU: 0-7", fillcolor="#FFE4B5"];
+        output_0 [label="Linear GPU0
+GPU: gpu_0", fillcolor="#FFB6C1"];
+        output_1 [label="Linear GPU1
+GPU: gpu_1", fillcolor="#FFB6C1"];
+        output_2 [label="Linear GPU2
+GPU: gpu_2", fillcolor="#FFB6C1"];
+        output_3 [label="Linear GPU3
+GPU: gpu_3", fillcolor="#FFB6C1"];
+        output_4 [label="Linear GPU4
+GPU: gpu_4", fillcolor="#FFB6C1"];
+        output_5 [label="Linear GPU5
+GPU: gpu_5", fillcolor="#FFB6C1"];
+        output_6 [label="Linear GPU6
+GPU: gpu_6", fillcolor="#FFB6C1"];
+        output_7 [label="Linear GPU7
+GPU: gpu_7", fillcolor="#FFB6C1"];
+        output_concat [shape=parallelogram, label="Concat Output
+GPU: 0-7", fillcolor="#FFE4B5"];
+        final_output [shape=ellipse, label="Final Output
+GPU: 0-7", fillcolor="#E8F4FD"];
+    }
+    
+    // Connections for short sequence
+    input -> seq_check;
+    seq_check -> embed_split;
+    embed_split -> {embed_0 embed_1 embed_2 embed_3 embed_4 embed_5 embed_6 embed_7};
+    {embed_0 embed_1 embed_2 embed_3 embed_4 embed_5 embed_6 embed_7} -> embed_gather -> pos_enc;
+    pos_enc -> layernorm_0 -> attn_base_0 -> residual_0;
+    layernorm_0 -> residual_0 [style=dashed, label="Residual"];
+    residual_0 -> ffn_0 -> residual_0_ffn;
+    residual_0 -> residual_0_ffn [style=dashed, label="Residual"];
+    
+    residual_0_ffn -> layernorm_1 -> attn_base_1 -> residual_1 -> ffn_1 -> residual_1_ffn;
+    residual_1_ffn -> layernorm_2 -> attn_base_2 -> residual_2 -> ffn_2 -> residual_2_ffn;
+    residual_2_ffn -> layernorm_3 -> attn_base_3 -> residual_3 -> ffn_3 -> residual_3_ffn;
+    
+    residual_3_ffn -> output_split -> {output_0 output_1 output_2 output_3 output_4 output_5 output_6 output_7} -> output_concat -> final_output;
+}

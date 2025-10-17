@@ -63,7 +63,7 @@ The FA Pool strategy operates through the following mechanism:
 
 1. **Sequence Length Monitoring**: Continuously monitor input sequence length during inference
 2. **Threshold Detection**: Compare sequence length against predefined thresholds
-3. **Resource Activation**: When sequence length exceeds the threshold, activate additional GPUs for the attention pool
+3. **Resource Activation**: When sequence length exceeds the threshold, activate additional GPUs for the attention pool. Otherwise, activate only Attention with the same number of FFNs as before.
 4. **Workload Distribution**: Partition attention computation across the available pool GPUs
 5. **Result Aggregation**: Collect and synchronize results from pool GPUs
 6. **Resource Deactivation**: Release pool resources when sequence length drops below threshold
@@ -212,67 +212,7 @@ Breakdown of computational overhead:
 - **Synchronization**: 5-8% (minimized through asynchronous execution)
 - **Resource Management**: 2-3% (efficient allocation/deallocation)
 
-## 6. Discussion
-
-### 6.1 Key Insights
-
-**Dynamic vs. Static Allocation**: The quadratic complexity of attention mechanisms makes them ideal candidates for dynamic resource allocation, as computational requirements vary dramatically with sequence length.
-
-**Threshold Sensitivity**: The sequence length threshold represents a critical design parameter. Our empirical analysis shows optimal performance when the threshold balances attention computation time with communication overhead.
-
-**Resource Pool Efficiency**: The attention pool approach achieves high GPU utilization by concentrating computational resources on the bottleneck operation while maintaining model coherence through the base layer.
-
-### 6.2 Limitations
-
-**Communication Bottleneck**: For very long sequences (>32K tokens), communication overhead begins to dominate, limiting further scaling.
-
-**Memory Requirements**: While individual pool GPUs require less memory, the total system memory requirement increases with pool size.
-
-**Model Architecture Dependency**: Current implementation is optimized for transformer architectures and may require adaptation for other model types.
-
-### 6.3 Practical Considerations
-
-**Hardware Requirements**: FA Pool requires flexible GPU allocation capabilities, which may not be available in all deployment scenarios.
-
-**Energy Efficiency**: While improving performance, the additional GPUs increase total power consumption.
-
-**Cost Analysis**: The strategy is most beneficial in scenarios where performance improvements justify the additional hardware costs.
-
-## 7. Future Work
-
-### 7.1 Algorithmic Improvements
-
-**Adaptive Thresholds**: Implement dynamic threshold adjustment based on real-time performance metrics and workload characteristics.
-
-**Hierarchical Pooling**: Explore multi-level attention pools for extremely long sequences (>64K tokens).
-
-**Predictive Allocation**: Develop machine learning models to predict optimal resource allocation based on sequence characteristics.
-
-### 7.2 System Optimizations
-
-**Communication Protocols**: Investigate specialized communication protocols for attention pool synchronization.
-
-**Memory Management**: Develop more sophisticated memory management strategies to reduce overall memory requirements.
-
-**Fault Tolerance**: Implement robust fault tolerance mechanisms for pool GPU failures.
-
-### 7.3 Broader Applications
-
-**Other Model Architectures**: Extend FA Pool to other architectures such as mixture of experts or retrieval-augmented models.
-
-**Training Scenarios**: Adapt the strategy for training scenarios where gradient synchronization adds complexity.
-
-**Multi-Modal Models**: Investigate applications in multi-modal models where attention operates across different modalities.
-
-### 7.4 Integration with Emerging Technologies
-
-**Specialized Hardware**: Explore integration with specialized attention acceleration hardware.
-
-**Edge Deployment**: Develop lightweight versions suitable for edge computing scenarios with limited GPU resources.
-
-**Cloud-Native Architectures**: Design cloud-native implementations leveraging container orchestration and auto-scaling capabilities.
-
-## 8. Conclusion
+## 6. Conclusion
 
 FA Pool represents a significant advancement in parallel strategies for large language models, addressing the fundamental challenge of quadratic attention complexity through dynamic resource allocation. By intelligently allocating GPU resources based on sequence length thresholds, FA Pool achieves substantial improvements in both TPOT and TPS metrics, particularly for long sequences.
 

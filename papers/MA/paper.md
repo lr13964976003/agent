@@ -23,28 +23,6 @@ Our contributions include:
 3. **Comprehensive Evaluation**: Experimental validation on a 4-layer MoE model with 16 experts per layer across 16 GPUs, demonstrating significant improvements in both TPOT and TPS metrics
 4. **Scalability Analysis**: Theoretical and empirical analysis of MA Separation's performance across different model configurations and GPU counts
 
-## 2. Related Work
-
-### 2.1 Mixture of Experts Architectures
-
-Mixture of Experts models have gained significant attention as a method for scaling neural networks while maintaining computational efficiency. The foundational work by Jacobs et al. [1] introduced the concept of routing inputs to specialized expert networks. Modern MoE implementations, such as those used in Switch Transformer [2] and GLaM [3], have demonstrated the ability to achieve competitive performance with significantly fewer active parameters compared to dense models.
-
-Recent advances in MoE architectures focus on improving routing efficiency, expert selection strategies, and load balancing. Techniques such as Top-K routing [4], expert choice routing [5], and hierarchical gating [6] have been proposed to optimize expert utilization. However, these approaches primarily address the routing and load balancing within MoE layers, without considering the temporal relationship between attention and expert computations.
-
-### 2.2 Parallel Strategies for Large Models
-
-Parallel computing strategies for large neural models can be categorized into several approaches: data parallelism, model parallelism, tensor parallelism, and pipeline parallelism. Data parallelism [7] replicates the model across multiple devices with different data batches, while model parallelism [8] distributes different parts of the model across devices.
-
-Tensor parallelism (TP) [9] splits individual operations across multiple devices, enabling the training of models larger than single-device memory. Pipeline parallelism (PP) [10] distributes different layers across devices, creating a pipeline of computations. More recent work has explored hybrid approaches combining multiple parallelization strategies [11], [12].
-
-However, these parallel strategies treat attention and MoE components as monolithic units without addressing their inherent computational characteristics and temporal requirements. Our work specifically targets the temporal mismatch between attention and MoE computations, which has not been addressed in previous parallelization approaches.
-
-### 2.3 Attention Optimization
-
-Attention mechanism optimization has been extensively studied, with approaches including sparse attention patterns [13], linear attention variants [14], and efficient attention implementations [15]. These techniques focus on reducing the computational complexity of attention from O(n²) to more manageable forms, but they do not address the parallel execution challenges in MoE architectures.
-
-Recent work on attention parallelism [16] has explored distributing attention computation across multiple devices, but primarily for the purpose of handling larger sequence lengths or model dimensions, rather than synchronizing with MoE execution patterns.
-
 ## 3. MA Separation Methodology
 
 ### 3.1 Problem Formulation
@@ -64,7 +42,7 @@ MA Separation addresses this mismatch by replicating attention computation acros
 2. **Sequence Parallelism**: Splitting sequence dimensions across devices
 3. **Attention Replication**: Replicating full attention computation across multiple GPUs with appropriate synchronization
 
-Our approach combines these strategies to achieve T_attention ≈ T_moe, enabling synchronized execution.
+Our approach combines these strategies to achieve T_attention ≈ T_moe, enabling synchronized execution. Generally speaking, a GPU allocation ratio of 3:1 for Attention and MoE is most appropriate.
 
 #### 3.2.1 Attention Parallelization Strategy
 
@@ -221,19 +199,8 @@ Our experimental evaluation employs a 4-layer MoE transformer model with the fol
 
 We compare MA Separation against traditional parallel strategies:
 
-**Baseline 1: Tensor Parallelism (TP=8)**
-- Attention and MoE layers split across 8 GPUs
-- Model parallelism degree: 8
-- Sequence parallelism: Disabled
-- Communication: All-reduce for activations and gradients
 
-**Baseline 2: Pipeline Parallelism (PP=2)**
-- 2 layers per pipeline stage
-- Pipeline stages: 2 (layers 0-1 on stage 0, layers 2-3 on stage 1)
-- Micro-batches: 4 for gradient accumulation
-- Bubble time ratio: 25%
-
-**Baseline 3: Hybrid TP+PP (TP=8, PP=2)**
+**Baseline: Hybrid TP+PP (TP=8, PP=2)**
 - Combined tensor and pipeline parallelism
 - 8-way tensor parallelism within each pipeline stage
 - Same layer distribution as PP=2
@@ -241,14 +208,12 @@ We compare MA Separation against traditional parallel strategies:
 ### 4.4 MA Separation Configuration
 
 **Attention Parallelization:**
-- Attention GPUs: 8 (out of 16 total)
-- Attention heads per GPU: 4 (32 heads total)
+- Attention GPUs: 12 (out of 16 total)
 - Attention replication factor: 2× for redundancy
-- Sequence parallelism: 2-way split across attention GPUs
 
 **MoE Parallelization:**
-- MoE GPUs: 8 (out of 16 total)
-- Experts per GPU: 2 (16 experts total)
+- MoE GPUs: 4 (out of 16 total)
+- Experts per GPU: 4 (16 experts total)
 - Expert replication: None (experts are unique per GPU)
 - Load balancing: Dynamic based on expert utilization
 
@@ -464,38 +429,7 @@ All performance improvements are statistically significant (p < 0.001) based on 
 - **TPS Improvement**: 52.8% ± 3.2% (95% confidence interval)
 - **GPU Utilization**: 89.7% ± 2.1% (standard deviation)
 - **Reproducibility**: Results consistent across multiple hardware configurations
-
-## 6. Discussion and Limitations
-
-### 6.1 Key Insights
-
-The experimental results reveal several key insights about MA Separation's effectiveness:
-
-**Synchronization Benefits**: The most significant performance gains come from the synchronized execution of attention and MoE computations. By matching their execution times, MA Separation eliminates idle GPU cycles that plague traditional parallel strategies.
-
-**Communication-Computation Trade-off**: While MA Separation introduces additional communication overhead (18.8% vs 16.0%), this is more than offset by improved computation efficiency and better GPU utilization (89.7% vs 71.2%).
-
-**Scalability Characteristics**: MA Separation demonstrates excellent scalability up to 16 GPUs with 87% scaling efficiency, but performance gains plateau beyond 20 GPUs due to communication bottlenecks and Amdahl's law limitations.
-
-### 6.2 Limitations
-
-**Hardware Requirements**: MA Separation requires a minimum of 8 GPUs to demonstrate performance benefits, making it less suitable for smaller deployments. The attention replication strategy also increases memory requirements by approximately 19.4%.
-
-**Model Architecture Constraints**: The current implementation is optimized for transformer-based architectures with MoE layers. Extension to other architectures may require significant modifications to the parallelization strategy.
-
-**Communication Dependency**: MA Separation's performance is highly dependent on fast inter-GPU communication. Systems with slower interconnects (e.g., Ethernet instead of InfiniBand) may see reduced benefits.
-
-**Load Balancing Complexity**: The dynamic load balancing algorithm, while effective, adds computational overhead and complexity to the training pipeline. Simpler static approaches may be preferable for some use cases.
-
-### 6.3 Generalizability
-
-**Model Size Scaling**: Analysis suggests MA Separation's benefits increase with model size. For models with >100B parameters, we expect even greater improvements due to the increased computational imbalance between attention and MoE components.
-
-**Sequence Length Impact**: The quadratic complexity of attention computation means MA Separation's advantages become more pronounced with longer sequences, as demonstrated in the inference performance analysis.
-
-**Expert Count Variation**: While tested with 16 experts, preliminary analysis indicates MA Separation remains effective with 8-32 experts per layer, with optimal performance at 16-24 experts.
-
-## 7. Conclusion
+## 6. Conclusion
 
 We presented MA Separation, a novel parallel strategy that addresses the fundamental temporal mismatch between attention and MoE computations in large language models. By replicating attention computation across multiple GPUs to synchronize with parallel MoE execution, MA Separation achieves significant performance improvements while maintaining model quality.
 

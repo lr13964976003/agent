@@ -1,0 +1,55 @@
+{
+  "baseline_model": {
+    "description": "4-layer Dense Transformer with TP=8, PP=2 using 16 GPUs",
+    "dot_file": "../outputs/2025-10-16-18-18-15/baseline_transformer_dag.dot",
+    "svg_file": "../outputs/2025-10-16-18-18-15/baseline_transformer_dag.svg",
+    "total_gpus": 16,
+    "parallel_strategy": "static",
+    "tensor_parallelism": 8,
+    "pipeline_parallelism": 2
+  },
+  "fa_pool_model": {
+    "short_sequences": {
+      "description": "FA Pool for sequences ≤4096 tokens using 8 base GPUs",
+      "dot_file": "../outputs/2025-10-16-18-18-15/fa_pool_short_sequence_dag.dot",
+      "svg_file": "../outputs/2025-10-16-18-18-15/fa_pool_short_sequence_dag.svg",
+      "total_gpus": 8,
+      "parallel_strategy": "dynamic",
+      "threshold": "≤4096 tokens"
+    },
+    "long_sequences": {
+      "description": "FA Pool for sequences >4096 tokens using 40 total GPUs (8 base + 32 attention pool)",
+      "dot_file": "../outputs/2025-10-16-18-18-15/fa_pool_long_sequence_dag.dot",
+      "svg_file": "../outputs/2025-10-16-18-18-15/fa_pool_long_sequence_dag.svg",
+      "total_gpus": 40,
+      "parallel_strategy": "dynamic",
+      "threshold": ">4096 tokens",
+      "attention_pool_gpus": 32,
+      "block_size_formula": "ceil(sequence_length/32)"
+    }
+  },
+  "model_specifications": {
+    "layers": 4,
+    "hidden_dimension": 4096,
+    "attention_heads": 32,
+    "feedforward_dimension": 16384,
+    "batch_size": 1024,
+    "parameters": 13000000000,
+    "activation": "GELU",
+    "normalization": "RMSNorm"
+  },
+  "deployment_analysis": {
+    "baseline": {
+      "gpu_utilization": "45-60%",
+      "memory_per_gpu": "65GB base",
+      "communication_overhead": "15-20%"
+    },
+    "fa_pool": {
+      "base_layer_utilization": "85-92%",
+      "attention_pool_utilization": "85-92%",
+      "base_layer_memory": "65GB",
+      "attention_pool_memory": "45GB",
+      "communication_overhead": "<15%"
+    }
+  }
+}

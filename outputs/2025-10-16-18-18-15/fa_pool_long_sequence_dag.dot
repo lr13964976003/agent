@@ -1,0 +1,209 @@
+digraph fa_pool_long_sequence_dag {
+    rankdir=TB;
+    compound=true;
+    splines=ortho;
+    node [shape=rectangle, style=filled, fontname="monospace"];
+    
+    // Global attributes
+    graph [label="FA Pool - Long Sequence (>4096 tokens)
+Base Layer: 8 GPUs + Attention Pool: 32 GPUs
+Total: 40 GPUs", fontsize=20];
+    
+    // Input node
+    input [shape=ellipse, label="Input (Long Seq)
+Input: [batch_size=1024, seq_len=>4096, d_model=4096]
+GPU: Host", fillcolor="#E8F4FD"];
+    
+    // Sequence length check
+    seq_check [shape=parallelogram, label="Sequence Length Check
+Threshold: 4096 tokens
+Decision: Activate Attention Pool
+Block Size: ceil(seq_len/32)", fillcolor="#FFE4B5"];
+    
+    // Resource manager
+    resource_manager [shape=parallelogram, label="Resource Manager
+Activate 32 GPUs for Attention Pool
+Distribute Attention Computation", fillcolor="#FF6B6B"];
+    
+    // Base layer components (always active)
+    subgraph cluster_base_layer {
+        label="Base Layer (8 GPUs - Always Active)";
+        style=rounded;
+        fillcolor="#F0F8FF";
+        
+        // Embedding and positional encoding
+        embed_split [shape=parallelogram, label="Split Embedding (TP=8)
+GPU: 0-7", fillcolor="#FFE4B5"];
+        pos_enc [label="Positional Encoding
+GPU: 0-7", fillcolor="#87CEEB"];
+    }
+    
+    // Attention Pool (32 GPUs activated)
+    subgraph cluster_attention_pool {
+        label="Attention Pool (32 GPUs - Activated for Long Sequences)";
+        style=rounded;
+        fillcolor="#FFE4E1";
+        
+        // Block distribution
+        block_split [shape=parallelogram, label="Block-wise Split
+Input: [batch_size=1024, seq_len=>4096, d_model=4096]
+Output: 32×[batch_size=1024, block_size, d_model=4096]
+GPU: 8-39", fillcolor="#FF6B6B"];
+        
+        // Layer 0 attention pool
+        subgraph cluster_layer0_pool {
+            label="Layer 0 Attention Pool";
+            style=dashed;
+            fillcolor="#FFDAB9";
+            
+            layernorm_0_pool [label="LayerNorm 0 Pool
+GPU: 8-39", fillcolor="#DDA0DD"];
+            
+            // 32 parallel attention blocks
+            flash_attn_0_8 [label="Flash Attention Block 0
+GPU: gpu_8", fillcolor="#FFD700"];
+            flash_attn_0_9 [label="Flash Attention Block 1
+GPU: gpu_9", fillcolor="#FFD700"];
+            flash_attn_0_10 [label="Flash Attention Block 2
+GPU: gpu_10", fillcolor="#FFD700"];
+            flash_attn_0_11 [label="Flash Attention Block 3
+GPU: gpu_11", fillcolor="#FFD700"];
+            flash_attn_0_12 [label="Flash Attention Block 4
+GPU: gpu_12", fillcolor="#FFD700"];
+            flash_attn_0_13 [label="Flash Attention Block 5
+GPU: gpu_13", fillcolor="#FFD700"];
+            flash_attn_0_14 [label="Flash Attention Block 6
+GPU: gpu_14", fillcolor="#FFD700"];
+            flash_attn_0_15 [label="Flash Attention Block 7
+GPU: gpu_15", fillcolor="#FFD700"];
+            
+            // Continue for remaining GPUs
+            flash_attn_0_16 [label="Flash Attention Block 8
+GPU: gpu_16", fillcolor="#FFD700"];
+            flash_attn_0_17 [label="Flash Attention Block 9
+GPU: gpu_17", fillcolor="#FFD700"];
+            flash_attn_0_18 [label="Flash Attention Block 10
+GPU: gpu_18", fillcolor="#FFD700"];
+            flash_attn_0_19 [label="Flash Attention Block 11
+GPU: gpu_19", fillcolor="#FFD700"];
+            flash_attn_0_20 [label="Flash Attention Block 12
+GPU: gpu_20", fillcolor="#FFD700"];
+            flash_attn_0_21 [label="Flash Attention Block 13
+GPU: gpu_21", fillcolor="#FFD700"];
+            flash_attn_0_22 [label="Flash Attention Block 14
+GPU: gpu_22", fillcolor="#FFD700"];
+            flash_attn_0_23 [label="Flash Attention Block 15
+GPU: gpu_23", fillcolor="#FFD700"];
+            
+            flash_attn_0_24 [label="Flash Attention Block 16
+GPU: gpu_24", fillcolor="#FFD700"];
+            flash_attn_0_25 [label="Flash Attention Block 17
+GPU: gpu_25", fillcolor="#FFD700"];
+            flash_attn_0_26 [label="Flash Attention Block 18
+GPU: gpu_26", fillcolor="#FFD700"];
+            flash_attn_0_27 [label="Flash Attention Block 19
+GPU: gpu_27", fillcolor="#FFD700"];
+            flash_attn_0_28 [label="Flash Attention Block 20
+GPU: gpu_28", fillcolor="#FFD700"];
+            flash_attn_0_29 [label="Flash Attention Block 21
+GPU: gpu_29", fillcolor="#FFD700"];
+            flash_attn_0_30 [label="Flash Attention Block 22
+GPU: gpu_30", fillcolor="#FFD700"];
+            flash_attn_0_31 [label="Flash Attention Block 23
+GPU: gpu_31", fillcolor="#FFD700"];
+            
+            flash_attn_0_32 [label="Flash Attention Block 24
+GPU: gpu_32", fillcolor="#FFD700"];
+            flash_attn_0_33 [label="Flash Attention Block 25
+GPU: gpu_33", fillcolor="#FFD700"];
+            flash_attn_0_34 [label="Flash Attention Block 26
+GPU: gpu_34", fillcolor="#FFD700"];
+            flash_attn_0_35 [label="Flash Attention Block 27
+GPU: gpu_35", fillcolor="#FFD700"];
+            flash_attn_0_36 [label="Flash Attention Block 28
+GPU: gpu_36", fillcolor="#FFD700"];
+            flash_attn_0_37 [label="Flash Attention Block 29
+GPU: gpu_37", fillcolor="#FFD700"];
+            flash_attn_0_38 [label="Flash Attention Block 30
+GPU: gpu_38", fillcolor="#FFD700"];
+            flash_attn_0_39 [label="Flash Attention Block 31
+GPU: gpu_39", fillcolor="#FFD700"];
+            
+            // KV cache sharing
+            kv_cache_share [shape=parallelogram, label="KV Cache Sharing
+Replicate K,V across all pool GPUs
+GPU: 8-39", fillcolor="#FF6B6B"];
+            
+            // Concatenation
+            concat_0 [shape=parallelogram, label="Concatenate Blocks
+Input: 32×[batch_size=1024, block_size, d_model=4096]
+Output: [batch_size=1024, seq_len, d_model=4096]
+GPU: 8-39 → 0-7", fillcolor="#FFE4B5"];
+        }
+        
+        // Similar blocks for layers 1, 2, 3
+        // (Abbreviated for brevity - full structure in actual)
+    }
+    
+    // Base layer FFNs (always on base GPUs)
+    subgraph cluster_base_layer_ffn {
+        label="Base Layer FFN (Always on Base GPUs)";
+        style=dashed;
+        fillcolor="#E6FFF0";
+        
+        // FFN for each layer on base GPUs
+        ffn_0 [label="FFN 0
+Input: [batch_size=1024, seq_len=>4096, d_model=4096]
+Output: [batch_size=1024, seq_len=>4096, d_model=4096]
+GPU: 0-7 (TP=8)", fillcolor="#98FB98"];
+        ffn_1 [label="FFN 1
+GPU: 0-7", fillcolor="#98FB98"];
+        ffn_2 [label="FFN 2
+GPU: 0-7", fillcolor="#98FB98"];
+        ffn_3 [label="FFN 3
+GPU: 0-7", fillcolor="#98FB98"];
+    }
+    
+    // Communication between layers
+    async_comm_0 [shape=ellipse, label="Asynchronous Communication
+Overlap Attention (Pool) with FFN (Base)
+GPU: 8-39 ↔ 0-7", fillcolor="#FF6B6B"];
+    async_comm_1 [shape=ellipse, label="Asynchronous Communication 1
+GPU: 8-39 ↔ 0-7", fillcolor="#FF6B6B"];
+    async_comm_2 [shape=ellipse, label="Asynchronous Communication 2
+GPU: 8-39 ↔ 0-7", fillcolor="#FF6B6B"];
+    async_comm_3 [shape=ellipse, label="Asynchronous Communication 3
+GPU: 8-39 ↔ 0-7", fillcolor="#FF6B6B"];
+    
+    // Output layer
+    subgraph cluster_output {
+        label="Output Layer (TP=8)";
+        style=dashed;
+        fillcolor="#E6E6FA";
+        
+        output_split [shape=parallelogram, label="Split Output (TP=8)
+GPU: 0-7", fillcolor="#FFE4B5"];
+        {output_0 output_1 output_2 output_3 output_4 output_5 output_6 output_7} [label="Linear GPUi
+GPU: gpu_i", fillcolor="#FFB6C1"];
+        output_concat [shape=parallelogram, label="Concat Output
+GPU: 0-7", fillcolor="#FFE4B5"];
+        final_output [shape=ellipse, label="Final Output
+GPU: 0-7", fillcolor="#E8F4FD"];
+    }
+    
+    // Connections
+    input -> seq_check -> resource_manager;
+    resource_manager -> embed_split;
+    embed_split -> {embed_0 embed_1 embed_2 embed_3 embed_4 embed_5 embed_6 embed_7};
+    {embed_0 embed_1 embed_2 embed_3 embed_4 embed_5 embed_6 embed_7} -> embed_gather -> pos_enc;
+    
+    // Layer 0 flow
+    pos_enc -> block_split -> {flash_attn_0_8 flash_attn_0_9 flash_attn_0_10 flash_attn_0_11 flash_attn_0_12 flash_attn_0_13 flash_attn_0_14 flash_attn_0_15};
+    {flash_attn_0_8 flash_attn_0_9 flash_attn_0_10 flash_attn_0_11 flash_attn_0_12 flash_attn_0_13 flash_attn_0_14 flash_attn_0_15} -> concat_0 -> ffn_0;
+    
+    // Continue with remaining layers...
+    // (Abridged for brevity)
+    
+    // Final output
+    ffn_3 -> output_split -> {output_0 output_1 output_2 output_3 output_4 output_5 output_6 output_7} -> output_concat -> final_output;
+}
