@@ -1,0 +1,140 @@
+{
+  "task": "MA Separation Parallel Strategy DAG Generation",
+  "date": "2025-10-17",
+  "generated_dags": [
+    {
+      "strategy": "MA_Separation",
+      "description": "4-layer MoE transformer with MA Separation parallel strategy",
+      "configuration": {
+        "attention_gpus": 12,
+        "moe_gpus": 4,
+        "total_gpus": 16,
+        "gpu_allocation_ratio": "3:1"
+      },
+      "files": {
+        "dot": "../outputs/2025-10-17-10-50-08/ma_separation_dag.dot",
+        "svg": "../outputs/2025-10-17-10-50-08/ma_separation_dag.svg",
+        "graphviz": "../outputs/2025-10-17-10-50-08/ma_separation_dag"
+      },
+      "key_features": [
+        "12 GPUs dedicated to attention with 32 heads distributed",
+        "4 GPUs dedicated to MoE with 16 experts distributed",
+        "All-reduce operations for attention aggregation",
+        "Gate-based expert routing shown with dashed lines",
+        "Cross-GPU communication paths explicitly shown",
+        "Residual connections and layer normalization included"
+      ]
+    },
+    {
+      "strategy": "TP8_PP2_Baseline",
+      "description": "4-layer MoE transformer with hybrid Tensor Parallelism 8 + Pipeline Parallelism 2",
+      "configuration": {
+        "tensor_parallelism": 8,
+        "pipeline_parallelism": 2,
+        "total_gpus": 16,
+        "stages": 2,
+        "layers_per_stage": 2
+      },
+      "files": {
+        "dot": "../outputs/2025-10-17-10-50-08/baseline_tp8_pp2_dag.dot",
+        "svg": "../outputs/2025-10-17-10-50-08/baseline_tp8_pp2_dag.svg",
+        "graphviz": "../outputs/2025-10-17-10-50-08/baseline_tp8_pp2_dag"
+      },
+      "key_features": [
+        "Tensor parallelism 8 across GPUs 0-7 and 8-15",
+        "Pipeline parallelism with 2 stages",
+        "Each stage processes 2 layers",
+        "Cross-stage communication nodes explicitly shown",
+        "All-reduce operations for tensor parallelism"
+      ]
+    },
+    {
+      "strategy": "TP8_Standalone",
+      "description": "4-layer MoE transformer with standalone Tensor Parallelism 8",
+      "configuration": {
+        "tensor_parallelism": 8,
+        "total_gpus": 8,
+        "model_parallel": true
+      },
+      "files": {
+        "dot": "../outputs/2025-10-17-10-50-08/tp8_standalone_dag.dot",
+        "svg": "../outputs/2025-10-17-10-50-08/tp8_standalone_dag.svg",
+        "graphviz": "../outputs/2025-10-17-10-50-08/tp8_standalone_dag"
+      },
+      "key_features": [
+        "Tensor parallelism across 8 GPUs",
+        "Model parallelism within each layer",
+        "All-reduce operations after attention and MoE",
+        "Expert processing on all GPUs",
+        "No pipeline stages"
+      ]
+    },
+    {
+      "strategy": "PP2_Standalone",
+      "description": "4-layer MoE transformer with standalone Pipeline Parallelism 2",
+      "configuration": {
+        "pipeline_parallelism": 2,
+        "total_gpus": 16,
+        "stages": 2,
+        "layers_per_stage": 2,
+        "gpus_per_stage": 8
+      },
+      "files": {
+        "dot": "../outputs/2025-10-17-10-50-08/pp2_standalone_dag.dot",
+        "svg": "../outputs/2025-10-17-10-50-08/pp2_standalone_dag.svg",
+        "graphviz": "../outputs/2025-10-17-10-50-08/pp2_standalone_dag"
+      },
+      "key_features": [
+        "Pipeline parallelism with 2 stages",
+        "Each stage uses 8 GPUs",
+        "No tensor parallelism within layers",
+        "Cross-stage communication shown",
+        "Full model replication within each stage"
+      ]
+    }
+  ],
+  "technical_specifications": {
+    "model_dimensions": {
+      "batch_size": 1024,
+      "sequence_length": 2048,
+      "hidden_dimension": 4096,
+      "attention_heads": 32,
+      "moe_experts_per_layer": 16,
+      "expert_hidden_dimension": 16384,
+      "top_k_routing": 2
+    },
+    "communication_patterns": [
+      "All-Reduce for tensor parallelism",
+      "All-To-All for expert routing",
+      "Pipeline communication between stages",
+      "Broadcast operations for data distribution"
+    ],
+    "gpu_assignments": {
+      "ma_separation": {
+        "attention": "GPUs 0-11",
+        "moe": "GPUs 12-15"
+      },
+      "baseline": {
+        "stage_0": "GPUs 0-7",
+        "stage_1": "GPUs 8-15"
+      }
+    }
+  },
+  "validation_status": {
+    "ma_separation": {
+      "gpu_count": 16,
+      "attention_gpus": 12,
+      "moe_gpus": 4,
+      "ratio_check": "12:4 = 3:1 ✓"
+    },
+    "baseline": {
+      "gpu_count": 16,
+      "tp_size": 8,
+      "pp_size": 2,
+      "total_check": "8×2 = 16 ✓"
+    },
+    "dimensional_consistency": "All tensor dimensions aligned across parallel strategies ✓",
+    "node_connectivity": "All nodes properly connected with inputs/outputs ✓",
+    "cycle_detection": "All DAGs are acyclic ✓"
+  }
+}
