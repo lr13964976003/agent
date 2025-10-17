@@ -35,7 +35,7 @@ def main():
                 "slug": "check_topic",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "../papers/FA/paper.md",
+                    "paper_path": "../papers/MA/paper.md",
                     "score_path": "../knowledges/llm_parallelism_classification_schema.json"
                 },
                 "tools": [
@@ -46,7 +46,7 @@ def main():
                 "slug": "chain_read_paper",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "../papers/FA/paper.md",
+                    "paper_path": "../papers/MA/paper.md",
                     "knowledge_path": "../knowledges/llm_parallel_strategies.md",
                     "save_path": f"../outputs/{submission_dir}"
                     },
@@ -61,7 +61,7 @@ def main():
                 "slug" : "chain_check_paper",
                 "version" : 8,
                 "inputs": {
-                    "origin_paper_path" : "../papers/FA/paper.md"
+                    "origin_paper_path" : "../papers/MA/paper.md"
                     },
                 "tools": [
                     FileReadTool(),
@@ -137,15 +137,17 @@ def main():
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
     
-    check_result = run_pipeline([agents[0]], [tasks[0]])
-    if "failed" in check_result.lower():
-        return "The paper is not relevant to the topic"
+    #check_result = run_pipeline([agents[0]], [tasks[0]])
+    #if "failed" in check_result.lower():
+    #    return "The paper is not relevant to the topic"
 
     paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], work_task=tasks[1], review_task=tasks[2])
     paper_result = paper_loop.run()
     dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=paper_result)
     dag_result = dag_loop.run()
     
+    return
+
     perf_task = tasks[5]
     perf_task.description = tasks[5].description + \
     f"There are the submissions of previous agents: \n\n{dag_result}"

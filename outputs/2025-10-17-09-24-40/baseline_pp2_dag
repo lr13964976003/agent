@@ -1,0 +1,41 @@
+// Baseline PP=2: Pipeline parallelism across 2 stages
+digraph baseline_pp2_dag {
+	graph [bgcolor=white fontname=Arial fontsize=12 rankdir=TB]
+	node [fontname=Arial fontsize=10]
+	input [label="Input\n[batch_size=1024, seq_len=2048, hidden_dim=4096]" fillcolor="#D0E8FF" shape=ellipse style=filled]
+	subgraph stage0 {
+		label="Stage 0: GPUs 0-3, Layers 0-1"
+		s0_embedding [label="Embedding\n[Input: [1024,2048], Output: [1024,2048,4096]]" fillcolor="#E8F4FD" shape=rectangle style=filled]
+		s0_layer0_norm1 [label="Layer 0\nLayerNorm\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8F4FD" shape=rectangle style=filled]
+		s0_layer0_attn [label="Layer 0\nAttention\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8F4FD" shape=rectangle style=filled]
+		s0_layer0_residual1 [label="Layer 0\nResidual Add\n[Input: 2×[1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8FDE8" shape=parallelogram style="filled,rounded"]
+		s0_layer0_norm2 [label="Layer 0\nLayerNorm\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8F4FD" shape=rectangle style=filled]
+		s0_layer0_moe [label="Layer 0\nMoE (8 experts)\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8F4FD" shape=rectangle style=filled]
+		s0_layer0_residual2 [label="Layer 0\nResidual Add\n[Input: 2×[1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8FDE8" shape=parallelogram style="filled,rounded"]
+		s0_layer1_norm1 [label="Layer 1\nLayerNorm\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8F4FD" shape=rectangle style=filled]
+		s0_layer1_attn [label="Layer 1\nAttention\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8F4FD" shape=rectangle style=filled]
+		s0_layer1_residual1 [label="Layer 1\nResidual Add\n[Input: 2×[1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8FDE8" shape=parallelogram style="filled,rounded"]
+		s0_layer1_norm2 [label="Layer 1\nLayerNorm\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8F4FD" shape=rectangle style=filled]
+		s0_layer1_moe [label="Layer 1\nMoE (8 experts)\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8F4FD" shape=rectangle style=filled]
+		s0_layer1_residual2 [label="Layer 1\nResidual Add\n[Input: 2×[1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8FDE8" shape=parallelogram style="filled,rounded"]
+	}
+	pipeline_send [label="Pipeline Send\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8FDE8" shape=parallelogram style="filled,rounded"]
+	subgraph stage1 {
+		label="Stage 1: GPUs 4-7, Layers 2-3"
+		s1_layer2_norm1 [label="Layer 2\nLayerNorm\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#FDE8E8" shape=rectangle style=filled]
+		s1_layer2_attn [label="Layer 2\nAttention\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#FDE8E8" shape=rectangle style=filled]
+		s1_layer2_residual1 [label="Layer 2\nResidual Add\n[Input: 2×[1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8FDE8" shape=parallelogram style="filled,rounded"]
+		s1_layer2_norm2 [label="Layer 2\nLayerNorm\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#FDE8E8" shape=rectangle style=filled]
+		s1_layer2_moe [label="Layer 2\nMoE (8 experts)\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#FDE8E8" shape=rectangle style=filled]
+		s1_layer2_residual2 [label="Layer 2\nResidual Add\n[Input: 2×[1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8FDE8" shape=parallelogram style="filled,rounded"]
+		s1_layer3_norm1 [label="Layer 3\nLayerNorm\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#FDE8E8" shape=rectangle style=filled]
+		s1_layer3_attn [label="Layer 3\nAttention\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#FDE8E8" shape=rectangle style=filled]
+		s1_layer3_residual1 [label="Layer 3\nResidual Add\n[Input: 2×[1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8FDE8" shape=parallelogram style="filled,rounded"]
+		s1_layer3_norm2 [label="Layer 3\nLayerNorm\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#FDE8E8" shape=rectangle style=filled]
+		s1_layer3_moe [label="Layer 3\nMoE (8 experts)\n[Input: [1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#FDE8E8" shape=rectangle style=filled]
+		s1_layer3_residual2 [label="Layer 3\nResidual Add\n[Input: 2×[1024,2048,4096], Output: [1024,2048,4096]]" fillcolor="#E8FDE8" shape=parallelogram style="filled,rounded"]
+	}
+	output [label="Output\n[batch_size=1024, seq_len=2048, hidden_dim=4096]" fillcolor="#D0E8FF" shape=ellipse style=filled]
+	input -> s0_embedding
+	s1_layer3_residual2 -> output
+}
