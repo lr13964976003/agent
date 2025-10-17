@@ -1,0 +1,355 @@
+{
+  "deployment_config": {
+    "ma_separation_model": {
+      "parallel_strategy": "MA_Separation",
+      "total_gpus": 16,
+      "gpu_allocation": {
+        "attention_gpus": 12,
+        "moe_gpus": 4,
+        "allocation_ratio": "3:1"
+      },
+      "device_mapping": {
+        "attention_computation": {
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+          "parallel_strategy": "attention_replication",
+          "parameters": {
+            "total_attention_heads": 32,
+            "heads_per_gpu": 2.67,
+            "head_distribution": [
+              {"gpu": 0, "heads": [0, 1, 2]},
+              {"gpu": 1, "heads": [3, 4, 5]},
+              {"gpu": 2, "heads": [6, 7, 8]},
+              {"gpu": 3, "heads": [9, 10, 11]},
+              {"gpu": 4, "heads": [12, 13, 14]},
+              {"gpu": 5, "heads": [15, 16, 17]},
+              {"gpu": 6, "heads": [18, 19, 20]},
+              {"gpu": 7, "heads": [21, 22, 23]},
+              {"gpu": 8, "heads": [24, 25]},
+              {"gpu": 9, "heads": [26, 27]},
+              {"gpu": 10, "heads": [28, 29]},
+              {"gpu": 11, "heads": [30, 31]}
+            ],
+            "hidden_dimension": 4096,
+            "sequence_length": 2048,
+            "head_dimension": 128
+          },
+          "communication": {
+            "intra_node_reduce": {
+              "devices_per_node": 4,
+              "nodes": 3,
+              "bandwidth": "600GB/s"
+            },
+            "inter_node_reduce": {
+              "topology": "fat_tree",
+              "bandwidth": "200Gb/s"
+            }
+          }
+        },
+        "moe_computation": {
+          "devices": [12, 13, 14, 15],
+          "parallel_strategy": "expert_parallelism",
+          "parameters": {
+            "total_experts": 16,
+            "experts_per_gpu": 4,
+            "expert_distribution": [
+              {"gpu": 12, "experts": [0, 1, 2, 3]},
+              {"gpu": 13, "experts": [4, 5, 6, 7]},
+              {"gpu": 14, "experts": [8, 9, 10, 11]},
+              {"gpu": 15, "experts": [12, 13, 14, 15]}
+            ],
+            "expert_hidden_dimension": 16384,
+            "top_k_routing": 2,
+            "expert_capacity_factor": 1.0,
+            "load_balancing_loss": 0.01,
+            "router_z_loss": 0.001
+          },
+          "communication": {
+            "all_to_all": {
+              "pattern": "expert_routing",
+              "bandwidth": "200Gb/s"
+            }
+          }
+        }
+      },
+      "synchronization": {
+        "mechanism": "cuda_events",
+        "timing_prediction": {
+          "model": "lightweight_timing_predictor",
+          "inputs": ["sequence_length", "hidden_dimension", "active_experts", "gpu_specs", "current_load"],
+          "output": ["predicted_t_attention", "predicted_t_moe"]
+        },
+        "barrier_sync": {
+          "attention_complete": "cudaEventRecord(attention_complete_event, attention_stream)",
+          "moe_complete": "cudaEventRecord(moe_complete_event, moe_stream)",
+          "next_layer_wait": [
+            "cudaStreamWaitEvent(next_layer_stream, attention_complete_event)",
+            "cudaStreamWaitEvent(next_layer_stream, moe_complete_event)"
+          ]
+        },
+        "load_balancing": {
+          "algorithm": "dynamic_head_distribution",
+          "adjustment_threshold": 0.05,
+          "adjustment_frequency": "per_layer"
+        }
+      },
+      "model_layers": [
+        {
+          "layer_id": 0,
+          "type": "transformer_layer",
+          "attention_module": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            "parameters": {
+              "hidden_dim": 4096,
+              "num_heads": 32,
+              "head_dim": 128,
+              "dropout": 0.1,
+              "activation": "GELU"
+            }
+          },
+          "moe_module": {
+            "devices": [12, 13, 14, 15],
+            "parameters": {
+              "num_experts": 16,
+              "expert_hidden_dim": 16384,
+              "top_k": 2,
+              "activation": "SwiGLU",
+              "dropout": 0.1
+            }
+          }
+        },
+        {
+          "layer_id": 1,
+          "type": "transformer_layer",
+          "attention_module": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            "parameters": {
+              "hidden_dim": 4096,
+              "num_heads": 32,
+              "head_dim": 128,
+              "dropout": 0.1,
+              "activation": "GELU"
+            }
+          },
+          "moe_module": {
+            "devices": [12, 13, 14, 15],
+            "parameters": {
+              "num_experts": 16,
+              "expert_hidden_dim": 16384,
+              "top_k": 2,
+              "activation": "SwiGLU",
+              "dropout": 0.1
+            }
+          }
+        },
+        {
+          "layer_id": 2,
+          "type": "transformer_layer",
+          "attention_module": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            "parameters": {
+              "hidden_dim": 4096,
+              "num_heads": 32,
+              "head_dim": 128,
+              "dropout": 0.1,
+              "activation": "GELU"
+            }
+          },
+          "moe_module": {
+            "devices": [12, 13, 14, 15],
+            "parameters": {
+              "num_experts": 16,
+              "expert_hidden_dim": 16384,
+              "top_k": 2,
+              "activation": "SwiGLU",
+              "dropout": 0.1
+            }
+          }
+        },
+        {
+          "layer_id": 3,
+          "type": "transformer_layer",
+          "attention_module": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            "parameters": {
+              "hidden_dim": 4096,
+              "num_heads": 32,
+              "head_dim": 128,
+              "dropout": 0.1,
+              "activation": "GELU"
+            }
+          },
+          "moe_module": {
+            "devices": [12, 13, 14, 15],
+            "parameters": {
+              "num_experts": 16,
+              "expert_hidden_dim": 16384,
+              "top_k": 2,
+              "activation": "SwiGLU",
+              "dropout": 0.1
+            }
+          }
+        }
+      ]
+    },
+    "baseline_model": {
+      "name": "Hybrid_TP_PP_Baseline",
+      "parallel_strategy": "tensor_parallelism_plus_pipeline_parallelism",
+      "total_gpus": 16,
+      "tensor_parallelism": {
+        "tp_degree": 8,
+        "devices_per_stage": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        "slice_dimension": "hidden_dimension",
+        "parameters": {
+          "hidden_dim": 4096,
+          "slice_size": 512,
+          "num_heads": 32,
+          "heads_per_gpu": 4
+        }
+      },
+      "pipeline_parallelism": {
+        "pp_degree": 2,
+        "stages": [
+          {
+            "stage_id": 0,
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+            "layers": [0, 1],
+            "parameters": {
+              "layers_per_stage": 2,
+              "micro_batch_size": 64
+            }
+          },
+          {
+            "stage_id": 1,
+            "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+            "layers": [2, 3],
+            "parameters": {
+              "layers_per_stage": 2,
+              "micro_batch_size": 64
+            }
+          }
+        ]
+      },
+      "model_layers": [
+        {
+          "layer_id": 0,
+          "type": "transformer_layer",
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "attention_module": {
+            "parallel_strategy": "tensor_parallel",
+            "parameters": {
+              "hidden_dim": 4096,
+              "num_heads": 32,
+              "heads_per_gpu": 4,
+              "head_dim": 128,
+              "dropout": 0.1,
+              "activation": "GELU"
+            }
+          },
+          "moe_module": {
+            "parallel_strategy": "tensor_parallel",
+            "parameters": {
+              "num_experts": 16,
+              "experts_per_gpu": 2,
+              "expert_hidden_dim": 16384,
+              "top_k": 2,
+              "activation": "SwiGLU",
+              "dropout": 0.1
+            }
+          }
+        },
+        {
+          "layer_id": 1,
+          "type": "transformer_layer",
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "attention_module": {
+            "parallel_strategy": "tensor_parallel",
+            "parameters": {
+              "hidden_dim": 4096,
+              "num_heads": 32,
+              "heads_per_gpu": 4,
+              "head_dim": 128,
+              "dropout": 0.1,
+              "activation": "GELU"
+            }
+          },
+          "moe_module": {
+            "parallel_strategy": "tensor_parallel",
+            "parameters": {
+              "num_experts": 16,
+              "experts_per_gpu": 2,
+              "expert_hidden_dim": 16384,
+              "top_k": 2,
+              "activation": "SwiGLU",
+              "dropout": 0.1
+            }
+          }
+        },
+        {
+          "layer_id": 2,
+          "type": "transformer_layer",
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "attention_module": {
+            "parallel_strategy": "tensor_parallel",
+            "parameters": {
+              "hidden_dim": 4096,
+              "num_heads": 32,
+              "heads_per_gpu": 4,
+              "head_dim": 128,
+              "dropout": 0.1,
+              "activation": "GELU"
+            }
+          },
+          "moe_module": {
+            "parallel_strategy": "tensor_parallel",
+            "parameters": {
+              "num_experts": 16,
+              "experts_per_gpu": 2,
+              "expert_hidden_dim": 16384,
+              "top_k": 2,
+              "activation": "SwiGLU",
+              "dropout": 0.1
+            }
+          }
+        },
+        {
+          "layer_id": 3,
+          "type": "transformer_layer",
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "attention_module": {
+            "parallel_strategy": "tensor_parallel",
+            "parameters": {
+              "hidden_dim": 4096,
+              "num_heads": 32,
+              "heads_per_gpu": 4,
+              "head_dim": 128,
+              "dropout": 0.1,
+              "activation": "GELU"
+            }
+          },
+          "moe_module": {
+            "parallel_strategy": "tensor_parallel",
+            "parameters": {
+              "num_experts": 16,
+              "experts_per_gpu": 2,
+              "expert_hidden_dim": 16384,
+              "top_k": 2,
+              "activation": "SwiGLU",
+              "dropout": 0.1
+            }
+          }
+        }
+      ],
+      "communication": {
+        "pipeline_communication": {
+          "pattern": "point_to_point",
+          "stages": 2,
+          "bandwidth": "200Gb/s"
+        },
+        "tensor_parallel_communication": {
+          "pattern": "all_reduce",
+          "bandwidth": "600GB/s"
+        }
+      }
+    }
+  }
+}
