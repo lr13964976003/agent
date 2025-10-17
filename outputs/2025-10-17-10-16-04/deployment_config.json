@@ -1,0 +1,241 @@
+{
+  "model_deployment": {
+    "name": "MA_Separation_MoE_Model",
+    "version": "1.0.0",
+    "description": "16-expert MoE model with MA Separation parallel strategy",
+    "total_parameters": 8858370048
+  },
+
+  "parallel_strategy": {
+    "name": "MA_Separation",
+    "type": "hybrid_attention_moe",
+    "attention_gpu_ratio": 0.75,
+    "moe_gpu_ratio": 0.25,
+    "total_gpus": 16,
+    "attention_gpus": 12,
+    "moe_gpus": 4
+  },
+
+  "gpu_allocation": {
+    "attention_gpus": [
+      {"node": 0, "gpu_id": 0, "global_id": 0, "hostname": "node0.ma-separation.local"},
+      {"node": 0, "gpu_id": 1, "global_id": 1, "hostname": "node0.ma-separation.local"},
+      {"node": 0, "gpu_id": 2, "global_id": 2, "hostname": "node0.ma-separation.local"},
+      {"node": 1, "gpu_id": 0, "global_id": 4, "hostname": "node1.ma-separation.local"},
+      {"node": 1, "gpu_id": 1, "global_id": 5, "hostname": "node1.ma-separation.local"},
+      {"node": 1, "gpu_id": 2, "global_id": 6, "hostname": "node1.ma-separation.local"},
+      {"node": 2, "gpu_id": 0, "global_id": 8, "hostname": "node2.ma-separation.local"},
+      {"node": 2, "gpu_id": 1, "global_id": 9, "hostname": "node2.ma-separation.local"},
+      {"node": 2, "gpu_id": 2, "global_id": 10, "hostname": "node2.ma-separation.local"},
+      {"node": 3, "gpu_id": 0, "global_id": 12, "hostname": "node3.ma-separation.local"},
+      {"node": 3, "gpu_id": 1, "global_id": 13, "hostname": "node3.ma-separation.local"},
+      {"node": 3, "gpu_id": 2, "global_id": 14, "hostname": "node3.ma-separation.local"}
+    ],
+    
+    "moe_gpus": [
+      {"node": 0, "gpu_id": 3, "global_id": 3, "hostname": "node0.ma-separation.local"},
+      {"node": 1, "gpu_id": 3, "global_id": 7, "hostname": "node1.ma-separation.local"},
+      {"node": 2, "gpu_id": 3, "global_id": 11, "hostname": "node2.ma-separation.local"},
+      {"node": 3, "gpu_id": 3, "global_id": 15, "hostname": "node3.ma-separation.local"}
+    ]
+  },
+
+  "modules": {
+    "attention_modules": {
+      "type": "transformer_attention",
+      "parameters": {
+        "hidden_size": 4096,
+        "num_attention_heads": 32,
+        "attention_head_size": 128,
+        "intermediate_size": 16384,
+        "hidden_dropout_prob": 0.1,
+        "attention_probs_dropout_prob": 0.1,
+        "max_position_embeddings": 2048
+      },
+      "parallel_config": {
+        "strategy": "head_parallelism",
+        "heads_per_gpu": [3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2],
+        "communication": "hierarchical_all_reduce",
+        "buffer_size": 33554432
+      }
+    },
+
+    "moe_modules": {
+      "type": "mixture_of_experts",
+      "parameters": {
+        "num_experts": 16,
+        "expert_capacity_factor": 1.0,
+        "top_k": 2,
+        "hidden_size": 4096,
+        "intermediate_size": 16384,
+        "aux_loss_alpha": 0.01,
+        "z_loss_alpha": 0.001
+      },
+      "expert_distribution": {
+        "GPU_3": {"experts": [0, 1, 2, 3], "memory_per_expert": 268435456},
+        "GPU_7": {"experts": [4, 5, 6, 7], "memory_per_expert": 268435456},
+        "GPU_11": {"experts": [8, 9, 10, 11], "memory_per_expert": 268435456},
+        "GPU_15": {"experts": [12, 13, 14, 15], "memory_per_expert": 268435456}
+      }
+    }
+  },
+
+  "device_mapping": {
+    "layer_0": {
+      "attention": {
+        "gpus": [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14],
+        "heads_per_gpu": {"start": [0, 3, 6, 9, 12, 15, 18, 21, 24, 26, 28, 30],
+                        "end": [3, 6, 9, 12, 15, 18, 21, 24, 26, 28, 30, 32]},
+        "buffer_allocation": 33554432
+      },
+      "moe": {
+        "gpus": [3, 7, 11, 15],
+        "experts_per_gpu": 4,
+        "routing": {"gate_gpu": 3, "broadcast_to_all": true}
+      }
+    },
+    
+    "layer_1": {
+      "attention": {
+        "gpus": [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14],
+        "heads_per_gpu": {"start": [0, 3, 6, 9, 12, 15, 18, 21, 24, 26, 28, 30],
+                        "end": [3, 6, 9, 12, 15, 18, 21, 24, 26, 28, 30, 32]},
+        "buffer_allocation": 33554432
+      },
+      "moe": {
+        "gpus": [3, 7, 11, 15],
+        "experts_per_gpu": 4,
+        "routing": {"gate_gpu": 7, "broadcast_to_all": true}
+      }
+    },
+    
+    "layer_2": {
+      "attention": {
+        "gpus": [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14],
+        "heads_per_gpu": {"start": [0, 3, 6, 9, 12, 15, 18, 21, 24, 26, 28, 30],
+                        "end": [3, 6, 9, 12, 15, 18, 21, 24, 26, 28, 30, 32]},
+        "buffer_allocation": 33554432
+      },
+      "moe": {
+        "gpus": [3, 7, 11, 15],
+        "experts_per_gpu": 4,
+        "routing": {"gate_gpu": 11, "broadcast_to_all": true}
+      }
+    },
+    
+    "layer_3": {
+      "attention": {
+        "gpus": [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14],
+        "heads_per_gpu": {"start": [0, 3, 6, 9, 12, 15, 18, 21, 24, 26, 28, 30],
+                        "end": [3, 6, 9, 12, 15, 18, 21, 24, 26, 28, 30, 32]},
+        "buffer_allocation": 33554432
+      },
+      "moe": {
+        "gpus": [3, 7, 11, 15],
+        "experts_per_gpu": 4,
+        "routing": {"gate_gpu": 15, "broadcast_to_all": true}
+      }
+    }
+  },
+
+  "communication_topology": {
+    "intra_node": {
+      "bandwidth": 600,
+      "unit": "GB/s",
+      "latency": "1us",
+      "topology": "nvlink_mesh"
+    },
+    
+    "inter_node": {
+      "bandwidth": 200,
+      "unit": "Gb/s", 
+      "latency": "5us",
+      "topology": "fat_tree_infiniband"
+    },
+    
+    "communication_groups": {
+      "attention_all_reduce": {
+        "ranks": [0,1,2,4,5,6,8,9,10,12,13,14],
+        "algorithm": "ring_all_reduce",
+        "chunk_size": 4194304
+      },
+      
+      "moe_all_to_all": {
+        "ranks": [3,7,11,15],
+        "algorithm": "hierarchical_all_to_all",
+        "chunk_size": 2097152
+      }
+    }
+  },
+
+  "synchronization_parameters": {
+    "time_prediction": {
+      "attention_time_model": "0.0012 + 0.000034*seq_len + 0.0000087*hidden_dim",
+      "moe_time_model": "0.0008 + 0.000045*expert_dim + 0.000012*active_experts",
+      "threshold": 0.15,
+      "interval": 100
+    },
+    
+    "load_balancing": {
+      "min_attention_gpus": 8,
+      "max_attention_gpus": 14,
+      "rebalancing_trigger": "15_percent_diff",
+      "monitoring_frequency": 100
+    },
+    
+    "barrier_sync": {
+      "timeout_ms": 5000,
+      "cuda_streams": {"attention_priority": 0, "moe_priority": 1},
+      "events": ["attention_complete", "moe_complete", "layer_sync"]
+    }
+  },
+
+  "memory_requirements": {
+    "per_gpu_total": 126730.8,
+    "unit": "MB",
+    
+    "breakdown": {
+      "model_parameters": 230949.9,
+      "activations": 120832,
+      "optimizer_states": 461899.8,
+      "communication_buffers": 125829.1
+    },
+    
+    "optimization": {
+      "activation_checkpointing": true,
+      "mixed_precision": "bf16",
+      "gradient_checkpointing": true,
+      "memory_efficiency": 85.4
+    }
+  },
+
+  "baseline_configuration": {
+    "TP_8_PP_2": {
+      "description": "Traditional tensor parallelism 8-way + pipeline parallelism 2-way",
+      "tensor_parallel_size": 8,
+      "pipeline_parallel_size": 2,
+      "micro_batch_size": 64,
+      "gradient_accumulation_steps": 16,
+      "performance": {
+        "TPOT_ms": 2.76,
+        "TPS": 8696,
+        "GPU_utilization": 71.2,
+        "communication_overhead": 16.0
+      }
+    }
+  },
+
+  "performance_targets": {
+    "TPOT_reduction_percent": 34.2,
+    "TPS_increase_percent": 52.8,
+    "GPU_utilization_target": 89.7,
+    "energy_efficiency_improvement_percent": 33.9,
+    "scaling_efficiency_16_gpu": 0.87
+  },
+
+  "fault_tolerance": {
+    "attention_redundancy": {"replication_factor": 2, "recovery_time_ms": 50},
+    "expert_failure_handling": {"success_rate": 0.992, "redistribution_time_ms": 150},
+    "gpu_failure_recovery": {"time_seconds": 2.3, "graceful_degradation": "linear"}
+  }
+}

@@ -205,6 +205,23 @@ We compare MA Separation against traditional parallel strategies:
 - 8-way tensor parallelism within each pipeline stage
 - Same layer distribution as PP=2
 
+### 4.4 MA Separation Configuration
+
+**Attention Parallelization:**
+- Attention GPUs: 12 (out of 16 total)
+- Attention replication factor: 2× for redundancy
+
+**MoE Parallelization:**
+- MoE GPUs: 4 (out of 16 total)
+- Experts per GPU: 4 (16 experts total)
+- Expert replication: None (experts are unique per GPU)
+- Load balancing: Dynamic based on expert utilization
+
+**Synchronization Settings:**
+- Time prediction model: Neural network with 3 hidden layers
+- Synchronization interval: Every 100 iterations
+- Load balancing threshold: 5% execution time difference
+- Communication compression: 8-bit quantization for gradients
 
 ### 4.5 Dataset and Training Configuration
 
