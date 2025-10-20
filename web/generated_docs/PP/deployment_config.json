@@ -1,254 +1,638 @@
 {
-  "deployment_configurations": {
-    "baseline_method": {
-      "name": "Tensor Parallelism + Pipeline Parallelism",
-      "parallel_strategy": {
-        "type": "hybrid",
-        "tensor_parallelism": {
-          "degree": 8,
-          "strategy": "row_and_column_parallel",
-          "parameters": {
-            "attention_layer": {
-              "query_key_value": "column_parallel",
-              "dense": "row_parallel",
-              "hidden_size": 8192,
-              "num_heads": 16,
-              "head_dim": 512
-            },
-            "mlp_layer": {
-              "gate_proj": "column_parallel",
-              "up_proj": "column_parallel", 
-              "down_proj": "row_parallel",
-              "ffn_hidden_size": 32768,
-              "hidden_size": 8192
-            }
+  "deployment_config": {
+    "models": {
+      "baseline": {
+        "name": "dense_16_layer_baseline",
+        "type": "dense_neural_network",
+        "layers": 16,
+        "parallel_strategy": {
+          "type": "hybrid_parallelism",
+                   "tensor_parallelism": {
+            "degree": 8,
+            "split": "column_row",
+            "devices_per_group": 8
+          },
+          "pipeline_parallelism": {
+            "degree": 2,
+            "stages": 2,
+            "layers_per_stage": [8, 8],
+            "devices_per_stage": 8
           }
         },
-        "pipeline_parallelism": {
-          "degree": 2,
-          "strategy": "gpipe",
-          "num_layers": 16,
-          "layers_per_stage": 8
-        }
-      },
-      "device_mapping": {
-        "stage_0": {
-          "tensor_parallel_group": [0, 1, 2, 3, 4, 5, 6, 7],
-          "layers": [0, 1, 2, 3, 4, 5, 6, 7]
+        "parameters": {
+          "batch_size": 1024,
+          "sequence_length": 10000,
+          "hidden_size": 8192,
+          "num_heads": 16,
+          "head_dim": 512,
+          "mlp_hidden_size": 32768,
+          "precision": "FP16",
+          "datatype_size_bytes": 2
         },
-        "stage_1": {
-          "tensor_parallel_group": [8, 9, 10, 11, 12, 13, 14, 15],
-          "layers": [8, 9, 10, 11, 12, 13, 14, 15]
-        }
-      },
-      "memory_requirements": {
-        "per_device_memory": "shared_across_tensor_group",
-        "activation_memory": "distributed_via_tensor_parallel",
-        "weight_memory": "sharded_across_tensor_group"
-      }
-    },
-    "proposed_method": {
-      "name": "Layer-wise Cache-aware Deployment",
-      "parallel_strategy": {
-        "type": "layer_parallelism",
-        "strategy": "greedy_layer_aggregation",
-        "degree": 16,
-        "cache_constraint": "SRAM_L2_cache_per_device",
-        "partitioning_algorithm": {
-          "type": "greedy",
-          "memory_estimation": {
-            "formula": "size(layer) = weight_size + activation_size + buffer_size",
-            "parameters": {
-              "batch_size": 1024,
-              "sequence_length": 10000,
-              "precision": "FP16",
-              "datatype_size": 2
+        "device_mapping": {
+          "stage_0": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+            "layers": [1, 2, 3, 4, 5, 6, 7, 8],
+            "tensor_parallel_group": {
+              "device_0": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_1": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_2": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_3": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_4": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_5": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_6": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_7": ["attention_q_weights", "attention_k_weights", "attention_v_weights"]
+            },
+            "pipeline_communication": {
+              "to_stage_1": {
+                "from_devices": [0, 1, 2, 3, 4, 5, 6, 7],
+                "to_devices": [8, 9, 10, 11, 12, 13, 14, 15],
+                "transfer_size_bytes": 167772160,
+                "bandwidth_gbps": 600
+              }
             }
           },
-          "cache_capacity_per_device": "H100_SRAM_L2_size",
-          "contiguous_assignment": true
-        }
-      },
-      "device_mapping": {
-        "device_0": {
-          "layers": [0],
-          "memory_allocation": {
-            "weights": "layer_0_weights",
-            "activations": "layer_0_activations",
-            "buffers": "layer_0_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_1": {
-          "layers": [1],
-          "memory_allocation": {
-            "weights": "layer_1_weights",
-            "activations": "layer_1_activations", 
-            "buffers": "layer_1_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_2": {
-          "layers": [2],
-          "memory_allocation": {
-            "weights": "layer_2_weights",
-            "activations": "layer_2_activations",
-            "buffers": "layer_2_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_3": {
-          "layers": [3],
-          "memory_allocation": {
-            "weights": "layer_3_weights",
-            "activations": "layer_3_activations",
-            "buffers": "layer_3_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_4": {
-          "layers": [4],
-          "memory_allocation": {
-            "weights": "layer_4_weights",
-            "activations": "layer_4_activations",
-            "buffers": "layer_4_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_5": {
-          "layers": [5],
-          "memory_allocation": {
-            "weights": "layer_5_weights",
-            "activations": "layer_5_activations",
-            "buffers": "layer_5_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_6": {
-          "layers": [6],
-          "memory_allocation": {
-            "weights": "layer_6_weights",
-            "activations": "layer_6_activations",
-            "buffers": "layer_6_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_7": {
-          "layers": [7],
-          "memory_allocation": {
-            "weights": "layer_7_weights",
-            "activations": "layer_7_activations",
-            "buffers": "layer_7_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_8": {
-          "layers": [8],
-          "memory_allocation": {
-            "weights": "layer_8_weights",
-            "activations": "layer_8_activations",
-            "buffers": "layer_8_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_9": {
-          "layers": [9],
-          "memory_allocation": {
-            "weights": "layer_9_weights",
-            "activations": "layer_9_activations",
-            "buffers": "layer_9_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_10": {
-          "layers": [10],
-          "memory_allocation": {
-            "weights": "layer_10_weights",
-            "activations": "layer_10_activations",
-            "buffers": "layer_10_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_11": {
-          "layers": [11],
-          "memory_allocation": {
-            "weights": "layer_11_weights",
-            "activations": "layer_11_activations",
-            "buffers": "layer_11_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_12": {
-          "layers": [12],
-          "memory_allocation": {
-            "weights": "layer_12_weights",
-            "activations": "layer_12_activations",
-            "buffers": "layer_12_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_13": {
-          "layers": [13],
-          "memory_allocation": {
-            "weights": "layer_13_weights",
-            "activations": "layer_13_activations",
-            "buffers": "layer_13_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_14": {
-          "layers": [14],
-          "memory_allocation": {
-            "weights": "layer_14_weights",
-            "activations": "layer_14_activations",
-            "buffers": "layer_14_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
-          }
-        },
-        "device_15": {
-          "layers": [15],
-          "memory_allocation": {
-            "weights": "layer_15_weights",
-            "activations": "layer_15_activations",
-            "buffers": "layer_15_workspace",
-            "cache_constraint": "must_fit_in_SRAM_L2"
+          "stage_1": {
+            "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+            "layers": [9, 10, 11, 12, 13, 14, 15, 16],
+            "tensor_parallel_group": {
+              "device_8": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_9": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_10": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_11": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_12": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_13": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_14": ["attention_q_weights", "attention_k_weights", "attention_v_weights"],
+              "device_15": ["attention_q_weights", "attention_k_weights", "attention_v_weights"]
+            }
           }
         }
       },
-      "communication_pattern": {
-        "type": "layer_to_layer_transfer",
-        "transfer_points": [
-          {"from_device": 0, "to_device": 1, "transfer_layer": "activation_0_to_1"},
-          {"from_device": 1, "to_device": 2, "transfer_layer": "activation_1_to_2"},
-          {"from_device": 2, "to_device": 3, "transfer_layer": "activation_2_to_3"},
-          {"from_device": 3, "to_device": 4, "transfer_layer": "activation_3_to_4"},
-          {"from_device": 4, "to_device": 5, "transfer_layer": "activation_4_to_5"},
-          {"from_device": 5, "to_device": 6, "transfer_layer": "activation_5_to_6"},
-          {"from_device": 6, "to_device": 7, "transfer_layer": "activation_6_to_7"},
-          {"from_device": 7, "to_device": 8, "transfer_layer": "activation_7_to_8"},
-          {"from_device": 8, "to_device": 9, "transfer_layer": "activation_8_to_9"},
-          {"from_device": 9, "to_device": 10, "transfer_layer": "activation_9_to_10"},
-          {"from_device": 10, "to_device": 11, "transfer_layer": "activation_10_to_11"},
-          {"from_device": 11, "to_device": 12, "transfer_layer": "activation_11_to_12"},
-          {"from_device": 12, "to_device": 13, "transfer_layer": "activation_12_to_13"},
-          {"from_device": 13, "to_device": 14, "transfer_layer": "activation_13_to_14"},
-          {"from_device": 14, "to_device": 15, "transfer_layer": "activation_14_to_15"}
-        ]
+      "proposed": {
+        "name": "dense_16_layer_proposed",
+        "type": "dense_neural_network",
+        "layers": 16,
+        "parallel_strategy": {
+          "type": "layer_wise_partitioning",
+          "cache_aware": true,
+          "cache_capacity_bytes": 8589934592,
+          "partitioning_strategy": "greedy_aggregation",
+          "layers_per_device": 1,
+          "total_partitions": 16
+        },
+        "parameters": {
+          "batch_size": 1024,
+          "sequence_length": 10000,
+          "hidden_size": 8192,
+          "num_heads": 16,
+          "head_dim": 512,
+          "mlp_hidden_size": 32768,
+          "precision": "FP16",
+          "datatype_size_bytes": 2,
+          "per_layer_memory_bytes": 1298030592
+        },
+        "device_mapping": {
+          "device_0": {
+            "device_id": 0,
+            "partition_id": 1,
+            "layers": [1],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_1": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_0_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_0_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_0_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_0_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_0_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_0_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_0_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": null,
+              "downstream_device": 1,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_1": {
+            "device_id": 1,
+            "partition_id": 2,
+            "layers": [2],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_2": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_1_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_1_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_1_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_1_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_1_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_1_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_1_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 0,
+              "downstream_device": 2,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_2": {
+            "device_id": 2,
+            "partition_id": 3,
+            "layers": [3],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_3": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_2_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_2_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_2_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_2_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_2_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_2_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_2_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 1,
+              "downstream_device": 3,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_3": {
+            "device_id": 3,
+            "partition_id": 4,
+            "layers": [4],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_4": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_3_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_3_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_3_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_3_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_3_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_3_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_3_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 2,
+              "downstream_device": 4,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_4": {
+            "device_id": 4,
+            "partition_id": 5,
+            "layers": [5],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_5": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_4_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_4_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_4_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_4_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_4_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_4_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_4_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 3,
+              "downstream_device": 5,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_5": {
+            "device_id": 5,
+            "partition_id": 6,
+            "layers": [6],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_6": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_5_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_5_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_5_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_5_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_5_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_5_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_5_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 4,
+              "downstream_device": 6,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_6": {
+            "device_id": 6,
+            "partition_id": 7,
+            "layers": [7],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_7": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_6_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_6_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_6_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_6_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_6_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_6_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_6_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 5,
+              "downstream_device": 7,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_7": {
+            "device_id": 7,
+            "partition_id": 8,
+            "layers": [8],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_8": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_7_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_7_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_7_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_7_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_7_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_7_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_7_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 6,
+              "downstream_device": 8,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_8": {
+            "device_id": 8,
+            "partition_id": 9,
+            "layers": [9],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_9": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_8_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_8_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_8_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_8_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_8_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_8_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_8_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 7,
+              "downstream_device": 9,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_9": {
+            "device_id": 9,
+            "partition_id": 10,
+            "layers": [10],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_10": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_9_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_9_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_9_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_9_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_9_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_9_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_9_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 8,
+              "downstream_device": 10,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_10": {
+            "device_id": 10,
+            "partition_id": 11,
+            "layers": [11],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_11": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_10_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_10_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_10_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_10_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_10_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_10_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_10_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 9,
+              "downstream_device": 11,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_11": {
+            "device_id": 11,
+            "partition_id": 12,
+            "layers": [12],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_12": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_11_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_11_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_11_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_11_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_11_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_11_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_11_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 10,
+              "downstream_device": 12,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_12": {
+            "device_id": 12,
+            "partition_id": 13,
+            "layers": [13],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_13": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_12_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_12_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_12_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_12_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_12_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_12_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_12_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 11,
+              "downstream_device": 13,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_13": {
+            "device_id": 13,
+            "partition_id": 14,
+            "layers": [14],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_14": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_13_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_13_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_13_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_13_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_13_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_13_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_13_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 12,
+              "downstream_device": 14,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_14": {
+            "device_id": 14,
+            "partition_id": 15,
+            "layers": [15],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_15": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_14_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_14_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_14_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_14_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_14_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_14_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_14_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 13,
+              "downstream_device": 15,
+              "transfer_size_bytes": 167772160,
+              "transfer_type": "activation"
+            }
+          },
+          "device_15": {
+            "device_id": 15,
+            "partition_id": 16,
+            "layers": [16],
+            "memory_allocation": {
+              "weights": 1073741824,
+              "activations": 167772160,
+              "buffers": 56518208,
+              "total": 1298030592,
+              "cache_limit": 8589934592
+            },
+            "modules": {
+              "layer_16": {
+                "attention": {
+                  "q_weights": {"size": 67108864, "location": "device_15_SRAM"},
+                  "k_weights": {"size": 67108864, "location": "device_15_SRAM"},
+                  "v_weights": {"size": 67108864, "location": "device_15_SRAM"},
+                  "output_weights": {"size": 67108864, "location": "device_15_SRAM"}
+                },
+                "mlp": {
+                  "gate_weights": {"size": 536870912, "location": "device_15_SRAM"},
+                  "up_weights": {"size": 536870912, "location": "device_15_SRAM"},
+                  "down_weights": {"size": 536870912, "location": "device_15_SRAM"}
+                }
+              }
+            },
+            "communication": {
+              "upstream_device": 14,
+              "downstream_device": null,
+              "output": {
+                "transfer_size_bytes": 167772160,
+                "destination": "host_memory"
+              }
+            }
+          }
+        }
       }
-    }
-  },
-  "model_specifications": {
-    "dense_model": {
-      "layers": 16,
-      "architecture": "fully_connected_dense",
-      "parameters": {
-        "hidden_size": 8192,
-        "num_heads": 16,
-        "head_dim": 512,
-        "ffn_hidden_size": 32768,
-        "sequence_length": 10000,
-        "batch_size": 1024,
-        "precision": "FP16"
+    },
+    "performance_metrics": {
+      "baseline": {
+        "tps": 12800,
+        "tpot_ms": 0.078
+      },
+      "proposed": {
+        "tps": 15360,
+        "tpot_ms": 0.065
       }
     }
   }

@@ -1,0 +1,33 @@
+// Baseline TP=8 PP=2 DAG
+digraph {
+	nodesep=1 rankdir=TB ranksep=2 splines=polyline
+	input [label="Total Input\n[batch=1024, seq=4096, hidden=4096]" fillcolor=lightgreen shape=ellipse]
+	subgraph cluster_stage0 {
+		fillcolor=lightblue label="Stage 0 (GPUs 0-7)" style="rounded,filled"
+		stage0_embed [label="Embedding\n[vocab→4096]\nGPU: 0" shape=rectangle]
+		layer0_attn [label="L0 Attention\nTP=8 GPUs\n[1024, 4096, 4096]" shape=rectangle]
+		layer0_ffn [label="L0 FFN\nTP=8 GPUs\n[1024, 4096, 16384]" shape=rectangle]
+		layer1_attn [label="L1 Attention\nTP=8 GPUs\n[1024, 4096, 4096]" shape=rectangle]
+		layer1_ffn [label="L1 FFN\nTP=8 GPUs\n[1024, 4096, 16384]" shape=rectangle]
+	}
+	pipeline_comm [label="Pipeline Send\nGPU 7 → GPU 8" fillcolor=yellow shape=parallelogram]
+	subgraph cluster_stage1 {
+		fillcolor=lightcoral label="Stage 1 (GPUs 8-15)" style="rounded,filled"
+		layer2_attn [label="L2 Attention\nTP=8 GPUs\n[1024, 4096, 4096]" shape=rectangle]
+		layer2_ffn [label="L2 FFN\nTP=8 GPUs\n[1024, 4096, 16384]" shape=rectangle]
+		layer3_attn [label="L3 Attention\nTP=8 GPUs\n[1024, 4096, 4096]" shape=rectangle]
+		layer3_ffn [label="L3 FFN\nTP=8 GPUs\n[1024, 4096, 16384]" shape=rectangle]
+		output [label="Total Output\n[1024, 4096, 32000]\nGPU: 15" fillcolor=lightgreen shape=ellipse]
+	}
+	input -> stage0_embed
+	stage0_embed -> layer0_attn
+	layer0_attn -> layer0_ffn
+	layer0_ffn -> layer1_attn
+	layer1_attn -> layer1_ffn
+	layer1_ffn -> pipeline_comm
+	pipeline_comm -> layer2_attn
+	layer2_attn -> layer2_ffn
+	layer2_ffn -> layer3_attn
+	layer3_attn -> layer3_ffn
+	layer3_ffn -> output
+}

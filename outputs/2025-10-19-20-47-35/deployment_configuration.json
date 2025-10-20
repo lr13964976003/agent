@@ -1,0 +1,233 @@
+{
+  "deployment_config": {
+    "models": {
+      "dense_transformer": {
+        "type": "dense",
+        "layers": 4,
+        "hidden_size": 8192,
+        "num_heads": 16,
+        "head_dim": 512,
+        "mlp_hidden_size": 32768,
+        "vocab_size": 32000,
+        "max_sequence_length": 10000,
+        "precision": "fp16"
+      }
+    },
+    "deployment_strategies": {
+      "baseline": {
+        "name": "Tensor Parallelism + Pipeline Parallelism",
+        "strategy": "TP_PP",
+        "devices": 16,
+        "parameters": {
+          "tensor_parallel_size": 8,
+          "pipeline_parallel_size": 2,
+          "data_parallel_size": 1,
+          "micro_batch_size": 1024,
+          "sequence_length": 10000
+        },
+        "module_mapping": {
+          "pipeline_stage_0": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+            "layers": [0, 1],
+            "modules_per_device": {
+              "device_0": ["layer_0_attention_0", "layer_0_mlp_0", "layer_0_layernorm_0", "layer_0_layernorm_1"],
+              "device_1": ["layer_0_attention_1", "layer_0_mlp_1", "layer_0_layernorm_0", "layer_0_layernorm_1"],
+              "device_2": ["layer_0_attention_2", "layer_0_mlp_2", "layer_0_layernorm_0", "layer_0_layernorm_1"],
+              "device_3": ["layer_0_attention_3", "layer_0_mlp_3", "layer_0_layernorm_0", "layer_0_layernorm_1"],
+              "device_4": ["layer_0_attention_4", "layer_0_mlp_4", "layer_0_layernorm_0", "layer_0_layernorm_1"],
+              "device_5": ["layer_0_attention_5", "layer_0_mlp_5", "layer_0_layernorm_0", "layer_0_layernorm_1"],
+              "device_6": ["layer_0_attention_6", "layer_0_mlp_6", "layer_0_layernorm_0", "layer_0_layernorm_1"],
+              "device_7": ["layer_0_attention_7", "layer_0_mlp_7", "layer_0_layernorm_0", "layer_0_layernorm_1"]
+            }
+          },
+          "pipeline_stage_1": {
+            "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+            "layers": [2, 3],
+            "modules_per_device": {
+              "device_8": ["layer_2_attention_0", "layer_2_mlp_0", "layer_2_layernorm_0", "layer_2_layernorm_1"],
+              "device_9": ["layer_2_attention_1", "layer_2_mlp_1", "layer_2_layernorm_0", "layer_2_layernorm_1"],
+              "device_10": ["layer_2_attention_2", "layer_2_mlp_2", "layer_2_layernorm_0", "layer_2_layernorm_1"],
+              "device_11": ["layer_2_attention_3", "layer_2_mlp_3", "layer_2_layernorm_0", "layer_2_layernorm_1"],
+              "device_12": ["layer_2_attention_4", "layer_2_mlp_4", "layer_2_layernorm_0", "layer_2_layernorm_1"],
+              "device_13": ["layer_2_attention_5", "layer_2_mlp_5", "layer_2_layernorm_0", "layer_2_layernorm_1"],
+              "device_14": ["layer_2_attention_6", "layer_2_mlp_6", "layer_2_layernorm_0", "layer_2_layernorm_1"],
+              "device_15": ["layer_2_attention_7", "layer_2_mlp_7", "layer_2_layernorm_0", "layer_2_layernorm_1"]
+            }
+          }
+        }
+      },
+      "proposed": {
+        "name": "Ring Attention + Sequence Parallelism",
+        "strategy": "RA_SP",
+        "devices": 16,
+        "parameters": {
+          "ring_size": 16,
+          "sequence_parallel_size": 16,
+          "batch_size": 1024,
+          "sequence_length": 10000,
+          "tokens_per_device": 625,
+          "head_parallel_size": 1,
+          "precision": "fp16"
+        },
+        "ring_topology": {
+          "device_ring_order": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+          "communication_pattern": "bidirectional_ring"
+        },
+        "sequence_partitioning": {
+          "sequence_splits": {
+            "device_0": {"start": 0, "end": 625, "tokens": 625},
+            "device_1": {"start": 625, "end": 1250, "tokens": 625},
+            "device_2": {"start": 1250, "end": 1875, "tokens": 625},
+            "device_3": {"start": 1875, "end": 2500, "tokens": 625},
+            "device_4": {"start": 2500, "end": 3125, "tokens": 625},
+            "device_5": {"start": 3125, "end": 3750, "tokens": 625},
+            "device_6": {"start": 3750, "end": 4375, "tokens": 625},
+            "device_7": {"start": 4375, "end": 5000, "tokens": 625},
+            "device_8": {"start": 5000, "end": 5625, "tokens": 625},
+            "device_9": {"start": 5625, "end": 6250, "tokens": 625},
+            "device_10": {"start": 6250, "end": 6875, "tokens": 625},
+            "device_11": {"start": 6875, "end": 7500, "tokens": 625},
+            "device_12": {"start": 7500, "end": 8125, "tokens": 625},
+            "device_13": {"start": 8125, "end": 8750, "tokens": 625},
+            "device_14": {"start": 8750, "end": 9375, "tokens": 625},
+            "device_15": {"start": 9375, "end": 10000, "tokens": 625}
+          }
+        },
+        "module_mapping": {
+          "attention_layers": {
+            "all_devices": ["attention_qkv_projection", "attention_ring_computation", "attention_output_projection", "layernorm_1", "layernorm_2"]
+          },
+          "mlp_layers": {
+            "all_devices": ["mlp_gate_projection", "mlp_up_projection", "mlp_down_projection", "activation_function"]
+          },
+          "per_device_modules": {
+            "device_0": {
+              "sequence_slice": {"start": 0, "end": 625},
+              "attention_modules": ["q_proj_0", "k_proj_0", "v_proj_0", "o_proj_0", "ring_attention_stage_0"],
+              "mlp_modules": ["mlp_gate_0", "mlp_up_0", "mlp_down_0"],
+              "communication": ["send_to_device_1", "recv_from_device_15"]
+            },
+            "device_1": {
+              "sequence_slice": {"start": 625, "end": 1250},
+              "attention_modules": ["q_proj_1", "k_proj_1", "v_proj_1", "o_proj_1", "ring_attention_stage_1"],
+              "mlp_modules": ["mlp_gate_1", "mlp_up_1", "mlp_down_1"],
+              "communication": ["send_to_device_2", "recv_from_device_0"]
+            },
+            "device_2": {
+              "sequence_slice": {"start": 1250, "end": 1875},
+              "attention_modules": ["q_proj_2", "k_proj_2", "v_proj_2", "o_proj_2", "ring_attention_stage_2"],
+              "mlp_modules": ["mlp_gate_2", "mlp_up_2", "mlp_down_2"],
+              "communication": ["send_to_device_3", "recv_from_device_1"]
+            },
+            "device_3": {
+              "sequence_slice": {"start": 1875, "end": 2500},
+              "attention_modules": ["q_proj_3", "k_proj_3", "v_proj_3", "o_proj_3", "ring_attention_stage_3"],
+              "mlp_modules": ["mlp_gate_3", "mlp_up_3", "mlp_down_3"],
+              "communication": ["send_to_device_4", "recv_from_device_2"]
+            },
+            "device_4": {
+              "sequence_slice": {"start": 2500, "end": 3125},
+              "attention_modules": ["q_proj_4", "k_proj_4", "v_proj_4", "o_proj_4", "ring_attention_stage_4"],
+              "mlp_modules": ["mlp_gate_4", "mlp_up_4", "mlp_down_4"],
+              "communication": ["send_to_device_5", "recv_from_device_3"]
+            },
+            "device_5": {
+              "sequence_slice": {"start": 3125, "end": 3750},
+              "attention_modules": ["q_proj_5", "k_proj_5", "v_proj_5", "o_proj_5", "ring_attention_stage_5"],
+              "mlp_modules": ["mlp_gate_5", "mlp_up_5", "mlp_down_5"],
+              "communication": ["send_to_device_6", "recv_from_device_4"]
+            },
+            "device_6": {
+              "sequence_slice": {"start": 3750, "end": 4375},
+              "attention_modules": ["q_proj_6", "k_proj_6", "v_proj_6", "o_proj_6", "ring_attention_stage_6"],
+              "mlp_modules": ["mlp_gate_6", "mlp_up_6", "mlp_down_6"],
+              "communication": ["send_to_device_7", "recv_from_device_5"]
+            },
+            "device_7": {
+              "sequence_slice": {"start": 4375, "end": 5000},
+              "attention_modules": ["q_proj_7", "k_proj_7", "v_proj_7", "o_proj_7", "ring_attention_stage_7"],
+              "mlp_modules": ["mlp_gate_7", "mlp_up_7", "mlp_down_7"],
+              "communication": ["send_to_device_8", "recv_from_device_6"]
+            },
+            "device_8": {
+              "sequence_slice": {"start": 5000, "end": 5625},
+              "attention_modules": ["q_proj_8", "k_proj_8", "v_proj_8", "o_proj_8", "ring_attention_stage_8"],
+              "mlp_modules": ["mlp_gate_8", "mlp_up_8", "mlp_down_8"],
+              "communication": ["send_to_device_9", "recv_from_device_7"]
+            },
+            "device_9": {
+              "sequence_slice": {"start": 5625, "end": 6250},
+              "attention_modules": ["q_proj_9", "k_proj_9", "v_proj_9", "o_proj_9", "ring_attention_stage_9"],
+              "mlp_modules": ["mlp_gate_9", "mlp_up_9", "mlp_down_9"],
+              "communication": ["send_to_device_10", "recv_from_device_8"]
+            },
+            "device_10": {
+              "sequence_slice": {"start": 6250, "end": 6875},
+              "attention_modules": ["q_proj_10", "k_proj_10", "v_proj_10", "o_proj_10", "ring_attention_stage_10"],
+              "mlp_modules": ["mlp_gate_10", "mlp_up_10", "mlp_down_10"],
+              "communication": ["send_to_device_11", "recv_from_device_9"]
+            },
+            "device_11": {
+              "sequence_slice": {"start": 6875, "end": 7500},
+              "attention_modules": ["q_proj_11", "k_proj_11", "v_proj_11", "o_proj_11", "ring_attention_stage_11"],
+              "mlp_modules": ["mlp_gate_11", "mlp_up_11", "mlp_down_11"],
+              "communication": ["send_to_device_12", "recv_from_device_10"]
+            },
+            "device_12": {
+              "sequence_slice": {"start": 7500, "end": 8125},
+              "attention_modules": ["q_proj_12", "k_proj_12", "v_proj_12", "o_proj_12", "ring_attention_stage_12"],
+              "mlp_modules": ["mlp_gate_12", "mlp_up_12", "mlp_down_12"],
+              "communication": ["send_to_device_13", "recv_from_device_11"]
+            },
+            "device_13": {
+              "sequence_slice": {"start": 8125, "end": 8750},
+              "attention_modules": ["q_proj_13", "k_proj_13", "v_proj_13", "o_proj_13", "ring_attention_stage_13"],
+              "mlp_modules": ["mlp_gate_13", "mlp_up_13", "mlp_down_13"],
+              "communication": ["send_to_device_14", "recv_from_device_12"]
+            },
+            "device_14": {
+              "sequence_slice": {"start": 8750, "end": 9375},
+              "attention_modules": ["q_proj_14", "k_proj_14", "v_proj_14", "o_proj_14", "ring_attention_stage_14"],
+              "mlp_modules": ["mlp_gate_14", "mlp_up_14", "mlp_down_14"],
+              "communication": ["send_to_device_15", "recv_from_device_13"]
+            },
+            "device_15": {
+              "sequence_slice": {"start": 9375, "end": 10000},
+              "attention_modules": ["q_proj_15", "k_proj_15", "v_proj_15", "o_proj_15", "ring_attention_stage_15"],
+              "mlp_modules": ["mlp_gate_15", "mlp_up_15", "mlp_down_15"],
+              "communication": ["send_to_device_0", "recv_from_device_14"]
+            }
+          }
+        }
+      }
+    },
+    "communication_specifications": {
+      "ring_attention": {
+        "protocol": "NCCL_send_recv",
+        "buffer_size": "625 * 8192 * 2 bytes = 10.24 MB per KV tensor",
+        "stages": 16,
+        "overlap": true,
+        "precision": "fp16"
+      },
+      "tensor_parallel": {
+        "protocol": "NCCL_all_reduce",
+        "buffer_size": "1024 * 8192 * 2 bytes = 16.78 MB per layer",
+        "precision": "fp16"
+      }
+    },
+    "performance_targets": {
+      "baseline": {
+        "tps": 1200000,
+        "tpot_ms": 0.85
+      },
+      "proposed": {
+        "tps": 1450000,
+        "tpot_ms": 0.70,
+        "improvement": {
+          "tps_percent": 20.8,
+          "tpot_percent": -17.6
+        }
+      }
+    }
+  }
+}

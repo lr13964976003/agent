@@ -1,0 +1,227 @@
+digraph proposed_ra_sp {
+    comment="Ring Attention + Sequence Parallelism Deployment"
+    rankdir=TB
+    size="120,120"
+    compound=true
+    
+    // Input distribution across devices
+    input [label="Input\n[batch_size=1024, seq_len=10000, d_model=8192]\nSplit to 16 devices: 625 tokens each", shape=ellipse, style=filled, fillcolor=lightyellow]
+    
+    // Input split operation
+    split_input [label="Split Input\nAll 16 devices\n[1024,10000,8192] → [1024,625,8192] per device", shape=parallelogram, style=filled, fillcolor=orange]
+    
+    // All 16 devices - each device processes its sequence segment
+    subgraph cluster_all_devices {
+        label="All 16 Devices (Sequence Parallel)"
+        style=dashed
+        color=blue
+        
+        // Device 0 (representative for all devices)
+        subgraph cluster_device_0 {
+            label="Device 0 (tokens 0-624)"
+            style=dashed
+            color=lightblue
+            
+            // Layer 0 - Attention with Ring Communication
+            layernorm_0_attn [label="LayerNorm L0-Attn\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            q_proj_0 [label="Q Projection L0\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            k_proj_0 [label="K Projection L0\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            v_proj_0 [label="V Projection L0\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            
+            // Ring attention stages
+            ring_stage_0 [label="Ring Stage 0\nDevice 0\nCompute: Local Q×Local KV\nRecv from dev 15, Send to dev 1\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightcoral]
+            ring_stage_1 [label="Ring Stage 1\nDevice 0\nCompute: Local Q×Recv KV from dev 1\nRecv from dev 15, Send to dev 1\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightcoral]
+            ring_stage_15 [label="Ring Stage 15\nDevice 0\nCompute: Local Q×Recv KV from dev 15\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightcoral]
+            
+            // Combine ring results
+            ring_combine [label="Combine Ring Results\nDevice 0\nSum across 16 stages\nOutput: [1024,625,512]", shape=parallelogram, style=filled, fillcolor=orange]
+            
+            o_proj_0 [label="O Projection L0\nDevice 0\nInput: [1024,625,512]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            residual_0_attn [label="Residual Add L0-Attn\nDevice 0\nInput: [1024,625,8192], [1024,625,8192]\nOutput: [1024,625,8192]", shape=diamond, style=filled, fillcolor=lightcoral]
+            
+            // Layer 0 - MLP (local to each device)
+            layernorm_0_mlp [label="LayerNorm L0-MLP\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            gate_proj_0 [label="Gate Projection L0\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            up_proj_0 [label="Up Projection L0\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            mlp_activation_0 [label="Swish Activation L0\nDevice 0\nInput: [1024,625,16384]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            down_proj_0 [label="Down Projection L0\nDevice 0\nInput: [1024,625,16384]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            residual_0_mlp [label="Residual Add L0-MLP\nDevice 0\nInput: [1024,625,8192], [1024,625,8192]\nOutput: [1024,625,8192]", shape=diamond, style=filled, fillcolor=lightcoral]
+            
+            // Layer 1 - Attention
+            layernorm_1_attn [label="LayerNorm L1-Attn\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            q_proj_1 [label="Q Projection L1\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            k_proj_1 [label="K Projection L1\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            v_proj_1 [label="V Projection L1\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            
+            // Ring attention for layer 1
+            ring_stage_16 [label="Ring Stage 0 L1\nDevice 0\nCompute: Local Q×Local KV\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightcoral]
+            ring_stage_17 [label="Ring Stage 1 L1\nDevice 0\nCompute: Local Q×Recv KV\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightcoral]
+            ring_combine_1 [label="Combine Ring Results L1\nDevice 0\nOutput: [1024,625,512]", shape=parallelogram, style=filled, fillcolor=orange]
+            
+            o_proj_1 [label="O Projection L1\nDevice 0\nInput: [1024,625,512]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            residual_1_attn [label="Residual Add L1-Attn\nDevice 0\nInput: [1024,625,8192], [1024,625,8192]\nOutput: [1024,625,8192]", shape=diamond, style=filled, fillcolor=lightcoral]
+            
+            // Layer 1 - MLP
+            layernorm_1_mlp [label="LayerNorm L1-MLP\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            gate_proj_1 [label="Gate Projection L1\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            up_proj_1 [label="Up Projection L1\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            mlp_activation_1 [label="Swish Activation L1\nDevice 0\nInput: [1024,625,16384]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            down_proj_1 [label="Down Projection L1\nDevice 0\nInput: [1024,625,16384]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            residual_1_mlp [label="Residual Add L1-MLP\nDevice 0\nInput: [1024,625,8192], [1024,625,8192]\nOutput: [1024,625,8192]", shape=diamond, style=filled, fillcolor=lightcoral]
+            
+            // Layer 2 - Attention (same pattern)
+            layernorm_2_attn [label="LayerNorm L2-Attn\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            q_proj_2 [label="Q Projection L2\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            k_proj_2 [label="K Projection L2\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            v_proj_2 [label="V Projection L2\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            
+            // Ring attention for layer 2
+            ring_stage_32 [label="Ring Stage 0 L2\nDevice 0\nCompute: Local Q×Local KV\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightcoral]
+            ring_combine_2 [label="Combine Ring Results L2\nDevice 0\nOutput: [1024,625,512]", shape=parallelogram, style=filled, fillcolor=orange]
+            
+            o_proj_2 [label="O Projection L2\nDevice 0\nInput: [1024,625,512]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            residual_2_attn [label="Residual Add L2-Attn\nDevice 0\nInput: [1024,625,8192], [1024,625,8192]\nOutput: [1024,625,8192]", shape=diamond, style=filled, fillcolor=lightcoral]
+            
+            // Layer 2 - MLP
+            layernorm_2_mlp [label="LayerNorm L2-MLP\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            gate_proj_2 [label="Gate Projection L2\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            up_proj_2 [label="Up Projection L2\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            mlp_activation_2 [label="Swish Activation L2\nDevice 0\nInput: [1024,625,16384]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            down_proj_2 [label="Down Projection L2\nDevice 0\nInput: [1024,625,16384]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            residual_2_mlp [label="Residual Add L2-MLP\nDevice 0\nInput: [1024,625,8192], [1024,625,8192]\nOutput: [1024,625,8192]", shape=diamond, style=filled, fillcolor=lightcoral]
+            
+            // Layer 3 - Attention
+            layernorm_3_attn [label="LayerNorm L3-Attn\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            q_proj_3 [label="Q Projection L3\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            k_proj_3 [label="K Projection L3\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            v_proj_3 [label="V Projection L3\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightblue]
+            
+            // Ring attention for layer 3
+            ring_stage_48 [label="Ring Stage 0 L3\nDevice 0\nCompute: Local Q×Local KV\nOutput: [1024,625,512]", shape=rectangle, style=filled, fillcolor=lightcoral]
+            ring_combine_3 [label="Combine Ring Results L3\nDevice 0\nOutput: [1024,625,512]", shape=parallelogram, style=filled, fillcolor=orange]
+            
+            o_proj_3 [label="O Projection L3\nDevice 0\nInput: [1024,625,512]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            residual_3_attn [label="Residual Add L3-Attn\nDevice 0\nInput: [1024,625,8192], [1024,625,8192]\nOutput: [1024,625,8192]", shape=diamond, style=filled, fillcolor=lightcoral]
+            
+            // Layer 3 - MLP
+            layernorm_3_mlp [label="LayerNorm L3-MLP\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            gate_proj_3 [label="Gate Projection L3\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            up_proj_3 [label="Up Projection L3\nDevice 0\nInput: [1024,625,8192]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            mlp_activation_3 [label="Swish Activation L3\nDevice 0\nInput: [1024,625,16384]\nOutput: [1024,625,16384]", shape=rectangle, style=filled, fillcolor=lightblue]
+            down_proj_3 [label="Down Projection L3\nDevice 0\nInput: [1024,625,16384]\nOutput: [1024,625,8192]", shape=rectangle, style=filled, fillcolor=lightblue]
+            residual_3_mlp [label="Residual Add L3-MLP\nDevice 0\nInput: [1024,625,8192], [1024,625,8192]\nOutput: [1024,625,8192]", shape=diamond, style=filled, fillcolor=lightcoral]
+        }
+    }
+    
+    // Communication nodes
+    send_recv_0 [label="Send/Recv KV\nDevice 0 → Device 1\n[1024,625,512]", shape=parallelogram, style=filled, fillcolor=purple]
+    send_recv_1 [label="Send/Recv KV\nDevice 1 → Device 2\n[1024,625,512]", shape=parallelogram, style=filled, fillcolor=purple]
+    send_recv_15 [label="Send/Recv KV\nDevice 15 → Device 0\n[1024,625,512]", shape=parallelogram, style=filled, fillcolor=purple]
+    
+    // Gather final outputs
+    gather_output [label="Gather All Device Outputs\nAll 16 devices\nConcatenate: [1024,625,8192] × 16 → [1024,10000,8192]", shape=parallelogram, style=filled, fillcolor=orange]
+    
+    // Final output
+    output [label="Output\n[batch_size=1024, seq_len=10000, d_model=8192]", shape=ellipse, style=filled, fillcolor=lightyellow]
+    
+    // Connections - simplified for clarity on Device 0
+    input -> split_input
+    split_input -> layernorm_0_attn
+    
+    // Layer 0 - Attention
+    layernorm_0_attn -> q_proj_0
+    layernorm_0_attn -> k_proj_0
+    layernorm_0_attn -> v_proj_0
+    k_proj_0 -> send_recv_0 [style=dashed]
+    v_proj_0 -> send_recv_0 [style=dashed]
+    
+    q_proj_0 -> ring_stage_0
+    send_recv_0 -> ring_stage_0
+    ring_stage_0 -> ring_stage_1
+    ring_stage_1 -> ring_stage_15
+    ring_stage_15 -> ring_combine
+    
+    ring_combine -> o_proj_0
+    o_proj_0 -> residual_0_attn
+    split_input -> residual_0_attn [style=dashed, label="via Device 0"]
+    
+    // Layer 0 - MLP
+    residual_0_attn -> layernorm_0_mlp
+    layernorm_0_mlp -> gate_proj_0
+    layernorm_0_mlp -> up_proj_0
+    gate_proj_0 -> mlp_activation_0
+    up_proj_0 -> mlp_activation_0
+    mlp_activation_0 -> down_proj_0
+    down_proj_0 -> residual_0_mlp
+    residual_0_attn -> residual_0_mlp
+    
+    // Layer 1 - Attention
+    residual_0_mlp -> layernorm_1_attn
+    layernorm_1_attn -> q_proj_1
+    layernorm_1_attn -> k_proj_1
+    layernorm_1_attn -> v_proj_1
+    q_proj_1 -> ring_stage_16
+    k_proj_1 -> send_recv_1 [style=dashed]
+    v_proj_1 -> send_recv_1 [style=dashed]
+    
+    ring_stage_16 -> ring_combine_1
+    ring_combine_1 -> o_proj_1
+    o_proj_1 -> residual_1_attn
+    residual_0_mlp -> residual_1_attn
+    
+    // Layer 1 - MLP
+    residual_1_attn -> layernorm_1_mlp
+    layernorm_1_mlp -> gate_proj_1
+    layernorm_1_mlp -> up_proj_1
+    gate_proj_1 -> mlp_activation_1
+    up_proj_1 -> mlp_activation_1
+    mlp_activation_1 -> down_proj_1
+    down_proj_1 -> residual_1_mlp
+    residual_1_attn -> residual_1_mlp
+    
+    // Layer 2 - Attention
+    residual_1_mlp -> layernorm_2_attn
+    layernorm_2_attn -> q_proj_2
+    layernorm_2_attn -> k_proj_2
+    layernorm_2_attn -> v_proj_2
+    q_proj_2 -> ring_stage_32
+    ring_stage_32 -> ring_combine_2
+    ring_combine_2 -> o_proj_2
+    o_proj_2 -> residual_2_attn
+    residual_1_mlp -> residual_2_attn
+    
+    // Layer 2 - MLP
+    residual_2_attn -> layernorm_2_mlp
+    layernorm_2_mlp -> gate_proj_2
+    layernorm_2_mlp -> up_proj_2
+    gate_proj_2 -> mlp_activation_2
+    up_proj_2 -> mlp_activation_2
+    mlp_activation_2 -> down_proj_2
+    down_proj_2 -> residual_2_mlp
+    residual_2_attn -> residual_2_mlp
+    
+    // Layer 3 - Attention
+    residual_2_mlp -> layernorm_3_attn
+    layernorm_3_attn -> q_proj_3
+    layernorm_3_attn -> k_proj_3
+    layernorm_3_attn -> v_proj_3
+    q_proj_3 -> ring_stage_48
+    ring_stage_48 -> ring_combine_3
+    ring_combine_3 -> o_proj_3
+    o_proj_3 -> residual_3_attn
+    residual_2_mlp -> residual_3_attn
+    
+    // Layer 3 - MLP
+    residual_3_attn -> layernorm_3_mlp
+    layernorm_3_mlp -> gate_proj_3
+    layernorm_3_mlp -> up_proj_3
+    gate_proj_3 -> mlp_activation_3
+    up_proj_3 -> mlp_activation_3
+    mlp_activation_3 -> down_proj_3
+    down_proj_3 -> residual_3_mlp
+    residual_3_attn -> residual_3_mlp
+    
+    // Final gather
+    residual_3_mlp -> gather_output
+    gather_output -> output
+}

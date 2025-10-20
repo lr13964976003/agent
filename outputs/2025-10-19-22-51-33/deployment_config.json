@@ -1,0 +1,294 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "TP=8, PP=2 Baseline",
+      "parallel_strategy": {
+        "type": "static",
+        "tensor_parallelism": {
+          "enabled": true,
+          "degree": 8,
+          "partition_dimension": 4096,
+          "partition_size": 512
+        },
+        "pipeline_parallelism": {
+          "enabled": true,
+          "degree": 2,
+          "stage_layers": [0, 1, 2, 3],
+          "stage_partition": {
+            "stage_0": [0, 1],
+            "stage_1": [2, 3]
+          }
+        }
+      },
+      "model_modules": {
+        "embedding": {
+          "type": "embedding_layer",
+          "parameters": {
+            "vocab_size": 32000,
+            "hidden_dim": 4096,
+            "partition": "column_parallel"
+          },
+          "device_mapping": "stage_0_gpu_0"
+        },
+        "layers": [
+          {
+            "layer_0": {
+              "attention": {
+                "type": "multi_head_attention",
+                "parameters": {
+                  "hidden_dim": 4096,
+                  "num_heads": 32,
+                  "head_dim": 128,
+                  "tensor_parallel": 8
+                },
+                "device_mapping": "stage_0_gpu_0-7"
+              },
+              "ffn": {
+                "type": "feed_forward_network",
+                "parameters": {
+                  "hidden_dim": 4096,
+                  "ffn_dim": 16384,
+                  "tensor_parallel": 8
+                },
+                "device_mapping": "stage_0_gpu_0-7"
+              }
+            }
+          },
+          {
+            "layer_1": {
+              "attention": {
+                "type": "multi_head_attention",
+                "parameters": {
+                  "hidden_dim": 4096,
+                  "num_heads": 32,
+                  "head_dim": 128,
+                  "tensor_parallel": 8
+                },
+                "device_mapping": "stage_0_gpu_0-7"
+              },
+              "ffn": {
+                "type": "feed_forward_network",
+                "parameters": {
+                  "hidden_dim": 4096,
+                  "ffn_dim": 16384,
+                  "tensor_parallel": 8
+                },
+                "device_mapping": "stage_0_gpu_0-7"
+              }
+            }
+          },
+          {
+            "layer_2": {
+              "attention": {
+                "type": "multi_head_attention",
+                "parameters": {
+                  "hidden_dim": 4096,
+                  "num_heads": 32,
+                  "head_dim": 128,
+                  "tensor_parallel": 8
+                },
+                "device_mapping": "stage_1_gpu_0-7"
+              },
+              "ffn": {
+                "type": "feed_forward_network",
+                "parameters": {
+                  "hidden_dim": 4096,
+                  "ffn_dim": 16384,
+                  "tensor_parallel": 8
+                },
+                "device_mapping": "stage_1_gpu_0-7"
+              }
+            }
+          },
+          {
+            "layer_3": {
+              "attention": {
+                "type": "multi_head_attention",
+                "parameters": {
+                  "hidden_dim": 4096,
+                  "num_heads": 32,
+                  "head_dim": 128,
+                  "tensor_parallel": 8
+                },
+                "device_mapping": "stage_1_gpu_0-7"
+              },
+              "ffn": {
+                "type": "feed_forward_network",
+                "parameters": {
+                  "hidden_dim": 4096,
+                  "ffn_dim": 16384,
+                  "tensor_parallel": 8
+                },
+                "device_mapping": "stage_1_gpu_0-7"
+              }
+            }
+          }
+        ],
+        "output_layer": {
+          "type": "linear_projection",
+          "parameters": {
+            "input_dim": 4096,
+            "output_dim": 32000,
+            "partition": "column_parallel"
+          },
+          "device_mapping": "stage_1_gpu_0"
+        }
+      },
+      "device_topology": {
+        "total_gpus": 16,
+        "gpu_mapping": {
+          "stage_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+          "stage_1": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+        }
+      }
+    },
+    "fa_pool": {
+      "name": "Flash Attention Pool",
+      "parallel_strategy": {
+        "type": "dynamic",
+        "sequence_threshold": 4096,
+        "base_layer": {
+          "gpus": 8,
+          "components": ["embedding", "ffn", "output"]
+        },
+        "attention_pool": {
+          "max_gpus": 32,
+          "allocation_strategy": "sequence_length_based",
+          "components": ["attention"]
+        }
+      },
+      "model_modules": {
+        "base_layer": {
+          "embedding": {
+            "type": "embedding_layer",            "parameters": {
+              "vocab_size": 32000,
+              "hidden_dim": 4096,
+              "device_count": 8
+            },
+            "device_mapping": "base_gpu_0-7"
+          },
+          "layers": [
+            {
+              "layer_0": {
+                "ffn": {
+                  "type": "feed_forward_network",
+                  "parameters": {
+                    "hidden_dim": 4096,
+                    "ffn_dim": 16384,
+                    "tensor_parallel": 2
+                  },
+                  "device_mapping": "base_gpu_0-7"
+                }
+              }
+            },
+            {
+              "layer_1": {
+                "ffn": {
+                  "type": "feed_forward_network",
+                  "parameters": {
+                    "hidden_dim": 4096,
+                    "ffn_dim": 16384,
+                    "tensor_parallel": 2
+                  },
+                  "device_mapping": "base_gpu_0-7"
+                }
+              }
+            },
+            {
+              "layer_2": {
+                "ffn": {
+                  "type": "feed_forward_network",
+                  "parameters": {
+                    "hidden_dim": 4096,
+                    "ffn_dim": 16384,
+                    "tensor_parallel": 2
+                  },
+                  "device_mapping": "base_gpu_0-7"
+                }
+              }
+            },
+            {
+              "layer_3": {
+                "ffn": {
+                  "type": "feed_forward_network",
+                  "parameters": {
+                    "hidden_dim": 4096,
+                    "ffn_dim": 16384,
+                    "tensor_parallel": 2
+                  },
+                  "device_mapping": "base_gpu_0-7"
+                }
+              }
+            }
+          ],
+          "output_layer": {
+            "type": "linear_projection",
+            "parameters": {
+              "input_dim": 4096,
+              "output_dim": 32000,
+              "device_count": 8
+            },
+            "device_mapping": "base_gpu_0-7"
+          }
+        },
+        "attention_pool": {
+          "attention_computation": {
+            "type": "flash_attention_parallel",
+            "parameters": {
+              "hidden_dim": 4096,
+              "num_heads": 32,
+              "head_dim": 128,
+              "flash_attention": true,
+              "kv_cache_replication": true,
+              "block_size_formula": "ceil(sequence_length / num_gpus)"
+            },
+            "dynamic_allocation": {
+              "sequence_length_thresholds": [
+                {"max_length": 4096, "pool_gpus": 0},
+                {"max_length": 8192, "pool_gpus": 8},
+                {"max_length": 16384, "pool_gpus": 16},
+                {"max_length": 24576, "pool_gpus": 24},
+                {"max_length": 32768, "pool_gpus": 32}
+              ]
+            },
+            "device_mapping": {
+              "gpu_allocation": {
+                "pool_0_gpus": ["gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15"],
+                "pool_1_gpus": ["gpu_16", "gpu_17", "gpu_18", "gpu_19", "gpu_20", "gpu_21", "gpu_22", "gpu_23"],
+                "pool_2_gpus": ["gpu_24", "gpu_25", "gpu_26", "gpu_27", "gpu_28", "gpu_29", "gpu_30", "gpu_31"],
+                "pool_3_gpus": ["gpu_32", "gpu_33", "gpu_34", "gpu_35", "gpu_36", "gpu_37", "gpu_38", "gpu_39"]
+              }
+            }
+          }
+        }
+      },
+      "device_topology": {
+        "total_gpus": 40,
+        "base_layer": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+        "attention_pool": [
+          "gpu_8", "gpu_9", "gpu_10", "gpu_11", "gpu_12", "gpu_13", "gpu_14", "gpu_15",
+          "gpu_16", "gpu_17", "gpu_18", "gpu_19", "gpu_20", "gpu_21", "gpu_22", "gpu_23",
+          "gpu_24", "gpu_25", "gpu_26", "gpu_27", "gpu_28", "gpu_29", "gpu_30", "gpu_31",
+          "gpu_32", "gpu_33", "gpu_34", "gpu_35", "gpu_36", "gpu_37", "gpu_38", "gpu_39"
+        ]
+      },
+      "runtime_configuration": {
+        "resource_manager": {
+          "monitoring_frequency": "per_sequence",
+          "allocation_algorithm": "greedy_within_limits",
+          "synchronization_protocol": "hierarchical_reduction",
+          "communication_pattern": "tree_based_all_gather"
+        },
+        "performance_parameters": {
+          "batch_size": 1024,
+          "sequence_length_range": "512-40960",
+          "overlap_execution": true,
+          "memory_per_gpu": {
+            "base_layer": "65GB",
+            "attention_pool": "45GB"
+          }
+        }
+      }
+    }
+  }
+}

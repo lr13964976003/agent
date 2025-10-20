@@ -1,0 +1,1580 @@
+// FA Pool 4-Layer Transformer\nSeq Len: 32768, Pool GPUs: 32
+digraph fa_pool_transformer {
+	graph [nodesep=0.5 rankdir=TB splines=ortho]
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	input [label="Input Embedding\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=lightgreen shape=ellipse]
+	subgraph cluster_base {
+		color=red label="Base Layer - GPUs [0-7]\nFFN Operations Only" style=dashed
+		layer0_ffn_start [label="Layer 0 FFN Start\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer1_ffn_start [label="Layer 1 FFN Start\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer2_ffn_start [label="Layer 2 FFN Start\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer3_ffn_start [label="Layer 3 FFN Start\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		output_proj [label="Output Projection\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, vocab_size=?, partition=?]"]
+	}
+	send_to_pool [label="Send to Attention Pool\nGPU: [0-7] → [8-{7+attention_pool_gpus}]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=yellow shape=parallelogram]
+	recv_from_pool [label="Receive from Attention Pool\nGPU: [8-{7+attention_pool_gpus}] → [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=yellow shape=parallelogram]
+	subgraph cluster_layer0_attn_0 {
+		label="Layer 0 Attention Block 0\nGPU: 8\nSeq: 0-1024"
+		layer0_attn_qkv_0 [label="Layer 0 QKV Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_0 [label="Layer 0 Attention Scores Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]"]
+		layer0_attn_weighted_0 [label="Layer 0 Weighted Sum Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]"]
+		layer0_attn_out_0 [label="Layer 0 Attention Output Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=0-1024, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_1 {
+		label="Layer 0 Attention Block 1\nGPU: 9\nSeq: 1024-2048"
+		layer0_attn_qkv_1 [label="Layer 0 QKV Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_1 [label="Layer 0 Attention Scores Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]"]
+		layer0_attn_weighted_1 [label="Layer 0 Weighted Sum Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]"]
+		layer0_attn_out_1 [label="Layer 0 Attention Output Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024-2048, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_2 {
+		label="Layer 0 Attention Block 2\nGPU: 10\nSeq: 2048-3072"
+		layer0_attn_qkv_2 [label="Layer 0 QKV Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_2 [label="Layer 0 Attention Scores Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]"]
+		layer0_attn_weighted_2 [label="Layer 0 Weighted Sum Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]"]
+		layer0_attn_out_2 [label="Layer 0 Attention Output Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048-3072, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_3 {
+		label="Layer 0 Attention Block 3\nGPU: 11\nSeq: 3072-4096"
+		layer0_attn_qkv_3 [label="Layer 0 QKV Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_3 [label="Layer 0 Attention Scores Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]"]
+		layer0_attn_weighted_3 [label="Layer 0 Weighted Sum Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]"]
+		layer0_attn_out_3 [label="Layer 0 Attention Output Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=3072-4096, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_4 {
+		label="Layer 0 Attention Block 4\nGPU: 12\nSeq: 4096-5120"
+		layer0_attn_qkv_4 [label="Layer 0 QKV Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_4 [label="Layer 0 Attention Scores Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]"]
+		layer0_attn_weighted_4 [label="Layer 0 Weighted Sum Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]"]
+		layer0_attn_out_4 [label="Layer 0 Attention Output Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096-5120, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_5 {
+		label="Layer 0 Attention Block 5\nGPU: 13\nSeq: 5120-6144"
+		layer0_attn_qkv_5 [label="Layer 0 QKV Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_5 [label="Layer 0 Attention Scores Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]"]
+		layer0_attn_weighted_5 [label="Layer 0 Weighted Sum Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]"]
+		layer0_attn_out_5 [label="Layer 0 Attention Output Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=5120-6144, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_6 {
+		label="Layer 0 Attention Block 6\nGPU: 14\nSeq: 6144-7168"
+		layer0_attn_qkv_6 [label="Layer 0 QKV Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_6 [label="Layer 0 Attention Scores Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]"]
+		layer0_attn_weighted_6 [label="Layer 0 Weighted Sum Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]"]
+		layer0_attn_out_6 [label="Layer 0 Attention Output Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=6144-7168, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_7 {
+		label="Layer 0 Attention Block 7\nGPU: 15\nSeq: 7168-8192"
+		layer0_attn_qkv_7 [label="Layer 0 QKV Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_7 [label="Layer 0 Attention Scores Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]"]
+		layer0_attn_weighted_7 [label="Layer 0 Weighted Sum Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]"]
+		layer0_attn_out_7 [label="Layer 0 Attention Output Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=7168-8192, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_8 {
+		label="Layer 0 Attention Block 8\nGPU: 16\nSeq: 8192-9216"
+		layer0_attn_qkv_8 [label="Layer 0 QKV Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_8 [label="Layer 0 Attention Scores Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]"]
+		layer0_attn_weighted_8 [label="Layer 0 Weighted Sum Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]"]
+		layer0_attn_out_8 [label="Layer 0 Attention Output Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=8192-9216, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_9 {
+		label="Layer 0 Attention Block 9\nGPU: 17\nSeq: 9216-10240"
+		layer0_attn_qkv_9 [label="Layer 0 QKV Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_9 [label="Layer 0 Attention Scores Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]"]
+		layer0_attn_weighted_9 [label="Layer 0 Weighted Sum Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]"]
+		layer0_attn_out_9 [label="Layer 0 Attention Output Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=9216-10240, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_10 {
+		label="Layer 0 Attention Block 10\nGPU: 18\nSeq: 10240-11264"
+		layer0_attn_qkv_10 [label="Layer 0 QKV Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_10 [label="Layer 0 Attention Scores Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]"]
+		layer0_attn_weighted_10 [label="Layer 0 Weighted Sum Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]"]
+		layer0_attn_out_10 [label="Layer 0 Attention Output Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=10240-11264, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_11 {
+		label="Layer 0 Attention Block 11\nGPU: 19\nSeq: 11264-12288"
+		layer0_attn_qkv_11 [label="Layer 0 QKV Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_11 [label="Layer 0 Attention Scores Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]"]
+		layer0_attn_weighted_11 [label="Layer 0 Weighted Sum Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]"]
+		layer0_attn_out_11 [label="Layer 0 Attention Output Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=11264-12288, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_12 {
+		label="Layer 0 Attention Block 12\nGPU: 20\nSeq: 12288-13312"
+		layer0_attn_qkv_12 [label="Layer 0 QKV Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_12 [label="Layer 0 Attention Scores Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]"]
+		layer0_attn_weighted_12 [label="Layer 0 Weighted Sum Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]"]
+		layer0_attn_out_12 [label="Layer 0 Attention Output Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=12288-13312, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_13 {
+		label="Layer 0 Attention Block 13\nGPU: 21\nSeq: 13312-14336"
+		layer0_attn_qkv_13 [label="Layer 0 QKV Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_13 [label="Layer 0 Attention Scores Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]"]
+		layer0_attn_weighted_13 [label="Layer 0 Weighted Sum Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]"]
+		layer0_attn_out_13 [label="Layer 0 Attention Output Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=13312-14336, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_14 {
+		label="Layer 0 Attention Block 14\nGPU: 22\nSeq: 14336-15360"
+		layer0_attn_qkv_14 [label="Layer 0 QKV Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_14 [label="Layer 0 Attention Scores Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]"]
+		layer0_attn_weighted_14 [label="Layer 0 Weighted Sum Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]"]
+		layer0_attn_out_14 [label="Layer 0 Attention Output Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=14336-15360, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_15 {
+		label="Layer 0 Attention Block 15\nGPU: 23\nSeq: 15360-16384"
+		layer0_attn_qkv_15 [label="Layer 0 QKV Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_15 [label="Layer 0 Attention Scores Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]"]
+		layer0_attn_weighted_15 [label="Layer 0 Weighted Sum Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]"]
+		layer0_attn_out_15 [label="Layer 0 Attention Output Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=15360-16384, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_16 {
+		label="Layer 0 Attention Block 16\nGPU: 24\nSeq: 16384-17408"
+		layer0_attn_qkv_16 [label="Layer 0 QKV Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_16 [label="Layer 0 Attention Scores Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]"]
+		layer0_attn_weighted_16 [label="Layer 0 Weighted Sum Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]"]
+		layer0_attn_out_16 [label="Layer 0 Attention Output Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=16384-17408, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_17 {
+		label="Layer 0 Attention Block 17\nGPU: 25\nSeq: 17408-18432"
+		layer0_attn_qkv_17 [label="Layer 0 QKV Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_17 [label="Layer 0 Attention Scores Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]"]
+		layer0_attn_weighted_17 [label="Layer 0 Weighted Sum Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]"]
+		layer0_attn_out_17 [label="Layer 0 Attention Output Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=17408-18432, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_18 {
+		label="Layer 0 Attention Block 18\nGPU: 26\nSeq: 18432-19456"
+		layer0_attn_qkv_18 [label="Layer 0 QKV Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_18 [label="Layer 0 Attention Scores Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]"]
+		layer0_attn_weighted_18 [label="Layer 0 Weighted Sum Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]"]
+		layer0_attn_out_18 [label="Layer 0 Attention Output Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=18432-19456, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_19 {
+		label="Layer 0 Attention Block 19\nGPU: 27\nSeq: 19456-20480"
+		layer0_attn_qkv_19 [label="Layer 0 QKV Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_19 [label="Layer 0 Attention Scores Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]"]
+		layer0_attn_weighted_19 [label="Layer 0 Weighted Sum Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]"]
+		layer0_attn_out_19 [label="Layer 0 Attention Output Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=19456-20480, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_20 {
+		label="Layer 0 Attention Block 20\nGPU: 28\nSeq: 20480-21504"
+		layer0_attn_qkv_20 [label="Layer 0 QKV Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_20 [label="Layer 0 Attention Scores Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]"]
+		layer0_attn_weighted_20 [label="Layer 0 Weighted Sum Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]"]
+		layer0_attn_out_20 [label="Layer 0 Attention Output Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=20480-21504, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_21 {
+		label="Layer 0 Attention Block 21\nGPU: 29\nSeq: 21504-22528"
+		layer0_attn_qkv_21 [label="Layer 0 QKV Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_21 [label="Layer 0 Attention Scores Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]"]
+		layer0_attn_weighted_21 [label="Layer 0 Weighted Sum Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]"]
+		layer0_attn_out_21 [label="Layer 0 Attention Output Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=21504-22528, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_22 {
+		label="Layer 0 Attention Block 22\nGPU: 30\nSeq: 22528-23552"
+		layer0_attn_qkv_22 [label="Layer 0 QKV Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_22 [label="Layer 0 Attention Scores Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]"]
+		layer0_attn_weighted_22 [label="Layer 0 Weighted Sum Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]"]
+		layer0_attn_out_22 [label="Layer 0 Attention Output Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=22528-23552, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_23 {
+		label="Layer 0 Attention Block 23\nGPU: 31\nSeq: 23552-24576"
+		layer0_attn_qkv_23 [label="Layer 0 QKV Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_23 [label="Layer 0 Attention Scores Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]"]
+		layer0_attn_weighted_23 [label="Layer 0 Weighted Sum Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]"]
+		layer0_attn_out_23 [label="Layer 0 Attention Output Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=23552-24576, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_24 {
+		label="Layer 0 Attention Block 24\nGPU: 32\nSeq: 24576-25600"
+		layer0_attn_qkv_24 [label="Layer 0 QKV Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_24 [label="Layer 0 Attention Scores Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]"]
+		layer0_attn_weighted_24 [label="Layer 0 Weighted Sum Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]"]
+		layer0_attn_out_24 [label="Layer 0 Attention Output Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=24576-25600, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_25 {
+		label="Layer 0 Attention Block 25\nGPU: 33\nSeq: 25600-26624"
+		layer0_attn_qkv_25 [label="Layer 0 QKV Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_25 [label="Layer 0 Attention Scores Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]"]
+		layer0_attn_weighted_25 [label="Layer 0 Weighted Sum Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]"]
+		layer0_attn_out_25 [label="Layer 0 Attention Output Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=25600-26624, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_26 {
+		label="Layer 0 Attention Block 26\nGPU: 34\nSeq: 26624-27648"
+		layer0_attn_qkv_26 [label="Layer 0 QKV Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_26 [label="Layer 0 Attention Scores Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]"]
+		layer0_attn_weighted_26 [label="Layer 0 Weighted Sum Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]"]
+		layer0_attn_out_26 [label="Layer 0 Attention Output Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=26624-27648, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_27 {
+		label="Layer 0 Attention Block 27\nGPU: 35\nSeq: 27648-28672"
+		layer0_attn_qkv_27 [label="Layer 0 QKV Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_27 [label="Layer 0 Attention Scores Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]"]
+		layer0_attn_weighted_27 [label="Layer 0 Weighted Sum Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]"]
+		layer0_attn_out_27 [label="Layer 0 Attention Output Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=27648-28672, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_28 {
+		label="Layer 0 Attention Block 28\nGPU: 36\nSeq: 28672-29696"
+		layer0_attn_qkv_28 [label="Layer 0 QKV Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_28 [label="Layer 0 Attention Scores Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]"]
+		layer0_attn_weighted_28 [label="Layer 0 Weighted Sum Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]"]
+		layer0_attn_out_28 [label="Layer 0 Attention Output Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=28672-29696, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_29 {
+		label="Layer 0 Attention Block 29\nGPU: 37\nSeq: 29696-30720"
+		layer0_attn_qkv_29 [label="Layer 0 QKV Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_29 [label="Layer 0 Attention Scores Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]"]
+		layer0_attn_weighted_29 [label="Layer 0 Weighted Sum Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]"]
+		layer0_attn_out_29 [label="Layer 0 Attention Output Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=29696-30720, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_30 {
+		label="Layer 0 Attention Block 30\nGPU: 38\nSeq: 30720-31744"
+		layer0_attn_qkv_30 [label="Layer 0 QKV Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_30 [label="Layer 0 Attention Scores Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]"]
+		layer0_attn_weighted_30 [label="Layer 0 Weighted Sum Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]"]
+		layer0_attn_out_30 [label="Layer 0 Attention Output Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=30720-31744, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer0_attn_31 {
+		label="Layer 0 Attention Block 31\nGPU: 39\nSeq: 31744-32768"
+		layer0_attn_qkv_31 [label="Layer 0 QKV Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores_31 [label="Layer 0 Attention Scores Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]"]
+		layer0_attn_weighted_31 [label="Layer 0 Weighted Sum Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]"]
+		layer0_attn_out_31 [label="Layer 0 Attention Output Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=31744-32768, hidden_dim=4096, partition=512]"]
+	}
+	layer0_attn_aggregate [label="Layer 0 Attention Aggregation\nGPU: All Pool GPUs\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512] from each block\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=orange shape=parallelogram]
+	send_to_pool_1 [label="Send Layer 1 to Pool\nGPU: [0-7] → [8-39]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=yellow shape=parallelogram]
+	subgraph cluster_layer1_attn_0 {
+		label="Layer 1 Attention Block 0\nGPU: 8\nSeq: 0-1024"
+		layer1_attn_qkv_0 [label="Layer 1 QKV Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_0 [label="Layer 1 Attention Scores Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]"]
+		layer1_attn_weighted_0 [label="Layer 1 Weighted Sum Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]"]
+		layer1_attn_out_0 [label="Layer 1 Attention Output Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=0-1024, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_1 {
+		label="Layer 1 Attention Block 1\nGPU: 9\nSeq: 1024-2048"
+		layer1_attn_qkv_1 [label="Layer 1 QKV Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_1 [label="Layer 1 Attention Scores Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]"]
+		layer1_attn_weighted_1 [label="Layer 1 Weighted Sum Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]"]
+		layer1_attn_out_1 [label="Layer 1 Attention Output Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024-2048, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_2 {
+		label="Layer 1 Attention Block 2\nGPU: 10\nSeq: 2048-3072"
+		layer1_attn_qkv_2 [label="Layer 1 QKV Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_2 [label="Layer 1 Attention Scores Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]"]
+		layer1_attn_weighted_2 [label="Layer 1 Weighted Sum Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]"]
+		layer1_attn_out_2 [label="Layer 1 Attention Output Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048-3072, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_3 {
+		label="Layer 1 Attention Block 3\nGPU: 11\nSeq: 3072-4096"
+		layer1_attn_qkv_3 [label="Layer 1 QKV Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_3 [label="Layer 1 Attention Scores Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]"]
+		layer1_attn_weighted_3 [label="Layer 1 Weighted Sum Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]"]
+		layer1_attn_out_3 [label="Layer 1 Attention Output Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=3072-4096, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_4 {
+		label="Layer 1 Attention Block 4\nGPU: 12\nSeq: 4096-5120"
+		layer1_attn_qkv_4 [label="Layer 1 QKV Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_4 [label="Layer 1 Attention Scores Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]"]
+		layer1_attn_weighted_4 [label="Layer 1 Weighted Sum Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]"]
+		layer1_attn_out_4 [label="Layer 1 Attention Output Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096-5120, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_5 {
+		label="Layer 1 Attention Block 5\nGPU: 13\nSeq: 5120-6144"
+		layer1_attn_qkv_5 [label="Layer 1 QKV Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_5 [label="Layer 1 Attention Scores Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]"]
+		layer1_attn_weighted_5 [label="Layer 1 Weighted Sum Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]"]
+		layer1_attn_out_5 [label="Layer 1 Attention Output Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=5120-6144, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_6 {
+		label="Layer 1 Attention Block 6\nGPU: 14\nSeq: 6144-7168"
+		layer1_attn_qkv_6 [label="Layer 1 QKV Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_6 [label="Layer 1 Attention Scores Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]"]
+		layer1_attn_weighted_6 [label="Layer 1 Weighted Sum Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]"]
+		layer1_attn_out_6 [label="Layer 1 Attention Output Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=6144-7168, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_7 {
+		label="Layer 1 Attention Block 7\nGPU: 15\nSeq: 7168-8192"
+		layer1_attn_qkv_7 [label="Layer 1 QKV Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_7 [label="Layer 1 Attention Scores Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]"]
+		layer1_attn_weighted_7 [label="Layer 1 Weighted Sum Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]"]
+		layer1_attn_out_7 [label="Layer 1 Attention Output Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=7168-8192, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_8 {
+		label="Layer 1 Attention Block 8\nGPU: 16\nSeq: 8192-9216"
+		layer1_attn_qkv_8 [label="Layer 1 QKV Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_8 [label="Layer 1 Attention Scores Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]"]
+		layer1_attn_weighted_8 [label="Layer 1 Weighted Sum Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]"]
+		layer1_attn_out_8 [label="Layer 1 Attention Output Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=8192-9216, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_9 {
+		label="Layer 1 Attention Block 9\nGPU: 17\nSeq: 9216-10240"
+		layer1_attn_qkv_9 [label="Layer 1 QKV Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_9 [label="Layer 1 Attention Scores Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]"]
+		layer1_attn_weighted_9 [label="Layer 1 Weighted Sum Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]"]
+		layer1_attn_out_9 [label="Layer 1 Attention Output Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=9216-10240, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_10 {
+		label="Layer 1 Attention Block 10\nGPU: 18\nSeq: 10240-11264"
+		layer1_attn_qkv_10 [label="Layer 1 QKV Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_10 [label="Layer 1 Attention Scores Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]"]
+		layer1_attn_weighted_10 [label="Layer 1 Weighted Sum Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]"]
+		layer1_attn_out_10 [label="Layer 1 Attention Output Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=10240-11264, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_11 {
+		label="Layer 1 Attention Block 11\nGPU: 19\nSeq: 11264-12288"
+		layer1_attn_qkv_11 [label="Layer 1 QKV Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_11 [label="Layer 1 Attention Scores Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]"]
+		layer1_attn_weighted_11 [label="Layer 1 Weighted Sum Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]"]
+		layer1_attn_out_11 [label="Layer 1 Attention Output Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=11264-12288, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_12 {
+		label="Layer 1 Attention Block 12\nGPU: 20\nSeq: 12288-13312"
+		layer1_attn_qkv_12 [label="Layer 1 QKV Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_12 [label="Layer 1 Attention Scores Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]"]
+		layer1_attn_weighted_12 [label="Layer 1 Weighted Sum Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]"]
+		layer1_attn_out_12 [label="Layer 1 Attention Output Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=12288-13312, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_13 {
+		label="Layer 1 Attention Block 13\nGPU: 21\nSeq: 13312-14336"
+		layer1_attn_qkv_13 [label="Layer 1 QKV Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_13 [label="Layer 1 Attention Scores Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]"]
+		layer1_attn_weighted_13 [label="Layer 1 Weighted Sum Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]"]
+		layer1_attn_out_13 [label="Layer 1 Attention Output Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=13312-14336, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_14 {
+		label="Layer 1 Attention Block 14\nGPU: 22\nSeq: 14336-15360"
+		layer1_attn_qkv_14 [label="Layer 1 QKV Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_14 [label="Layer 1 Attention Scores Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]"]
+		layer1_attn_weighted_14 [label="Layer 1 Weighted Sum Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]"]
+		layer1_attn_out_14 [label="Layer 1 Attention Output Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=14336-15360, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_15 {
+		label="Layer 1 Attention Block 15\nGPU: 23\nSeq: 15360-16384"
+		layer1_attn_qkv_15 [label="Layer 1 QKV Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_15 [label="Layer 1 Attention Scores Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]"]
+		layer1_attn_weighted_15 [label="Layer 1 Weighted Sum Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]"]
+		layer1_attn_out_15 [label="Layer 1 Attention Output Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=15360-16384, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_16 {
+		label="Layer 1 Attention Block 16\nGPU: 24\nSeq: 16384-17408"
+		layer1_attn_qkv_16 [label="Layer 1 QKV Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_16 [label="Layer 1 Attention Scores Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]"]
+		layer1_attn_weighted_16 [label="Layer 1 Weighted Sum Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]"]
+		layer1_attn_out_16 [label="Layer 1 Attention Output Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=16384-17408, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_17 {
+		label="Layer 1 Attention Block 17\nGPU: 25\nSeq: 17408-18432"
+		layer1_attn_qkv_17 [label="Layer 1 QKV Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_17 [label="Layer 1 Attention Scores Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]"]
+		layer1_attn_weighted_17 [label="Layer 1 Weighted Sum Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]"]
+		layer1_attn_out_17 [label="Layer 1 Attention Output Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=17408-18432, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_18 {
+		label="Layer 1 Attention Block 18\nGPU: 26\nSeq: 18432-19456"
+		layer1_attn_qkv_18 [label="Layer 1 QKV Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_18 [label="Layer 1 Attention Scores Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]"]
+		layer1_attn_weighted_18 [label="Layer 1 Weighted Sum Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]"]
+		layer1_attn_out_18 [label="Layer 1 Attention Output Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=18432-19456, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_19 {
+		label="Layer 1 Attention Block 19\nGPU: 27\nSeq: 19456-20480"
+		layer1_attn_qkv_19 [label="Layer 1 QKV Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_19 [label="Layer 1 Attention Scores Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]"]
+		layer1_attn_weighted_19 [label="Layer 1 Weighted Sum Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]"]
+		layer1_attn_out_19 [label="Layer 1 Attention Output Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=19456-20480, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_20 {
+		label="Layer 1 Attention Block 20\nGPU: 28\nSeq: 20480-21504"
+		layer1_attn_qkv_20 [label="Layer 1 QKV Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_20 [label="Layer 1 Attention Scores Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]"]
+		layer1_attn_weighted_20 [label="Layer 1 Weighted Sum Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]"]
+		layer1_attn_out_20 [label="Layer 1 Attention Output Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=20480-21504, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_21 {
+		label="Layer 1 Attention Block 21\nGPU: 29\nSeq: 21504-22528"
+		layer1_attn_qkv_21 [label="Layer 1 QKV Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_21 [label="Layer 1 Attention Scores Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]"]
+		layer1_attn_weighted_21 [label="Layer 1 Weighted Sum Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]"]
+		layer1_attn_out_21 [label="Layer 1 Attention Output Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=21504-22528, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_22 {
+		label="Layer 1 Attention Block 22\nGPU: 30\nSeq: 22528-23552"
+		layer1_attn_qkv_22 [label="Layer 1 QKV Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_22 [label="Layer 1 Attention Scores Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]"]
+		layer1_attn_weighted_22 [label="Layer 1 Weighted Sum Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]"]
+		layer1_attn_out_22 [label="Layer 1 Attention Output Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=22528-23552, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_23 {
+		label="Layer 1 Attention Block 23\nGPU: 31\nSeq: 23552-24576"
+		layer1_attn_qkv_23 [label="Layer 1 QKV Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_23 [label="Layer 1 Attention Scores Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]"]
+		layer1_attn_weighted_23 [label="Layer 1 Weighted Sum Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]"]
+		layer1_attn_out_23 [label="Layer 1 Attention Output Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=23552-24576, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_24 {
+		label="Layer 1 Attention Block 24\nGPU: 32\nSeq: 24576-25600"
+		layer1_attn_qkv_24 [label="Layer 1 QKV Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_24 [label="Layer 1 Attention Scores Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]"]
+		layer1_attn_weighted_24 [label="Layer 1 Weighted Sum Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]"]
+		layer1_attn_out_24 [label="Layer 1 Attention Output Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=24576-25600, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_25 {
+		label="Layer 1 Attention Block 25\nGPU: 33\nSeq: 25600-26624"
+		layer1_attn_qkv_25 [label="Layer 1 QKV Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_25 [label="Layer 1 Attention Scores Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]"]
+		layer1_attn_weighted_25 [label="Layer 1 Weighted Sum Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]"]
+		layer1_attn_out_25 [label="Layer 1 Attention Output Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=25600-26624, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_26 {
+		label="Layer 1 Attention Block 26\nGPU: 34\nSeq: 26624-27648"
+		layer1_attn_qkv_26 [label="Layer 1 QKV Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_26 [label="Layer 1 Attention Scores Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]"]
+		layer1_attn_weighted_26 [label="Layer 1 Weighted Sum Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]"]
+		layer1_attn_out_26 [label="Layer 1 Attention Output Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=26624-27648, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_27 {
+		label="Layer 1 Attention Block 27\nGPU: 35\nSeq: 27648-28672"
+		layer1_attn_qkv_27 [label="Layer 1 QKV Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_27 [label="Layer 1 Attention Scores Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]"]
+		layer1_attn_weighted_27 [label="Layer 1 Weighted Sum Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]"]
+		layer1_attn_out_27 [label="Layer 1 Attention Output Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=27648-28672, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_28 {
+		label="Layer 1 Attention Block 28\nGPU: 36\nSeq: 28672-29696"
+		layer1_attn_qkv_28 [label="Layer 1 QKV Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_28 [label="Layer 1 Attention Scores Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]"]
+		layer1_attn_weighted_28 [label="Layer 1 Weighted Sum Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]"]
+		layer1_attn_out_28 [label="Layer 1 Attention Output Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=28672-29696, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_29 {
+		label="Layer 1 Attention Block 29\nGPU: 37\nSeq: 29696-30720"
+		layer1_attn_qkv_29 [label="Layer 1 QKV Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_29 [label="Layer 1 Attention Scores Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]"]
+		layer1_attn_weighted_29 [label="Layer 1 Weighted Sum Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]"]
+		layer1_attn_out_29 [label="Layer 1 Attention Output Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=29696-30720, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_30 {
+		label="Layer 1 Attention Block 30\nGPU: 38\nSeq: 30720-31744"
+		layer1_attn_qkv_30 [label="Layer 1 QKV Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_30 [label="Layer 1 Attention Scores Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]"]
+		layer1_attn_weighted_30 [label="Layer 1 Weighted Sum Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]"]
+		layer1_attn_out_30 [label="Layer 1 Attention Output Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=30720-31744, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer1_attn_31 {
+		label="Layer 1 Attention Block 31\nGPU: 39\nSeq: 31744-32768"
+		layer1_attn_qkv_31 [label="Layer 1 QKV Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores_31 [label="Layer 1 Attention Scores Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]"]
+		layer1_attn_weighted_31 [label="Layer 1 Weighted Sum Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]"]
+		layer1_attn_out_31 [label="Layer 1 Attention Output Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=31744-32768, hidden_dim=4096, partition=512]"]
+	}
+	layer1_attn_aggregate [label="Layer 1 Attention Aggregation\nGPU: All Pool GPUs\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512] from each block\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=orange shape=parallelogram]
+	recv_from_pool_1 [label="Receive Layer 1 from Pool\nGPU: [8-39] → [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=yellow shape=parallelogram]
+	send_to_pool_2 [label="Send Layer 2 to Pool\nGPU: [0-7] → [8-39]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=yellow shape=parallelogram]
+	subgraph cluster_layer2_attn_0 {
+		label="Layer 2 Attention Block 0\nGPU: 8\nSeq: 0-1024"
+		layer2_attn_qkv_0 [label="Layer 2 QKV Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_0 [label="Layer 2 Attention Scores Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]"]
+		layer2_attn_weighted_0 [label="Layer 2 Weighted Sum Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]"]
+		layer2_attn_out_0 [label="Layer 2 Attention Output Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=0-1024, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_1 {
+		label="Layer 2 Attention Block 1\nGPU: 9\nSeq: 1024-2048"
+		layer2_attn_qkv_1 [label="Layer 2 QKV Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_1 [label="Layer 2 Attention Scores Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]"]
+		layer2_attn_weighted_1 [label="Layer 2 Weighted Sum Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]"]
+		layer2_attn_out_1 [label="Layer 2 Attention Output Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024-2048, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_2 {
+		label="Layer 2 Attention Block 2\nGPU: 10\nSeq: 2048-3072"
+		layer2_attn_qkv_2 [label="Layer 2 QKV Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_2 [label="Layer 2 Attention Scores Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]"]
+		layer2_attn_weighted_2 [label="Layer 2 Weighted Sum Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]"]
+		layer2_attn_out_2 [label="Layer 2 Attention Output Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048-3072, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_3 {
+		label="Layer 2 Attention Block 3\nGPU: 11\nSeq: 3072-4096"
+		layer2_attn_qkv_3 [label="Layer 2 QKV Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_3 [label="Layer 2 Attention Scores Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]"]
+		layer2_attn_weighted_3 [label="Layer 2 Weighted Sum Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]"]
+		layer2_attn_out_3 [label="Layer 2 Attention Output Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=3072-4096, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_4 {
+		label="Layer 2 Attention Block 4\nGPU: 12\nSeq: 4096-5120"
+		layer2_attn_qkv_4 [label="Layer 2 QKV Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_4 [label="Layer 2 Attention Scores Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]"]
+		layer2_attn_weighted_4 [label="Layer 2 Weighted Sum Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]"]
+		layer2_attn_out_4 [label="Layer 2 Attention Output Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096-5120, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_5 {
+		label="Layer 2 Attention Block 5\nGPU: 13\nSeq: 5120-6144"
+		layer2_attn_qkv_5 [label="Layer 2 QKV Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_5 [label="Layer 2 Attention Scores Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]"]
+		layer2_attn_weighted_5 [label="Layer 2 Weighted Sum Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]"]
+		layer2_attn_out_5 [label="Layer 2 Attention Output Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=5120-6144, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_6 {
+		label="Layer 2 Attention Block 6\nGPU: 14\nSeq: 6144-7168"
+		layer2_attn_qkv_6 [label="Layer 2 QKV Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_6 [label="Layer 2 Attention Scores Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]"]
+		layer2_attn_weighted_6 [label="Layer 2 Weighted Sum Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]"]
+		layer2_attn_out_6 [label="Layer 2 Attention Output Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=6144-7168, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_7 {
+		label="Layer 2 Attention Block 7\nGPU: 15\nSeq: 7168-8192"
+		layer2_attn_qkv_7 [label="Layer 2 QKV Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_7 [label="Layer 2 Attention Scores Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]"]
+		layer2_attn_weighted_7 [label="Layer 2 Weighted Sum Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]"]
+		layer2_attn_out_7 [label="Layer 2 Attention Output Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=7168-8192, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_8 {
+		label="Layer 2 Attention Block 8\nGPU: 16\nSeq: 8192-9216"
+		layer2_attn_qkv_8 [label="Layer 2 QKV Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_8 [label="Layer 2 Attention Scores Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]"]
+		layer2_attn_weighted_8 [label="Layer 2 Weighted Sum Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]"]
+		layer2_attn_out_8 [label="Layer 2 Attention Output Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=8192-9216, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_9 {
+		label="Layer 2 Attention Block 9\nGPU: 17\nSeq: 9216-10240"
+		layer2_attn_qkv_9 [label="Layer 2 QKV Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_9 [label="Layer 2 Attention Scores Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]"]
+		layer2_attn_weighted_9 [label="Layer 2 Weighted Sum Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]"]
+		layer2_attn_out_9 [label="Layer 2 Attention Output Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=9216-10240, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_10 {
+		label="Layer 2 Attention Block 10\nGPU: 18\nSeq: 10240-11264"
+		layer2_attn_qkv_10 [label="Layer 2 QKV Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_10 [label="Layer 2 Attention Scores Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]"]
+		layer2_attn_weighted_10 [label="Layer 2 Weighted Sum Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]"]
+		layer2_attn_out_10 [label="Layer 2 Attention Output Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=10240-11264, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_11 {
+		label="Layer 2 Attention Block 11\nGPU: 19\nSeq: 11264-12288"
+		layer2_attn_qkv_11 [label="Layer 2 QKV Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_11 [label="Layer 2 Attention Scores Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]"]
+		layer2_attn_weighted_11 [label="Layer 2 Weighted Sum Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]"]
+		layer2_attn_out_11 [label="Layer 2 Attention Output Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=11264-12288, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_12 {
+		label="Layer 2 Attention Block 12\nGPU: 20\nSeq: 12288-13312"
+		layer2_attn_qkv_12 [label="Layer 2 QKV Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_12 [label="Layer 2 Attention Scores Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]"]
+		layer2_attn_weighted_12 [label="Layer 2 Weighted Sum Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]"]
+		layer2_attn_out_12 [label="Layer 2 Attention Output Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=12288-13312, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_13 {
+		label="Layer 2 Attention Block 13\nGPU: 21\nSeq: 13312-14336"
+		layer2_attn_qkv_13 [label="Layer 2 QKV Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_13 [label="Layer 2 Attention Scores Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]"]
+		layer2_attn_weighted_13 [label="Layer 2 Weighted Sum Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]"]
+		layer2_attn_out_13 [label="Layer 2 Attention Output Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=13312-14336, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_14 {
+		label="Layer 2 Attention Block 14\nGPU: 22\nSeq: 14336-15360"
+		layer2_attn_qkv_14 [label="Layer 2 QKV Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_14 [label="Layer 2 Attention Scores Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]"]
+		layer2_attn_weighted_14 [label="Layer 2 Weighted Sum Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]"]
+		layer2_attn_out_14 [label="Layer 2 Attention Output Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=14336-15360, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_15 {
+		label="Layer 2 Attention Block 15\nGPU: 23\nSeq: 15360-16384"
+		layer2_attn_qkv_15 [label="Layer 2 QKV Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_15 [label="Layer 2 Attention Scores Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]"]
+		layer2_attn_weighted_15 [label="Layer 2 Weighted Sum Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]"]
+		layer2_attn_out_15 [label="Layer 2 Attention Output Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=15360-16384, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_16 {
+		label="Layer 2 Attention Block 16\nGPU: 24\nSeq: 16384-17408"
+		layer2_attn_qkv_16 [label="Layer 2 QKV Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_16 [label="Layer 2 Attention Scores Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]"]
+		layer2_attn_weighted_16 [label="Layer 2 Weighted Sum Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]"]
+		layer2_attn_out_16 [label="Layer 2 Attention Output Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=16384-17408, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_17 {
+		label="Layer 2 Attention Block 17\nGPU: 25\nSeq: 17408-18432"
+		layer2_attn_qkv_17 [label="Layer 2 QKV Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_17 [label="Layer 2 Attention Scores Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]"]
+		layer2_attn_weighted_17 [label="Layer 2 Weighted Sum Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]"]
+		layer2_attn_out_17 [label="Layer 2 Attention Output Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=17408-18432, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_18 {
+		label="Layer 2 Attention Block 18\nGPU: 26\nSeq: 18432-19456"
+		layer2_attn_qkv_18 [label="Layer 2 QKV Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_18 [label="Layer 2 Attention Scores Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]"]
+		layer2_attn_weighted_18 [label="Layer 2 Weighted Sum Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]"]
+		layer2_attn_out_18 [label="Layer 2 Attention Output Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=18432-19456, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_19 {
+		label="Layer 2 Attention Block 19\nGPU: 27\nSeq: 19456-20480"
+		layer2_attn_qkv_19 [label="Layer 2 QKV Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_19 [label="Layer 2 Attention Scores Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]"]
+		layer2_attn_weighted_19 [label="Layer 2 Weighted Sum Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]"]
+		layer2_attn_out_19 [label="Layer 2 Attention Output Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=19456-20480, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_20 {
+		label="Layer 2 Attention Block 20\nGPU: 28\nSeq: 20480-21504"
+		layer2_attn_qkv_20 [label="Layer 2 QKV Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_20 [label="Layer 2 Attention Scores Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]"]
+		layer2_attn_weighted_20 [label="Layer 2 Weighted Sum Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]"]
+		layer2_attn_out_20 [label="Layer 2 Attention Output Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=20480-21504, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_21 {
+		label="Layer 2 Attention Block 21\nGPU: 29\nSeq: 21504-22528"
+		layer2_attn_qkv_21 [label="Layer 2 QKV Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_21 [label="Layer 2 Attention Scores Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]"]
+		layer2_attn_weighted_21 [label="Layer 2 Weighted Sum Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]"]
+		layer2_attn_out_21 [label="Layer 2 Attention Output Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=21504-22528, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_22 {
+		label="Layer 2 Attention Block 22\nGPU: 30\nSeq: 22528-23552"
+		layer2_attn_qkv_22 [label="Layer 2 QKV Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_22 [label="Layer 2 Attention Scores Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]"]
+		layer2_attn_weighted_22 [label="Layer 2 Weighted Sum Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]"]
+		layer2_attn_out_22 [label="Layer 2 Attention Output Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=22528-23552, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_23 {
+		label="Layer 2 Attention Block 23\nGPU: 31\nSeq: 23552-24576"
+		layer2_attn_qkv_23 [label="Layer 2 QKV Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_23 [label="Layer 2 Attention Scores Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]"]
+		layer2_attn_weighted_23 [label="Layer 2 Weighted Sum Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]"]
+		layer2_attn_out_23 [label="Layer 2 Attention Output Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=23552-24576, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_24 {
+		label="Layer 2 Attention Block 24\nGPU: 32\nSeq: 24576-25600"
+		layer2_attn_qkv_24 [label="Layer 2 QKV Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_24 [label="Layer 2 Attention Scores Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]"]
+		layer2_attn_weighted_24 [label="Layer 2 Weighted Sum Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]"]
+		layer2_attn_out_24 [label="Layer 2 Attention Output Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=24576-25600, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_25 {
+		label="Layer 2 Attention Block 25\nGPU: 33\nSeq: 25600-26624"
+		layer2_attn_qkv_25 [label="Layer 2 QKV Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_25 [label="Layer 2 Attention Scores Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]"]
+		layer2_attn_weighted_25 [label="Layer 2 Weighted Sum Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]"]
+		layer2_attn_out_25 [label="Layer 2 Attention Output Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=25600-26624, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_26 {
+		label="Layer 2 Attention Block 26\nGPU: 34\nSeq: 26624-27648"
+		layer2_attn_qkv_26 [label="Layer 2 QKV Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_26 [label="Layer 2 Attention Scores Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]"]
+		layer2_attn_weighted_26 [label="Layer 2 Weighted Sum Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]"]
+		layer2_attn_out_26 [label="Layer 2 Attention Output Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=26624-27648, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_27 {
+		label="Layer 2 Attention Block 27\nGPU: 35\nSeq: 27648-28672"
+		layer2_attn_qkv_27 [label="Layer 2 QKV Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_27 [label="Layer 2 Attention Scores Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]"]
+		layer2_attn_weighted_27 [label="Layer 2 Weighted Sum Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]"]
+		layer2_attn_out_27 [label="Layer 2 Attention Output Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=27648-28672, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_28 {
+		label="Layer 2 Attention Block 28\nGPU: 36\nSeq: 28672-29696"
+		layer2_attn_qkv_28 [label="Layer 2 QKV Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_28 [label="Layer 2 Attention Scores Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]"]
+		layer2_attn_weighted_28 [label="Layer 2 Weighted Sum Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]"]
+		layer2_attn_out_28 [label="Layer 2 Attention Output Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=28672-29696, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_29 {
+		label="Layer 2 Attention Block 29\nGPU: 37\nSeq: 29696-30720"
+		layer2_attn_qkv_29 [label="Layer 2 QKV Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_29 [label="Layer 2 Attention Scores Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]"]
+		layer2_attn_weighted_29 [label="Layer 2 Weighted Sum Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]"]
+		layer2_attn_out_29 [label="Layer 2 Attention Output Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=29696-30720, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_30 {
+		label="Layer 2 Attention Block 30\nGPU: 38\nSeq: 30720-31744"
+		layer2_attn_qkv_30 [label="Layer 2 QKV Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_30 [label="Layer 2 Attention Scores Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]"]
+		layer2_attn_weighted_30 [label="Layer 2 Weighted Sum Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]"]
+		layer2_attn_out_30 [label="Layer 2 Attention Output Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=30720-31744, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer2_attn_31 {
+		label="Layer 2 Attention Block 31\nGPU: 39\nSeq: 31744-32768"
+		layer2_attn_qkv_31 [label="Layer 2 QKV Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores_31 [label="Layer 2 Attention Scores Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]"]
+		layer2_attn_weighted_31 [label="Layer 2 Weighted Sum Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]"]
+		layer2_attn_out_31 [label="Layer 2 Attention Output Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=31744-32768, hidden_dim=4096, partition=512]"]
+	}
+	layer2_attn_aggregate [label="Layer 2 Attention Aggregation\nGPU: All Pool GPUs\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512] from each block\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=orange shape=parallelogram]
+	recv_from_pool_2 [label="Receive Layer 2 from Pool\nGPU: [8-39] → [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=yellow shape=parallelogram]
+	send_to_pool_3 [label="Send Layer 3 to Pool\nGPU: [0-7] → [8-39]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=yellow shape=parallelogram]
+	subgraph cluster_layer3_attn_0 {
+		label="Layer 3 Attention Block 0\nGPU: 8\nSeq: 0-1024"
+		layer3_attn_qkv_0 [label="Layer 3 QKV Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_0 [label="Layer 3 Attention Scores Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]"]
+		layer3_attn_weighted_0 [label="Layer 3 Weighted Sum Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]"]
+		layer3_attn_out_0 [label="Layer 3 Attention Output Block 0\nGPU: 8\nInput: [batch_size=1024, seq_len=0-1024, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=0-1024, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_1 {
+		label="Layer 3 Attention Block 1\nGPU: 9\nSeq: 1024-2048"
+		layer3_attn_qkv_1 [label="Layer 3 QKV Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_1 [label="Layer 3 Attention Scores Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]"]
+		layer3_attn_weighted_1 [label="Layer 3 Weighted Sum Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]"]
+		layer3_attn_out_1 [label="Layer 3 Attention Output Block 1\nGPU: 9\nInput: [batch_size=1024, seq_len=1024-2048, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=1024-2048, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_2 {
+		label="Layer 3 Attention Block 2\nGPU: 10\nSeq: 2048-3072"
+		layer3_attn_qkv_2 [label="Layer 3 QKV Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_2 [label="Layer 3 Attention Scores Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]"]
+		layer3_attn_weighted_2 [label="Layer 3 Weighted Sum Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]"]
+		layer3_attn_out_2 [label="Layer 3 Attention Output Block 2\nGPU: 10\nInput: [batch_size=1024, seq_len=2048-3072, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=2048-3072, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_3 {
+		label="Layer 3 Attention Block 3\nGPU: 11\nSeq: 3072-4096"
+		layer3_attn_qkv_3 [label="Layer 3 QKV Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_3 [label="Layer 3 Attention Scores Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]"]
+		layer3_attn_weighted_3 [label="Layer 3 Weighted Sum Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]"]
+		layer3_attn_out_3 [label="Layer 3 Attention Output Block 3\nGPU: 11\nInput: [batch_size=1024, seq_len=3072-4096, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=3072-4096, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_4 {
+		label="Layer 3 Attention Block 4\nGPU: 12\nSeq: 4096-5120"
+		layer3_attn_qkv_4 [label="Layer 3 QKV Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_4 [label="Layer 3 Attention Scores Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]"]
+		layer3_attn_weighted_4 [label="Layer 3 Weighted Sum Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]"]
+		layer3_attn_out_4 [label="Layer 3 Attention Output Block 4\nGPU: 12\nInput: [batch_size=1024, seq_len=4096-5120, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096-5120, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_5 {
+		label="Layer 3 Attention Block 5\nGPU: 13\nSeq: 5120-6144"
+		layer3_attn_qkv_5 [label="Layer 3 QKV Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_5 [label="Layer 3 Attention Scores Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]"]
+		layer3_attn_weighted_5 [label="Layer 3 Weighted Sum Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]"]
+		layer3_attn_out_5 [label="Layer 3 Attention Output Block 5\nGPU: 13\nInput: [batch_size=1024, seq_len=5120-6144, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=5120-6144, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_6 {
+		label="Layer 3 Attention Block 6\nGPU: 14\nSeq: 6144-7168"
+		layer3_attn_qkv_6 [label="Layer 3 QKV Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_6 [label="Layer 3 Attention Scores Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]"]
+		layer3_attn_weighted_6 [label="Layer 3 Weighted Sum Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]"]
+		layer3_attn_out_6 [label="Layer 3 Attention Output Block 6\nGPU: 14\nInput: [batch_size=1024, seq_len=6144-7168, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=6144-7168, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_7 {
+		label="Layer 3 Attention Block 7\nGPU: 15\nSeq: 7168-8192"
+		layer3_attn_qkv_7 [label="Layer 3 QKV Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_7 [label="Layer 3 Attention Scores Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]"]
+		layer3_attn_weighted_7 [label="Layer 3 Weighted Sum Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]"]
+		layer3_attn_out_7 [label="Layer 3 Attention Output Block 7\nGPU: 15\nInput: [batch_size=1024, seq_len=7168-8192, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=7168-8192, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_8 {
+		label="Layer 3 Attention Block 8\nGPU: 16\nSeq: 8192-9216"
+		layer3_attn_qkv_8 [label="Layer 3 QKV Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_8 [label="Layer 3 Attention Scores Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]"]
+		layer3_attn_weighted_8 [label="Layer 3 Weighted Sum Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]"]
+		layer3_attn_out_8 [label="Layer 3 Attention Output Block 8\nGPU: 16\nInput: [batch_size=1024, seq_len=8192-9216, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=8192-9216, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_9 {
+		label="Layer 3 Attention Block 9\nGPU: 17\nSeq: 9216-10240"
+		layer3_attn_qkv_9 [label="Layer 3 QKV Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_9 [label="Layer 3 Attention Scores Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]"]
+		layer3_attn_weighted_9 [label="Layer 3 Weighted Sum Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]"]
+		layer3_attn_out_9 [label="Layer 3 Attention Output Block 9\nGPU: 17\nInput: [batch_size=1024, seq_len=9216-10240, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=9216-10240, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_10 {
+		label="Layer 3 Attention Block 10\nGPU: 18\nSeq: 10240-11264"
+		layer3_attn_qkv_10 [label="Layer 3 QKV Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_10 [label="Layer 3 Attention Scores Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]"]
+		layer3_attn_weighted_10 [label="Layer 3 Weighted Sum Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]"]
+		layer3_attn_out_10 [label="Layer 3 Attention Output Block 10\nGPU: 18\nInput: [batch_size=1024, seq_len=10240-11264, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=10240-11264, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_11 {
+		label="Layer 3 Attention Block 11\nGPU: 19\nSeq: 11264-12288"
+		layer3_attn_qkv_11 [label="Layer 3 QKV Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_11 [label="Layer 3 Attention Scores Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]"]
+		layer3_attn_weighted_11 [label="Layer 3 Weighted Sum Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]"]
+		layer3_attn_out_11 [label="Layer 3 Attention Output Block 11\nGPU: 19\nInput: [batch_size=1024, seq_len=11264-12288, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=11264-12288, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_12 {
+		label="Layer 3 Attention Block 12\nGPU: 20\nSeq: 12288-13312"
+		layer3_attn_qkv_12 [label="Layer 3 QKV Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_12 [label="Layer 3 Attention Scores Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]"]
+		layer3_attn_weighted_12 [label="Layer 3 Weighted Sum Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]"]
+		layer3_attn_out_12 [label="Layer 3 Attention Output Block 12\nGPU: 20\nInput: [batch_size=1024, seq_len=12288-13312, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=12288-13312, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_13 {
+		label="Layer 3 Attention Block 13\nGPU: 21\nSeq: 13312-14336"
+		layer3_attn_qkv_13 [label="Layer 3 QKV Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_13 [label="Layer 3 Attention Scores Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]"]
+		layer3_attn_weighted_13 [label="Layer 3 Weighted Sum Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]"]
+		layer3_attn_out_13 [label="Layer 3 Attention Output Block 13\nGPU: 21\nInput: [batch_size=1024, seq_len=13312-14336, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=13312-14336, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_14 {
+		label="Layer 3 Attention Block 14\nGPU: 22\nSeq: 14336-15360"
+		layer3_attn_qkv_14 [label="Layer 3 QKV Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_14 [label="Layer 3 Attention Scores Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]"]
+		layer3_attn_weighted_14 [label="Layer 3 Weighted Sum Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]"]
+		layer3_attn_out_14 [label="Layer 3 Attention Output Block 14\nGPU: 22\nInput: [batch_size=1024, seq_len=14336-15360, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=14336-15360, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_15 {
+		label="Layer 3 Attention Block 15\nGPU: 23\nSeq: 15360-16384"
+		layer3_attn_qkv_15 [label="Layer 3 QKV Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_15 [label="Layer 3 Attention Scores Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]"]
+		layer3_attn_weighted_15 [label="Layer 3 Weighted Sum Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]"]
+		layer3_attn_out_15 [label="Layer 3 Attention Output Block 15\nGPU: 23\nInput: [batch_size=1024, seq_len=15360-16384, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=15360-16384, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_16 {
+		label="Layer 3 Attention Block 16\nGPU: 24\nSeq: 16384-17408"
+		layer3_attn_qkv_16 [label="Layer 3 QKV Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_16 [label="Layer 3 Attention Scores Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]"]
+		layer3_attn_weighted_16 [label="Layer 3 Weighted Sum Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]"]
+		layer3_attn_out_16 [label="Layer 3 Attention Output Block 16\nGPU: 24\nInput: [batch_size=1024, seq_len=16384-17408, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=16384-17408, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_17 {
+		label="Layer 3 Attention Block 17\nGPU: 25\nSeq: 17408-18432"
+		layer3_attn_qkv_17 [label="Layer 3 QKV Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_17 [label="Layer 3 Attention Scores Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]"]
+		layer3_attn_weighted_17 [label="Layer 3 Weighted Sum Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]"]
+		layer3_attn_out_17 [label="Layer 3 Attention Output Block 17\nGPU: 25\nInput: [batch_size=1024, seq_len=17408-18432, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=17408-18432, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_18 {
+		label="Layer 3 Attention Block 18\nGPU: 26\nSeq: 18432-19456"
+		layer3_attn_qkv_18 [label="Layer 3 QKV Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_18 [label="Layer 3 Attention Scores Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]"]
+		layer3_attn_weighted_18 [label="Layer 3 Weighted Sum Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]"]
+		layer3_attn_out_18 [label="Layer 3 Attention Output Block 18\nGPU: 26\nInput: [batch_size=1024, seq_len=18432-19456, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=18432-19456, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_19 {
+		label="Layer 3 Attention Block 19\nGPU: 27\nSeq: 19456-20480"
+		layer3_attn_qkv_19 [label="Layer 3 QKV Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_19 [label="Layer 3 Attention Scores Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]"]
+		layer3_attn_weighted_19 [label="Layer 3 Weighted Sum Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]"]
+		layer3_attn_out_19 [label="Layer 3 Attention Output Block 19\nGPU: 27\nInput: [batch_size=1024, seq_len=19456-20480, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=19456-20480, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_20 {
+		label="Layer 3 Attention Block 20\nGPU: 28\nSeq: 20480-21504"
+		layer3_attn_qkv_20 [label="Layer 3 QKV Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_20 [label="Layer 3 Attention Scores Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]"]
+		layer3_attn_weighted_20 [label="Layer 3 Weighted Sum Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]"]
+		layer3_attn_out_20 [label="Layer 3 Attention Output Block 20\nGPU: 28\nInput: [batch_size=1024, seq_len=20480-21504, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=20480-21504, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_21 {
+		label="Layer 3 Attention Block 21\nGPU: 29\nSeq: 21504-22528"
+		layer3_attn_qkv_21 [label="Layer 3 QKV Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_21 [label="Layer 3 Attention Scores Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]"]
+		layer3_attn_weighted_21 [label="Layer 3 Weighted Sum Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]"]
+		layer3_attn_out_21 [label="Layer 3 Attention Output Block 21\nGPU: 29\nInput: [batch_size=1024, seq_len=21504-22528, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=21504-22528, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_22 {
+		label="Layer 3 Attention Block 22\nGPU: 30\nSeq: 22528-23552"
+		layer3_attn_qkv_22 [label="Layer 3 QKV Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_22 [label="Layer 3 Attention Scores Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]"]
+		layer3_attn_weighted_22 [label="Layer 3 Weighted Sum Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]"]
+		layer3_attn_out_22 [label="Layer 3 Attention Output Block 22\nGPU: 30\nInput: [batch_size=1024, seq_len=22528-23552, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=22528-23552, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_23 {
+		label="Layer 3 Attention Block 23\nGPU: 31\nSeq: 23552-24576"
+		layer3_attn_qkv_23 [label="Layer 3 QKV Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_23 [label="Layer 3 Attention Scores Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]"]
+		layer3_attn_weighted_23 [label="Layer 3 Weighted Sum Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]"]
+		layer3_attn_out_23 [label="Layer 3 Attention Output Block 23\nGPU: 31\nInput: [batch_size=1024, seq_len=23552-24576, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=23552-24576, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_24 {
+		label="Layer 3 Attention Block 24\nGPU: 32\nSeq: 24576-25600"
+		layer3_attn_qkv_24 [label="Layer 3 QKV Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_24 [label="Layer 3 Attention Scores Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]"]
+		layer3_attn_weighted_24 [label="Layer 3 Weighted Sum Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]"]
+		layer3_attn_out_24 [label="Layer 3 Attention Output Block 24\nGPU: 32\nInput: [batch_size=1024, seq_len=24576-25600, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=24576-25600, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_25 {
+		label="Layer 3 Attention Block 25\nGPU: 33\nSeq: 25600-26624"
+		layer3_attn_qkv_25 [label="Layer 3 QKV Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_25 [label="Layer 3 Attention Scores Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]"]
+		layer3_attn_weighted_25 [label="Layer 3 Weighted Sum Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]"]
+		layer3_attn_out_25 [label="Layer 3 Attention Output Block 25\nGPU: 33\nInput: [batch_size=1024, seq_len=25600-26624, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=25600-26624, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_26 {
+		label="Layer 3 Attention Block 26\nGPU: 34\nSeq: 26624-27648"
+		layer3_attn_qkv_26 [label="Layer 3 QKV Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_26 [label="Layer 3 Attention Scores Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]"]
+		layer3_attn_weighted_26 [label="Layer 3 Weighted Sum Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]"]
+		layer3_attn_out_26 [label="Layer 3 Attention Output Block 26\nGPU: 34\nInput: [batch_size=1024, seq_len=26624-27648, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=26624-27648, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_27 {
+		label="Layer 3 Attention Block 27\nGPU: 35\nSeq: 27648-28672"
+		layer3_attn_qkv_27 [label="Layer 3 QKV Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_27 [label="Layer 3 Attention Scores Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]"]
+		layer3_attn_weighted_27 [label="Layer 3 Weighted Sum Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]"]
+		layer3_attn_out_27 [label="Layer 3 Attention Output Block 27\nGPU: 35\nInput: [batch_size=1024, seq_len=27648-28672, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=27648-28672, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_28 {
+		label="Layer 3 Attention Block 28\nGPU: 36\nSeq: 28672-29696"
+		layer3_attn_qkv_28 [label="Layer 3 QKV Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_28 [label="Layer 3 Attention Scores Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]"]
+		layer3_attn_weighted_28 [label="Layer 3 Weighted Sum Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]"]
+		layer3_attn_out_28 [label="Layer 3 Attention Output Block 28\nGPU: 36\nInput: [batch_size=1024, seq_len=28672-29696, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=28672-29696, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_29 {
+		label="Layer 3 Attention Block 29\nGPU: 37\nSeq: 29696-30720"
+		layer3_attn_qkv_29 [label="Layer 3 QKV Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_29 [label="Layer 3 Attention Scores Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]"]
+		layer3_attn_weighted_29 [label="Layer 3 Weighted Sum Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]"]
+		layer3_attn_out_29 [label="Layer 3 Attention Output Block 29\nGPU: 37\nInput: [batch_size=1024, seq_len=29696-30720, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=29696-30720, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_30 {
+		label="Layer 3 Attention Block 30\nGPU: 38\nSeq: 30720-31744"
+		layer3_attn_qkv_30 [label="Layer 3 QKV Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_30 [label="Layer 3 Attention Scores Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]"]
+		layer3_attn_weighted_30 [label="Layer 3 Weighted Sum Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]"]
+		layer3_attn_out_30 [label="Layer 3 Attention Output Block 30\nGPU: 38\nInput: [batch_size=1024, seq_len=30720-31744, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=30720-31744, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_layer3_attn_31 {
+		label="Layer 3 Attention Block 31\nGPU: 39\nSeq: 31744-32768"
+		layer3_attn_qkv_31 [label="Layer 3 QKV Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores_31 [label="Layer 3 Attention Scores Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]"]
+		layer3_attn_weighted_31 [label="Layer 3 Weighted Sum Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]"]
+		layer3_attn_out_31 [label="Layer 3 Attention Output Block 31\nGPU: 39\nInput: [batch_size=1024, seq_len=31744-32768, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=31744-32768, hidden_dim=4096, partition=512]"]
+	}
+	layer3_attn_aggregate [label="Layer 3 Attention Aggregation\nGPU: All Pool GPUs\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512] from each block\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=orange shape=parallelogram]
+	recv_from_pool_3 [label="Receive Layer 3 from Pool\nGPU: [8-39] → [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=yellow shape=parallelogram]
+	subgraph cluster_attention_pool {
+		color=purple label="Attention Pool - GPUs [8-39]\nParallel Attention (32 GPUs)" style=dashed
+	}
+	output [label="Final Output\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, vocab_size=?, partition=?]\nOutput: [batch_size=1024, seq_len=?, vocab_size=?]" fillcolor=lightgreen shape=ellipse]
+	input -> send_to_pool
+	send_to_pool -> layer0_attn_qkv_0
+	layer0_attn_qkv_0 -> layer0_attn_scores_0
+	layer0_attn_scores_0 -> layer0_attn_weighted_0
+	layer0_attn_weighted_0 -> layer0_attn_out_0
+	layer0_attn_out_0 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_1
+	layer0_attn_qkv_1 -> layer0_attn_scores_1
+	layer0_attn_scores_1 -> layer0_attn_weighted_1
+	layer0_attn_weighted_1 -> layer0_attn_out_1
+	layer0_attn_out_1 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_2
+	layer0_attn_qkv_2 -> layer0_attn_scores_2
+	layer0_attn_scores_2 -> layer0_attn_weighted_2
+	layer0_attn_weighted_2 -> layer0_attn_out_2
+	layer0_attn_out_2 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_3
+	layer0_attn_qkv_3 -> layer0_attn_scores_3
+	layer0_attn_scores_3 -> layer0_attn_weighted_3
+	layer0_attn_weighted_3 -> layer0_attn_out_3
+	layer0_attn_out_3 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_4
+	layer0_attn_qkv_4 -> layer0_attn_scores_4
+	layer0_attn_scores_4 -> layer0_attn_weighted_4
+	layer0_attn_weighted_4 -> layer0_attn_out_4
+	layer0_attn_out_4 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_5
+	layer0_attn_qkv_5 -> layer0_attn_scores_5
+	layer0_attn_scores_5 -> layer0_attn_weighted_5
+	layer0_attn_weighted_5 -> layer0_attn_out_5
+	layer0_attn_out_5 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_6
+	layer0_attn_qkv_6 -> layer0_attn_scores_6
+	layer0_attn_scores_6 -> layer0_attn_weighted_6
+	layer0_attn_weighted_6 -> layer0_attn_out_6
+	layer0_attn_out_6 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_7
+	layer0_attn_qkv_7 -> layer0_attn_scores_7
+	layer0_attn_scores_7 -> layer0_attn_weighted_7
+	layer0_attn_weighted_7 -> layer0_attn_out_7
+	layer0_attn_out_7 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_8
+	layer0_attn_qkv_8 -> layer0_attn_scores_8
+	layer0_attn_scores_8 -> layer0_attn_weighted_8
+	layer0_attn_weighted_8 -> layer0_attn_out_8
+	layer0_attn_out_8 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_9
+	layer0_attn_qkv_9 -> layer0_attn_scores_9
+	layer0_attn_scores_9 -> layer0_attn_weighted_9
+	layer0_attn_weighted_9 -> layer0_attn_out_9
+	layer0_attn_out_9 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_10
+	layer0_attn_qkv_10 -> layer0_attn_scores_10
+	layer0_attn_scores_10 -> layer0_attn_weighted_10
+	layer0_attn_weighted_10 -> layer0_attn_out_10
+	layer0_attn_out_10 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_11
+	layer0_attn_qkv_11 -> layer0_attn_scores_11
+	layer0_attn_scores_11 -> layer0_attn_weighted_11
+	layer0_attn_weighted_11 -> layer0_attn_out_11
+	layer0_attn_out_11 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_12
+	layer0_attn_qkv_12 -> layer0_attn_scores_12
+	layer0_attn_scores_12 -> layer0_attn_weighted_12
+	layer0_attn_weighted_12 -> layer0_attn_out_12
+	layer0_attn_out_12 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_13
+	layer0_attn_qkv_13 -> layer0_attn_scores_13
+	layer0_attn_scores_13 -> layer0_attn_weighted_13
+	layer0_attn_weighted_13 -> layer0_attn_out_13
+	layer0_attn_out_13 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_14
+	layer0_attn_qkv_14 -> layer0_attn_scores_14
+	layer0_attn_scores_14 -> layer0_attn_weighted_14
+	layer0_attn_weighted_14 -> layer0_attn_out_14
+	layer0_attn_out_14 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_15
+	layer0_attn_qkv_15 -> layer0_attn_scores_15
+	layer0_attn_scores_15 -> layer0_attn_weighted_15
+	layer0_attn_weighted_15 -> layer0_attn_out_15
+	layer0_attn_out_15 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_16
+	layer0_attn_qkv_16 -> layer0_attn_scores_16
+	layer0_attn_scores_16 -> layer0_attn_weighted_16
+	layer0_attn_weighted_16 -> layer0_attn_out_16
+	layer0_attn_out_16 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_17
+	layer0_attn_qkv_17 -> layer0_attn_scores_17
+	layer0_attn_scores_17 -> layer0_attn_weighted_17
+	layer0_attn_weighted_17 -> layer0_attn_out_17
+	layer0_attn_out_17 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_18
+	layer0_attn_qkv_18 -> layer0_attn_scores_18
+	layer0_attn_scores_18 -> layer0_attn_weighted_18
+	layer0_attn_weighted_18 -> layer0_attn_out_18
+	layer0_attn_out_18 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_19
+	layer0_attn_qkv_19 -> layer0_attn_scores_19
+	layer0_attn_scores_19 -> layer0_attn_weighted_19
+	layer0_attn_weighted_19 -> layer0_attn_out_19
+	layer0_attn_out_19 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_20
+	layer0_attn_qkv_20 -> layer0_attn_scores_20
+	layer0_attn_scores_20 -> layer0_attn_weighted_20
+	layer0_attn_weighted_20 -> layer0_attn_out_20
+	layer0_attn_out_20 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_21
+	layer0_attn_qkv_21 -> layer0_attn_scores_21
+	layer0_attn_scores_21 -> layer0_attn_weighted_21
+	layer0_attn_weighted_21 -> layer0_attn_out_21
+	layer0_attn_out_21 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_22
+	layer0_attn_qkv_22 -> layer0_attn_scores_22
+	layer0_attn_scores_22 -> layer0_attn_weighted_22
+	layer0_attn_weighted_22 -> layer0_attn_out_22
+	layer0_attn_out_22 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_23
+	layer0_attn_qkv_23 -> layer0_attn_scores_23
+	layer0_attn_scores_23 -> layer0_attn_weighted_23
+	layer0_attn_weighted_23 -> layer0_attn_out_23
+	layer0_attn_out_23 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_24
+	layer0_attn_qkv_24 -> layer0_attn_scores_24
+	layer0_attn_scores_24 -> layer0_attn_weighted_24
+	layer0_attn_weighted_24 -> layer0_attn_out_24
+	layer0_attn_out_24 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_25
+	layer0_attn_qkv_25 -> layer0_attn_scores_25
+	layer0_attn_scores_25 -> layer0_attn_weighted_25
+	layer0_attn_weighted_25 -> layer0_attn_out_25
+	layer0_attn_out_25 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_26
+	layer0_attn_qkv_26 -> layer0_attn_scores_26
+	layer0_attn_scores_26 -> layer0_attn_weighted_26
+	layer0_attn_weighted_26 -> layer0_attn_out_26
+	layer0_attn_out_26 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_27
+	layer0_attn_qkv_27 -> layer0_attn_scores_27
+	layer0_attn_scores_27 -> layer0_attn_weighted_27
+	layer0_attn_weighted_27 -> layer0_attn_out_27
+	layer0_attn_out_27 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_28
+	layer0_attn_qkv_28 -> layer0_attn_scores_28
+	layer0_attn_scores_28 -> layer0_attn_weighted_28
+	layer0_attn_weighted_28 -> layer0_attn_out_28
+	layer0_attn_out_28 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_29
+	layer0_attn_qkv_29 -> layer0_attn_scores_29
+	layer0_attn_scores_29 -> layer0_attn_weighted_29
+	layer0_attn_weighted_29 -> layer0_attn_out_29
+	layer0_attn_out_29 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_30
+	layer0_attn_qkv_30 -> layer0_attn_scores_30
+	layer0_attn_scores_30 -> layer0_attn_weighted_30
+	layer0_attn_weighted_30 -> layer0_attn_out_30
+	layer0_attn_out_30 -> layer0_attn_aggregate
+	send_to_pool -> layer0_attn_qkv_31
+	layer0_attn_qkv_31 -> layer0_attn_scores_31
+	layer0_attn_scores_31 -> layer0_attn_weighted_31
+	layer0_attn_weighted_31 -> layer0_attn_out_31
+	layer0_attn_out_31 -> layer0_attn_aggregate
+	layer0_attn_aggregate -> recv_from_pool
+	recv_from_pool -> layer0_ffn_start
+	layer0_ffn_start -> layer1_ffn_start
+	layer1_ffn_start -> send_to_pool_1
+	send_to_pool_1 -> layer1_attn_qkv_0
+	layer1_attn_qkv_0 -> layer1_attn_scores_0
+	layer1_attn_scores_0 -> layer1_attn_weighted_0
+	layer1_attn_weighted_0 -> layer1_attn_out_0
+	layer1_attn_out_0 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_1
+	layer1_attn_qkv_1 -> layer1_attn_scores_1
+	layer1_attn_scores_1 -> layer1_attn_weighted_1
+	layer1_attn_weighted_1 -> layer1_attn_out_1
+	layer1_attn_out_1 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_2
+	layer1_attn_qkv_2 -> layer1_attn_scores_2
+	layer1_attn_scores_2 -> layer1_attn_weighted_2
+	layer1_attn_weighted_2 -> layer1_attn_out_2
+	layer1_attn_out_2 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_3
+	layer1_attn_qkv_3 -> layer1_attn_scores_3
+	layer1_attn_scores_3 -> layer1_attn_weighted_3
+	layer1_attn_weighted_3 -> layer1_attn_out_3
+	layer1_attn_out_3 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_4
+	layer1_attn_qkv_4 -> layer1_attn_scores_4
+	layer1_attn_scores_4 -> layer1_attn_weighted_4
+	layer1_attn_weighted_4 -> layer1_attn_out_4
+	layer1_attn_out_4 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_5
+	layer1_attn_qkv_5 -> layer1_attn_scores_5
+	layer1_attn_scores_5 -> layer1_attn_weighted_5
+	layer1_attn_weighted_5 -> layer1_attn_out_5
+	layer1_attn_out_5 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_6
+	layer1_attn_qkv_6 -> layer1_attn_scores_6
+	layer1_attn_scores_6 -> layer1_attn_weighted_6
+	layer1_attn_weighted_6 -> layer1_attn_out_6
+	layer1_attn_out_6 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_7
+	layer1_attn_qkv_7 -> layer1_attn_scores_7
+	layer1_attn_scores_7 -> layer1_attn_weighted_7
+	layer1_attn_weighted_7 -> layer1_attn_out_7
+	layer1_attn_out_7 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_8
+	layer1_attn_qkv_8 -> layer1_attn_scores_8
+	layer1_attn_scores_8 -> layer1_attn_weighted_8
+	layer1_attn_weighted_8 -> layer1_attn_out_8
+	layer1_attn_out_8 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_9
+	layer1_attn_qkv_9 -> layer1_attn_scores_9
+	layer1_attn_scores_9 -> layer1_attn_weighted_9
+	layer1_attn_weighted_9 -> layer1_attn_out_9
+	layer1_attn_out_9 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_10
+	layer1_attn_qkv_10 -> layer1_attn_scores_10
+	layer1_attn_scores_10 -> layer1_attn_weighted_10
+	layer1_attn_weighted_10 -> layer1_attn_out_10
+	layer1_attn_out_10 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_11
+	layer1_attn_qkv_11 -> layer1_attn_scores_11
+	layer1_attn_scores_11 -> layer1_attn_weighted_11
+	layer1_attn_weighted_11 -> layer1_attn_out_11
+	layer1_attn_out_11 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_12
+	layer1_attn_qkv_12 -> layer1_attn_scores_12
+	layer1_attn_scores_12 -> layer1_attn_weighted_12
+	layer1_attn_weighted_12 -> layer1_attn_out_12
+	layer1_attn_out_12 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_13
+	layer1_attn_qkv_13 -> layer1_attn_scores_13
+	layer1_attn_scores_13 -> layer1_attn_weighted_13
+	layer1_attn_weighted_13 -> layer1_attn_out_13
+	layer1_attn_out_13 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_14
+	layer1_attn_qkv_14 -> layer1_attn_scores_14
+	layer1_attn_scores_14 -> layer1_attn_weighted_14
+	layer1_attn_weighted_14 -> layer1_attn_out_14
+	layer1_attn_out_14 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_15
+	layer1_attn_qkv_15 -> layer1_attn_scores_15
+	layer1_attn_scores_15 -> layer1_attn_weighted_15
+	layer1_attn_weighted_15 -> layer1_attn_out_15
+	layer1_attn_out_15 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_16
+	layer1_attn_qkv_16 -> layer1_attn_scores_16
+	layer1_attn_scores_16 -> layer1_attn_weighted_16
+	layer1_attn_weighted_16 -> layer1_attn_out_16
+	layer1_attn_out_16 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_17
+	layer1_attn_qkv_17 -> layer1_attn_scores_17
+	layer1_attn_scores_17 -> layer1_attn_weighted_17
+	layer1_attn_weighted_17 -> layer1_attn_out_17
+	layer1_attn_out_17 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_18
+	layer1_attn_qkv_18 -> layer1_attn_scores_18
+	layer1_attn_scores_18 -> layer1_attn_weighted_18
+	layer1_attn_weighted_18 -> layer1_attn_out_18
+	layer1_attn_out_18 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_19
+	layer1_attn_qkv_19 -> layer1_attn_scores_19
+	layer1_attn_scores_19 -> layer1_attn_weighted_19
+	layer1_attn_weighted_19 -> layer1_attn_out_19
+	layer1_attn_out_19 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_20
+	layer1_attn_qkv_20 -> layer1_attn_scores_20
+	layer1_attn_scores_20 -> layer1_attn_weighted_20
+	layer1_attn_weighted_20 -> layer1_attn_out_20
+	layer1_attn_out_20 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_21
+	layer1_attn_qkv_21 -> layer1_attn_scores_21
+	layer1_attn_scores_21 -> layer1_attn_weighted_21
+	layer1_attn_weighted_21 -> layer1_attn_out_21
+	layer1_attn_out_21 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_22
+	layer1_attn_qkv_22 -> layer1_attn_scores_22
+	layer1_attn_scores_22 -> layer1_attn_weighted_22
+	layer1_attn_weighted_22 -> layer1_attn_out_22
+	layer1_attn_out_22 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_23
+	layer1_attn_qkv_23 -> layer1_attn_scores_23
+	layer1_attn_scores_23 -> layer1_attn_weighted_23
+	layer1_attn_weighted_23 -> layer1_attn_out_23
+	layer1_attn_out_23 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_24
+	layer1_attn_qkv_24 -> layer1_attn_scores_24
+	layer1_attn_scores_24 -> layer1_attn_weighted_24
+	layer1_attn_weighted_24 -> layer1_attn_out_24
+	layer1_attn_out_24 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_25
+	layer1_attn_qkv_25 -> layer1_attn_scores_25
+	layer1_attn_scores_25 -> layer1_attn_weighted_25
+	layer1_attn_weighted_25 -> layer1_attn_out_25
+	layer1_attn_out_25 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_26
+	layer1_attn_qkv_26 -> layer1_attn_scores_26
+	layer1_attn_scores_26 -> layer1_attn_weighted_26
+	layer1_attn_weighted_26 -> layer1_attn_out_26
+	layer1_attn_out_26 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_27
+	layer1_attn_qkv_27 -> layer1_attn_scores_27
+	layer1_attn_scores_27 -> layer1_attn_weighted_27
+	layer1_attn_weighted_27 -> layer1_attn_out_27
+	layer1_attn_out_27 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_28
+	layer1_attn_qkv_28 -> layer1_attn_scores_28
+	layer1_attn_scores_28 -> layer1_attn_weighted_28
+	layer1_attn_weighted_28 -> layer1_attn_out_28
+	layer1_attn_out_28 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_29
+	layer1_attn_qkv_29 -> layer1_attn_scores_29
+	layer1_attn_scores_29 -> layer1_attn_weighted_29
+	layer1_attn_weighted_29 -> layer1_attn_out_29
+	layer1_attn_out_29 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_30
+	layer1_attn_qkv_30 -> layer1_attn_scores_30
+	layer1_attn_scores_30 -> layer1_attn_weighted_30
+	layer1_attn_weighted_30 -> layer1_attn_out_30
+	layer1_attn_out_30 -> layer1_attn_aggregate
+	send_to_pool_1 -> layer1_attn_qkv_31
+	layer1_attn_qkv_31 -> layer1_attn_scores_31
+	layer1_attn_scores_31 -> layer1_attn_weighted_31
+	layer1_attn_weighted_31 -> layer1_attn_out_31
+	layer1_attn_out_31 -> layer1_attn_aggregate
+	layer1_attn_aggregate -> recv_from_pool_1
+	recv_from_pool_1 -> layer2_ffn_start
+	layer2_ffn_start -> send_to_pool_2
+	send_to_pool_2 -> layer2_attn_qkv_0
+	layer2_attn_qkv_0 -> layer2_attn_scores_0
+	layer2_attn_scores_0 -> layer2_attn_weighted_0
+	layer2_attn_weighted_0 -> layer2_attn_out_0
+	layer2_attn_out_0 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_1
+	layer2_attn_qkv_1 -> layer2_attn_scores_1
+	layer2_attn_scores_1 -> layer2_attn_weighted_1
+	layer2_attn_weighted_1 -> layer2_attn_out_1
+	layer2_attn_out_1 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_2
+	layer2_attn_qkv_2 -> layer2_attn_scores_2
+	layer2_attn_scores_2 -> layer2_attn_weighted_2
+	layer2_attn_weighted_2 -> layer2_attn_out_2
+	layer2_attn_out_2 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_3
+	layer2_attn_qkv_3 -> layer2_attn_scores_3
+	layer2_attn_scores_3 -> layer2_attn_weighted_3
+	layer2_attn_weighted_3 -> layer2_attn_out_3
+	layer2_attn_out_3 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_4
+	layer2_attn_qkv_4 -> layer2_attn_scores_4
+	layer2_attn_scores_4 -> layer2_attn_weighted_4
+	layer2_attn_weighted_4 -> layer2_attn_out_4
+	layer2_attn_out_4 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_5
+	layer2_attn_qkv_5 -> layer2_attn_scores_5
+	layer2_attn_scores_5 -> layer2_attn_weighted_5
+	layer2_attn_weighted_5 -> layer2_attn_out_5
+	layer2_attn_out_5 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_6
+	layer2_attn_qkv_6 -> layer2_attn_scores_6
+	layer2_attn_scores_6 -> layer2_attn_weighted_6
+	layer2_attn_weighted_6 -> layer2_attn_out_6
+	layer2_attn_out_6 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_7
+	layer2_attn_qkv_7 -> layer2_attn_scores_7
+	layer2_attn_scores_7 -> layer2_attn_weighted_7
+	layer2_attn_weighted_7 -> layer2_attn_out_7
+	layer2_attn_out_7 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_8
+	layer2_attn_qkv_8 -> layer2_attn_scores_8
+	layer2_attn_scores_8 -> layer2_attn_weighted_8
+	layer2_attn_weighted_8 -> layer2_attn_out_8
+	layer2_attn_out_8 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_9
+	layer2_attn_qkv_9 -> layer2_attn_scores_9
+	layer2_attn_scores_9 -> layer2_attn_weighted_9
+	layer2_attn_weighted_9 -> layer2_attn_out_9
+	layer2_attn_out_9 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_10
+	layer2_attn_qkv_10 -> layer2_attn_scores_10
+	layer2_attn_scores_10 -> layer2_attn_weighted_10
+	layer2_attn_weighted_10 -> layer2_attn_out_10
+	layer2_attn_out_10 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_11
+	layer2_attn_qkv_11 -> layer2_attn_scores_11
+	layer2_attn_scores_11 -> layer2_attn_weighted_11
+	layer2_attn_weighted_11 -> layer2_attn_out_11
+	layer2_attn_out_11 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_12
+	layer2_attn_qkv_12 -> layer2_attn_scores_12
+	layer2_attn_scores_12 -> layer2_attn_weighted_12
+	layer2_attn_weighted_12 -> layer2_attn_out_12
+	layer2_attn_out_12 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_13
+	layer2_attn_qkv_13 -> layer2_attn_scores_13
+	layer2_attn_scores_13 -> layer2_attn_weighted_13
+	layer2_attn_weighted_13 -> layer2_attn_out_13
+	layer2_attn_out_13 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_14
+	layer2_attn_qkv_14 -> layer2_attn_scores_14
+	layer2_attn_scores_14 -> layer2_attn_weighted_14
+	layer2_attn_weighted_14 -> layer2_attn_out_14
+	layer2_attn_out_14 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_15
+	layer2_attn_qkv_15 -> layer2_attn_scores_15
+	layer2_attn_scores_15 -> layer2_attn_weighted_15
+	layer2_attn_weighted_15 -> layer2_attn_out_15
+	layer2_attn_out_15 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_16
+	layer2_attn_qkv_16 -> layer2_attn_scores_16
+	layer2_attn_scores_16 -> layer2_attn_weighted_16
+	layer2_attn_weighted_16 -> layer2_attn_out_16
+	layer2_attn_out_16 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_17
+	layer2_attn_qkv_17 -> layer2_attn_scores_17
+	layer2_attn_scores_17 -> layer2_attn_weighted_17
+	layer2_attn_weighted_17 -> layer2_attn_out_17
+	layer2_attn_out_17 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_18
+	layer2_attn_qkv_18 -> layer2_attn_scores_18
+	layer2_attn_scores_18 -> layer2_attn_weighted_18
+	layer2_attn_weighted_18 -> layer2_attn_out_18
+	layer2_attn_out_18 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_19
+	layer2_attn_qkv_19 -> layer2_attn_scores_19
+	layer2_attn_scores_19 -> layer2_attn_weighted_19
+	layer2_attn_weighted_19 -> layer2_attn_out_19
+	layer2_attn_out_19 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_20
+	layer2_attn_qkv_20 -> layer2_attn_scores_20
+	layer2_attn_scores_20 -> layer2_attn_weighted_20
+	layer2_attn_weighted_20 -> layer2_attn_out_20
+	layer2_attn_out_20 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_21
+	layer2_attn_qkv_21 -> layer2_attn_scores_21
+	layer2_attn_scores_21 -> layer2_attn_weighted_21
+	layer2_attn_weighted_21 -> layer2_attn_out_21
+	layer2_attn_out_21 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_22
+	layer2_attn_qkv_22 -> layer2_attn_scores_22
+	layer2_attn_scores_22 -> layer2_attn_weighted_22
+	layer2_attn_weighted_22 -> layer2_attn_out_22
+	layer2_attn_out_22 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_23
+	layer2_attn_qkv_23 -> layer2_attn_scores_23
+	layer2_attn_scores_23 -> layer2_attn_weighted_23
+	layer2_attn_weighted_23 -> layer2_attn_out_23
+	layer2_attn_out_23 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_24
+	layer2_attn_qkv_24 -> layer2_attn_scores_24
+	layer2_attn_scores_24 -> layer2_attn_weighted_24
+	layer2_attn_weighted_24 -> layer2_attn_out_24
+	layer2_attn_out_24 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_25
+	layer2_attn_qkv_25 -> layer2_attn_scores_25
+	layer2_attn_scores_25 -> layer2_attn_weighted_25
+	layer2_attn_weighted_25 -> layer2_attn_out_25
+	layer2_attn_out_25 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_26
+	layer2_attn_qkv_26 -> layer2_attn_scores_26
+	layer2_attn_scores_26 -> layer2_attn_weighted_26
+	layer2_attn_weighted_26 -> layer2_attn_out_26
+	layer2_attn_out_26 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_27
+	layer2_attn_qkv_27 -> layer2_attn_scores_27
+	layer2_attn_scores_27 -> layer2_attn_weighted_27
+	layer2_attn_weighted_27 -> layer2_attn_out_27
+	layer2_attn_out_27 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_28
+	layer2_attn_qkv_28 -> layer2_attn_scores_28
+	layer2_attn_scores_28 -> layer2_attn_weighted_28
+	layer2_attn_weighted_28 -> layer2_attn_out_28
+	layer2_attn_out_28 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_29
+	layer2_attn_qkv_29 -> layer2_attn_scores_29
+	layer2_attn_scores_29 -> layer2_attn_weighted_29
+	layer2_attn_weighted_29 -> layer2_attn_out_29
+	layer2_attn_out_29 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_30
+	layer2_attn_qkv_30 -> layer2_attn_scores_30
+	layer2_attn_scores_30 -> layer2_attn_weighted_30
+	layer2_attn_weighted_30 -> layer2_attn_out_30
+	layer2_attn_out_30 -> layer2_attn_aggregate
+	send_to_pool_2 -> layer2_attn_qkv_31
+	layer2_attn_qkv_31 -> layer2_attn_scores_31
+	layer2_attn_scores_31 -> layer2_attn_weighted_31
+	layer2_attn_weighted_31 -> layer2_attn_out_31
+	layer2_attn_out_31 -> layer2_attn_aggregate
+	layer2_attn_aggregate -> recv_from_pool_2
+	recv_from_pool_2 -> layer3_ffn_start
+	layer3_ffn_start -> send_to_pool_3
+	send_to_pool_3 -> layer3_attn_qkv_0
+	layer3_attn_qkv_0 -> layer3_attn_scores_0
+	layer3_attn_scores_0 -> layer3_attn_weighted_0
+	layer3_attn_weighted_0 -> layer3_attn_out_0
+	layer3_attn_out_0 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_1
+	layer3_attn_qkv_1 -> layer3_attn_scores_1
+	layer3_attn_scores_1 -> layer3_attn_weighted_1
+	layer3_attn_weighted_1 -> layer3_attn_out_1
+	layer3_attn_out_1 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_2
+	layer3_attn_qkv_2 -> layer3_attn_scores_2
+	layer3_attn_scores_2 -> layer3_attn_weighted_2
+	layer3_attn_weighted_2 -> layer3_attn_out_2
+	layer3_attn_out_2 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_3
+	layer3_attn_qkv_3 -> layer3_attn_scores_3
+	layer3_attn_scores_3 -> layer3_attn_weighted_3
+	layer3_attn_weighted_3 -> layer3_attn_out_3
+	layer3_attn_out_3 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_4
+	layer3_attn_qkv_4 -> layer3_attn_scores_4
+	layer3_attn_scores_4 -> layer3_attn_weighted_4
+	layer3_attn_weighted_4 -> layer3_attn_out_4
+	layer3_attn_out_4 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_5
+	layer3_attn_qkv_5 -> layer3_attn_scores_5
+	layer3_attn_scores_5 -> layer3_attn_weighted_5
+	layer3_attn_weighted_5 -> layer3_attn_out_5
+	layer3_attn_out_5 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_6
+	layer3_attn_qkv_6 -> layer3_attn_scores_6
+	layer3_attn_scores_6 -> layer3_attn_weighted_6
+	layer3_attn_weighted_6 -> layer3_attn_out_6
+	layer3_attn_out_6 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_7
+	layer3_attn_qkv_7 -> layer3_attn_scores_7
+	layer3_attn_scores_7 -> layer3_attn_weighted_7
+	layer3_attn_weighted_7 -> layer3_attn_out_7
+	layer3_attn_out_7 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_8
+	layer3_attn_qkv_8 -> layer3_attn_scores_8
+	layer3_attn_scores_8 -> layer3_attn_weighted_8
+	layer3_attn_weighted_8 -> layer3_attn_out_8
+	layer3_attn_out_8 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_9
+	layer3_attn_qkv_9 -> layer3_attn_scores_9
+	layer3_attn_scores_9 -> layer3_attn_weighted_9
+	layer3_attn_weighted_9 -> layer3_attn_out_9
+	layer3_attn_out_9 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_10
+	layer3_attn_qkv_10 -> layer3_attn_scores_10
+	layer3_attn_scores_10 -> layer3_attn_weighted_10
+	layer3_attn_weighted_10 -> layer3_attn_out_10
+	layer3_attn_out_10 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_11
+	layer3_attn_qkv_11 -> layer3_attn_scores_11
+	layer3_attn_scores_11 -> layer3_attn_weighted_11
+	layer3_attn_weighted_11 -> layer3_attn_out_11
+	layer3_attn_out_11 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_12
+	layer3_attn_qkv_12 -> layer3_attn_scores_12
+	layer3_attn_scores_12 -> layer3_attn_weighted_12
+	layer3_attn_weighted_12 -> layer3_attn_out_12
+	layer3_attn_out_12 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_13
+	layer3_attn_qkv_13 -> layer3_attn_scores_13
+	layer3_attn_scores_13 -> layer3_attn_weighted_13
+	layer3_attn_weighted_13 -> layer3_attn_out_13
+	layer3_attn_out_13 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_14
+	layer3_attn_qkv_14 -> layer3_attn_scores_14
+	layer3_attn_scores_14 -> layer3_attn_weighted_14
+	layer3_attn_weighted_14 -> layer3_attn_out_14
+	layer3_attn_out_14 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_15
+	layer3_attn_qkv_15 -> layer3_attn_scores_15
+	layer3_attn_scores_15 -> layer3_attn_weighted_15
+	layer3_attn_weighted_15 -> layer3_attn_out_15
+	layer3_attn_out_15 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_16
+	layer3_attn_qkv_16 -> layer3_attn_scores_16
+	layer3_attn_scores_16 -> layer3_attn_weighted_16
+	layer3_attn_weighted_16 -> layer3_attn_out_16
+	layer3_attn_out_16 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_17
+	layer3_attn_qkv_17 -> layer3_attn_scores_17
+	layer3_attn_scores_17 -> layer3_attn_weighted_17
+	layer3_attn_weighted_17 -> layer3_attn_out_17
+	layer3_attn_out_17 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_18
+	layer3_attn_qkv_18 -> layer3_attn_scores_18
+	layer3_attn_scores_18 -> layer3_attn_weighted_18
+	layer3_attn_weighted_18 -> layer3_attn_out_18
+	layer3_attn_out_18 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_19
+	layer3_attn_qkv_19 -> layer3_attn_scores_19
+	layer3_attn_scores_19 -> layer3_attn_weighted_19
+	layer3_attn_weighted_19 -> layer3_attn_out_19
+	layer3_attn_out_19 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_20
+	layer3_attn_qkv_20 -> layer3_attn_scores_20
+	layer3_attn_scores_20 -> layer3_attn_weighted_20
+	layer3_attn_weighted_20 -> layer3_attn_out_20
+	layer3_attn_out_20 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_21
+	layer3_attn_qkv_21 -> layer3_attn_scores_21
+	layer3_attn_scores_21 -> layer3_attn_weighted_21
+	layer3_attn_weighted_21 -> layer3_attn_out_21
+	layer3_attn_out_21 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_22
+	layer3_attn_qkv_22 -> layer3_attn_scores_22
+	layer3_attn_scores_22 -> layer3_attn_weighted_22
+	layer3_attn_weighted_22 -> layer3_attn_out_22
+	layer3_attn_out_22 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_23
+	layer3_attn_qkv_23 -> layer3_attn_scores_23
+	layer3_attn_scores_23 -> layer3_attn_weighted_23
+	layer3_attn_weighted_23 -> layer3_attn_out_23
+	layer3_attn_out_23 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_24
+	layer3_attn_qkv_24 -> layer3_attn_scores_24
+	layer3_attn_scores_24 -> layer3_attn_weighted_24
+	layer3_attn_weighted_24 -> layer3_attn_out_24
+	layer3_attn_out_24 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_25
+	layer3_attn_qkv_25 -> layer3_attn_scores_25
+	layer3_attn_scores_25 -> layer3_attn_weighted_25
+	layer3_attn_weighted_25 -> layer3_attn_out_25
+	layer3_attn_out_25 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_26
+	layer3_attn_qkv_26 -> layer3_attn_scores_26
+	layer3_attn_scores_26 -> layer3_attn_weighted_26
+	layer3_attn_weighted_26 -> layer3_attn_out_26
+	layer3_attn_out_26 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_27
+	layer3_attn_qkv_27 -> layer3_attn_scores_27
+	layer3_attn_scores_27 -> layer3_attn_weighted_27
+	layer3_attn_weighted_27 -> layer3_attn_out_27
+	layer3_attn_out_27 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_28
+	layer3_attn_qkv_28 -> layer3_attn_scores_28
+	layer3_attn_scores_28 -> layer3_attn_weighted_28
+	layer3_attn_weighted_28 -> layer3_attn_out_28
+	layer3_attn_out_28 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_29
+	layer3_attn_qkv_29 -> layer3_attn_scores_29
+	layer3_attn_scores_29 -> layer3_attn_weighted_29
+	layer3_attn_weighted_29 -> layer3_attn_out_29
+	layer3_attn_out_29 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_30
+	layer3_attn_qkv_30 -> layer3_attn_scores_30
+	layer3_attn_scores_30 -> layer3_attn_weighted_30
+	layer3_attn_weighted_30 -> layer3_attn_out_30
+	layer3_attn_out_30 -> layer3_attn_aggregate
+	send_to_pool_3 -> layer3_attn_qkv_31
+	layer3_attn_qkv_31 -> layer3_attn_scores_31
+	layer3_attn_scores_31 -> layer3_attn_weighted_31
+	layer3_attn_weighted_31 -> layer3_attn_out_31
+	layer3_attn_out_31 -> layer3_attn_aggregate
+	layer3_attn_aggregate -> recv_from_pool_3
+	recv_from_pool_3 -> output_proj
+	output_proj -> output
+}

@@ -1,0 +1,296 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "baseline_tensor_pipeline_parallel",
+      "model": {
+        "type": "dense_16_layer",
+        "layers": 16,
+        "precision": "fp16",
+        "batch_size": 1024,
+        "sequence_length": 10000,
+        "hidden_size": 8192,
+        "num_heads": 16,
+        "head_dim": 512,
+        "mlp_hidden_size": 32768
+      },
+      "parallel_strategy": {
+        "type": "hybrid_tensor_pipeline",
+        "tensor_parallelism": {
+          "degree": 8,
+          "strategy": "column_and_row_parallel"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "strategy": "layer_wise_pipeline"
+        }
+      },
+      "module_divisions": {
+        "pipeline_stage_0": {
+          "layers": [1, 2, 3, 4, 5, 6, 7, 8],
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "tensor_parallel_groups": [
+            {"layer": 1, "devices": [0, 1, 2, 3, 4, 5, 6, 7]},
+            {"layer": 2, "devices": [0, 1, 2, 3, 4, 5, 6, 7]},
+            {"layer": 3, "devices": [0, 1, 2, 3, 4, 5, 6, 7]},
+            {"layer": 4, "devices": [0, 1, 2, 3, 4, 5, 6, 7]},
+            {"layer": 5, "devices": [0, 1, 2, 3, 4, 5, 6, 7]},
+            {"layer": 6, "devices": [0, 1, 2, 3, 4, 5, 6, 7]},
+            {"layer": 7, "devices": [0, 1, 2, 3, 4, 5, 6, 7]},
+            {"layer": 8, "devices": [0, 1, 2, 3, 4, 5, 6, 7]}
+          ]
+        },
+        "pipeline_stage_1": {
+          "layers": [9, 10, 11, 12, 13, 14, 15, 16],
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "tensor_parallel_groups": [
+            {"layer": 9, "devices": [8, 9, 10, 11, 12, 13, 14, 15]},
+            {"layer": 10, "devices": [8, 9, 10, 11, 12, 13, 14, 15]},
+            {"layer": 11, "devices": [8, 9, 10, 11, 12, 13, 14, 15]},
+            {"layer": 12, "devices": [8, 9, 10, 11, 12, 13, 14, 15]},
+            {"layer": 13, "devices": [8, 9, 10, 11, 12, 13, 14, 15]},
+            {"layer": 14, "devices": [8, 9, 10, 11, 12, 13, 14, 15]},
+            {"layer": 15, "devices": [8, 9, 10, 11, 12, 13, 14, 15]},
+            {"layer": 16, "devices": [8, 9, 10, 11, 12, 13, 14, 15]}
+          ]
+        }
+      },
+      "device_mapping": {
+        "0": {"stage": 0, "layer": "all_layers_0-8", "role": "tensor_parallel_shard"},
+        "1": {"stage": 0, "layer": "all_layers_0-8", "role": "tensor_parallel_shard"},
+        "2": {"stage": 0, "layer": "all_layers_0-8", "role": "tensor_parallel_shard"},
+        "3": {"stage": 0, "layer": "all_layers_0-8", "role": "tensor_parallel_shard"},
+        "4": {"stage": 0, "layer": "all_layers_0-8", "role": "tensor_parallel_shard"},
+        "5": {"stage": 0, "layer": "all_layers_0-8", "role": "tensor_parallel_shard"},
+        "6": {"stage": 0, "layer": "all_layers_0-8", "role": "tensor_parallel_shard"},
+        "7": {"stage": 0, "layer": "all_layers_0-8", "role": "tensor_parallel_shard"},
+        "8": {"stage": 1, "layer": "all_layers_9-16", "role": "tensor_parallel_shard"},
+        "9": {"stage": 1, "layer": "all_layers_9-16", "role": "tensor_parallel_shard"},
+        "10": {"stage": 1, "layer": "all_layers_9-16", "role": "tensor_parallel_shard"},
+        "11": {"stage": 1, "layer": "all_layers_9-16", "role": "tensor_parallel_shard"},
+        "12": {"stage": 1, "layer": "all_layers_9-16", "role": "tensor_parallel_shard"},
+        "13": {"stage": 1, "layer": "all_layers_9-16", "role": "tensor_parallel_shard"},
+        "14": {"stage": 1, "layer": "all_layers_9-16", "role": "tensor_parallel_shard"},
+        "15": {"stage": 1, "layer": "all_layers_9-16", "role": "tensor_parallel_shard"}
+      }
+    },
+    "proposed": {
+      "name": "layer_wise_cache_optimized",
+      "model": {
+        "type": "dense_16_layer",
+        "layers": 16,
+        "precision": "fp16",
+        "batch_size": 1024,
+        "sequence_length": 10000,
+        "hidden_size": 8192,
+        "num_heads": 16,
+        "head_dim": 512,
+        "mlp_hidden_size": 32768
+      },
+      "parallel_strategy": {
+        "type": "layer_wise_parallelism",
+        "strategy": "cache_constrained_partitioning",
+        "constraint": "max_partition_size <= cache_capacity"
+      },
+      "module_divisions": {
+        "partition_0": {
+          "layer": 1,
+          "memory_components": {
+            "weights": "layer_1_weights_fp16",
+            "activations": "layer_1_activations_batch1024_seq10000",
+            "buffers": "layer_1_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_1": {
+          "layer": 2,
+          "memory_components": {
+            "weights": "layer_2_weights_fp16",
+            "activations": "layer_2_activations_batch1024_seq10000",
+            "buffers": "layer_2_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_2": {
+          "layer": 3,
+          "memory_components": {
+            "weights": "layer_3_weights_fp16",
+            "activations": "layer_3_activations_batch1024_seq10000",
+            "buffers": "layer_3_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_3": {
+          "layer": 4,
+          "memory_components": {
+            "weights": "layer_4_weights_fp16",
+            "activations": "layer_4_activations_batch1024_seq10000",
+            "buffers": "layer_4_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_4": {
+          "layer": 5,
+          "memory_components": {
+            "weights": "layer_5_weights_fp16",
+            "activations": "layer_5_activations_batch1024_seq10000",
+            "buffers": "layer_5_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_5": {
+          "layer": 6,
+          "memory_components": {
+            "weights": "layer_6_weights_fp16",
+            "activations": "layer_6_activations_batch1024_seq10000",
+            "buffers": "layer_6_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_6": {
+          "layer": 7,
+          "memory_components": {
+            "weights": "layer_7_weights_fp16",
+            "activations": "layer_7_activations_batch1024_seq10000",
+            "buffers": "layer_7_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_7": {
+          "layer": 8,
+          "memory_components": {
+            "weights": "layer_8_weights_fp16",
+            "activations": "layer_8_activations_batch1024_seq10000",
+            "buffers": "layer_8_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_8": {
+          "layer": 9,
+          "memory_components": {
+            "weights": "layer_9_weights_fp16",
+            "activations": "layer_9_activations_batch1024_seq10000",
+            "buffers": "layer_9_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_9": {
+          "layer": 10,
+          "memory_components": {
+            "weights": "layer_10_weights_fp16",
+            "activations": "layer_10_activations_batch1024_seq10000",
+            "buffers": "layer_10_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_10": {
+          "layer": 11,
+          "memory_components": {
+            "weights": "layer_11_weights_fp16",
+            "activations": "layer_11_activations_batch1024_seq10000",
+            "buffers": "layer_11_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_11": {
+          "layer": 12,
+          "memory_components": {
+            "weights": "layer_12_weights_fp16",
+            "activations": "layer_12_activations_batch1024_seq10000",
+            "buffers": "layer_12_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_12": {
+          "layer": 13,
+          "memory_components": {
+            "weights": "layer_13_weights_fp16",
+            "activations": "layer_13_activations_batch1024_seq10000",
+            "buffers": "layer_13_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_13": {
+          "layer": 14,
+          "memory_components": {
+            "weights": "layer_14_weights_fp16",
+            "activations": "layer_14_activations_batch1024_seq10000",
+            "buffers": "layer_14_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_14": {
+          "layer": 15,
+          "memory_components": {
+            "weights": "layer_15_weights_fp16",
+            "activations": "layer_15_activations_batch1024_seq10000",
+            "buffers": "layer_15_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        },
+        "partition_15": {
+          "layer": 16,
+          "memory_components": {
+            "weights": "layer_16_weights_fp16",
+            "activations": "layer_16_activations_batch1024_seq10000",
+            "buffers": "layer_16_operator_buffer"
+          },
+          "total_size_constraint": "<= L2_cache_capacity"
+        }
+      },
+      "device_mapping": {
+        "0": {"partition": "partition_0", "layer": 1, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "1": {"partition": "partition_1", "layer": 2, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "2": {"partition": "partition_2", "layer": 3, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "3": {"partition": "partition_3", "layer": 4, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "4": {"partition": "partition_4", "layer": 5, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "5": {"partition": "partition_5", "layer": 6, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "6": {"partition": "partition_6", "layer": 7, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "7": {"partition": "partition_7", "layer": 8, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "8": {"partition": "partition_8", "layer": 9, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "9": {"partition": "partition_9", "layer": 10, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "10": {"partition": "partition_10", "layer": 11, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "11": {"partition": "partition_11", "layer": 12, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "12": {"partition": "partition_12", "layer": 13, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "13": {"partition": "partition_13", "layer": 14, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "14": {"partition": "partition_14", "layer": 15, "memory": "100%_SRAM_L2", "role": "layer_execution"},
+        "15": {"partition": "partition_15", "layer": 16, "memory": "100%_SRAM_L2", "role": "layer_execution"}
+      },
+      "communication_pattern": {
+        "type": "point_to_point",
+        "transfers": [
+          {"from_device": 0, "to_device": 1, "transfer_type": "layer_1_output_to_layer_2"},
+          {"from_device": 1, "to_device": 2, "transfer_type": "layer_2_output_to_layer_3"},
+          {"from_device": 2, "to_device": 3, "transfer_type": "layer_3_output_to_layer_4"},
+          {"from_device": 3, "to_device": 4, "transfer_type": "layer_4_output_to_layer_5"},
+          {"from_device": 4, "to_device": 5, "transfer_type": "layer_5_output_to_layer_6"},
+          {"from_device": 5, "to_device": 6, "transfer_type": "layer_6_output_to_layer_7"},
+          {"from_device": 6, "to_device": 7, "transfer_type": "layer_7_output_to_layer_8"},
+          {"from_device": 7, "to_device": 8, "transfer_type": "layer_8_output_to_layer_9"},
+          {"from_device": 8, "to_device": 9, "transfer_type": "layer_9_output_to_layer_10"},
+          {"from_device": 9, "to_device": 10, "transfer_type": "layer_10_output_to_layer_11"},
+          {"from_device": 10, "to_device": 11, "transfer_type": "layer_11_output_to_layer_12"},
+          {"from_device": 11, "to_device": 12, "transfer_type": "layer_12_output_to_layer_13"},
+          {"from_device": 12, "to_device": 13, "transfer_type": "layer_13_output_to_layer_14"},
+          {"from_device": 13, "to_device": 14, "transfer_type": "layer_14_output_to_layer_15"},
+          {"from_device": 14, "to_device": 15, "transfer_type": "layer_15_output_to_layer_16"}
+        ]
+      }
+    }
+  },
+  "memory_constraints": {
+    "cache_capacity_per_device": "H100_L2_cache_size",
+    "activation_memory_per_layer": "1024 * 10000 * 8192 * 2_bytes",
+    "weight_memory_per_layer": "8192 * 8192 * 2_bytes",
+    "total_per_layer": "activation_memory + weight_memory + buffer_memory"
+  },
+  "performance_targets": {
+    "baseline": {
+      "TPS": 12800,
+      "TPOT_ms": 0.078
+    },
+    "proposed": {
+      "TPS": 15360,
+      "TPOT_ms": 0.065
+    }
+  }
+}

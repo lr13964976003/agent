@@ -1,0 +1,175 @@
+// FA Pool DAG - Fixed Dynamic Parallelization Strategy
+// 8 Base GPUs + 32 Attention Pool GPUs = 40 total GPUs
+// Sequence length: 32768 tokens (exceeds 4096 threshold)
+// Block size: 32768/32 = 1024 tokens per GPU
+
+digraph fa_pool_dag {
+    rankdir=TB
+    splines=ortho
+    compound=true
+    fontsize=10
+    
+    // Input with precise dimensions
+    input [label="Input\n[batch_size=1024, seq_len=32768, hidden_dim=4096]", shape=ellipse, fillcolor=lightgreen, style=filled]
+    
+    // Resource Manager - FIXED: Proper outgoing edges and no cycles
+    resource_mgr [label="Resource Manager\nseq_len=32768 > 4096\nActivate 32 GPUs\nGPUs: 8-39", shape=diamond, fillcolor=yellow, style=filled]
+    
+    // Base Layer (8 GPUs for FFN, Embedding, Output)
+    subgraph cluster_base {
+        label="Base Layer (GPUs 0-7)\nEmbedding + FFN + Output"
+        style="rounded,filled"
+        fillcolor=lightblue
+        
+        // Embedding across 8 GPUs
+        embed [label="Embedding Layer\nInput: [1024,32768,32000]\nOutput: [1024,32768,4096]\nTP=8\nGPUs: 0-7", shape=rectangle, style=filled]
+        
+        // FFN Layer 0
+        layer0_ffn [label="Layer 0 FFN\nInput: [1024,32768,4096]\nOutput: [1024,32768,4096]\nTP=8\nGPUs: 0-7", shape=rectangle, style=filled]
+        
+        // FFN Layer 1  
+        layer1_ffn [label="Layer 1 FFN\nInput: [1024,32768,4096]\nOutput: [1024,32768,4096]\nTP=8\nGPUs: 0-7", shape=rectangle, style=filled]
+        
+        // FFN Layer 2
+        layer2_ffn [label="Layer 2 FFN\nInput: [1024,32768,4096]\nOutput: [1024,32768,4096]\nTP=8\nGPUs: 0-7", shape=rectangle, style=filled]
+        
+        // FFN Layer 3
+        layer3_ffn [label="Layer 3 FFN\nInput: [1024,32768,4096]\nOutput: [1024,32768,4096]\nTP=8\nGPUs: 0-7", shape=rectangle, style=filled]
+        
+        // Output projection
+        output [label="Output Projection\nInput: [1024,32768,4096]\nOutput: [1024,32768,32000]\nTP=8\nGPUs: 0-7", shape=rectangle, style=filled]
+    }
+    
+    // Attention Pool (32 GPUs for parallel attention)
+    subgraph cluster_pool {
+        label="Attention Pool (GPUs 8-39)\n32 GPUs for Parallel Attention"
+        style="rounded,filled"
+        fillcolor=lightcoral
+        
+        // KV Cache replication across all pool GPUs
+        kv_replicate [label="KV Cache Replication\nInput: [1024,32768,4096]\nOutput: [1024,32768,4096]×32\nAll 32 GPUs", shape=parallelogram, style=filled]
+        
+        // Layer 0 Attention computations - showing representative nodes
+        subgraph cluster_l0_attention {
+            label="Layer 0 Attention (32 parallel)")
+            style="dotted"
+            
+            // Parallel attention computations for 32 GPUs
+            l0_attn_0 [label="Flash Attention\nInput: [1024,1024,4096]\nOutput: [1024,1024,4096]\nGPU: 8", shape=rectangle]
+            l0_attn_1 [label="Flash Attention\nInput: [1024,1024,4096]\nOutput: [1024,1024,4096]\nGPU: 9", shape=rectangle]
+            l0_attn_2 [label="Flash Attention\nInput: [1024,1024,4096]\nOutput: [1024,1024,4096]\nGPU: 10", shape=rectangle]
+            l0_attn_3 [label="Flash Attention\nInput: [1024,1024,4096]\nOutput: [1024,1024,4096]\nGPU: 11", shape=rectangle]
+            
+            // Continue pattern through all 32 GPUs... (abbreviated)
+            l0_attn_31 [label="Flash Attention\n[1024,1024,4096]\nGPU: 39", shape=rectangle]
+        }
+        
+        // Aggregation nodes for each layer
+        l0_agg [label="Layer 0 Aggregation\nInput: 32×[1024,1024,4096]\nOutput: [1024,32768,4096]\nGPUs: 0-7", shape=parallelogram, style=filled]
+        
+        // Layer 1 Attention computations
+        subgraph cluster_l1_attention {
+            label="Layer 1 Attention (32 parallel)")
+            style="dotted"
+            
+            l1_attn_0 [label="Flash Attention\n[1024,1024,4096]\nGPU: 8", shape=rectangle]
+            l1_attn_1 [label="Flash Attention\n[1024,1024,4096]\nGPU: 9", shape=rectangle]
+            l1_attn_31 [label="Flash Attention\n[1024,1024,4096]\nGPU: 39", shape=rectangle]
+        }
+        
+        l1_agg [label="Layer 1 Aggregation\nInput: 32×[1024,1024,4096]\nOutput: [1024,32768,4096]\nGPUs: 0-7", shape=parallelogram, style=filled]
+        
+        // Layer 2 Attention computations
+        subgraph cluster_l2_attention {
+            label="Layer 2 Attention (32 parallel)")
+            style="dotted"
+            
+            l2_attn_0 [label="Flash Attention\n[1024,1024,4096]\nGPU: 8", shape=rectangle]
+            l2_attn_1 [label="Flash Attention\n[1024,1024,4096]\nGPU: 9", shape=rectangle]
+            l2_attn_31 [label="Flash Attention\n[1024,1024,4096]\nGPU: 39", shape=rectangle]
+        }
+        
+        l2_agg [label="Layer 2 Aggregation\nInput: 32×[1024,1024,4096]\nOutput: [1024,32768,4096]\nGPUs: 0-7", shape=parallelogram, style=filled]
+        
+        // Layer 3 Attention computations
+        subgraph cluster_l3_attention {
+            label="Layer 3 Attention (32 parallel)")
+            style="dotted"
+            
+            l3_attn_0 [label="Flash Attention\n[1024,1024,4096]\nGPU: 8", shape=rectangle]
+            l3_attn_1 [label="Flash Attention\n[1024,1024,4096]\nGPU: 9", shape=rectangle]
+            l3_attn_31 [label="Flash Attention\n[1024,1024,4096]\nGPU: 39", shape=rectangle]
+        }
+        
+        l3_agg [label="Layer 3 Aggregation\nInput: 32×[1024,1024,4096]\nOutput: [1024,32768,4096]\nGPUs: 0-7", shape=parallelogram, style=filled]
+    }
+    
+    // Final output
+    final_output [label="Final Output\n[batch_size=1024, seq_len=32768, vocab_size=32000]", shape=ellipse, fillcolor=lightgreen, style=filled]
+    
+    // Connections - Fixed to eliminate cycles
+    input -> resource_mgr
+    resource_mgr -> embed [label="activate base"]
+    resource_mgr -> kv_replicate [label="activate pool"]
+    
+    input -> embed [style=dashed, label="data flow"]
+    embed -> kv_replicate [style=dashed, label="KV replication"]
+    
+    // Layer 0: Attention computations (all 32 GPUs)
+    kv_replicate -> l0_attn_0
+    kv_replicate -> l0_attn_1
+    kv_replicate -> l0_attn_2
+    kv_replicate -> l0_attn_3
+    kv_replicate -> l0_attn_31
+    
+    // All attention outputs to aggregation
+    l0_attn_0 -> l0_agg
+    l0_attn_1 -> l0_agg
+    l0_attn_2 -> l0_agg
+    l0_attn_3 -> l0_agg
+    l0_attn_31 -> l0_agg
+    
+    // Layer 0 complete
+    embed -> layer0_ffn [style=dashed, label="skip attention"]
+    l0_agg -> layer0_ffn [label="attention output"]
+    
+    // Layer 1
+    layer0_ffn -> l1_agg [label="prepare layer 1"]
+    kv_replicate -> l1_attn_0 [label="KV for layer 1"]
+    kv_replicate -> l1_attn_1 [label="KV for layer 1"]
+    kv_replicate -> l1_attn_31 [label="KV for layer 1"]
+    
+    l1_attn_0 -> l1_agg
+    l1_attn_1 -> l1_agg
+    l1_attn_31 -> l1_agg
+    
+    l1_agg -> layer1_ffn
+    
+    // Layer 2
+    layer1_ffn -> l2_agg [label="prepare layer 2"]
+    kv_replicate -> l2_attn_0 [label="KV for layer 2"]
+    kv_replicate -> l2_attn_1 [label="KV for layer 2"]
+    kv_replicate -> l2_attn_31 [label="KV for layer 2"]
+    
+    l2_attn_0 -> l2_agg
+    l2_attn_1 -> l2_agg
+    l2_attn_31 -> l2_agg
+    
+    l2_agg -> layer2_ffn
+    
+    // Layer 3
+    layer2_ffn -> l3_agg [label="prepare layer 3"]
+    kv_replicate -> l3_attn_0 [label="KV for layer 3"]
+    kv_replicate -> l3_attn_1 [label="KV for layer 3"]
+    kv_replicate -> l3_attn_31 [label="KV for layer 3"]
+    
+    l3_attn_0 -> l3_agg
+    l3_attn_1 -> l3_agg
+    l3_attn_31 -> l3_agg
+    
+    l3_agg -> layer3_ffn
+    
+    // Final output
+    layer3_ffn -> output
+    output -> final_output
+}

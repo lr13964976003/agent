@@ -1,0 +1,162 @@
+{
+  "deployment_configurations": {
+    "baseline_model": {
+      "name": "4-layer Dense Baseline",
+      "model_type": "transformer_decoder",
+      "parameters": {
+        "num_layers": 4,
+        "hidden_dim": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "ffn_hidden_dim": 16384,
+        "max_seq_len": 32768,
+        "batch_size": 1024,
+        "total_parameters": "13B"
+      },
+      "parallel_strategy": {
+        "type": "static",
+        "tensor_parallelism": {
+          "world_size": 8,
+          "partition_dim": "hidden",
+          "partition_size": 512
+        },
+        "pipeline_parallelism": {
+          "stages": 2,
+          "layers_per_stage": 2,
+          "schedule": "1F1B"
+        }
+      },
+      "device_mapping": {
+        "stage_0": {
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": ["layer_0", "layer_1"],
+          "tensor_partition_size": 512
+        },
+        "stage_1": {
+          "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": ["layer_2", "layer_3"],
+          "tensor_partition_size": 512
+        }
+      }
+    },
+    "fa_pool_model": {
+      "name": "FA Pool 4-layer Dense",
+      "model_type": "transformer_decoder",
+      "parameters": {
+        "num_layers": 4,
+        "hidden_dim": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "ffn_hidden_dim": 16384,
+        "max_seq_len": 32768,
+        "batch_size": 1024,
+        "total_parameters": "13B",
+        "sequence_threshold": 4096
+      },
+      "parallel_strategy": {
+        "type": "dynamic",
+        "base_layer": {
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "tensor_parallelism": {
+            "world_size": 8,
+            "partition_dim": "hidden",
+            "partition_size": 512
+          }
+        },
+        "attention_pool": {
+          "dynamic_allocation": true,
+          "max_gpus": 32,
+          "gpu_range": [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+          "allocation_formula": "min(32, ceil(sequence_length / 1024))"
+        }
+      },
+      "device_mapping": {
+        "base_layer_modules": {
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "modules": [
+            "embedding_layer",
+            "positional_encoding",
+            "layer_0_rmsnorm",
+            "layer_0_ffn",
+            "layer_1_rmsnorm",
+            "layer_1_ffn",
+            "layer_2_rmsnorm",
+            "layer_2_ffn",
+            "layer_3_rmsnorm",
+            "layer_3_ffn",
+            "output_projection"
+          ]
+        },
+        "attention_pool_modules": {
+          "trigger_condition": "sequence_length > 4096",
+          "computation_strategy": "block_parallel_flash_attention",
+          "modules": [
+            "layer_0_attention",
+            "layer_1_attention",
+            "layer_2_attention",
+            "layer_3_attention"
+          ]
+        }
+      },
+      "resource_allocation_table": {
+        "4097-5120": 4,
+        "5121-6144": 6,
+        "6145-7168": 7,
+        "7169-8192": 8,
+        "8193-9216": 9,
+        "9217-10240": 10,
+        "10241-11264": 11,
+        "11265-12288": 12,
+        "12289-13312": 13,
+        "13313-14336": 14,
+        "14337-15360": 15,
+        "15361-16384": 16,
+        "16385-17408": 17,
+        "17409-18432": 18,
+        "18433-19456": 19,
+        "19457-20480": 20,
+        "20481-21504": 21,
+        "21505-22528": 22,
+        "22529-23552": 23,
+        "23553-24576": 24,
+        "24577-25600": 25,
+        "25601-26624": 26,
+        "26625-27648": 27,
+        "27649-28672": 28,
+        "28673-29696": 29,
+        "29697-30720": 30,
+        "30721-31744": 31,
+        "31745-32768": 32
+      }
+    }
+  },
+  "communication_parameters": {
+    "nccl_settings": {
+      "algorithm": "ring",
+      "protocol": "simple",
+      "buffer_size": "2GB"
+    },
+    "attention_pool_communication": {
+      "broadcast_method": "nccl_broadcast",
+      "reduction_method": "nccl_reduce",
+      "synchronization": "cuda_events"
+    }
+  },
+  "system_requirements": {
+    "hardware": {
+      "gpu_model": "NVIDIA A100 80GB",
+      "min_gpus": 16,
+      "max_gpus": 40,
+      "interconnect": "NVLink 3.0 + InfiniBand",
+      "cpu": "AMD EPYC 7763",
+      "memory": "2TB DDR4",
+      "storage": "NVMe SSD"
+    },
+    "software": {
+      "cuda_version": "11.8+",
+      "nccl_version": "2.15+",
+      "pytorch_version": "2.0+",
+      "flash_attention": "2.0+"
+    }
+  }
+}

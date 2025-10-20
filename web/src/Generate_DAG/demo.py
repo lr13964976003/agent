@@ -174,7 +174,7 @@ def main():
     dag_result = dag_loop.run()
 
     tasks[5].description = tasks[5].description + f"There are the submissions of previous agents: \n\n{dag_result}"
-    run_pipeline([agents[5]], [perf_task])
+    run_pipeline([agents[5]], [tasks[5]])
 
     print("Run Success")
 

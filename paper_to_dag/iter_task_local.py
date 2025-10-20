@@ -137,7 +137,7 @@ def main():
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
     
-    #check_result = run_pipeline([agents[0]], [tasks[0]])
+   # check_result = run_pipeline([agents[0]], [tasks[0]])
     #if "failed" in check_result.lower():
     #    return "The paper is not relevant to the topic"
 

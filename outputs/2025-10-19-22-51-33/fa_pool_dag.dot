@@ -1,0 +1,156 @@
+// FA Pool Dynamic Allocation DAG
+digraph {
+	nodesep=1 rankdir=TB ranksep=2 splines=polyline
+	input [label="Total Input\n[batch=1024, seq=32768, hidden=4096]" fillcolor=lightgreen shape=ellipse]
+	subgraph cluster_base {
+		fillcolor=lightblue label="Base Layer (GPUs 0-7)" style="rounded,filled"
+		embed [label="Embedding\n[vocab→4096]\nGPU: 0-7" shape=rectangle]
+		layer0_ffn [label="L0 FFN\nTP=2 GPUs\n[1024, 32768, 16384]" shape=rectangle]
+		layer1_ffn [label="L1 FFN\nTP=2 GPUs\n[1024, 32768, 16384]" shape=rectangle]
+		layer2_ffn [label="L2 FFN\nTP=2 GPUs\n[1024, 32768, 16384]" shape=rectangle]
+		layer3_ffn [label="L3 FFN\nTP=2 GPUs\n[1024, 32768, 16384]" shape=rectangle]
+	}
+	subgraph cluster_pool {
+		fillcolor=lightcoral label="Attention Pool (GPUs 8-39)" style="rounded,filled"
+		kv_replicate [label="KV Cache Replication\n[1024, 32768, 4096]\nAll 32 GPUs" shape=parallelogram]
+		attn_0 [label="Flash Attention\nGPU 8\n[1024, 1024, 4096]" shape=rectangle]
+		attn_1 [label="Flash Attention\nGPU 9\n[1024, 1024, 4096]" shape=rectangle]
+		attn_2 [label="Flash Attention\nGPU 10\n[1024, 1024, 4096]" shape=rectangle]
+		attn_3 [label="Flash Attention\nGPU 11\n[1024, 1024, 4096]" shape=rectangle]
+		attn_4 [label="Flash Attention\nGPU 12\n[1024, 1024, 4096]" shape=rectangle]
+		attn_5 [label="Flash Attention\nGPU 13\n[1024, 1024, 4096]" shape=rectangle]
+		attn_6 [label="Flash Attention\nGPU 14\n[1024, 1024, 4096]" shape=rectangle]
+		attn_7 [label="Flash Attention\nGPU 15\n[1024, 1024, 4096]" shape=rectangle]
+		attn_8 [label="Flash Attention\nGPU 16\n[1024, 1024, 4096]" shape=rectangle]
+		attn_9 [label="Flash Attention\nGPU 17\n[1024, 1024, 4096]" shape=rectangle]
+		attn_10 [label="Flash Attention\nGPU 18\n[1024, 1024, 4096]" shape=rectangle]
+		attn_11 [label="Flash Attention\nGPU 19\n[1024, 1024, 4096]" shape=rectangle]
+		attn_12 [label="Flash Attention\nGPU 20\n[1024, 1024, 4096]" shape=rectangle]
+		attn_13 [label="Flash Attention\nGPU 21\n[1024, 1024, 4096]" shape=rectangle]
+		attn_14 [label="Flash Attention\nGPU 22\n[1024, 1024, 4096]" shape=rectangle]
+		attn_15 [label="Flash Attention\nGPU 23\n[1024, 1024, 4096]" shape=rectangle]
+		attn_16 [label="Flash Attention\nGPU 24\n[1024, 1024, 4096]" shape=rectangle]
+		attn_17 [label="Flash Attention\nGPU 25\n[1024, 1024, 4096]" shape=rectangle]
+		attn_18 [label="Flash Attention\nGPU 26\n[1024, 1024, 4096]" shape=rectangle]
+		attn_19 [label="Flash Attention\nGPU 27\n[1024, 1024, 4096]" shape=rectangle]
+		attn_20 [label="Flash Attention\nGPU 28\n[1024, 1024, 4096]" shape=rectangle]
+		attn_21 [label="Flash Attention\nGPU 29\n[1024, 1024, 4096]" shape=rectangle]
+		attn_22 [label="Flash Attention\nGPU 30\n[1024, 1024, 4096]" shape=rectangle]
+		attn_23 [label="Flash Attention\nGPU 31\n[1024, 1024, 4096]" shape=rectangle]
+		attn_24 [label="Flash Attention\nGPU 32\n[1024, 1024, 4096]" shape=rectangle]
+		attn_25 [label="Flash Attention\nGPU 33\n[1024, 1024, 4096]" shape=rectangle]
+		attn_26 [label="Flash Attention\nGPU 34\n[1024, 1024, 4096]" shape=rectangle]
+		attn_27 [label="Flash Attention\nGPU 35\n[1024, 1024, 4096]" shape=rectangle]
+		attn_28 [label="Flash Attention\nGPU 36\n[1024, 1024, 4096]" shape=rectangle]
+		attn_29 [label="Flash Attention\nGPU 37\n[1024, 1024, 4096]" shape=rectangle]
+		attn_30 [label="Flash Attention\nGPU 38\n[1024, 1024, 4096]" shape=rectangle]
+		attn_31 [label="Flash Attention\nGPU 39\n[1024, 1024, 4096]" shape=rectangle]
+		agg [label="Results Aggregation\n[32 blocks → 32768]\nGPU: 0-7" shape=parallelogram]
+	}
+	output [label="Total Output\n[1024, 32768, 32000]\nGPU: 0-7" fillcolor=lightgreen shape=ellipse]
+	input -> embed
+	embed -> kv_replicate
+	embed -> attn_0
+	kv_replicate -> attn_0
+	attn_0 -> agg
+	embed -> attn_1
+	kv_replicate -> attn_1
+	attn_1 -> agg
+	embed -> attn_2
+	kv_replicate -> attn_2
+	attn_2 -> agg
+	embed -> attn_3
+	kv_replicate -> attn_3
+	attn_3 -> agg
+	embed -> attn_4
+	kv_replicate -> attn_4
+	attn_4 -> agg
+	embed -> attn_5
+	kv_replicate -> attn_5
+	attn_5 -> agg
+	embed -> attn_6
+	kv_replicate -> attn_6
+	attn_6 -> agg
+	embed -> attn_7
+	kv_replicate -> attn_7
+	attn_7 -> agg
+	embed -> attn_8
+	kv_replicate -> attn_8
+	attn_8 -> agg
+	embed -> attn_9
+	kv_replicate -> attn_9
+	attn_9 -> agg
+	embed -> attn_10
+	kv_replicate -> attn_10
+	attn_10 -> agg
+	embed -> attn_11
+	kv_replicate -> attn_11
+	attn_11 -> agg
+	embed -> attn_12
+	kv_replicate -> attn_12
+	attn_12 -> agg
+	embed -> attn_13
+	kv_replicate -> attn_13
+	attn_13 -> agg
+	embed -> attn_14
+	kv_replicate -> attn_14
+	attn_14 -> agg
+	embed -> attn_15
+	kv_replicate -> attn_15
+	attn_15 -> agg
+	embed -> attn_16
+	kv_replicate -> attn_16
+	attn_16 -> agg
+	embed -> attn_17
+	kv_replicate -> attn_17
+	attn_17 -> agg
+	embed -> attn_18
+	kv_replicate -> attn_18
+	attn_18 -> agg
+	embed -> attn_19
+	kv_replicate -> attn_19
+	attn_19 -> agg
+	embed -> attn_20
+	kv_replicate -> attn_20
+	attn_20 -> agg
+	embed -> attn_21
+	kv_replicate -> attn_21
+	attn_21 -> agg
+	embed -> attn_22
+	kv_replicate -> attn_22
+	attn_22 -> agg
+	embed -> attn_23
+	kv_replicate -> attn_23
+	attn_23 -> agg
+	embed -> attn_24
+	kv_replicate -> attn_24
+	attn_24 -> agg
+	embed -> attn_25
+	kv_replicate -> attn_25
+	attn_25 -> agg
+	embed -> attn_26
+	kv_replicate -> attn_26
+	attn_26 -> agg
+	embed -> attn_27
+	kv_replicate -> attn_27
+	attn_27 -> agg
+	embed -> attn_28
+	kv_replicate -> attn_28
+	attn_28 -> agg
+	embed -> attn_29
+	kv_replicate -> attn_29
+	attn_29 -> agg
+	embed -> attn_30
+	kv_replicate -> attn_30
+	attn_30 -> agg
+	embed -> attn_31
+	kv_replicate -> attn_31
+	attn_31 -> agg
+	agg -> layer0_ffn
+	layer0_ffn -> layer1_ffn
+	layer1_ffn -> layer2_ffn
+	layer2_ffn -> layer3_ffn
+	layer3_ffn -> output
+	resource_mgr [label="Resource Manager\nSequence Length > 4096\nActivate 32 GPUs\nGPU: 0-7" fillcolor=yellow shape=diamond]
+	input -> resource_mgr
+}

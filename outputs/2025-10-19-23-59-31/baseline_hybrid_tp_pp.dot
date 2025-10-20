@@ -1,0 +1,313 @@
+digraph baseline_hybrid_tp_pp {
+    graph [comment="Baseline Hybrid TP=8, PP=2 Complete Model DAG - 16 GPUs", rankdir=TB, size="25,35"]
+    node [fontname="Arial", fontsize=10, shape=ellipse, style=filled]
+    
+    // Input and Output nodes
+    input [fillcolor="#e6f3ff", label="Input\nInput: [batch_size=1024, seq_len=2048]\nOutput: [batch_size=1024, seq_len=2048]\nGPU: 0", shape=ellipse]
+    output [fillcolor="#e6f3ff", label="Output\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, vocab_size=50265]\nGPU: 0", shape=ellipse]
+    
+    // Pipeline Stage 0 (GPUs 0-7) - Layers 0 and 1
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0\nGPUs 0-7 (8-way TP)"
+        style=dashed
+        
+        // Embedding and Layer 0
+        embedding [fillcolor="#000080", label="Embedding\nInput: [batch_size=1024, seq_len=2048]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=rectangle]
+        
+        // Layer 0 - Attention and MoE across 8 GPUs
+        ln1_0 [fillcolor="#000080", label="LayerNorm 0\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=rectangle]
+        
+        // Attention across 8 GPUs (TP=8)
+        qkv_0_0 [fillcolor="#0014ff", label="QKV Proj 0\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 0", shape=rectangle]
+        qkv_0_1 [fillcolor="#001eff", label="QKV Proj 1\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 1", shape=rectangle]
+        qkv_0_2 [fillcolor="#0028ff", label="QKV Proj 2\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 2", shape=rectangle]
+        qkv_0_3 [fillcolor="#0032ff", label="QKV Proj 3\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 3", shape=rectangle]
+        qkv_0_4 [fillcolor="#003cff", label="QKV Proj 4\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 4", shape=rectangle]
+        qkv_0_5 [fillcolor="#0046ff", label="QKV Proj 5\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 5", shape=rectangle]
+        qkv_0_6 [fillcolor="#0050ff", label="QKV Proj 6\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 6", shape=rectangle]
+        qkv_0_7 [fillcolor="#005aff", label="QKV Proj 7\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 7", shape=rectangle]
+        
+        attention_0 [fillcolor="#ff0000", label="Multi-Head Attention 0\nInput: [8× partial heads]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0-7", shape=rectangle]
+        out_proj_0 [fillcolor="#000080", label="Output Projection 0\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=rectangle]
+        residual1_0 [fillcolor="#ffffcc", label="Residual Add 0\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=parallelogram]
+        
+        // MoE Layer 0 across 8 GPUs
+        ln2_0 [fillcolor="#000080", label="LayerNorm 0 (MoE)\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=rectangle]
+        gate_0 [fillcolor="#00ff00", label="Gating Network 0\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, num_experts=16]\nGPU: 0", shape=parallelogram, style=dashed]
+        
+        // 16 experts across 8 GPUs (2 experts per GPU)
+        exp_0_0 [fillcolor="#ff8800", label="Expert 0\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=rectangle]
+        exp_1_0 [fillcolor="#ff8800", label="Expert 1\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=rectangle]
+        exp_2_1 [fillcolor="#ff8800", label="Expert 2\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 1", shape=rectangle]
+        exp_3_1 [fillcolor="#ff8800", label="Expert 3\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 1", shape=rectangle]
+        exp_4_2 [fillcolor="#ff8800", label="Expert 4\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 2", shape=rectangle]
+        exp_5_2 [fillcolor="#ff8800", label="Expert 5\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 2", shape=rectangle]
+        exp_6_3 [fillcolor="#ff8800", label="Expert 6\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 3", shape=rectangle]
+        exp_7_3 [fillcolor="#ff8800", label="Expert 7\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 3", shape=rectangle]
+        exp_8_4 [fillcolor="#ff8800", label="Expert 8\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 4", shape=rectangle]
+        exp_9_4 [fillcolor="#ff8800", label="Expert 9\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 4", shape=rectangle]
+        exp_10_5 [fillcolor="#ff8800", label="Expert 10\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 5", shape=rectangle]
+        exp_11_5 [fillcolor="#ff8800", label="Expert 11\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 5", shape=rectangle]
+        exp_12_6 [fillcolor="#ff8800", label="Expert 12\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 6", shape=rectangle]
+        exp_13_6 [fillcolor="#ff8800", label="Expert 13\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 6", shape=rectangle]
+        exp_14_7 [fillcolor="#ff8800", label="Expert 14\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 7", shape=rectangle]
+        exp_15_7 [fillcolor="#ff8800", label="Expert 15\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 7", shape=rectangle]
+        
+        expert_agg_0 [fillcolor="#ffffcc", label="Expert Aggregation 0\nInput: [16× expert outputs]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=parallelogram]
+        residual2_0 [fillcolor="#ffffcc", label="Residual Add 0\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=parallelogram]
+        
+        // Layer 1 in Stage 0
+        ln1_1 [fillcolor="#000080", label="LayerNorm 1\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=rectangle]
+        attention_1 [fillcolor="#ff0000", label="Multi-Head Attention 1\nInput: [8× partial heads]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0-7", shape=rectangle]
+        out_proj_1 [fillcolor="#000080", label="Output Projection 1\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=rectangle]
+        residual1_1 [fillcolor="#ffffcc", label="Residual Add 1\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=parallelogram]
+        
+        // MoE Layer 1
+        ln2_1 [fillcolor="#000080", label="LayerNorm 1 (MoE)\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=rectangle]
+        gate_1 [fillcolor="#00ff00", label="Gating Network 1\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, num_experts=16]\nGPU: 0", shape=parallelogram, style=dashed]
+        expert_agg_1 [fillcolor="#ffffcc", label="Expert Aggregation 1\nInput: [16× expert outputs]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=parallelogram]
+        residual2_1 [fillcolor="#ffffcc", label="Residual Add 1\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0", shape=parallelogram]
+    }
+    
+    // Pipeline Stage 1 (GPUs 8-15) - Layers 2 and 3
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1\nGPUs 8-15 (8-way TP)"
+        style=dashed
+        
+        // Layer 2
+        ln1_2 [fillcolor="#000080", label="LayerNorm 2\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=rectangle]
+        qkv_2_8 [fillcolor="#0090ff", label="QKV Proj 2\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 8", shape=rectangle]
+        qkv_2_9 [fillcolor="#009aff", label="QKV Proj 3\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 9", shape=rectangle]
+        qkv_2_10 [fillcolor="#00a4ff", label="QKV Proj 4\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 10", shape=rectangle]
+        qkv_2_11 [fillcolor="#00aeff", label="QKV Proj 5\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 11", shape=rectangle]
+        qkv_2_12 [fillcolor="#00b8ff", label="QKV Proj 6\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 12", shape=rectangle]
+        qkv_2_13 [fillcolor="#00c2ff", label="QKV Proj 7\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 13", shape=rectangle]
+        qkv_2_14 [fillcolor="#00ccff", label="QKV Proj 8\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 14", shape=rectangle]
+        qkv_2_15 [fillcolor="#00d6ff", label="QKV Proj 9\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, heads=4, d_k=128]\nGPU: 15", shape=rectangle]
+        
+        attention_2 [fillcolor="#ff0000", label="Multi-Head Attention 2\nInput: [8× partial heads]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8-15", shape=rectangle]
+        out_proj_2 [fillcolor="#000080", label="Output Projection 2\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=rectangle]
+        residual1_2 [fillcolor="#ffffcc", label="Residual Add 2\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=parallelogram]
+        
+        // MoE Layer 2
+        ln2_2 [fillcolor="#000080", label="LayerNorm 2 (MoE)\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=rectangle]
+        gate_2 [fillcolor="#00ff00", label="Gating Network 2\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, num_experts=16]\nGPU: 8", shape=parallelogram, style=dashed]
+        expert_agg_2 [fillcolor="#ffffcc", label="Expert Aggregation 2\nInput: [16× expert outputs]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=parallelogram]
+        residual2_2 [fillcolor="#ffffcc", label="Residual Add 2\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=parallelogram]
+        
+        // Layer 3
+        ln1_3 [fillcolor="#000080", label="LayerNorm 3\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=rectangle]
+        attention_3 [fillcolor="#ff0000", label="Multi-Head Attention 3\nInput: [8× partial heads]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8-15", shape=rectangle]
+        out_proj_3 [fillcolor="#000080", label="Output Projection 3\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=rectangle]
+        residual1_3 [fillcolor="#ffffcc", label="Residual Add 3\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=parallelogram]
+        
+        // MoE Layer 3
+        ln2_3 [fillcolor="#000080", label="LayerNorm 3 (MoE)\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=rectangle]
+        gate_3 [fillcolor="#00ff00", label="Gating Network 3\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, num_experts=16]\nGPU: 8", shape=parallelogram, style=dashed]
+        expert_agg_3 [fillcolor="#ffffcc", label="Expert Aggregation 3\nInput: [16× expert outputs]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=parallelogram]
+        residual2_3 [fillcolor="#ffffcc", label="Residual Add 3\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 8", shape=parallelogram]
+    }
+    
+    // Pipeline communication
+    pipeline_comm [fillcolor="#ff00ff", label="Pipeline Communication\nInput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nOutput: [batch_size=1024, seq_len=2048, hidden_size=4096]\nGPU: 0->8", shape=ellipse, style=dashed]
+    
+    // Edges - Complete flow
+    input -> embedding
+    
+    // Stage 0 flow
+    embedding -> ln1_0
+    ln1_0 -> qkv_0_0
+    ln1_0 -> qkv_0_1
+    ln1_0 -> qkv_0_2
+    ln1_0 -> qkv_0_3
+    ln1_0 -> qkv_0_4
+    ln1_0 -> qkv_0_5
+    ln1_0 -> qkv_0_6
+    ln1_0 -> qkv_0_7
+    
+    qkv_0_0 -> attention_0
+    qkv_0_1 -> attention_0
+    qkv_0_2 -> attention_0
+    qkv_0_3 -> attention_0
+    qkv_0_4 -> attention_0
+    qkv_0_5 -> attention_0
+    qkv_0_6 -> attention_0
+    qkv_0_7 -> attention_0
+    
+    attention_0 -> out_proj_0
+    out_proj_0 -> residual1_0
+    embedding -> residual1_0
+    residual1_0 -> ln2_0
+    
+    // Layer 0 MoE in Stage 0
+    ln2_0 -> gate_0
+    ln2_0 -> exp_0_0
+    ln2_0 -> exp_1_0
+    ln2_0 -> exp_2_1
+    ln2_0 -> exp_3_1
+    ln2_0 -> exp_4_2
+    ln2_0 -> exp_5_2
+    ln2_0 -> exp_6_3
+    ln2_0 -> exp_7_3
+    ln2_0 -> exp_8_4
+    ln2_0 -> exp_9_4
+    ln2_0 -> exp_10_5
+    ln2_0 -> exp_11_5
+    ln2_0 -> exp_12_6
+    ln2_0 -> exp_13_6
+    ln2_0 -> exp_14_7
+    ln2_0 -> exp_15_7
+    
+    gate_0 -> exp_0_0 [style=dashed]
+    gate_0 -> exp_1_0 [style=dashed]
+    gate_0 -> exp_2_1 [style=dashed]
+    gate_0 -> exp_3_1 [style=dashed]
+    gate_0 -> exp_4_2 [style=dashed]
+    gate_0 -> exp_5_2 [style=dashed]
+    gate_0 -> exp_6_3 [style=dashed]
+    gate_0 -> exp_7_3 [style=dashed]
+    gate_0 -> exp_8_4 [style=dashed]
+    gate_0 -> exp_9_4 [style=dashed]
+    gate_0 -> exp_10_5 [style=dashed]
+    gate_0 -> exp_11_5 [style=dashed]
+    gate_0 -> exp_12_6 [style=dashed]
+    gate_0 -> exp_13_6 [style=dashed]
+    gate_0 -> exp_14_7 [style=dashed]
+    gate_0 -> exp_15_7 [style=dashed]
+    
+    exp_0_0 -> expert_agg_0
+    exp_1_0 -> expert_agg_0
+    exp_2_1 -> expert_agg_0
+    exp_3_1 -> expert_agg_0
+    exp_4_2 -> expert_agg_0
+    exp_5_2 -> expert_agg_0
+    exp_6_3 -> expert_agg_0
+    exp_7_3 -> expert_agg_0
+    exp_8_4 -> expert_agg_0
+    exp_9_4 -> expert_agg_0
+    exp_10_5 -> expert_agg_0
+    exp_11_5 -> expert_agg_0
+    exp_12_6 -> expert_agg_0
+    exp_13_6 -> expert_agg_0
+    exp_14_7 -> expert_agg_0
+    exp_15_7 -> expert_agg_0
+    
+    expert_agg_0 -> residual2_0
+    residual1_0 -> residual2_0
+    residual2_0 -> ln1_1
+    
+    // Layer 1 in Stage 0
+    ln1_1 -> qkv_0_0
+    ln1_1 -> qkv_0_1
+    ln1_1 -> qkv_0_2
+    ln1_1 -> qkv_0_3
+    ln1_1 -> qkv_0_4
+    ln1_1 -> qkv_0_5
+    ln1_1 -> qkv_0_6
+    ln1_1 -> qkv_0_7
+    
+    qkv_0_0 -> attention_1
+    qkv_0_1 -> attention_1
+    qkv_0_2 -> attention_1
+    qkv_0_3 -> attention_1
+    qkv_0_4 -> attention_1
+    qkv_0_5 -> attention_1
+    qkv_0_6 -> attention_1
+    qkv_0_7 -> attention_1
+    
+    attention_1 -> out_proj_1
+    out_proj_1 -> residual1_1
+    residual2_0 -> residual1_1
+    residual1_1 -> ln2_1
+    
+    ln2_1 -> gate_1
+    ln2_1 -> exp_0_0
+    ln2_1 -> exp_1_0
+    ln2_1 -> exp_2_1
+    ln2_1 -> exp_3_1
+    ln2_1 -> exp_4_2
+    ln2_1 -> exp_5_2
+    ln2_1 -> exp_6_3
+    ln2_1 -> exp_7_3
+    ln2_1 -> exp_8_4
+    ln2_1 -> exp_9_4
+    ln2_1 -> exp_10_5
+    ln2_1 -> exp_11_5
+    ln2_1 -> exp_12_6
+    ln2_1 -> exp_13_6
+    ln2_1 -> exp_14_7
+    ln2_1 -> exp_15_7
+    
+    gate_1 -> exp_0_0 [style=dashed]
+    gate_1 -> exp_1_0 [style=dashed]
+    gate_1 -> exp_2_1 [style=dashed]
+    gate_1 -> exp_3_1 [style=dashed]
+    gate_1 -> exp_4_2 [style=dashed]
+    gate_1 -> exp_5_2 [style=dashed]
+    gate_1 -> exp_6_3 [style=dashed]
+    gate_1 -> exp_7_3 [style=dashed]
+    gate_1 -> exp_8_4 [style=dashed]
+    gate_1 -> exp_9_4 [style=dashed]
+    gate_1 -> exp_10_5 [style=dashed]
+    gate_1 -> exp_11_5 [style=dashed]
+    gate_1 -> exp_12_6 [style=dashed]
+    gate_1 -> exp_13_6 [style=dashed]
+    gate_1 -> exp_14_7 [style=dashed]
+    gate_1 -> exp_15_7 [style=dashed]
+    
+    expert_agg_1 -> residual2_1
+    residual1_1 -> residual2_1
+    residual2_1 -> pipeline_comm
+    
+    // Stage 1 flow
+    pipeline_comm -> ln1_2
+    ln1_2 -> qkv_2_8
+    ln1_2 -> qkv_2_9
+    ln1_2 -> qkv_2_10
+    ln1_2 -> qkv_2_11
+    ln1_2 -> qkv_2_12
+    ln1_2 -> qkv_2_13
+    ln1_2 -> qkv_2_14
+    ln1_2 -> qkv_2_15
+    
+    qkv_2_8 -> attention_2
+    qkv_2_9 -> attention_2
+    qkv_2_10 -> attention_2
+    qkv_2_11 -> attention_2
+    qkv_2_12 -> attention_2
+    qkv_2_13 -> attention_2
+    qkv_2_14 -> attention_2
+    qkv_2_15 -> attention_2
+    
+    attention_2 -> out_proj_2
+    out_proj_2 -> residual1_2
+    pipeline_comm -> residual1_2
+    residual1_2 -> ln2_2
+    
+    ln2_2 -> gate_2
+    ln2_2 -> exp_0_0
+    ln2_2 -> exp_1_0
+    ln2_2 -> exp_2_1
+    ln2_2 -> exp_3_1
+    ln2_2 -> exp_4_2
+    ln2_2 -> exp_5_2
+    ln2_2 -> exp_6_3
+    ln2_2 -> exp_7_3
+    ln2_2 -> exp_8_4
+    ln2_2 -> exp_9_4
+    ln2_2 -> exp_10_5
+    ln2_2 -> exp_11_5
+    ln2_2 -> exp_12_6
+    ln2_2 -> exp_13_6
+    ln2_2 -> exp_14_7
+    ln2_2 -> exp_15_7
+    
+    gate_2 -> exp_0_0 [style=dashed]
+    gate_2 -> exp_1_0 [style=dashed]
+    gate_2 -> exp_2_1 [style=dashed]
+    gate_2 -> exp_3_1 [style=dashed]
+    gate_2 -> exp_4_2 [style=dashed]
+    gate_2 -> exp_5_2 [style=dashed]
+    gate_2 -> exp_6_3 [style=dashed]
+    gate_2 -> exp_7_3 [style=dashed]
+    gate_2 -> exp_8_4

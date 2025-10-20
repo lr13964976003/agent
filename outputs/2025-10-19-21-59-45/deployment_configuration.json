@@ -1,0 +1,356 @@
+{
+  "deployment_specifications": {
+    "baseline_tp8_pp2": {
+      "parallel_strategy": {
+        "name": "tensor_and_pipeline_parallelism",
+        "tensor_parallel_degree": 8,
+        "pipeline_parallel_degree": 2,
+        "expert_parallel_degree": 1
+      },
+      "model_configuration": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "input_dimension": 8192,
+        "hidden_dimension": 32768,
+        "output_dimension": 8192,
+        "precision": "FP16",
+        "attention": {
+          "heads": 16,
+          "head_dimension": 512,
+          "total_dimension": 8192
+        }
+      },
+      "module_division": {
+        "pipeline_stage_0": {
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": [1, 2],
+          "experts_per_gpu": 8,
+          "tensor_shards": {
+            "gpu_0": {"weight_slice": "0:4096", "expert_range": "0-7"},
+            "gpu_1": {"weight_slice": "4096:8192", "expert_range": "0-7"},
+            "gpu_2": {"weight_slice": "8192:12288", "expert_range": "0-7"},
+            "gpu_3": {"weight_slice": "12288:16384", "expert_range": "0-7"},
+            "gpu_4": {"weight_slice": "16384:20480", "expert_range": "0-7"},
+            "gpu_5": {"weight_slice": "20480:24576", "expert_range": "0-7"},
+            "gpu_6": {"weight_slice": "24576:28672", "expert_range": "0-7"},
+            "gpu_7": {"weight_slice": "28672:32768", "expert_range": "0-7"}
+          }
+        },
+        "pipeline_stage_1": {
+          "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": [3, 4],
+          "experts_per_gpu": 8,
+          "tensor_shards": {
+            "gpu_8": {"weight_slice": "0:4096", "expert_range": "8-15"},
+            "gpu_9": {"weight_slice": "4096:8192", "expert_range": "8-15"},
+            "gpu_10": {"weight_slice": "8192:12288", "expert_range": "8-15"},
+            "gpu_11": {"weight_slice": "12288:16384", "expert_range": "8-15"},
+            "gpu_12": {"weight_slice": "16384:20480", "expert_range": "8-15"},
+            "gpu_13": {"weight_slice": "20480:24576", "expert_range": "8-15"},
+            "gpu_14": {"weight_slice": "24576:28672", "expert_range": "8-15"},
+            "gpu_15": {"weight_slice": "28672:32768", "expert_range": "8-15"}
+          }
+        }
+      },
+      "communication_parameters": {
+        "intra_stage": {
+          "type": "all_reduce",
+          "bandwidth": "400GB/s",
+          "latency": "5-10us",
+          "nccl_algorithm": "ring"
+        },
+        "inter_stage": {
+          "type": "pipeline_send_recv",
+          "bandwidth": "400GB/s",
+          "latency": "5-10us",
+          "buffer_size": "167.8GB_per_layer"
+        }
+      },
+      "device_mapping": {
+        "node_0": {
+          "gpus": [0, 1, 2, 3],
+          "pipeline_stage": 0,
+          "tensor_parallel_ranks": [0, 1, 2, 3]
+        },
+        "node_1": {
+          "gpus": [4, 5, 6, 7],
+          "pipeline_stage": 0,
+          "tensor_parallel_ranks": [4, 5, 6, 7]
+        },
+        "node_2": {
+          "gpus": [8, 9, 10, 11],
+          "pipeline_stage": 1,
+          "tensor_parallel_ranks": [0, 1, 2, 3]
+        },
+        "node_3": {
+          "gpus": [12, 13, 14, 15],
+          "pipeline_stage": 1,
+          "tensor_parallel_ranks": [4, 5, 6, 7]
+        }
+      },
+      "memory_requirements": {
+        "per_gpu": {
+          "model_parameters": "537MB_per_expert",
+          "activation_buffers": "20GB_shared",
+          "total": "5.4GB_per_GPU"
+        }
+      },
+      "performance_targets": {
+        "throughput": "120000_TPS",
+        "latency": "8.3ms_TPOT",
+        "gpu_utilization": "65%"
+      }
+    },
+    "proposed_ep16": {
+      "parallel_strategy": {
+        "name": "expert_parallelism",
+        "expert_parallel_degree": 16,
+        "tensor_parallel_degree": 1,
+        "pipeline_parallel_degree": 1
+      },
+      "model_configuration": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "input_dimension": 8192,
+        "hidden_dimension": 32768,
+        "output_dimension": 8192,
+        "precision": "FP16",
+        "attention": {
+          "heads": 16,
+          "head_dimension": 512,
+          "total_dimension": 8192
+        }
+      },
+      "module_division": {
+        "experts": {
+          "expert_0": {
+            "gpu_id": 0,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_1": {
+            "gpu_id": 1,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_2": {
+            "gpu_id": 2,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_3": {
+            "gpu_id": 3,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_4": {
+            "gpu_id": 4,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_5": {
+            "gpu_id": 5,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_6": {
+            "gpu_id": 6,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_7": {
+            "gpu_id": 7,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_8": {
+            "gpu_id": 8,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_9": {
+            "gpu_id": 9,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_10": {
+            "gpu_id": 10,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_11": {
+            "gpu_id": 11,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_12": {
+            "gpu_id": 12,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_13": {
+            "gpu_id": 13,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_14": {
+            "gpu_id": 14,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          },
+          "expert_15": {
+            "gpu_id": 15,
+            "layer_assignments": [1, 2, 3, 4],
+            "parameters": {
+              "weight1": [8192, 32768],
+              "weight2": [32768, 8192],
+              "memory_size": "537MB"
+            }
+          }
+        }
+      },
+      "communication_parameters": {
+        "token_routing": {
+          "type": "point_to_point",
+          "bandwidth": "400GB/s",
+          "latency": "5-10us",
+          "buffer_size": "10.49GB_per_expert"
+        },
+        "load_balancing": {
+          "update_frequency": 100,
+          "threshold": 1.2,
+          "adjustment_rate": 0.1
+        }
+      },
+      "device_mapping": {
+        "expert_0": {"gpu": 0, "node": 0},
+        "expert_1": {"gpu": 1, "node": 0},
+        "expert_2": {"gpu": 2, "node": 0},
+        "expert_3": {"gpu": 3, "node": 0},
+        "expert_4": {"gpu": 4, "node": 1},
+        "expert_5": {"gpu": 5, "node": 1},
+        "expert_6": {"gpu": 6, "node": 1},
+        "expert_7": {"gpu": 7, "node": 1},
+        "expert_8": {"gpu": 8, "node": 2},
+        "expert_9": {"gpu": 9, "node": 2},
+        "expert_10": {"gpu": 10, "node": 2},
+        "expert_11": {"gpu": 11, "node": 2},
+        "expert_12": {"gpu": 12, " "node": 3},
+        "expert_13": {"gpu": 13, "node": 3},
+        "expert_14": {"gpu": 14, "node": 3},
+        "expert_15": {"gpu": 15, "node": 3}
+      },
+      "memory_requirements": {
+        "per_gpu": {
+          "model_parameters": "537MB_per_expert",
+          "activation_buffers": "160GB_shared",
+          "total": "668MB_per_GPU"
+        }
+      },
+      "cuda_streams": {
+        "compute_stream": 0,
+        "send_stream": 1,
+        "recv_stream": 2
+      },
+      "performance_targets": {
+        "throughput": "450000_TPS",
+        "latency": "2.2ms_TPOT",
+        "gpu_utilization": "98%"
+      },
+      "routing_mechanism": {
+        "gating_function": "softmax",
+        "top_k": 2,
+        "load_balancing": {
+          "equation": "load_e = tokens_routed_to_e / expert_capacity",
+          "capacity_multiplier": 1.2,
+          "adjustment_factor": "max(0.1, 1.0 - load_e * 0.5)"
+        }
+      }
+    }
+  },
+  "hardware_requirements": {
+    "gpus": 16,
+    "gpu_type": "NVIDIA_H100_80GB",
+    "interconnect": {
+      "intra_node": "NVLink_400GB/s",
+      "inter_node": "InfiniBand_200GB/s"
+    },
+    "cpu": "AMD_EPYC_9654_96_cores_per_node",
+    "memory": "2TB_DDR5_per_node",
+    "storage": "100TB_NVMe_SSD"
+  },
+  "software_requirements": {
+    "cuda": "12.2",
+    "nccl": "2.18.3",
+    "pytorch": "2.1.0",
+    "transformers": "4.35.0",
+    "mpi": "OpenMPI_4.1.5"
+  },
+  "environment_variables": {
+    "CUDA_VISIBLE_DEVICES": "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15",
+    "NCCL_IB_HCA": "mlx5_0,mlx5_1",
+    "NCCL_SOCKET_IFNAME": "ib0",
+    "CUDA_DEVICE_MAX_CONNECTIONS": 1,
+    "NCCL_NTHREADS": 512
+  }
+}

@@ -1,0 +1,106 @@
+// 4-Layer Transformer Baseline (TP=8, PP=2)
+digraph baseline_transformer {
+	graph [nodesep=0.5 rankdir=TB splines=ortho]
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	input [label="Input Embedding\nGPU: [0-7], [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=lightgreen shape=ellipse]
+	subgraph cluster_stage0 {
+		color=red label="Stage 0 - GPUs [0-7]\nTP=8, Partition=512" style=dashed
+		layer0_rmsnorm [label="Layer 0 RMSNorm\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer0_attn_qkv [label="Layer 0 QKV Projection\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128, partition=512]"]
+		layer0_attn_scores [label="Layer 0 Attention Scores\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128]"]
+		layer0_attn_weighted [label="Layer 0 Weighted Sum\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128]"]
+		layer0_attn_out [label="Layer 0 Attention Output\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer0_res_add1 [label="Layer 0 Residual Add 1\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512], [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer0_ffn1 [label="Layer 0 FFN Up\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]"]
+		layer0_gelu [label="Layer 0 GELU\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]\nOutput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]"]
+		layer0_ffn2 [label="Layer 0 FFN Down\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer0_res_add2 [label="Layer 0 Residual Add 2\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512], [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer1_rmsnorm [label="Layer 1 RMSNorm\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer1_attn_qkv [label="Layer 1 QKV Projection\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128, partition=512]"]
+		layer1_attn_scores [label="Layer 1 Attention Scores\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128]"]
+		layer1_attn_weighted [label="Layer 1 Weighted Sum\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128]"]
+		layer1_attn_out [label="Layer 1 Attention Output\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer1_res_add1 [label="Layer 1 Residual Add 1\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512], [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer1_ffn1 [label="Layer 1 FFN Up\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]"]
+		layer1_gelu [label="Layer 1 GELU\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]\nOutput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]"]
+		layer1_ffn2 [label="Layer 1 FFN Down\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer1_res_add2 [label="Layer 1 Residual Add 2\nGPU: [0-7]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512], [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+	}
+	subgraph cluster_stage1 {
+		color=blue label="Stage 1 - GPUs [8-15]\nTP=8, Partition=512" style=dashed
+		pipeline_comm_1 [label="Pipeline Communication\nGPU: [7] → [8]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]" fillcolor=yellow shape=parallelogram]
+		layer2_rmsnorm [label="Layer 2 RMSNorm\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer2_attn_qkv [label="Layer 2 QKV Projection\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128, partition=512]"]
+		layer2_attn_scores [label="Layer 2 Attention Scores\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128]"]
+		layer2_attn_weighted [label="Layer 2 Weighted Sum\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128]"]
+		layer2_attn_out [label="Layer 2 Attention Output\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer2_res_add1 [label="Layer 2 Residual Add 1\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512], [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer2_ffn1 [label="Layer 2 FFN Up\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]"]
+		layer2_gelu [label="Layer 2 GELU\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]\nOutput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]"]
+		layer2_ffn2 [label="Layer 2 FFN Down\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer2_res_add2 [label="Layer 2 Residual Add 2\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512], [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer3_rmsnorm [label="Layer 3 RMSNorm\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer3_attn_qkv [label="Layer 3 QKV Projection\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128, partition=512]"]
+		layer3_attn_scores [label="Layer 3 Attention Scores\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128]"]
+		layer3_attn_weighted [label="Layer 3 Weighted Sum\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128], [batch_size=1024, seq_len=?, seq_len=?]\nOutput: [batch_size=1024, seq_len=?, heads=32, d_k=128]"]
+		layer3_attn_out [label="Layer 3 Attention Output\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer3_res_add1 [label="Layer 3 Residual Add 1\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512], [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer3_ffn1 [label="Layer 3 FFN Up\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]"]
+		layer3_gelu [label="Layer 3 GELU\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]\nOutput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]"]
+		layer3_ffn2 [label="Layer 3 FFN Down\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, ffn_hidden=16384, partition=2048]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		layer3_res_add2 [label="Layer 3 Residual Add 2\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512], [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]"]
+		output_proj [label="Output Projection\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, hidden_dim=4096, partition=512]\nOutput: [batch_size=1024, seq_len=?, vocab_size=?, partition=?]"]
+	}
+	output [label="Final Output\nGPU: [8-15]\nInput: [batch_size=1024, seq_len=?, vocab_size=?, partition=?]\nOutput: [batch_size=1024, seq_len=?, vocab_size=?]" fillcolor=lightgreen shape=ellipse]
+	input -> layer0_rmsnorm
+	layer0_rmsnorm -> layer0_attn_qkv
+	layer0_attn_qkv -> layer0_attn_scores
+	layer0_attn_scores -> layer0_attn_weighted
+	layer0_attn_weighted -> layer0_attn_out
+	layer0_attn_out -> layer0_res_add1
+	input -> layer0_res_add1
+	layer0_res_add1 -> layer0_ffn1
+	layer0_ffn1 -> layer0_gelu
+	layer0_gelu -> layer0_ffn2
+	layer0_ffn2 -> layer0_res_add2
+	layer0_res_add1 -> layer0_res_add2
+	layer0_res_add2 -> layer1_rmsnorm
+	layer1_rmsnorm -> layer1_attn_qkv
+	layer1_attn_qkv -> layer1_attn_scores
+	layer1_attn_scores -> layer1_attn_weighted
+	layer1_attn_weighted -> layer1_attn_out
+	layer1_attn_out -> layer1_res_add1
+	layer0_res_add2 -> layer1_res_add1
+	layer1_res_add1 -> layer1_ffn1
+	layer1_ffn1 -> layer1_gelu
+	layer1_gelu -> layer1_ffn2
+	layer1_ffn2 -> layer1_res_add2
+	layer1_res_add1 -> layer1_res_add2
+	layer1_res_add2 -> pipeline_comm_1
+	pipeline_comm_1 -> layer2_rmsnorm
+	layer2_rmsnorm -> layer2_attn_qkv
+	layer2_attn_qkv -> layer2_attn_scores
+	layer2_attn_scores -> layer2_attn_weighted
+	layer2_attn_weighted -> layer2_attn_out
+	layer2_attn_out -> layer2_res_add1
+	pipeline_comm_1 -> layer2_res_add1
+	layer2_res_add1 -> layer2_ffn1
+	layer2_ffn1 -> layer2_gelu
+	layer2_gelu -> layer2_ffn2
+	layer2_ffn2 -> layer2_res_add2
+	layer2_res_add1 -> layer2_res_add2
+	layer2_res_add2 -> layer3_rmsnorm
+	layer3_rmsnorm -> layer3_attn_qkv
+	layer3_attn_qkv -> layer3_attn_scores
+	layer3_attn_scores -> layer3_attn_weighted
+	layer3_attn_weighted -> layer3_attn_out
+	layer3_attn_out -> layer3_res_add1
+	layer2_res_add2 -> layer3_res_add1
+	layer3_res_add1 -> layer3_ffn1
+	layer3_ffn1 -> layer3_gelu
+	layer3_gelu -> layer3_ffn2
+	layer3_ffn2 -> layer3_res_add2
+	layer3_res_add1 -> layer3_res_add2
+	layer3_res_add2 -> output_proj
+	output_proj -> output
+}

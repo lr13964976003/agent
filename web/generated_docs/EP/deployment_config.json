@@ -1,0 +1,206 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "Baseline (TP=8, PP=2)",
+      "model_specifications": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "precision": "FP16",
+        "token_dimension": 8192,
+        "mha_heads": 16,
+        "mha_head_dimension": 512,
+        "mlp_hidden_size": 32768
+      },
+      "parallel_strategy": {
+        "tensor_parallelism": 8,
+        "pipeline_parallelism": 2,
+        "expert_parallelism": 1,
+        "data_parallelism": 1
+      },
+      "device_mapping": {
+        "total_gpus": 16,
+        "gpu_type": "H100",
+        "topology": {
+          "pipeline_stages": 2,
+          "gpus_per_stage": 8,
+          "expert_distribution": {
+            "experts_per_gpu": 8,
+            "placement_strategy": "colocated_shared"
+          }
+        },
+        "gpu_assignments": {
+          "stage_0": {
+            "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+            "experts_per_gpu": 8,
+            "tensor_parallel_shards": 8
+          },
+          "stage_1": {
+            "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+            "experts_per_gpu": 8,
+            "tensor_parallel_shards": 8
+          }
+        }
+      },
+      "communication_strategy": {
+        "intra_stage": "NCCL_all_reduce",
+        "inter_stage": "pipeline_parallel_communication",
+        "token_routing": "sequential_pipeline_processing",
+        "overlapping": false
+      },
+      "performance_metrics": {
+        "throughput_tps": 120000,
+        "latency_tpot_ms": 8.3,
+        "bottlenecks": ["compute_contention", "pipeline_stalls", "memory_bandwidth"]
+      }
+    },
+    "proposed": {
+      "name": "Cross-Node Expert Parallelism (EP=16)",
+      "model_specifications": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "precision": "FP16",
+        "token_dimension": 8192,
+        "mha_heads": 16,
+        "mha_head_dimension": 512,
+        "mlp_hidden_size": 32768
+      },
+      "parallel_strategy": {
+        "tensor_parallelism": 1,
+        "pipeline_parallelism": 1,
+        "expert_parallelism": 16,
+        "data_parallelism": 1
+      },
+      "device_mapping": {
+        "total_gpus": 16,
+        "gpu_type": "H100",
+        "topology": {
+          "network_topology": "fully_connected",
+          "bandwidth": "H100_NVSwitch",
+          "latency": "ultra_low"
+        },
+        "expert_placement": {
+          "placement_strategy": "one_expert_per_gpu",
+          "constraint": "max_one_expert_per_gpu",
+          "mapping_type": "direct"
+        },
+        "gpu_assignments": {
+          "experts_layer_1": {
+            "expert_0": {"gpu": 0, "layer": 1},
+            "expert_1": {"gpu": 1, "layer": 1},
+            "expert_2": {"gpu": 2, "layer": 1},
+            "expert_3": {"gpu": 3, "layer": 1},
+            "expert_4": {"gpu": 4, "layer": 1},
+            "expert_5": {"gpu": 5, "layer": 1},
+            "expert_6": {"gpu": 6, "layer": 1},
+            "expert_7": {"gpu": 7, "layer": 1},
+            "expert_8": {"gpu": 8, "layer": 1},
+            "expert_9": {"gpu": 9, "layer": 1},
+            "expert_10": {"gpu": 10, "layer": 1},
+            "expert_11": {"gpu": 11, "layer": 1},
+            "expert_12": {"gpu": 12, "layer": 1},
+            "expert_13": {"gpu": 13, "layer": 1},
+            "expert_14": {"gpu": 14, "layer": 1},
+            "expert_15": {"gpu": 15, "layer": 1}
+          },
+          "experts_layer_2": {
+            "expert_0": {"gpu": 0, "layer": 2},
+            "expert_1": {"gpu": 1, "layer": 2},
+            "expert_2": {"gpu": 2, "layer": 2},
+            "expert_3": {"gpu": 3, "layer": 2},
+            "expert_4": {"gpu": 4, "layer": 2},
+            "expert_5": {"gpu": 5, "layer": 2},
+            "expert_6": {"gpu": 6, "layer": 2},
+            "expert_7": {"gpu": 7, "layer": 2},
+            "expert_8": {"gpu": 8, "layer": 2},
+            "expert_9": {"gpu": 9, "layer": 2},
+            "expert_10": {"gpu": 10, "layer": 2},
+            "expert_11": {"gpu": 11, "layer": 2},
+            "expert_12": {"gpu": 12, "layer": 2},
+            "expert_13": {"gpu": 13, "layer": 2},
+            "expert_14": {"gpu": 14, "layer": 2},
+            "expert_15": {"gpu": 15, "layer": 2}
+          },
+          "experts_layer_3": {
+            "expert_0": {"gpu": 0, "layer": 3},
+            "expert_1": {"gpu": 1, "layer": 3},
+            "expert_2": {"gpu": 2, "layer": 3},
+            "expert_3": {"gpu": 3, "layer": 3},
+            "expert_4": {"gpu": 4, "layer": 3},
+            "expert_5": {"gpu": 5, "layer": 3},
+            "expert_6": {"gpu": 6, "layer": 3},
+            "expert_7": {"gpu": 7, "layer": 3},
+            "expert_8": {"gpu": 8, "layer": 3},
+            "expert_9": {"gpu": 9, "layer": 3},
+            "expert_10": {"gpu": 10, "layer": 3},
+            "expert_11": {"gpu": 11, "layer": 3},
+            "expert_12": {"gpu": 12, "layer": 3},
+            "expert_13": {"gpu": 13, "layer": 3},
+            "expert_14": {"gpu": 14, "layer": 3},
+            "expert_15": {"gpu": 15, "layer": 3}
+          },
+          "experts_layer_4": {
+            "expert_0": {"gpu": 0, "layer": 4},
+            "expert_1": {"gpu": 1, "layer": 4},
+            "expert_2": {"gpu": 2, "layer": 4},
+            "expert_3": {"gpu": 3, "layer": 4},
+            "expert_4": {"gpu": 4, "layer": 4},
+            "expert_5": {"gpu": 5, "layer": 4},
+            "expert_6": {"gpu": 6, "layer": 4},
+            "expert_7": {"gpu": 7, "layer": 4},
+            "expert_8": {"gpu": 8, "layer": 4},
+            "expert_9": {"gpu": 9, "layer": 4},
+            "expert_10": {"gpu": 10, "layer": 4},
+            "expert_11": {"gpu": 11, "layer": 4},
+            "expert_12": {"gpu": 12, "layer": 4},
+            "expert_13": {"gpu": 13, "layer": 4},
+            "expert_14": {"gpu": 14, "layer": 4},
+            "expert_15": {"gpu": 15, "layer": 4}
+          }
+        }
+      },
+      "communication_strategy": {
+        "routing_mechanism": "dynamic_gating",
+        "communication_library": "NCCL",
+        "token_batching": true,
+        "asynchronous_routing": true,
+        "overlap_compute_communication": true,
+        "implementation": "CUDA_streams",
+        "topology_aware_placement": true
+      },
+      "load_balancing": {
+        "strategy": "dynamic",
+        "monitoring": "per_expert_load",
+        "adjustment": "gating_probability_modification",
+        "prevention": "overloading_specific_experts"
+      },
+      "performance_metrics": {
+        "throughput_tps": 450000,
+        "latency_tpot_ms": 2.2,
+        "improvement_factor": {
+          "throughput": 3.75,
+          "latency": 3.8
+        },
+        "bottlenecks": ["network_bandwidth", "load_balancing", "synchronization"]
+      },
+      "scalability": {
+        "regime": "large_EP",
+        "minimum_ep": 16,
+        "linear_scaling": true,
+        "network_limiting_factor": "bandwidth"
+      }
+    }
+  },
+  "deployment_requirements": {
+    "minimum_gpus": 16,
+    "recommended_network": "H100_NVSwitch_or_equivalent",
+    "memory_per_gpu": "sufficient_for_single_expert_FP16",
+    "software_stack": ["CUDA", "NCCL", "MPI", "MoE_framework"]
+  },
+  "validation_criteria": {
+    "correctness": "identical_outputs_to_baseline",
+    "performance": "3.75x_throughput_improvement_minimum",
+    "scalability": "linear_scaling_with_additional_gpus"
+  }
+}

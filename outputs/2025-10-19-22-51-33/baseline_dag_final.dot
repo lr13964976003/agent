@@ -1,0 +1,183 @@
+// Baseline TP=8, PP=2 DAG - Static Parallelization Strategy
+// 16 total GPUs: 8 TP × 2 PP
+// Model: 4-layer Dense transformer with 4096 hidden dim, 32 heads, 16384 FFN dim
+
+digraph baseline_dag {
+    rankdir=TB
+    splines=ortho
+    compound=true
+    fontsize=10
+    
+    // Input node with precise dimensions
+    input [label="Input\n[batch_size=1024, seq_len=4096, hidden_dim=4096]", shape=ellipse, fillcolor=lightgreen, style=filled]
+    
+    // Stage 0 (GPUs 0-7)
+    subgraph cluster_stage0 {
+        label="Stage 0 (GPUs 0-7)\nTP=8, Layers 0-1"
+        style="rounded,filled"
+        fillcolor=lightblue
+        
+        // Embedding layer - distributed across 8 GPUs via column parallelism
+        stage0_embed [label="Embedding Layer\nInput: [batch_size=1024, seq_len=4096, vocab_size=32000]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 0-7", shape=rectangle, style=filled]
+        
+        // Layer 0: Multi-Head Attention
+        layer0_q_proj [label="Layer 0 Q Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer0_k_proj [label="Layer 0 K Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer0_v_proj [label="Layer 0 V Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer0_attention [label="Layer 0 Multi-Head Attention\nInput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer0_attn_out_proj [label="Layer 0 Attention Output Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer0_residual_add1 [label="Layer 0 Residual Add 1\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096] × 2\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=ellipse, style=dashed]
+        layer0_norm1 [label="Layer 0 RMSNorm\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=rectangle]
+        
+        // Layer 0: Feed Forward Network
+        layer0_ffn_gate [label="Layer 0 FFN Gate\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer0_ffn_up [label="Layer 0 FFN Up\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer0_ffn_down [label="Layer 0 FFN Down\nInput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer0_residual_add2 [label="Layer 0 Residual Add 2\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096] × 2\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=ellipse, style=dashed]
+        layer0_norm2 [label="Layer 0 RMSNorm\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=rectangle]
+        
+        // Layer 1: Same structure as Layer 0
+        layer1_q_proj [label="Layer 1 Q Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer1_k_proj [label="Layer 1 K Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer1_v_proj [label="Layer 1 V Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer1_attention [label="Layer 1 Multi-Head Attention\nInput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer1_attn_out_proj [label="Layer 1 Attention Output Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer1_residual_add1 [label="Layer 1 Residual Add 1\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096] × 2\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=ellipse, style=dashed]
+        layer1_norm1 [label="Layer 1 RMSNorm\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=rectangle]
+        
+        layer1_ffn_gate [label="Layer 1 FFN Gate\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer1_ffn_up [label="Layer 1 FFN Up\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer1_ffn_down [label="Layer 1 FFN Down\nInput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 0-7", shape=rectangle]
+        layer1_residual_add2 [label="Layer 1 Residual Add 2\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096] × 2\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=ellipse, style=dashed]
+        layer1_norm2 [label="Layer 1 RMSNorm\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=rectangle]
+    }
+    
+    // Pipeline communication between stages
+    pipeline_comm_0 [label="Pipeline Send\n[batch_size=1024, seq_len=4096, hidden_dim=4096]\nGPU 7 → GPU 8", shape=parallelogram, fillcolor=yellow, style=filled]
+    
+    // Stage 1 (GPUs 8-15)
+    subgraph cluster_stage1 {
+        label="Stage 1 (GPUs 8-15)\nTP=8, Layers 2-3"
+        style="rounded,filled"
+        fillcolor=lightcoral
+        
+        // Layer 2: Multi-Head Attention
+        layer2_q_proj [label="Layer 2 Q Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer2_k_proj [label="Layer 2 K Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer2_v_proj [label="Layer 2 V Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer2_attention [label="Layer 2 Multi-Head Attention\nInput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer2_attn_out_proj [label="Layer 2 Attention Output Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer2_residual_add1 [label="Layer 2 Residual Add 1\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096] × 2\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=ellipse, style=dashed]
+        layer2_norm1 [label="Layer 2 RMSNorm\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=rectangle]
+        
+        layer2_ffn_gate [label="Layer 2 FFN Gate\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer2_ffn_up [label="Layer 2 FFN Up\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer2_ffn_down [label="Layer 2 FFN Down\nInput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer2_residual_add2 [label="Layer 2 Residual Add 2\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096] × 2\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=ellipse, style=dashed]
+        layer2_norm2 [label="Layer 2 RMSNorm\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=rectangle]
+        
+        // Layer 3: Same structure
+        layer3_q_proj [label="Layer 3 Q Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer3_k_proj [label="Layer 3 K Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer3_v_proj [label="Layer 3 V Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer3_attention [label="Layer 3 Multi-Head Attention\nInput: [batch_size=1024, seq_len=4096, num_heads=32, d_k=128]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer3_attn_out_proj [label="Layer 3 Attention Output Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer3_residual_add1 [label="Layer 3 Residual Add 1\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096] × 2\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=ellipse, style=dashed]
+        layer3_norm1 [label="Layer 3 RMSNorm\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=rectangle]
+        
+        layer3_ffn_gate [label="Layer 3 FFN Gate\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer3_ffn_up [label="Layer 3 FFN Up\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer3_ffn_down [label="Layer 3 FFN Down\nInput: [batch_size=1024, seq_len=4096, ffn_dim=16384]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nTP=8\nGPUs: 8-15", shape=rectangle]
+        layer3_residual_add2 [label="Layer 3 Residual Add 2\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096] × 2\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=ellipse, style=dashed]
+        layer3_norm2 [label="Layer 3 RMSNorm\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nAll GPUs", shape=rectangle]
+        
+        // Output projection
+        output [label="Output Projection\nInput: [batch_size=1024, seq_len=4096, hidden_dim=4096]\nOutput: [batch_size=1024, seq_len=4096, vocab_size=32000]\nTP=8\nGPU: 15", shape=ellipse, fillcolor=lightgreen, style=filled]
+    }
+    
+    // Connections - complete data flow
+    input -> stage0_embed
+    stage0_embed -> layer0_q_proj
+    stage0_embed -> layer0_k_proj
+    stage0_embed -> layer0_v_proj
+    
+    layer0_q_proj -> layer0_attention
+    layer0_k_proj -> layer0_attention
+    layer0_v_proj -> layer0_attention
+    layer0_attention -> layer0_attn_out_proj
+    layer0_attn_out_proj -> layer0_residual_add1
+    stage0_embed -> layer0_residual_add1 [style=dashed]
+    layer0_residual_add1 -> layer0_norm1
+    
+    layer0_norm1 -> layer0_ffn_gate
+    layer0_norm1 -> layer0_ffn_up
+    layer0_ffn_gate -> layer0_ffn_down
+    layer0_ffn_up -> layer0_ffn_down
+    layer0_ffn_down -> layer0_residual_add2
+    layer0_norm1 -> layer0_residual_add2 [style=dashed]
+    layer0_residual_add2 -> layer0_norm2
+    
+    layer0_norm2 -> layer1_q_proj
+    layer0_norm2 -> layer1_k_proj
+    layer0_norm2 -> layer1_v_proj
+    
+    layer1_q_proj -> layer1_attention
+    layer1_k_proj -> layer1_attention
+    layer1_v_proj -> layer1_attention
+    layer1_attention -> layer1_attn_out_proj
+    layer1_attn_out_proj -> layer1_residual_add1
+    layer0_norm2 -> layer1_residual_add1 [style=dashed]
+    layer1_residual_add1 -> layer1_norm1
+    
+    layer1_norm1 -> layer1_ffn_gate
+    layer1_norm1 -> layer1_ffn_up
+    layer1_ffn_gate -> layer1_ffn_down
+    layer1_ffn_up -> layer1_ffn_down
+    layer1_ffn_down -> layer1_residual_add2
+    layer1_norm1 -> layer1_residual_add2 [style=dashed]
+    layer1_residual_add2 -> layer1_norm2
+    
+    layer1_norm2 -> pipeline_comm_0
+    
+    pipeline_comm_0 -> layer2_q_proj
+    pipeline_comm_0 -> layer2_k_proj
+    pipeline_comm_0 -> layer2_v_proj
+    
+    layer2_q_proj -> layer2_attention
+    layer2_k_proj -> layer2_attention
+    layer2_v_proj -> layer2_attention
+    layer2_attention -> layer2_attn_out_proj
+    layer2_attn_out_proj -> layer2_residual_add1
+    pipeline_comm_0 -> layer2_residual_add1 [style=dashed]
+    layer2_residual_add1 -> layer2_norm1
+    
+    layer2_norm1 -> layer2_ffn_gate
+    layer2_norm1 -> layer2_ffn_up
+    layer2_ffn_gate -> layer2_ffn_down
+    layer2_ffn_up -> layer2_ffn_down
+    layer2_ffn_down -> layer2_residual_add2
+    layer2_norm1 -> layer2_residual_add2 [style=dashed]
+    layer2_residual_add2 -> layer2_norm2
+    
+    layer2_norm2 -> layer3_q_proj
+    layer2_norm2 -> layer3_k_proj
+    layer2_norm2 -> layer3_v_proj
+    
+    layer3_q_proj -> layer3_attention
+    layer3_k_proj -> layer3_attention
+    layer3_v_proj -> layer3_attention
+    layer3_attention -> layer3_attn_out_proj
+    layer3_attn_out_proj -> layer3_residual_add1
+    layer2_norm2 -> layer3_residual_add1 [style=dashed]
+    layer3_residual_add1 -> layer3_norm1
+    
+    layer3_norm1 -> layer3_ffn_gate
+    layer3_norm1 -> layer3_ffn_up
+    layer3_ffn_gate -> layer3_ffn_down
+    layer3_ffn_up -> layer3_ffn_down
+    layer3_ffn_down -> layer3_residual_add2
+    layer3_norm1 -> layer3_residual_add2 [style=dashed]
+    layer3_residual_add2 -> layer3_norm2
+    
+    layer3_norm2 -> output
+}

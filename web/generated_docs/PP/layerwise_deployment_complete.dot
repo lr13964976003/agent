@@ -1,0 +1,130 @@
+import os
+
+# Generate complete layer-wise deployment DAG
+os.makedirs("./generated_docs/PP", exist_ok=True)
+
+with open("./generated_docs/PP/layerwise_deployment_complete.dot", "w") as f:
+    f.write('''digraph LayerWiseDeployment {
+    rankdir=TB;
+    bgcolor=white;
+    
+    node [shape=rectangle];
+    
+    // Global model parameters
+    // Model: 16-layer dense model
+    // GPUs: 16 GPUs (0-15)
+    // Each layer on separate GPU
+    
+    // Input node
+    subgraph cluster_input {
+        label="Input Layer";
+        color=black;
+        input [label="Input\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]", shape=parallelogram, style=filled, fillcolor=lightblue];
+    }
+    
+    // Output node
+    subgraph cluster_output {
+        label="Output Layer";
+        color=black;
+        output [label="Output\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]", shape=parallelogram, style=filled, fillcolor=lightblue];
+    }
+    
+    ''')
+
+    # Generate all 16 layers
+    for layer in range(1, 17):
+        gpu_id = layer - 1
+        f.write(f'''
+    // Layer {layer} (GPU {gpu_id})
+    subgraph cluster_layer_{layer} {{
+        label="Layer {layer} (GPU {gpu_id})";
+        color=blue;
+        
+        // Layer Norm 1
+        ln1_{layer} [label="Layer Norm 1\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]", style=filled, fillcolor=lightyellow];
+        
+        // Multi-head attention projections
+        q_proj_{layer} [label="Q Projection\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]", style=filled, fillcolor=lightgreen];
+        k_proj_{layer} [label="K Projection\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]", style=filled, fillcolor=lightgreen];
+        v_proj_{layer} [label="V Projection\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]", style=filled, fillcolor=lightgreen];
+        
+        // Attention computation
+        scaled_dot_attn_{layer} [label="Scaled Dot-Product Attention\nQ: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nK: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nV: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]", style=filled, fillcolor=lightcoral];
+        
+        // Concat and output projection
+        concat_{layer} [label="Concat & Reshape\nInput: [batch_size=1024, seq_len=10000, heads=16, d_k=512]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]", style=filled, fillcolor=lightcyan];
+        o_proj_{layer} [label="O Projection\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]", style=filled, fillcolor=lightgreen];
+        
+        // Residual connections
+        residual1_{layer} [label="Residual Add 1\nInput 1: [batch_size=1024, seq_len=10000, hidden_size=8192]\nInput 2: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]", style=filled, fillcolor=lightpink, shape=ellipse];
+        
+        // Layer Norm 2
+        ln2_{layer} [label="Layer Norm 2\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]", style=filled, fillcolor=lightyellow];
+        
+        // MLP components
+        mlp_up_{layer} [label="MLP Up Projection\nInput: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]", style=filled, fillcolor=lightgreen];
+        gelu_{layer} [label="GELU Activation\nInput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nOutput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]", style=filled, fillcolor=lightorange];
+        mlp_down_{layer} [label="MLP Down Projection\nInput: [batch_size=1024, seq_len=10000, ffn_hidden=32768]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]", style=filled, fillcolor=lightgreen];
+        
+        residual2_{layer} [label="Residual Add 2\nInput 1: [batch_size=1024, seq_len=10000, hidden_size=8192]\nInput 2: [batch_size=1024, seq_len=10000, hidden_size=8192]\nOutput: [batch_size=1024, seq_len=10000, hidden_size=8192]", style=filled, fillcolor=lightpink, shape=ellipse];
+    }}
+    ''')
+
+    # Communication nodes
+    for layer in range(1, 16):
+        f.write(f'''
+    // Communication between GPU {layer-1} and GPU {layer}
+    comm_{layer}_{layer+1} [label="GPU-to-GPU Transfer\\nGPU {layer-1} → GPU {layer}\\n[batch_size=1024, seq_len=10000, hidden_size=8192]", shape=parallelogram, style="filled,dashed", fillcolor=lightgray];
+    ''')
+
+    # Edges
+    f.write(''''
+    // Input to Layer 1
+    input -> ln1_1;
+    
+    // Internal layer connections
+    ''')
+
+    for layer in range(1, 17):
+        f.write(f'''
+    // Layer {layer} internal connections
+    ln1_{layer} -> q_proj_{layer};
+    ln1_{layer} -> k_proj_{layer};
+    ln1_{layer} -> v_proj_{layer};
+    q_proj_{layer} -> scaled_dot_attn_{layer};
+    k_proj_{layer} -> scaled_dot_attn_{layer};
+    v_proj_{layer} -> scaled_dot_attn_{layer};
+    scaled_dot_attn_{layer} -> concat_{layer};
+    concat_{layer} -> o_proj_{layer};
+    o_proj_{layer} -> residual1_{layer};
+    residual1_{layer} -> ln2_{layer};
+    ln2_{layer} -> mlp_up_{layer};
+    mlp_up_{layer} -> gelu_{layer};
+    gelu_{layer} -> mlp_down_{layer};
+    mlp_down_{layer} -> residual2_{layer};
+    residual1_{layer} -> residual2_{layer};
+    ''')
+
+    # Residual and communication connections
+    f.write(''''
+    // Residual connections and communication
+    ''')
+    
+    # Layer 1 connections
+    f.write('    input -> residual1_1;\n')
+    
+    # Inter-layer connections
+    for layer in range(2, 17):
+        f.write(f'''    residual2_{layer-1} -> comm_{layer-1}_{layer};\n''')
+        f.write(f'''    comm_{layer-1}_{layer} -> ln1_{layer};\n''')
+        f.write(f'''    comm_{layer-1}_{layer} -> residual1_{layer};\n''')
+    
+    # Final output
+    f.write(''''
+    // Final output connection
+    residual2_16 -> output;
+}
+    ''')
+
+print("Complete layer-wise deployment DAG generated successfully!")
+print("File saved: ./generated_docs/PP/layerwise_deployment_complete.dot")
