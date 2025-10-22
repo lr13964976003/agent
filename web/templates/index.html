@@ -264,19 +264,43 @@
       loadVersions();
     }
 
-    async function generateDocs(){
-      const arxiv_id = document.getElementById("arxivId").value.trim();
+    async function generateDocs() {
+      const arxiv_id = document.getElementById("arxiv_id").value.trim();
       const env = document.getElementById("envSelect").value;
-      if(!arxiv_id) return alert("请输入 Arxiv ID！");
-      if(!env) return alert("请选择环境！");
-      const res = await fetch("/generate", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ arxiv_id, env })
-      });
-      const data = await res.json();
-      alert(data.message || data.error);
-      queryDocs();
+      const prompt = document.getElementById("promptContent").value;
+      const runButton = document.querySelector('button.btn.btn-primary'); // Paper to Real 按钮
+      const statusDiv = document.getElementById("statusMessage");
+
+      if (!arxiv_id) {
+        alert("请输入 Arxiv ID");
+        return;
+      }
+
+  // ---- UI 反馈开始 ----
+      runButton.disabled = true;
+      runButton.textContent = "⏳ 正在运行中...";
+      statusDiv.innerHTML = `<div class="alert alert-info text-center">🚀 正在生成文档，请稍候...</div>`;
+  // ---- 调用后端 ----
+
+      try {
+        const res = await fetch("/generate", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({arxiv_id, env, prompt})
+        });
+        const data = await res.json();
+
+        if (data.error) throw new Error(data.error);
+
+    // 成功提示
+        statusDiv.innerHTML = `<div class="alert alert-success text-center">✅ 文档生成完成！</div>`;
+        listDocs(); // 自动刷新文档列表
+      } catch (err) {
+        statusDiv.innerHTML = `<div class="alert alert-danger text-center">❌ 运行出错：${err.message}</div>`;
+      } finally {
+        runButton.disabled = false;
+        runButton.textContent = "📄 Paper to Real";
+      }
     }
 
     async function queryDocs(){
@@ -324,3 +348,4 @@
   </script>
 </body>
 </html>
+
