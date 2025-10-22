@@ -196,8 +196,15 @@ def list_docs():
     arxiv_id = request.args.get("arxiv_id")
     folder = os.path.join(GENERATED_DIR, arxiv_id)
     if not os.path.exists(folder):
-        return jsonify({"files": []})
-    return jsonify({"files": os.listdir(folder)})
+        return jsonify({"error": "No documents found"}), 404
+
+    # 获取文件及其修改时间
+    files = sorted(
+        os.listdir(folder),
+        key=lambda f: os.path.getmtime(os.path.join(folder, f)),
+        reverse=True  # 最新在前
+    )
+    return jsonify({"files": files})
 
 @app.route("/get_doc", methods=["GET"])
 def get_doc():
@@ -225,3 +232,4 @@ def index():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0",port=5000,debug=True)
+
