@@ -1,0 +1,274 @@
+{
+  "deployment_configurations": {
+    "DeepSeek-R1": {
+      "model_spec": {
+        "name": "DeepSeek-R1",
+        "architecture": "MoE",
+        "parameters": "671B",
+        "attention_type": "MLA",
+        "kv_heads": 1,
+        "query_heads": 128,
+        "head_size": 128,
+        "hidden_dim": 16384,
+        "ffn_hidden_dim": 65536,
+        "context_length": 1000000
+      },
+      "parallel_strategy": {
+        "attention_phase": {
+          "strategy": "KV_Parallelism",
+          "kvp_width": 8,
+          "tpa_width": 1,
+          "total_gpus": 8,
+          "communication": "All-to-All"
+        },
+        "ffn_phase": {
+          "strategy": "Expert_Parallelism_x_Tensor_Parallelism",
+          "tpf_width": 8,
+          "ep_width": 8,
+          "total_experts": 256,
+          "experts_per_gpu": 32
+        }
+      },
+      "module_partitioning": {
+        "attention": {
+          "qkv_projection": {
+            "type": "replicated",
+            "weight_shape": [16384, 16384],
+            "device_mapping": "all_8_gpus"
+          },
+          "kv_cache": {
+            "type": "sequence_sharded",
+            "shard_size": 125000,
+            "device_mapping": {
+              "gpu_0": "tokens_0-124999",
+              "gpu_1": "tokens_125000-249999",
+              "gpu_2": "tokens_250000-374999",
+              "gpu_3": "tokens_375000-499999",
+              "gpu_4": "tokens_500000-624999",
+              "gpu_5": "tokens_625000-749999",
+              "gpu_6": "tokens_750000-874999",
+              "gpu_7": "tokens_875000-999999"
+            }
+          },
+          "attention_output": {
+            "type": "all_to_all_exchange",
+            "communication_pattern": "query_head_dimension"
+          }
+        },
+        "post_attention": {
+          "linear_projection": {
+            "type": "tensor_parallel",
+            "weight_shape": [16384, 16384],
+            "shard_dim": 0,
+            "shard_size": 2048,
+            "device_mapping": {
+              "gpu_0": "rows_0-2047",
+              "gpu_1": "rows_2048-4095", 
+              "gpu_2": "rows_4096-6143",
+              "gpu_3": "rows_6144-8191",
+              "gpu_4": "rows_8192-10239",
+              "gpu_5": "rows_10240-12287",
+              "gpu_6": "rows_12288-14335",
+              "gpu_7": "rows_14336-16383"
+            }
+          }
+        },
+        "ffn": {
+          "expert_routing": {
+            "type": "dynamic",
+            "ep_width": 8,
+            "experts_per_gpu": 32,
+            "device_mapping": {
+              "gpu_0": "experts_0-31",
+              "gpu_1": "experts_32-63",
+              "gpu_2": "experts_64-95",
+              "gpu_3": "experts_96-127",
+              "gpu_4": "experts_128-159",
+              "gpu_5": "experts_160-191",
+              "gpu_6": "experts_192-223",
+              "gpu_7": "experts_224-255"
+            }
+          },
+          "fc1": {
+            "type": "column_tensor_parallel",
+            "weight_shape": [16384, 65536],
+            "shard_dim": 1,
+            "shard_size": 8192,
+            "device_mapping": "per_expert_shard"
+          },
+          "fc2": {
+            "type": "row_tensor_parallel",
+            "weight_shape": [65536, 16384],
+            "shard_dim": 0,
+            "shard_size": 8192,
+            "device_mapping": "per_expert_shard"
+          }
+        }
+      },
+      "communication_patterns": {
+        "attention_all_to_all": {
+          "pattern": "query_head_exchange",
+          "volume": "B × H × bytes_per_element",
+          "overlap": "HOP-B_batchwise"
+        },
+        "ffn_all_reduce": {
+          "pattern": "tensor_parallel_reduction",
+          "volume": "B × H × bytes_per_element"
+        }
+      },
+      "memory_distribution": {
+        "kv_cache_per_gpu": "2 × 1 × 128 × 125000 × 0.5 bytes = 16 MB",
+        "ffn_weights_per_gpu": "(shared_expert + 32_experts × expert_size) / 8"
+      }
+    },
+    "Llama-405B": {
+      "model_spec": {
+        "name": "Llama-405B",
+        "architecture": "Dense",
+        "parameters": "405B",
+        "attention_type": "GQA",
+        "kv_heads": 8,
+        "query_heads": 128,
+        "head_size": 128,
+        "hidden_dim": 16384,
+        "ffn_hidden_dim": 65536,
+        "context_length": 1000000
+      },
+      "parallel_strategy": {
+        "attention_phase": {
+          "strategy": "KV_Parallelism_x_Tensor_Parallelism",
+          "kvp_width": 4,
+          "tpa_width": 4,
+          "total_gpus": 16,
+          "constraint": "TPA ≤ K (8)"
+        },
+        "ffn_phase": {
+          "strategy": "Tensor_Parallelism",
+          "tpf_width": 16,
+          "ep_width": 1
+        }
+      },
+      "module_partitioning": {
+        "attention": {
+          "qkv_projection": {
+            "type": "head_tensor_parallel",
+            "weight_shape": [16384, 16384],
+            "query_shard": [4096, 16384],
+            "kv_replicated": [1024, 16384],
+            "device_mapping": {
+              "group_0": ["gpu_0", "gpu_1", "gpu_2", "gpu_3"],
+              "group_1": ["gpu_4", "gpu_5", "gpu_6", "gpu_7"],
+              "group_2": ["gpu_8", "gpu_9", "gpu_10", "gpu_11"],
+              "group_3": ["gpu_12", "gpu_13", "gpu_14", "gpu_15"]
+            }
+          },
+          "kv_cache": {
+            "type": "sequence_sharded",
+            "kvp_groups": 4,
+            "sequence_per_group": 250000,
+            "device_mapping": {
+              "group_0": "tokens_0-249999",
+              "group_1": "tokens_250000-499999",
+              "group_2": "tokens_500000-749999",
+              "group_3": "tokens_750000-999999"
+            }
+          }
+        },
+        "post_attention": {
+          "linear_projection": {
+            "type": "tensor_parallel",
+            "weight_shape": [16384, 16384],
+            "shard_dim": 0,
+            "shard_size": 1024,
+            "device_mapping": {
+              "gpu_0": "rows_0-1023",
+              "gpu_1": "rows_1024-2047",
+              "gpu_2": "rows_2048-3071",
+              "gpu_3": "rows_3072-4095",
+              "gpu_4": "rows_4096-5119",
+              "gpu_5": "rows_5120-6143",
+              "gpu_6": "rows_6144-7167",
+              "gpu_7": "rows_7168-8191",
+              "gpu_8": "rows_8192-9215",
+              "gpu_9": "rows_9216-10239",
+              "gpu_10": "rows_10240-11263",
+              "gpu_11": "rows_11264-12287",
+              "gpu_12": "rows_12288-13311",
+              "gpu_13": "rows_13312-14335",
+              "gpu_14": "rows_14336-15359",
+              "gpu_15": "rows_15360-16383"
+            }
+          }
+        },
+        "ffn": {
+          "dense_ffn": {
+            "type": "tensor_parallel",
+            "fc1": {
+              "weight_shape": [16384, 65536],
+              "shard_dim": 1,
+              "shard_size": 4096,
+              "device_mapping": {
+                "gpu_0": "cols_0-4095",
+                "gpu_1": "cols_4096-8191",
+                "gpu_2": "cols_8192-12287",
+                "gpu_3": "cols_12288-16383",
+                "gpu_4": "cols_16384-20479",
+                "gpu_5": "cols_20480-24575",
+                "gpu_6": "cols_24576-28671",
+                "gpu_7": "cols_28672-32767",
+                "gpu_8": "cols_32768-36863",
+                "gpu_9": "cols_36864-40959",
+                "gpu_10": "cols_40960-45055",
+                "gpu_11": "cols_45056-49151",
+                "gpu_12": "cols_49152-53247",
+                "gpu_13": "cols_53248-57343",
+                "gpu_14": "cols_57344-61439",
+                "gpu_15": "cols_61440-65535"
+              }
+            },
+            "fc2": {
+              "weight_shape": [65536, 16384],
+              "shard_dim": 0,
+              "shard_size": 4096,
+              "device_mapping": "transposed_fc1_mapping"
+            }
+          }
+        }
+      },
+      "communication_patterns": {
+        "attention_all_to_all": {
+          "groups": 4,
+          "pattern": "query_head_exchange_between_groups",
+          "volume": "B × 16384 × 0.5 bytes"
+        },
+        "ffn_all_reduce": {
+          "pattern": "tensor_parallel_reduction_across_16_gpus",
+          "volume": "B × 16384 × 0.5 bytes"
+        }
+      },
+      "memory_distribution": {
+        "kv_cache_per_gpu": "2 × 2 × 128 × 250000 × 0.5 bytes = 32 MB",
+        "ffn_weights_per_gpu": "(16384×65536 + 65536×16384) / 16 = 134 MB"
+      }
+    }
+  },
+  "baseline_configurations": {
+    "tensor_parallelism": {
+      "strategy": "single_TP_across_attention_and_ffn",
+      "constraint": "TP_width ≤ KV_heads",
+      "limitation": "KV_duplication_when_TP > K"
+    },
+    "medha_kvp": {
+      "strategy": "sequence_sharding_only",
+      "limitation": "fixed_FFN_GPU_group",
+      "communication": "exposed_overheads"
+    }
+  },
+  "deployment_parameters": {
+    "precision": "FP4",
+    "memory_bandwidth": "8000_GB_per_s_per_gpu",
+    "nvlink_domain": "large_scale",
+    "batch_overlap": "HOP-B_enabled",
+    "kv_update_strategy": "round_robin_16_tokens_per_rank"
+  }
+}
