@@ -1,0 +1,136 @@
+// Llama-405B Baseline Tensor Parallelism (8 GPUs)
+digraph Llama_405B_TP_Baseline {
+	compound=true rankdir=TB size="15,20"
+	node [fontsize=10 height=0.8 width=2.5]
+	input [label="Input\nInput: [batch_size=B, seq_len=1, hidden_dim=16384]" fillcolor=lightblue shape=ellipse style=filled]
+	subgraph cluster_attention {
+		label="Attention Phase (TP=8)" style=dashed
+		qkv_0 [label="QKV Projection\nGPU 0\nInput: [B, 1, 16384]\nOutput: [B, 1, 16, 128]" fillcolor=lightyellow shape=rectangle style=filled]
+		qkv_1 [label="QKV Projection\nGPU 1\nInput: [B, 1, 16384]\nOutput: [B, 1, 16, 128]" fillcolor=lightyellow shape=rectangle style=filled]
+		qkv_2 [label="QKV Projection\nGPU 2\nInput: [B, 1, 16384]\nOutput: [B, 1, 16, 128]" fillcolor=lightyellow shape=rectangle style=filled]
+		qkv_3 [label="QKV Projection\nGPU 3\nInput: [B, 1, 16384]\nOutput: [B, 1, 16, 128]" fillcolor=lightyellow shape=rectangle style=filled]
+		qkv_4 [label="QKV Projection\nGPU 4\nInput: [B, 1, 16384]\nOutput: [B, 1, 16, 128]" fillcolor=lightyellow shape=rectangle style=filled]
+		qkv_5 [label="QKV Projection\nGPU 5\nInput: [B, 1, 16384]\nOutput: [B, 1, 16, 128]" fillcolor=lightyellow shape=rectangle style=filled]
+		qkv_6 [label="QKV Projection\nGPU 6\nInput: [B, 1, 16384]\nOutput: [B, 1, 16, 128]" fillcolor=lightyellow shape=rectangle style=filled]
+		qkv_7 [label="QKV Projection\nGPU 7\nInput: [B, 1, 16384]\nOutput: [B, 1, 16, 128]" fillcolor=lightyellow shape=rectangle style=filled]
+		kv_cache_0 [label="KV Cache\nGPU 0\nFull cache: [B, S, 8, 128]\n(duplicated)" fillcolor=lightgray shape=rectangle style=filled]
+		kv_cache_1 [label="KV Cache\nGPU 1\nFull cache: [B, S, 8, 128]\n(duplicated)" fillcolor=lightgray shape=rectangle style=filled]
+		kv_cache_2 [label="KV Cache\nGPU 2\nFull cache: [B, S, 8, 128]\n(duplicated)" fillcolor=lightgray shape=rectangle style=filled]
+		kv_cache_3 [label="KV Cache\nGPU 3\nFull cache: [B, S, 8, 128]\n(duplicated)" fillcolor=lightgray shape=rectangle style=filled]
+		kv_cache_4 [label="KV Cache\nGPU 4\nFull cache: [B, S, 8, 128]\n(duplicated)" fillcolor=lightgray shape=rectangle style=filled]
+		kv_cache_5 [label="KV Cache\nGPU 5\nFull cache: [B, S, 8, 128]\n(duplicated)" fillcolor=lightgray shape=rectangle style=filled]
+		kv_cache_6 [label="KV Cache\nGPU 6\nFull cache: [B, S, 8, 128]\n(duplicated)" fillcolor=lightgray shape=rectangle style=filled]
+		kv_cache_7 [label="KV Cache\nGPU 7\nFull cache: [B, S, 8, 128]\n(duplicated)" fillcolor=lightgray shape=rectangle style=filled]
+		attn_0 [label="Attention\nGPU 0\nInput: [B, 1, 16, 128]\nOutput: [B, 1, 16, 128]" fillcolor=lightgreen shape=rectangle style=filled]
+		attn_1 [label="Attention\nGPU 1\nInput: [B, 1, 16, 128]\nOutput: [B, 1, 16, 128]" fillcolor=lightgreen shape=rectangle style=filled]
+		attn_2 [label="Attention\nGPU 2\nInput: [B, 1, 16, 128]\nOutput: [B, 1, 16, 128]" fillcolor=lightgreen shape=rectangle style=filled]
+		attn_3 [label="Attention\nGPU 3\nInput: [B, 1, 16, 128]\nOutput: [B, 1, 16, 128]" fillcolor=lightgreen shape=rectangle style=filled]
+		attn_4 [label="Attention\nGPU 4\nInput: [B, 1, 16, 128]\nOutput: [B, 1, 16, 128]" fillcolor=lightgreen shape=rectangle style=filled]
+		attn_5 [label="Attention\nGPU 5\nInput: [B, 1, 16, 128]\nOutput: [B, 1, 16, 128]" fillcolor=lightgreen shape=rectangle style=filled]
+		attn_6 [label="Attention\nGPU 6\nInput: [B, 1, 16, 128]\nOutput: [B, 1, 16, 128]" fillcolor=lightgreen shape=rectangle style=filled]
+		attn_7 [label="Attention\nGPU 7\nInput: [B, 1, 16, 128]\nOutput: [B, 1, 16, 128]" fillcolor=lightgreen shape=rectangle style=filled]
+		attn_allreduce [label="TP All-Reduce\nTP=8\nInput: [B, 1, 16, 128]×8\nOutput: [B, 1, 16384]" fillcolor=gold shape=parallelogram style=filled]
+	}
+	subgraph cluster_ffn {
+		label="FFN Phase (TP=8)" style=dashed
+		ffn_up_0 [label="FFN UP\nGPU 0\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_gate_0 [label="FFN Gate\nGPU 0\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_down_0 [label="FFN Down\nGPU 0\nInput: [B, 1, 8192]\nWeights: [8192, 2048]\nOutput: [B, 1, 2048]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_up_1 [label="FFN UP\nGPU 1\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_gate_1 [label="FFN Gate\nGPU 1\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_down_1 [label="FFN Down\nGPU 1\nInput: [B, 1, 8192]\nWeights: [8192, 2048]\nOutput: [B, 1, 2048]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_up_2 [label="FFN UP\nGPU 2\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_gate_2 [label="FFN Gate\nGPU 2\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_down_2 [label="FFN Down\nGPU 2\nInput: [B, 1, 8192]\nWeights: [8192, 2048]\nOutput: [B, 1, 2048]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_up_3 [label="FFN UP\nGPU 3\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_gate_3 [label="FFN Gate\nGPU 3\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_down_3 [label="FFN Down\nGPU 3\nInput: [B, 1, 8192]\nWeights: [8192, 2048]\nOutput: [B, 1, 2048]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_up_4 [label="FFN UP\nGPU 4\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_gate_4 [label="FFN Gate\nGPU 4\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_down_4 [label="FFN Down\nGPU 4\nInput: [B, 1, 8192]\nWeights: [8192, 2048]\nOutput: [B, 1, 2048]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_up_5 [label="FFN UP\nGPU 5\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_gate_5 [label="FFN Gate\nGPU 5\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_down_5 [label="FFN Down\nGPU 5\nInput: [B, 1, 8192]\nWeights: [8192, 2048]\nOutput: [B, 1, 2048]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_up_6 [label="FFN UP\nGPU 6\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_gate_6 [label="FFN Gate\nGPU 6\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_down_6 [label="FFN Down\nGPU 6\nInput: [B, 1, 8192]\nWeights: [8192, 2048]\nOutput: [B, 1, 2048]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_up_7 [label="FFN UP\nGPU 7\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_gate_7 [label="FFN Gate\nGPU 7\nInput: [B, 1, 16384]\nWeights: [16384, 8192]\nOutput: [B, 1, 8192]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		ffn_down_7 [label="FFN Down\nGPU 7\nInput: [B, 1, 8192]\nWeights: [8192, 2048]\nOutput: [B, 1, 2048]" fillcolor=lightsteelblue shape=rectangle style=filled]
+		tp_allreduce [label="TP All-Reduce\nTP=8\nInput: [B, 1, 2048]×8\nOutput: [B, 1, 16384]" fillcolor=gold shape=parallelogram style=filled]
+	}
+	output [label="Output\nInput: [B, 1, 16384]\nOutput: [B, 1, 16384]" fillcolor=lightgreen shape=ellipse style=filled]
+	input -> qkv_0
+	qkv_0 -> kv_cache_0
+	kv_cache_0 -> attn_0
+	attn_0 -> attn_allreduce
+	attn_allreduce -> ffn_up_0 [lhead=cluster_ffn]
+	attn_allreduce -> ffn_gate_0
+	ffn_up_0 -> ffn_down_0
+	ffn_gate_0 -> ffn_down_0
+	ffn_down_0 -> tp_allreduce
+	input -> qkv_1
+	qkv_1 -> kv_cache_1
+	kv_cache_1 -> attn_1
+	attn_1 -> attn_allreduce
+	attn_allreduce -> ffn_up_1 [lhead=cluster_ffn]
+	attn_allreduce -> ffn_gate_1
+	ffn_up_1 -> ffn_down_1
+	ffn_gate_1 -> ffn_down_1
+	ffn_down_1 -> tp_allreduce
+	input -> qkv_2
+	qkv_2 -> kv_cache_2
+	kv_cache_2 -> attn_2
+	attn_2 -> attn_allreduce
+	attn_allreduce -> ffn_up_2 [lhead=cluster_ffn]
+	attn_allreduce -> ffn_gate_2
+	ffn_up_2 -> ffn_down_2
+	ffn_gate_2 -> ffn_down_2
+	ffn_down_2 -> tp_allreduce
+	input -> qkv_3
+	qkv_3 -> kv_cache_3
+	kv_cache_3 -> attn_3
+	attn_3 -> attn_allreduce
+	attn_allreduce -> ffn_up_3 [lhead=cluster_ffn]
+	attn_allreduce -> ffn_gate_3
+	ffn_up_3 -> ffn_down_3
+	ffn_gate_3 -> ffn_down_3
+	ffn_down_3 -> tp_allreduce
+	input -> qkv_4
+	qkv_4 -> kv_cache_4
+	kv_cache_4 -> attn_4
+	attn_4 -> attn_allreduce
+	attn_allreduce -> ffn_up_4 [lhead=cluster_ffn]
+	attn_allreduce -> ffn_gate_4
+	ffn_up_4 -> ffn_down_4
+	ffn_gate_4 -> ffn_down_4
+	ffn_down_4 -> tp_allreduce
+	input -> qkv_5
+	qkv_5 -> kv_cache_5
+	kv_cache_5 -> attn_5
+	attn_5 -> attn_allreduce
+	attn_allreduce -> ffn_up_5 [lhead=cluster_ffn]
+	attn_allreduce -> ffn_gate_5
+	ffn_up_5 -> ffn_down_5
+	ffn_gate_5 -> ffn_down_5
+	ffn_down_5 -> tp_allreduce
+	input -> qkv_6
+	qkv_6 -> kv_cache_6
+	kv_cache_6 -> attn_6
+	attn_6 -> attn_allreduce
+	attn_allreduce -> ffn_up_6 [lhead=cluster_ffn]
+	attn_allreduce -> ffn_gate_6
+	ffn_up_6 -> ffn_down_6
+	ffn_gate_6 -> ffn_down_6
+	ffn_down_6 -> tp_allreduce
+	input -> qkv_7
+	qkv_7 -> kv_cache_7
+	kv_cache_7 -> attn_7
+	attn_7 -> attn_allreduce
+	attn_allreduce -> ffn_up_7 [lhead=cluster_ffn]
+	attn_allreduce -> ffn_gate_7
+	ffn_up_7 -> ffn_down_7
+	ffn_gate_7 -> ffn_down_7
+	ffn_down_7 -> tp_allreduce
+	tp_allreduce -> output
+}

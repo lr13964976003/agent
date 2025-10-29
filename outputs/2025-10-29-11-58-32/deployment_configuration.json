@@ -1,0 +1,305 @@
+{
+  "deployment_config": {
+    "models": [
+      {
+        "name": "DeepSeek-R1",
+        "type": "MoE",
+        "parameters": 671000000000,
+        "attention": {
+          "type": "MLA",
+          "query_heads": 128,
+          "kv_heads": 1,
+          "head_size": 128,
+          "hidden_dim": 16384
+        },
+        "moe": {
+          "num_experts": 256,
+          "top_k": 8,
+          "expert_dim": 2048
+        },
+        "layers": 61,
+        "parallel_strategy": {
+          "attention_phase": {
+            "type": "KV_Parallelism",
+            "kvp_width": 16,
+            "tpa_width": 1,
+            "total_gpus": 16,
+            "memory_hierarchy": {
+              "kv_cache_per_gpu": "S/16 tokens",
+              "weight_distribution": "Full weights on each GPU (TPA=1)"
+            }
+          },
+          "ffn_phase": {
+            "type": "Expert_Parallelism",
+            "total_gpus": 16,
+            "grid": {
+              "tpf_width": 2,
+              "ep_width": 8,
+              "expert_group_size": 2
+            },
+            "expert_routing": {
+              "tokens_per_expert": "batch_size / 8",
+              "all_gather_pattern": "inter_expert"
+            }
+          },
+          "communication": {
+            "attention_alltoall": {
+              "volume_per_token": "B × 16384 bytes",
+              "latency_overlap": "HOP-B enabled"
+            },
+            "ffn_allreduce": {
+              "intra_expert": "TPF=2 All-Reduce",
+              "inter_expert": "EP=8 All-Gather"
+            }
+          }
+        },
+        "device_mapping": {
+          "attention_phase": [
+            {"gpu_id": 0, "role": "KVP_0", "kv_slice": "tokens [0:S/16]"},
+            {"gpu_id": 1, "role": "KVP_1", "kv_slice": "tokens [S/16:2S/16]"},
+            {"gpu_id": 2, "role": "KVP_2", "kv_slice": "tokens [2S/16:3S/16]"},
+            {"gpu_id": 3, "role": "KVP_3", "kv_slice": "tokens [3S/16:4S/16]"},
+            {"gpu_id": 4, "role": "KVP_4", "kv_slice": "tokens [4S/16:5S/16]"},
+            {"gpu_id": 5, "role": "KVP_5", "kv_slice": "tokens [5S/16:6S/16]"},
+            {"gpu_id": 6, "role": "KVP_6", "kv_slice": "tokens [6S/16:7S/16]"},
+            {"gpu_id": 7, "role": "KVP_7", "kv_slice": "tokens [7S/16:8S/16]"},
+            {"gpu_id": 8, "role": "KVP_8", "kv_slice": "tokens [8S/16:9S/16]"},
+            {"gpu_id": 9, "role": "KVP_9", "kv_slice": "tokens [9S/16:10S/16]"},
+            {"gpu_id": 10, "role": "KVP_10", "kv_slice": "tokens [10S/16:11S/16]"},
+            {"gpu_id": 11, "role": "KVP_11", "kv_slice": "tokens [11S/16:12S/16]"},
+            {"gpu_id": 12, "role": "KVP_12", "kv_slice": "tokens [12S/16:13S/16]"},
+            {"gpu_id": 13, "role": "KVP_13", "kv_slice": "tokens [13S/16:14S/16]"},
+            {"gpu_id": 14, "role": "KVP_14", "kv_slice": "tokens [14S/16:15S/16]"},
+            {"gpu_id": 15, "role": "KVP_15", "kv_slice": "tokens [15S/16:S]"}
+          ],
+          "ffn_phase": [
+            {"gpu_id": 0, "role": "Expert_0_TP_0", "experts": [0, 1], "tp_size": 2},
+            {"gpu_id": 1, "role": "Expert_0_TP_1", "experts": [0, 1], "tp_size": 2},
+            {"gpu_id": 2, "role": "Expert_1_TP_0", "experts": [2, 3], "tp_size": 2},
+            {"gpu_id": 3, "role": "Expert_1_TP_1", "experts": [2, 3], "tp_size": 2},
+            {"gpu_id": 4, "role": "Expert_2_TP_0", "experts": [4, 5], "tp_size": 2},
+            {"gpu_id": 5, "role": "Expert_2_TP_1", "experts": [4, 5], "tp_size": 2},
+            {"gpu_id": 6, "role": "Expert_3_TP_0", "experts": [6, 7], "tp_size": 2},
+            {"gpu_id": 7, "role": "Expert_3_TP_1", "experts": [6, 7], "tp_size": 2},
+            {"gpu_id": 8, "role": "Expert_4_TP_0", "experts": [8, 9], "tp_size": 2},
+            {"gpu_id": 9, "role": "Expert_4_TP_1", "experts": [8, 9], "tp_size": 2},
+            {"gpu_id": 10, "role": "Expert_5_TP_0", "experts": [10, 11], "tp_size": 2},
+            {"gpu_id": 11, "role": "Expert_5_TP_1", "experts": [10, 11], "tp_size": 2},
+            {"gpu_id": 12, "role": "Expert_6_TP_0", "experts": [12, 13], "tp_size": 2},
+            {"gpu_id": 13, "role": "Expert_6_TP_1", "experts": [12, 13], "tp_size": 2},
+            {"gpu_id": 14, "role": "Expert_7_TP_0", "experts": [14, 15], "tp_size": 2},
+            {"gpu_id": 15, "role": "Expert_7_TP_1", "experts": [14, 15], "tp_size": 2}
+          ]
+        }
+      },
+      {
+        "name": "Llama-405B",
+        "type": "Dense",
+        "parameters": 405000000000,
+        "attention": {
+          "type": "GQA",
+          "query_heads": 128,
+          "kv_heads": 8,
+          "head_size": 128,
+          "hidden_dim": 16384
+        },
+        "layers": 126,
+        "parallel_strategy": {
+          "attention_phase": {
+            "type": "KV_Parallelism",
+            "kvp_width": 8,
+            "tpa_width": 8,
+            "total_gpus": 64,
+            "memory_hierarchy": {
+              "kv_cache_per_gpu": "S/8 tokens",
+              "weight_sharding": "TPA=8 across 64 GPUs"
+            }
+          },
+          "ffn_phase": {
+            "type": "Tensor_Parallelism",
+            "total_gpus": 64,
+            "tpf_width": 64,
+            "expert_parallelism": false
+          },
+          "communication": {
+            "attention_alltoall": {
+              "volume_per_token": "B × 16384 / 8 bytes",
+              "latency_overlap": "HOP-B enabled"
+            },
+            "ffn_allreduce": {
+              "pattern": "TPF=64 All-Reduce"
+            }
+          }
+        },
+        "device_mapping": {
+          "attention_phase": [
+            {"gpu_id": 0, "role": "KVP_TP_0", "kv_slice": "tokens [0:S/8]", "attention_heads": "query heads [0:16], kv heads [0:1]"},
+            {"gpu_id": 1, "role": "KVP_TP_1", "kv_slice": "tokens [0:S/8]", "attention_heads": "query heads [16:32], kv heads [1:2]"},
+            {"gpu_id": 2, "role": "KVP_TP_2", "kv_slice": "tokens [0:S/8]", "attention_heads": "query heads [32:48], kv heads [2:3]"},
+            {"gpu_id": 3, "role": "KVP_TP_3", "kv_slice": "tokens [0:S/8]", "attention_heads": "query heads [48:64], kv heads [3:4]"},
+            {"gpu_id": 4, "role": "KVP_TP_4", "kv_slice": "tokens [0:S/8]", "attention_heads": "query heads [64:80], kv heads [4:5]"},
+            {"gpu_id": 5, "role": "KVP_TP_5", "kv_slice": "tokens [0:S/8]", "attention_heads": "query heads [80:96], kv heads [5:6]"},
+            {"gpu_id": 6, "role": "KVP_TP_6", "kv_slice": "tokens [0:S/8]", "attention_heads": "query heads [96:112], kv heads [6:7]"},
+            {"gpu_id": 7, "role": "KVP_TP_7", "kv_slice": "tokens [0:S/8]", "attention_heads": "query heads [112:128], kv heads [7:8]"},
+            {"gpu_id": 8, "role": "KVP_TP_0", "kv_slice": "tokens [S/8:2S/8]", "attention_heads": "query heads [0:16], kv heads [0:1]"},
+            {"gpu_id": 9, "role": "KVP_TP_1", "kv_slice": "tokens [S/8:2S/8]", "attention_heads": "query heads [16:32], kv heads [1:2]"},
+            {"gpu_id": 10, "role": "KVP_TP_2", "kv_slice": "tokens [S/8:2S/8]", "attention_heads": "query heads [32:48], kv heads [2:3]"},
+            {"gpu_id": 11, "role": "KVP_TP_3", "kv_slice": "tokens [S/8:2S/8]", "attention_heads": "query heads [48:64], kv heads [3:4]"},
+            {"gpu_id": 12, "role": "KVP_TP_4", "kv_slice": "tokens [S/8:2S/8]", "attention_heads": "query heads [64:80], kv heads [4:5]"},
+            {"gpu_id": 13, "role": "KVP_TP_5", "kv_slice": "tokens [S/8:2S/8]", "attention_heads": "query heads [80:96], kv heads [5:6]"},
+            {"gpu_id": 14, "role": "KVP_TP_6", "kv_slice": "tokens [S/8:2S/8]", "attention_heads": "query heads [96:112], kv heads [6:7]"},
+            {"gpu_id": 15, "role": "KVP_TP_7", "kv_slice": "tokens [S/8:2S/8]", "attention_heads": "query heads [112:128], kv heads [7:8]"},
+            {"gpu_id": 16, "role": "KVP_TP_0", "kv_slice": "tokens [2S/8:3S/8]", "attention_heads": "query heads [0:16], kv heads [0:1]"},
+            {"gpu_id": 17, "role": "KVP_TP_1", "kv_slice": "tokens [2S/8:3S/8]", "attention_heads": "query heads [16:32], kv heads [1:2]"},
+            {"gpu_id": 18, "role": "KVP_TP_2", "kv_slice": "tokens [2S/8:3S/8]", "attention_heads": "query heads [32:48], kv heads [2:3]"},
+            {"gpu_id": 19, "role": "KVP_TP_3", "kv_slice": "tokens [2S/8:3S/8]", "attention_heads": "query heads [48:64], kv heads [3:4]"},
+            {"gpu_id": 20, "role": "KVP_TP_4", "kv_slice": "tokens [2S/8:3S/8]", "attention_heads": "query heads [64:80], kv heads [4:5]"},
+            {"gpu_id": 21, "role": "KVP_TP_5", "kv_slice": "tokens [2S/8:3S/8]", "attention_heads": "query heads [80:96], kv heads [5:6]"},
+            {"gpu_id": 22, "role": "KVP_TP_6", "kv_slice": "tokens [2S/8:3S/8]", "attention_heads": "query heads [96:112], kv heads [6:7]"},
+            {"gpu_id": 23, "role": "KVP_TP_7", "kv_slice": "tokens [2S/8:3S/8]", "attention_heads": "query heads [112:128], kv heads [7:8]"},
+            {"gpu_id": 24, "role": "KVP_TP_0", "kv_slice": "tokens [3S/8:4S/8]", "attention_heads": "query heads [0:16], kv heads [0:1]"},
+            {"gpu_id": 25, "role": "KVP_TP_1", "kv_slice": "tokens [3S/8:4S/8]", "attention_heads": "query heads [16:32], kv heads [1:2]"},
+            {"gpu_id": 26, "role": "KVP_TP_2", "kv_slice": "tokens [3S/8:4S/8]", "attention_heads": "query heads [32:48], kv heads [2:3]"},
+            {"gpu_id": 27, "role": "KVP_TP_3", "kv_slice": "tokens [3S/8:4S/8]", "attention_heads": "query heads [48:64], kv heads [3:4]"},
+            {"gpu_id": 28, "role": "KVP_TP_4", "kv_slice": "tokens [3S/8:4S/8]", "attention_heads": "query heads [64:80], kv heads [4:5]"},
+            {"gpu_id": 29, "role": "KVP_TP_5", "kv_slice": "tokens [3S/8:4S/8]", "attention_heads": "query heads [80:96], kv heads [5:6]"},
+            {"gpu_id": 30, "role": "KVP_TP_6", "kv_slice": "tokens [3S/8:4S/8]", "attention_heads": "query heads [96:112], kv heads [6:7]"},
+            {"gpu_id": 31, "role": "KVP_TP_7", "kv_slice": "tokens [3S/8:4S/8]", "attention_heads": "query heads [112:128], kv heads [7:8]"},
+            {"gpu_id": 32, "role": "KVP_TP_0", "kv_slice": "tokens [4S/8:5S/8]", "attention_heads": "query heads [0:16], kv heads [0:1]"},
+            {"gpu_id": 33, "role": "KVP_TP_1", "kv_slice": "tokens [4S/8:5S/8]", "attention_heads": "query heads [16:32], kv heads [1:2]"},
+            {"gpu_id": 34, "role": "KVP_TP_2", "kv_slice": "tokens [4S/8:5S/8]", "attention_heads": "query heads [32:48], kv heads [2:3]"},
+            {"gpu_id": 35, "role": "KVP_TP_3", "kv_slice": "tokens [4S/8:5S/8]", "attention_heads": "query heads [48:64], kv heads [3:4]"},
+            {"gpu_id": 36, "role": "KVP_TP_4", "kv_slice": "tokens [4S/8:5S/8]", "attention_heads": "query heads [64:80], kv heads [4:5]"},
+            {"gpu_id": 37, "role": "KVP_TP_5", "kv_slice": "tokens [4S/8:5S/8]", "attention_heads": "query heads [80:96], kv heads [5:6]"},
+            {"gpu_id": 38, "role": "KVP_TP_6", "kv_slice": "tokens [4S/8:5S/8]", "attention_heads": "query heads [96:112], kv heads [6:7]"},
+            {"gpu_id": 39, "role": "KVP_TP_7", "kv_slice": "tokens [4S/8:5S/8]", "attention_heads": "query heads [112:128], kv heads [7:8]"},
+            {"gpu_id": 40, "role": "KVP_TP_0", "kv_slice": "tokens [5S/8:6S/8]", "attention_heads": "query heads [0:16], kv heads [0:1]"},
+            {"gpu_id": 41, "role": "KVP_TP_1", "kv_slice": "tokens [5S/8:6S/8]", "attention_heads": "query heads [16:32], kv heads [1:2]"},
+            {"gpu_id": 42, "role": "KVP_TP_2", "kv_slice": "tokens [5S/8:6S/8]", "attention_heads": "query heads [32:48], kv heads [2:3]"},
+            {"gpu_id": 43, "role": "KVP_TP_3", "kv_slice": "tokens [5S/8:6S/8]", "attention_heads": "query heads [48:64], kv heads [3:4]"},
+            {"gpu_id": 44, "role": "KVP_TP_4", "kv_slice": "tokens [5S/8:6S/8]", "attention_heads": "query heads [64:80], kv heads [4:5]"},
+            {"gpu_id": 45, "role": "KVP_TP_5", "kv_slice": "tokens [5S/8:6S/8]", "attention_heads": "query heads [80:96], kv heads [5:6]"},
+            {"gpu_id": 46, "role": "KVP_TP_6", "kv_slice": "tokens [5S/8:6S/8]", "attention_heads": "query heads [96:112], kv heads [6:7]"},
+            {"gpu_id": 47, "role": "KVP_TP_7", "kv_slice": "tokens [5S/8:6S/8]", "attention_heads": "query heads [112:128], kv heads [7:8]"},
+            {"gpu_id": 48, "role": "KVP_TP_0", "kv_slice": "tokens [6S/8:7S/8]", "attention_heads": "query heads [0:16], kv heads [0:1]"},
+            {"gpu_id": 49, "role": "KVP_TP_1", "kv_slice": "tokens [6S/8:7S/8]", "attention_heads": "query heads [16:32], kv heads [1:2]"},
+            {"gpu_id": 50, "role": "KVP_TP_2", "kv_slice": "tokens [6S/8:7S/8]", "attention_heads": "query heads [32:48], kv heads [2:3]"},
+            {"gpu_id": 51, "role": "KVP_TP_3", "kv_slice": "tokens [6S/8:7S/8]", "attention_heads": "query heads [48:64], kv heads [3:4]"},
+            {"gpu_id": 52, "role": "KVP_TP_4", "kv_slice": "tokens [6S/8:7S/8]", "attention_heads": "query heads [64:80], kv heads [4:5]"},
+            {"gpu_id": 53, "role": "KVP_TP_5", "kv_slice": "tokens [6S/8:7S/8]", "attention_heads": "query heads [80:96], kv heads [5:6]"},
+            {"gpu_id": 54, "role": "KVP_TP_6", "kv_slice": "tokens [6S/8:7S/8]", "attention_heads": "query heads [96:112], kv heads [6:7]"},
+            {"gpu_id": 55, "role": "KVP_TP_7", "kv_slice": "tokens [6S/8:7S/8]", "attention_heads": "query heads [112:128], kv heads [7:8]"},
+            {"gpu_id": 56, "role": "KVP_TP_0", "kv_slice": "tokens [7S/8:S]", "attention_heads": "query heads [0:16], kv heads [0:1]"},
+            {"gpu_id": 57, "role": "KVP_TP_1", "kv_slice": "tokens [7S/8:S]", "attention_heads": "query heads [16:32], kv heads [1:2]"},
+            {"gpu_id": 58, "role": "KVP_TP_2", "kv_slice": "tokens [7S/8:S]", "attention_heads": "query heads [32:48], kv heads [2:3]"},
+            {"gpu_id": 59, "role": "KVP_TP_3", "kv_slice": "tokens [7S/8:S]", "attention_heads": "query heads [48:64], kv heads [3:4]"},
+            {"gpu_id": 60, "role": "KVP_TP_4", "kv_slice": "tokens [7S/8:S]", "attention_heads": "query heads [64:80], kv heads [4:5]"},
+            {"gpu_id": 61, "role": "KVP_TP_5", "kv_slice": "tokens [7S/8:S]", "attention_heads": "query heads [80:96], kv heads [5:6]"},
+            {"gpu_id": 62, "role": "KVP_TP_6", "kv_slice": "tokens [7S/8:S]", "attention_heads": "query heads [96:112], kv heads [6:7]"},
+            {"gpu_id": 63, "role": "KVP_TP_7", "kv_slice": "tokens [7S/8:S]", "attention_heads": "query heads [112:128], kv heads [7:8]"}
+          ],
+          "ffn_phase": [
+            {"gpu_id": 0, "role": "TP_0", "ffn_shard": "weights [0:1024] of 65536"},
+            {"gpu_id": 1, "role": "TP_1", "ffn_shard": "weights [1024:2048] of 65536"},
+            {"gpu_id": 2, "role": "TP_2", "ffn_shard": "weights [2048:3072] of 65536"},
+            {"gpu_id": 3, "role": "TP_3", "ffn_shard": "weights [3072:4096] of 65536"},
+            {"gpu_id": 4, "role": "TP_4", "ffn_shard": "weights [4096:5120] of 65536"},
+            {"gpu_id": 5, "role": "TP_5", "ffn_shard": "weights [5120:6144] of 65536"},
+            {"gpu_id": 6, "role": "TP_6", "ffn_shard": "weights [6144:7168] of 65536"},
+            {"gpu_id": 7, "role": "TP_7", "ffn_shard": "weights [7168:8192] of 65536"},
+            {"gpu_id": 8, "role": "TP_8", "ffn_shard": "weights [8192:9216] of 65536"},
+            {"gpu_id": 9, "role": "TP_9", "ffn_shard": "weights [9216:10240] of 65536"},
+            {"gpu_id": 10, "role": "TP_10", "ffn_shard": "weights [10240:11264] of 65536"},
+            {"gpu_id": 11, "role": "TP_11", "ffn_shard": "weights [11264:12288] of 65536"},
+            {"gpu_id": 12, "role": "TP_12", "ffn_shard": "weights [12288:13312] of 65536"},
+            {"gpu_id": 13, "role": "TP_13", "ffn_shard": "weights [13312:14336] of 65536"},
+            {"gpu_id": 14, "role": "TP_14", "ffn_shard": "weights [14336:15360] of 65536"},
+            {"gpu_id": 15, "role": "TP_15", "ffn_shard": "weights [15360:16384] of 65536"},
+            {"gpu_id": 16, "role": "TP_16", "ffn_shard": "weights [16384:17408] of 65536"},
+            {"gpu_id": 17, "role": "TP_17", "ffn_shard": "weights [17408:18432] of 65536"},
+            {"gpu_id": 18, "role": "TP_18", "ffn_shard": "weights [18432:19456] of 65536"},
+            {"gpu_id": 19, "role": "TP_19", "ffn_shard": "weights [19456:20480] of 65536"},
+            {"gpu_id": 20, "role": "TP_20", "ffn_shard": "weights [20480:21504] of 65536"},
+            {"gpu_id": 21, "role": "TP_21", "ffn_shard": "weights [21504:22528] of 65536"},
+            {"gpu_id": 22, "role": "TP_22", "ffn_shard": "weights [22528:23552] of 65536"},
+            {"gpu_id": 23, "role": "TP_23", "ffn_shard": "weights [23552:24576] of 65536"},
+            {"gpu_id": 24, "role": "TP_24", "ffn_shard": "weights [24576:25600] of 65536"},
+            {"gpu_id": 25, "role": "TP_25", "ffn_shard": "weights [25600:26624] of 65536"},
+            {"gpu_id": 26, "role": "TP_26", "ffn_shard": "weights [26624:27648] of 65536"},
+            {"gpu_id": 27, "role": "TP_27", "ffn_shard": "weights [27648:28672] of 65536"},
+            {"gpu_id": 28, "role": "TP_28", "ffn_shard": "weights [28672:29696] of 65536"},
+            {"gpu_id": 29, "role": "TP_29", "ffn_shard": "weights [29696:30720] of 65536"},
+            {"gpu_id": 30, "role": "TP_30", "ffn_shard": "weights [30720:31744] of 65536"},
+            {"gpu_id": 31, "role": "TP_31", "ffn_shard": "weights [31744:32768] of 65536"},
+            {"gpu_id": 32, "role": "TP_32", "ffn_shard": "weights [32768:33792] of 65536"},
+            {"gpu_id": 33, "role": "TP_33", "ffn_shard": "weights [33792:34816] of 65536"},
+            {"gpu_id": 34, "role": "TP_34", "ffn_shard": "weights [34816:35840] of 65536"},
+            {"gpu_id": 35, "role": "TP_35", "ffn_shard": "weights [35840:36864] of 65536"},
+            {"gpu_id": 36, "role": "TP_36", "ffn_shard": "weights [36864:37888] of 65536"},
+            {"gpu_id": 37, "role": "TP_37", "ffn_shard": "weights [37888:38912] of 65536"},
+            {"gpu_id": 38, "role": "TP_38", "ffn_shard": "weights [38912:39936] of 65536"},
+            {"gpu_id": 39, "role": "TP_39", "ffn_shard": "weights [39936:40960] of 65536"},
+            {"gpu_id": 40, "role": "TP_40", "ffn_shard": "weights [40960:41984] of 65536"},
+            {"gpu_id": 41, "role": "TP_41", "ffn_shard": "weights [41984:43008] of 65536"},
+            {"gpu_id": 42, "role": "TP_42", "ffn_shard": "weights [43008:44032] of 65536"},
+            {"gpu_id": 43, "role": "TP_43", "ffn_shard": "weights [44032:45056] of 65536"},
+            {"gpu_id": 44, "role": "TP_44", "ffn_shard": "weights [45056:46080] of 65536"},
+            {"gpu_id": 45, "role": "TP_45", "ffn_shard": "weights [46080:47104] of 65536"},
+            {"gpu_id": 46, "role": "TP_46", "ffn_shard": "weights [47104:48128] of 65536"},
+            {"gpu_id": 47, "role": "TP_47", "ffn_shard": "weights [48128:49152] of 65536"},
+            {"gpu_id": 48, "role": "TP_48", "ffn_shard": "weights [49152:50176] of 65536"},
+            {"gpu_id": 49, "role": "TP_49", "ffn_shard": "weights [50176:51200] of 65536"},
+            {"gpu_id": 50, "role": "TP_50", "ffn_shard": "weights [51200:52224] of 65536"},
+            {"gpu_id": 51, "role": "TP_51", "ffn_shard": "weights [52224:53248] of 65536"},
+            {"gpu_id": 52, "role": "TP_52", "ffn_shard": "weights [53248:54272] of 65536"},
+            {"gpu_id": 53, "role": "TP_53", "ffn_shard": "weights [54272:55296] of 65536"},
+            {"gpu_id": 54, "role": "TP_54", "ffn_shard": "weights [55296:56320] of 65536"},
+            {"gpu_id": 55, "role": "TP_55", "ffn_shard": "weights [56320:57344] of 65536"},
+            {"gpu_id": 56, "role": "TP_56", "ffn_shard": "weights [57344:58368] of 65536"},
+            {"gpu_id": 57, "role": "TP_57", "ffn_shard": "weights [58368:59392] of 65536"},
+            {"gpu_id": 58, "role": "TP_58", "ffn_shard": "weights [59392:60416] of 65536"},
+            {"gpu_id": 59, "role": "TP_59", "ffn_shard": "weights [60416:61440] of 65536"},
+            {"gpu_id": 60, "role": "TP_60", "ffn_shard": "weights [61440:62464] of 65536"},
+            {"gpu_id": 61, "role": "TP_61", "ffn_shard": "weights [62464:63488] of 65536"},
+            {"gpu_id": 62, "role": "TP_62", "ffn_shard": "weights [63488:64512] of 65536"},
+            {"gpu_id": 63, "role": "TP_63", "ffn_shard": "weights [64512:65536] of 65536"}
+          ]
+        }
+      }
+    ],
+    "baseline_models": [
+      {
+        "name": "DeepSeek-R1-TP-Baseline",
+        "type": "MoE",
+        "parallel_strategy": {
+          "type": "Tensor_Parallelism",
+          "tp_width": 8,
+          "total_gpus": 8,
+          "kv_duplicate": true
+        }
+      },
+      {
+        "name": "Llama-405B-TP-Baseline", 
+        "type": "Dense",
+        "parallel_strategy": {
+          "type": "Tensor_Parallelism",
+          "tp_width": 8,
+          "total_gpus": 8,
+          "kv_duplicate": true
+        }
+      }
+    ],
+    "hardware_config": {
+      "platform": "GB200 NVL72",
+      "memory_bandwidth": "8000 GB/s",
+      "precision": "FP4",
+      "max_gpus": 64,
+      "nvlink_domain": "single_node"
+    },
+    "communication_overhead": {
+      "hopb_enabled": true,
+      "batch_overlap": "token-wise",
+      "latency_hiding": "attention_computation"
+    }
+  }
+}
