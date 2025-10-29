@@ -1,0 +1,519 @@
+{
+  "deployment_configurations": {
+    "megatron_8_3b": {
+      "model_name": "Megatron-GPT-8.3B",
+      "parameters": 8300000000,
+      "architecture": {
+        "layers": 24,
+        "hidden_dimension": 4096,
+        "attention_heads": 32,
+        "sequence_length": 2048,
+        "vocabulary_size": 51200
+      },
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallel": {
+          "degree": 8,
+          "strategy": "intra_operator",
+          "method": "column_row_parallel"
+        },
+        "pipeline_parallel": {
+          "degree": 1,
+          "strategy": "none"
+        },
+        "data_parallel": {
+          "degree": 64,
+          "strategy": "distributed_data_parallel"
+        }
+      },
+      "module_division": {
+        "attention_layers": {
+          "self_attention": {
+            "qkv_projection": {
+              "partitioning": "column_parallel",
+              "output_dimension": 4096,
+              "input_dimension": 4096,
+              "heads": 32,
+              "per_device_dimension": 512
+            },
+            "output_projection": {
+              "partitioning": "row_parallel",
+              "output_dimension": 4096,
+              "input_dimension": 4096,
+              "per_device_dimension": 512
+            }
+          }
+        },
+        "mlp_layers": {
+          "fc1": {
+            "partitioning": "column_parallel",
+            "output_dimension": 16384,
+            "input_dimension": 4096,
+            "per_device_dimension": 2048
+          },
+          "fc2": {
+            "partitioning": "row_parallel",
+            "output_dimension": 4096,
+            "input_dimension": 16384,
+            "per_device_dimension": 2048
+          }
+        },
+        "layernorm": {
+          "replicated": true,
+          "dimension": 4096
+        }
+      },
+      "device_mapping": {
+        "total_devices": 512,
+        "node_config": {
+          "nodes": 64,
+          "gpus_per_node": 8,
+          "gpu_type": "V100-32GB",
+          "interconnect": "NVLink"
+        },
+        "mapping": {
+          "tensor_parallel_group": "devices_0_to_7_per_node",
+          "data_parallel_group": "across_nodes"
+        }
+      },
+      "memory_requirements": {
+        "model_parameters": 16600000000,
+        "optimizer_states": 66400000000,
+        "activations": 5000000000,
+        "total_per_device": 150000000,
+        "memory_efficiency": 0.85
+      }
+    },
+    "megatron_530b": {
+      "model_name": "Megatron-Turing-NLG-530B",
+      "parameters": 530000000000,
+      "architecture": {
+        "layers": 105,
+        "hidden_dimension": 20480,
+        "attention_heads": 128,
+        "sequence_length": 2048,
+        "vocabulary_size": 51200
+      },
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallel": {
+          "degree": 8,
+          "strategy": "intra_operator",
+          "method": "column_row_parallel"
+        },
+        "pipeline_parallel": {
+          "degree": 35,
+          "strategy": "inter_operator",
+          "micro_batch_size": 1,
+          "schedule": "1F1B"
+        },
+        "data_parallel": {
+          "degree": 12,
+          "strategy": "distributed_data_parallel"
+        }
+      },
+      "module_division": {
+        "pipeline_stages": 35,
+        "layers_per_stage": 3,
+        "attention_layers": {
+          "self_attention": {
+            "qkv_projection": {
+              "partitioning": "column_parallel",
+              "output_dimension": 20480,
+              "input_dimension": 20480,
+              "heads": 128,
+              "per_device_dimension": 2560
+            },
+            "output_projection": {
+              "partitioning": "row_parallel",
+              "output_dimension": 20480,
+              "input_dimension": 20480,
+              "per_device_dimension": 2560
+            }
+          }
+        },
+        "mlp_layers": {
+          "fc1": {
+            "partitioning": "column_parallel",
+            "output_dimension": 81920,
+            "input_dimension": 20480,
+            "per_device_dimension": 10240
+          },
+          "fc2": {
+            "partitioning": "row_parallel",
+            "output_dimension": 20480,
+            "input_dimension": 81920,
+            "per_device_dimension": 10240
+          }
+        }
+      },
+      "device_mapping": {
+        "total_devices": 3360,
+        "node_config": {
+          "nodes": 420,
+          "gpus_per_node": 8,
+          "gpu_type": "A100-80GB",
+          "interconnect": "NVLink+InfiniBand"
+        },
+        "mapping": {
+          "tensor_parallel_group": "devices_0_to_7_per_node",
+          "pipeline_parallel_stages": "nodes_0_to_419",
+          "data_parallel_replicas": "12_replicas_across_pipeline"
+        }
+      },
+      "memory_requirements": {
+        "model_parameters": 1060000000000,
+        "optimizer_states": 4240000000000,
+        "activations": 50000000000,
+        "total_per_device": 1500000000,
+        "memory_efficiency": 0.75
+      }
+    },
+    "megatron_1t": {
+      "model_name": "Megatron-1T",
+      "parameters": 1000000000000,
+      "architecture": {
+        "layers": 128,
+        "hidden_dimension": 25600,
+        "attention_heads": 160,
+        "sequence_length": 2048,
+        "vocabulary_size": 51200
+      },
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallel": {
+          "degree": 8,
+          "strategy": "intra_operator",
+          "method": "column_row_parallel"
+        },
+        "pipeline_parallel": {
+          "degree": 64,
+          "strategy": "inter_operator",
+          "micro_batch_size": 32,
+          "schedule": "1F1B"
+        },
+        "data_parallel": {
+          "degree": 1,
+          "strategy": "none"
+        },
+        "sequence_parallel": {
+          "degree": 8,
+          "strategy": "activation_parallelism"
+        }
+      },
+      "module_division": {
+        "pipeline_stages": 64,
+        "layers_per_stage": 2,
+        "attention_layers": {
+          "self_attention": {
+            "qkv_projection": {
+              "partitioning": "column_parallel",
+              "output_dimension": 25600,
+              "input_dimension": 25600,
+              "heads": 160,
+              "per_device_dimension": 3200
+            },
+            "output_projection": {
+              "partitioning": "row_parallel",
+              "output_dimension": 25600,
+              "input_dimension": 25600,
+              "per_device_dimension": 3200
+            }
+          }
+        },
+        "mlp_layers": {
+          "fc1": {
+            "partitioning": "column_parallel",
+            "output_dimension": 102400,
+            "input_dimension": 25600,
+            "per_device_dimension": 12800
+          },
+          "fc2": {
+            "partitioning": "row_parallel",
+            "output_dimension": 25600,
+            "input_dimension": 102400,
+            "per_device_dimension": 12800
+          }
+        },
+        "sequence_parallel_activations": {
+          "partitioning": "sequence_dimension",
+          "per_device_sequence": 256
+        }
+      },
+      "device_mapping": {
+        "total_devices": 512,
+        "node_config": {
+          "nodes": 64,
+          "gpus_per_node": 8,
+          "gpu_type": "A100-80GB",
+          "interconnect": "NVLink+InfiniBand"
+        },
+        "mapping": {
+          "tensor_parallel_group": "devices_0_to_7_per_node",
+          "pipeline_parallel_stages": "nodes_0_to_63",
+          "sequence_parallel_group": "overlaps_tensor_parallel"
+        }
+      },
+      "memory_requirements": {
+        "model_parameters": 2000000000000,
+        "optimizer_states": 8000000000000,
+        "activations": 80000000000,
+        "total_per_device": 1900000000,
+        "memory_efficiency": 0.80
+      }
+    },
+    "gopher_280b": {
+      "model_name": "Gopher-280B",
+      "parameters": 280000000000,
+      "architecture": {
+        "layers": 80,
+        "hidden_dimension": 16384,
+        "attention_heads": 128,
+        "sequence_length": 2048,
+        "vocabulary_size": 32000
+      },
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallel": {
+          "degree": 8,
+          "strategy": "intra_operator",
+          "method": "mesh_tensorflow"
+        },
+        "pipeline_parallel": {
+          "degree": 4,
+          "strategy": "inter_operator",
+          "micro_batch_size": 512,
+          "schedule": "gpipe"
+        },
+        "data_parallel": {
+          "degree": 1024,
+          "strategy": "distributed_data_parallel"
+        }
+      },
+      "module_division": {
+        "pipeline_stages": 4,
+        "layers_per_stage": 20,
+        "attention_layers": {
+          "self_attention": {
+            "qkv_projection": {
+              "partitioning": "mesh_parallel",
+              "output_dimension": 16384,
+              "input_dimension": 16384,
+              "heads": 128,
+              "per_device_dimension": 2048
+            }
+          }
+        },
+        "mlp_layers": {
+          "fc1": {
+            "partitioning": "mesh_parallel",
+            "output_dimension": 65536,
+            "input_dimension": 16384,
+            "per_device_dimension": 8192
+          },
+          "fc2": {
+            "partitioning": "mesh_parallel",
+            "output_dimension": 16384,
+            "input_dimension": 65536,
+            "per_device_dimension": 8192
+          }
+        }
+      },
+      "device_mapping": {
+        "total_devices": 4096,
+        "node_config": {
+          "nodes": 4,
+          "chips_per_node": 1024,
+          "chip_type": "TPU_v3",
+          "interconnect": "2D_torus"
+        },
+        "mapping": {
+          "mesh_parallel_group": "within_1024_chips_per_pod",
+          "pipeline_stages": "across_4_pods",
+          "data_parallel_replicas": "within_each_pod"
+        }
+      },
+      "memory_requirements": {
+        "model_parameters": 560000000000,
+        "optimizer_states": 2240000000000,
+        "activations": 40000000000,
+        "total_per_device": 680000000,
+        "memory_efficiency": 0.90
+      }
+    },
+    "palm_540b": {
+      "model_name": "PaLM-540B",
+      "parameters": 540000000000,
+      "architecture": {
+        "layers": 118,
+        "hidden_dimension": 18432,
+        "attention_heads": 48,
+        "sequence_length": 2048,
+        "vocabulary_size": 256000
+      },
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallel": {
+          "degree": 12,
+          "strategy": "intra_operator",
+          "method": "gspmd"
+        },
+        "pipeline_parallel": {
+          "degree": 1,
+          "strategy": "none",
+          "reason": "avoids_pipeline_bubble"
+        },
+        "data_parallel": {
+          "degree": 512,
+          "strategy": "distributed_data_parallel"
+        }
+      },
+      "module_division": {
+        "pipeline_stages": 1,
+        "layers_per_stage": 118,
+        "attention_layers": {
+          "self_attention": {
+            "qkv_projection": {
+              "partitioning": "gspmd_sharding",
+              "output_dimension": 18432,
+              "input_dimension": 18432,
+              "heads": 48,
+              "per_device_dimension": 1536
+            }
+          }
+        },
+        "mlp_layers": {
+          "fc1": {
+            "partitioning": "gspmd_sharding",
+            "output_dimension": 49152,
+            "input_dimension": 18432,
+            "per_device_dimension": 4096
+          },
+          "fc2": {
+            "partitioning": "gspmd_sharding",
+            "output_dimension": 18432,
+            "input_dimension": 49152,
+            "per_device_dimension": 4096
+          }
+        }
+      },
+      "device_mapping": {
+        "total_devices": 6144,
+        "node_config": {
+          "nodes": 2,
+          "chips_per_node": 3072,
+          "chip_type": "TPU_v4",
+          "interconnect": "3D_torus"
+        },
+        "mapping": {
+          "tensor_parallel_group": "within_3072_chips_per_pod",
+          "data_parallel_replicas": "512_groups_within_pods"
+        }
+      },
+      "memory_requirements": {
+        "model_parameters": 1080000000000,
+        "optimizer_states": 4320000000000,
+        "activations": 60000000000,
+        "total_per_device":858000000,
+        "memory_efficiency": 0.85
+      }
+    },
+    "gpt3_175b": {
+      "model_name": "GPT-3-175B",
+      "parameters": 175000000000,
+      "architecture": {
+        "layers": 96,
+        "hidden_dimension": 12288,
+        "attention_heads": 96,
+        "sequence_length": 2048,
+        "vocabulary_size": 50000
+      },
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallel": {
+          "degree": 8,
+          "strategy": "intra_operator",
+          "method": "expert_designed"
+        },
+        "pipeline_parallel": {
+          "degree": 16,
+          "strategy": "inter_operator",
+          "micro_batch_size": 32
+        },
+        "data_parallel": {
+          "degree": 128,
+          "strategy": "distributed_data_parallel"
+        }
+      },
+      "module_division": {
+        "pipeline_stages": 16,
+        "layers_per_stage": 6,
+        "attention_layers": {
+          "self_attention": {
+            "qkv_projection": {
+              "partitioning": "column_parallel",
+              "output_dimension": 12288,
+              "input_dimension": 12288,
+              "heads": 96,
+              "per_device_dimension": 1536
+            }
+          }
+        },
+        "mlp_layers": {
+          "fc1": {
+            "partitioning": "column_parallel",
+            "output_dimension": 49152,
+            "input_dimension": 12288,
+            "per_device_dimension": 6144
+          },
+          "fc2": {
+            "partitioning": "row_parallel",
+            "output_dimension": 12288,
+            "input_dimension": 49152,
+            "per_device_dimension": 6144
+          }
+        }
+      },
+      "device_mapping": {
+        "total_devices": 1024,
+        "node_config": {
+          "nodes": 128,
+          "gpus_per_node": 8,
+          "gpu_type": "V100-32GB",
+          "interconnect": "NVLink+InfiniBand"
+        },
+        "mapping": {
+          "tensor_parallel_group": "devices_0_to_7_per_node",
+          "pipeline_stages": "nodes_0_to_127",
+          "data_parallel_replicas": "128_groups"
+        }
+      },
+      "memory_requirements": {
+        "model_parameters": 350000000000,
+        "optimizer_states": 1400000000000,
+        "activations": 25000000000,
+        "total_per_device": 1650000000,
+        "memory_efficiency": 0.70
+      }
+    }
+  },
+  "common_configurations": {
+    "precision": "mixed_fp16",
+    "activation_checkpointing": true,
+    "optimizer": {
+      "type": "adamw",
+      "betas": [0.9, 0.95],
+      "eps": 1e-8,
+      "weight_decay": 0.1
+    },
+    "communication": {
+      "backend": "nccl",
+      "all_reduce": "ring_allreduce",
+      "bucket_size": 50e6
+    },
+    "scheduling": {
+      "micro_batch_size_formula": "global_batch/(pipeline_parallel*data_parallel)",
+      "gradient_accumulation_steps": 1
+    }
+  }
+}
