@@ -276,11 +276,11 @@
         return;
       }
 
-  // ---- UI 反馈开始 ----
+      // ---- UI 反馈开始 ----
       runButton.disabled = true;
-      runButton.textContent = "⏳ 正在运行中...";
+      runButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 正在运行中...`;
       statusDiv.innerHTML = `<div class="alert alert-info text-center">🚀 正在生成文档，请稍候...</div>`;
-  // ---- 调用后端 ----
+      // ---- 调用后端 ----
 
       try {
         const res = await fetch("/generate", {
@@ -288,14 +288,22 @@
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({arxiv_id, env, prompt})
         });
+
+        if (!res.ok) {
+          throw new Error(`请求失败，状态码：${res.status}`);
+        }
+
         const data = await res.json();
 
-        if (data.error) throw new Error(data.error);
+        if (data.error) {
+          throw new Error(data.error);
+        }
 
-    // 成功提示
+        // 成功提示
         statusDiv.innerHTML = `<div class="alert alert-success text-center">✅ 文档生成完成！</div>`;
         listDocs(); // 自动刷新文档列表
       } catch (err) {
+        console.error(err); // 将错误信息打印到控制台，方便调试
         statusDiv.innerHTML = `<div class="alert alert-danger text-center">❌ 运行出错：${err.message}</div>`;
       } finally {
         runButton.disabled = false;
@@ -348,4 +356,5 @@
   </script>
 </body>
 </html>
+
 
