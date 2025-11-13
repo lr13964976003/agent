@@ -1,0 +1,216 @@
+digraph G {
+    rankdir=TB;
+    node [shape=rectangle, style=filled];
+    
+    // Title
+    label="Baseline: Tensor Parallel (TP=8) + Pipeline Parallel (PP=2)";
+    labelloc="t";
+    fontsize=24;
+    
+    // Input node
+    input [shape=ellipse, label="Input\nInput: [batch_size=1024, seq_len=10000, hidden=8192]\nGPU: Host"];
+    
+    // ===== Pipeline Stage 0 (GPUs 0-7) =====
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0\nGPUs 0-7";
+        style=dashed;
+        
+        // Embedding on GPU 0
+        embedding [label="Embedding\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0"];
+        
+        // Layer 0
+        subgraph cluster_layer0 {
+            label="Layer 0 (Stage 0)";
+            style=dotted;
+            
+            // Layer Norm 0
+            ln0 [label="LayerNorm\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7"];
+            
+            // QKV projections (column parallel)
+            q_proj_0 [label="Q Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 0-7 (column split)"];
+            k_proj_0 [label="K Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 0-7 (column split)"];
+            v_proj_0 [label="V Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 0-7 (column split)"];
+            
+            // Multi-head attention
+            mha_0 [label="Multi-Head Attention\nInput QKV: [batch=1024, seq=10000, hidden=1024]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 0-7"];
+            
+            // Output projection (row parallel)
+            out_proj_0 [label="Output Projection\nInput: [batch=1024, seq=10000, hidden=1024]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7 (row split)"];
+            
+            // Residual
+            residual0 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=10000, hidden=8192] x2\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7"];
+            
+            // MLP
+            gate_proj_0 [label="Gate Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 0-7 (column split)"];
+            up_proj_0 [label="Up Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 0-7 (column split)"];
+            silu_0 [label="SiLU\nInput: [batch=1024, seq=10000, hidden=4096]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 0-7"];
+            mul_0 [label="Elementwise Mul\nInput: [batch=1024, seq=10000, hidden=4096] x2\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 0-7"];
+            down_proj_0 [label="Down Projection\nInput: [batch=1024, seq=10000, hidden=4096]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7 (row split)"];
+            
+            // MLP residual
+            residual_mlp0 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=10000, hidden=8192] x2\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7"];
+        }
+        
+        // Layer 1 (similar to layer 0)
+        subgraph cluster_layer1 {
+            label="Layer 1 (Stage 0)";
+            style=dotted;
+            
+            ln1 [label="LayerNorm\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7"];
+            
+            q_proj_1 [label="Q Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 0-7 (column split)"];
+            k_proj_1 [label="K Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 0-7 (column split)"];
+            v_proj_1 [label="V Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 0-7 (column split)"];
+            
+            mha_1 [label="Multi-Head Attention\nInput QKV: [batch=1024, seq=10000, hidden=1024]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 0-7"];
+            out_proj_1 [label="Output Projection\nInput: [batch=1024, seq=10000, hidden=1024]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7 (row split)"];
+            residual1 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=10000, hidden=8192] x2\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7"];
+            
+            gate_proj_1 [label="Gate Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 0-7 (column split)"];
+            up_proj_1 [label="Up Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 0-7 (column split)"];
+            silu_1 [label="SiLU\nInput: [batch=1024, seq=10000, hidden=4096]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 0-7"];
+            mul_1 [label="Elementwise Mul\nInput: [batch=1024, seq=10000, hidden=4096] x2\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 0-7"];
+            down_proj_1 [label="Down Projection\nInput: [batch=1024, seq=10000, hidden=4096]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7 (row split)"];
+            residual_mlp1 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=10000, hidden=8192] x2\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 0-7"];
+        }
+    }
+    
+    // ===== Pipeline Stage 1 (GPUs 8-15) =====
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1\nGPUs 8-15";
+        style=dashed;
+        
+        // Pipeline communication
+        pipeline_comm [shape=ellipse, label="Pipeline Communication\nSend/Receive activations\nGPU 7 -> GPU 8"];
+        
+        // Layer 2
+        subgraph cluster_layer2 {
+            label="Layer 2 (Stage 1)";
+            style=dotted;
+            
+            ln2 [label="LayerNorm\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15"];
+            
+            q_proj_2 [label="Q Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 8-15 (column split)"];
+            k_proj_2 [label="K Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 8-15 (column split)"];
+            v_proj_2 [label="V Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 8-15 (column split)"];
+            
+            mha_2 [label="Multi-Head Attention\nInput QKV: [batch=1024, seq=10000, hidden=1024]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 8-15"];
+            out_proj_2 [label="Output Projection\nInput: [batch=1024, seq=10000, hidden=1024]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15 (row split)"];
+            residual2 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=10000, hidden=8192] x2\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15"];
+            
+            gate_proj_2 [label="Gate Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 8-15 (column split)"];
+            up_proj_2 [label="Up Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 8-15 (column split)"];
+            silu_2 [label="SiLU\nInput: [batch=1024, seq=10000, hidden=4096]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 8-15"];
+            mul_2 [label="Elementwise Mul\nInput: [batch=1024, seq=10000, hidden=4096] x2\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 8-15"];
+            down_proj_2 [label="Down Projection\nInput: [batch=1024, seq=10000, hidden=4096]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15 (row split)"];
+            residual_mlp2 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=10000, hidden=8192] x2\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15"];
+        }
+        
+        // Layer 3
+        subgraph cluster_layer3 {
+            label="Layer 3 (Stage 1)";
+            style=dotted;
+            
+            ln3 [label="LayerNorm\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15"];
+            
+            q_proj_3 [label="Q Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 8-15 (column split)"];
+            k_proj_3 [label="K Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 8-15 (column split)"];
+            v_proj_3 [label="V Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 8-15 (column split)"];
+            
+            mha_3 [label="Multi-Head Attention\nInput QKV: [batch=1024, seq=10000, hidden=1024]\nOutput: [batch=1024, seq=10000, hidden=1024]\nGPU: 8-15"];
+            out_proj_3 [label="Output Projection\nInput: [batch=1024, seq=10000, hidden=1024]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15 (row split)"];
+            residual3 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=10000, hidden=8192] x2\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15"];
+            
+            gate_proj_3 [label="Gate Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 8-15 (column split)"];
+            up_proj_3 [label="Up Projection\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 8-15 (column split)"];
+            silu_3 [label="SiLU\nInput: [batch=1024, seq=10000, hidden=4096]\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 8-15"];
+            mul_3 [label="Elementwise Mul\nInput: [batch=1024, seq=10000, hidden=4096] x2\nOutput: [batch=1024, seq=10000, hidden=4096]\nGPU: 8-15"];
+            down_proj_3 [label="Down Projection\nInput: [batch=1024, seq=10000, hidden=4096]\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15 (row split)"];
+            residual_mlp3 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=10000, hidden=8192] x2\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: 8-15"];
+        }
+    }
+    
+    // Final output
+    output [shape=ellipse, label="Output\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, vocab_size]\nGPU: 15"];
+    
+    // Connections
+    input -> embedding;
+    embedding -> ln0;
+    ln0 -> q_proj_0;
+    ln0 -> k_proj_0;
+    ln0 -> v_proj_0;
+    q_proj_0 -> mha_0;
+    k_proj_0 -> mha_0;
+    v_proj_0 -> mha_0;
+    mha_0 -> out_proj_0;
+    out_proj_0 -> residual0;
+    embedding -> residual0;
+    residual0 -> gate_proj_0;
+    residual0 -> up_proj_0;
+    gate_proj_0 -> silu_0;
+    up_proj_0 -> mul_0;
+    silu_0 -> mul_0;
+    mul_0 -> down_proj_0;
+    down_proj_0 -> residual_mlp0;
+    residual0 -> residual_mlp0;
+    
+    residual_mlp0 -> ln1;
+    ln1 -> q_proj_1;
+    ln1 -> k_proj_1;
+    ln1 -> v_proj_1;
+    q_proj_1 -> mha_1;
+    k_proj_1 -> mha_1;
+    v_proj_1 -> mha_1;
+    mha_1 -> out_proj_1;
+    out_proj_1 -> residual1;
+    residual_mlp0 -> residual1;
+    residual1 -> gate_proj_1;
+    residual1 -> up_proj_1;
+    gate_proj_1 -> silu_1;
+    up_proj_1 -> mul_1;
+    silu_1 -> mul_1;
+    mul_1 -> down_proj_1;
+    down_proj_1 -> residual_mlp1;
+    residual1 -> residual_mlp1;
+    
+    residual_mlp1 -> pipeline_comm;
+    pipeline_comm -> ln2;
+    
+    ln2 -> q_proj_2;
+    ln2 -> k_proj_2;
+    ln2 -> v_proj_2;
+    q_proj_2 -> mha_2;
+    k_proj_2 -> mha_2;
+    v_proj_2 -> mha_2;
+    mha_2 -> out_proj_2;
+    out_proj_2 -> residual2;
+    pipeline_comm -> residual2;
+    residual2 -> gate_proj_2;
+    residual2 -> up_proj_2;
+    gate_proj_2 -> silu_2;
+    up_proj_2 -> mul_2;
+    silu_2 -> mul_2;
+    mul_2 -> down_proj_2;
+    down_proj_2 -> residual_mlp2;
+    residual2 -> residual_mlp2;
+    
+    residual_mlp2 -> ln3;
+    ln3 -> q_proj_3;
+    ln3 -> k_proj_3;
+    ln3 -> v_proj_3;
+    q_proj_3 -> mha_3;
+    k_proj_3 -> mha_3;
+    v_proj_3 -> mha_3;
+    mha_3 -> out_proj_3;
+    out_proj_3 -> residual3;
+    residual_mlp2 -> residual3;
+    residual3 -> gate_proj_3;
+    residual3 -> up_proj_3;
+    gate_proj_3 -> silu_3;
+    up_proj_3 -> mul_3;
+    silu_3 -> mul_3;
+    mul_3 -> down_proj_3;
+    down_proj_3 -> residual_mlp3;
+    residual3 -> residual_mlp3;
+    
+    residual_mlp3 -> output;
