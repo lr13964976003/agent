@@ -38,6 +38,8 @@ Ensure no loss of dimensional information, modules structure, and the model's in
 
 Prohibit simplification of modules (such as Expert, etc.) <<<禁止简化模块>>>
 
+Omitt the completely repeated layers, and the repetition count should be indicated. <<<省略完全重复的层，并标明重复次数>>>
+
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
 
@@ -123,4 +125,5 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
