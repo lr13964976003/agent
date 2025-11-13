@@ -1,0 +1,322 @@
+digraph llama_7b_hpipe {
+    rankdir=TB;
+    node [shape=rectangle, fontname="Arial"];
+    
+    // Input nodes
+    input [label="Input\nInput: [batch_size=6, seq_len=2048, vocab_size=32000]\nOutput: [batch_size=6, seq_len=2048, vocab_size=32000]\nGPU: all GPUs", shape=ellipse, style=filled, fillcolor=lightblue];
+    
+    // Sequence slicing for token parallelism
+    slice_sequence [label="Slice Sequence\nInput: [batch_size=6, seq_len=2048]\nOutput: [batch_size=6, seq_len=384]\nGPU: all GPUs", shape=parallelogram, style=filled, fillcolor=yellow];
+    
+    // Stage 1: P@1 (Layers 1-3)
+    subgraph cluster_stage1 {
+        label="Stage 1: P@1 (P100)";
+        style=dashed;
+        
+        layer1_embed [label="Layer 1\nEmbedding\nInput: [batch_size=6, seq_len=384, vocab_size=32000]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        
+        layer1_norm1 [label="Layer 1\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer1_qkv [label="Layer 1\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@1"];
+        layer1_attn_score [label="Layer 1\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@1"];
+        layer1_attn_out [label="Layer 1\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer1_residual1 [label="Layer 1\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        
+        layer1_norm2 [label="Layer 1\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer1_ffn_gate [label="Layer 1\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@1"];
+        layer1_ffn_up [label="Layer 1\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@1"];
+        layer1_ffn_down [label="Layer 1\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer1_residual2 [label="Layer 1\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        
+        layer2_norm1 [label="Layer 2\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer2_qkv [label="Layer 2\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@1"];
+        layer2_attn_score [label="Layer 2\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@1"];
+        layer2_attn_out [label="Layer 2\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer2_residual1 [label="Layer 2\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        
+        layer2_norm2 [label="Layer 2\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer2_ffn_gate [label="Layer 2\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@1"];
+        layer2_ffn_up [label="Layer 2\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@1"];
+        layer2_ffn_down [label="Layer 2\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer2_residual2 [label="Layer 2\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        
+        layer3_norm1 [label="Layer 3\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer3_qkv [label="Layer 3\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@1"];
+        layer3_attn_score [label="Layer 3\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@1"];
+        layer3_attn_out [label="Layer 3\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer3_residual1 [label="Layer 3\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        
+        layer3_norm2 [label="Layer 3\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer3_ffn_gate [label="Layer 3\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@1"];
+        layer3_ffn_up [label="Layer 3\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@1"];
+        layer3_ffn_down [label="Layer 3\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+        layer3_residual2 [label="Layer 3\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@1"];
+    }
+    
+    // Communication between stages
+    comm_stage1_to_stage2 [label="Communication\nP@1 → P@2\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: PCIe", shape=ellipse, style=filled, fillcolor=lightgreen];
+    
+    // Stage 2: P@2 (Layers 4-7)
+    subgraph cluster_stage2 {
+        label="Stage 2: P@2 (P100)";
+        style=dashed;
+        
+        layer4_norm1 [label="Layer 4\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer4_qkv [label="Layer 4\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@2"];
+        layer4_attn_score [label="Layer 4\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@2"];
+        layer4_attn_out [label="Layer 4\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer4_residual1 [label="Layer 4\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        
+        layer4_norm2 [label="Layer 4\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer4_ffn_gate [label="Layer 4\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@2"];
+        layer4_ffn_up [label="Layer 4\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@2"];
+        layer4_ffn_down [label="Layer 4\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer4_residual2 [label="Layer 4\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        
+        layer5_norm1 [label="Layer 5\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer5_qkv [label="Layer 5\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@2"];
+        layer5_attn_score [label="Layer 5\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@2"];
+        layer5_attn_out [label="Layer 5\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer5_residual1 [label="Layer 5\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        
+        layer5_norm2 [label="Layer 5\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer5_ffn_gate [label="Layer 5\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@2"];
+        layer5_ffn_up [label="Layer 5\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@2"];
+        layer5_ffn_down [label="Layer 5\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer5_residual2 [label="Layer 5\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        
+        layer6_norm1 [label="Layer 6\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer6_qkv [label="Layer 6\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@2"];
+        layer6_attn_score [label="Layer 6\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@2"];
+        layer6_attn_out [label="Layer 6\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer6_residual1 [label="Layer 6\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        
+        layer6_norm2 [label="Layer 6\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer6_ffn_gate [label="Layer 6\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@2"];
+        layer6_ffn_up [label="Layer 6\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@2"];
+        layer6_ffn_down [label="Layer 6\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer6_residual2 [label="Layer 6\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        
+        layer7_norm1 [label="Layer 7\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer7_qkv [label="Layer 7\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@2"];
+        layer7_attn_score [label="Layer 7\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@2"];
+        layer7_attn_out [label="Layer 7\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer7_residual1 [label="Layer 7\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        
+        layer7_norm2 [label="Layer 7\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer7_ffn_gate [label="Layer 7\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@2"];
+        layer7_ffn_up [label="Layer 7\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@2"];
+        layer7_ffn_down [label="Layer 7\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+        layer7_residual2 [label="Layer 7\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@2"];
+    }
+    
+    // Communication between stages
+    comm_stage2_to_stage3 [label="Communication\nP@2 → P@3\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: PCIe", shape=ellipse, style=filled, fillcolor=lightgreen];
+    
+    // Stage 3: P@3 (Layers 8-11)
+    subgraph cluster_stage3 {
+        label="Stage 3: P@3 (T4)";
+        style=dashed;
+        
+        layer8_norm1 [label="Layer 8\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer8_qkv [label="Layer 8\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@3"];
+        layer8_attn_score [label="Layer 8\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@3"];
+        layer8_attn_out [label="Layer 8\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer8_residual1 [label="Layer 8\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        
+        layer8_norm2 [label="Layer 8\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer8_ffn_gate [label="Layer 8\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@3"];
+        layer8_ffn_up [label="Layer 8\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@3"];
+        layer8_ffn_down [label="Layer 8\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer8_residual2 [label="Layer 8\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        
+        layer9_norm1 [label="Layer 9\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer9_qkv [label="Layer 9\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@3"];
+        layer9_attn_score [label="Layer 9\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@3"];
+        layer9_attn_out [label="Layer 9\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer9_residual1 [label="Layer 9\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        
+        layer9_norm2 [label="Layer 9\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer9_ffn_gate [label="Layer 9\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@3"];
+        layer9_ffn_up [label="Layer 9\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@3"];
+        layer9_ffn_down [label="Layer 9\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer9_residual2 [label="Layer 9\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        
+        layer10_norm1 [label="Layer 10\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer10_qkv [label="Layer 10\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@3"];
+        layer10_attn_score [label="Layer 10\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@3"];
+        layer10_attn_out [label="Layer 10\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer10_residual1 [label="Layer 10\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        
+        layer10_norm2 [label="Layer 10\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer10_ffn_gate [label="Layer 10\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@3"];
+        layer10_ffn_up [label="Layer 10\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@3"];
+        layer10_ffn_down [label="Layer 10\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer10_residual2 [label="Layer 10\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        
+        layer11_norm1 [label="Layer 11\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer11_qkv [label="Layer 11\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@3"];
+        layer11_attn_score [label="Layer 11\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@3"];
+        layer11_attn_out [label="Layer 11\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer11_residual1 [label="Layer 11\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        
+        layer11_norm2 [label="Layer 11\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer11_ffn_gate [label="Layer 11\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@3"];
+        layer11_ffn_up [label="Layer 11\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@3"];
+        layer11_ffn_down [label="Layer 11\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+        layer11_residual2 [label="Layer 11\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@3"];
+    }
+    
+    // Communication between stages
+    comm_stage3_to_stage4 [label="Communication\nP@3 → P@4\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: PCIe", shape=ellipse, style=filled, fillcolor=lightgreen];
+    
+    // Stage 4: P@4 (Layers 12-15)
+    subgraph cluster_stage4 {
+        label="Stage 4: P@4 (T4)";
+        style=dashed;
+        
+        layer12_norm1 [label="Layer 12\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer12_qkv [label="Layer 12\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@4"];
+        layer12_attn_score [label="Layer 12\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@4"];
+        layer12_attn_out [label="Layer 12\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer12_residual1 [label="Layer 12\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        
+        layer12_norm2 [label="Layer 12\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer12_ffn_gate [label="Layer 12\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@4"];
+        layer12_ffn_up [label="Layer 12\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@4"];
+        layer12_ffn_down [label="Layer 12\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer12_residual2 [label="Layer 12\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        
+        layer13_norm1 [label="Layer 13\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer13_qkv [label="Layer 13\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@4"];
+        layer13_attn_score [label="Layer 13\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@4"];
+        layer13_attn_out [label="Layer 13\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer13_residual1 [label="Layer 13\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        
+        layer13_norm2 [label="Layer 13\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer13_ffn_gate [label="Layer 13\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@4"];
+        layer13_ffn_up [label="Layer 13\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@4"];
+        layer13_ffn_down [label="Layer 13\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer13_residual2 [label="Layer 13\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        
+        layer14_norm1 [label="Layer 14\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer14_qkv [label="Layer 14\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@4"];
+        layer14_attn_score [label="Layer 14\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@4"];
+        layer14_attn_out [label="Layer 14\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer14_residual1 [label="Layer 14\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        
+        layer14_norm2 [label="Layer 14\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer14_ffn_gate [label="Layer 14\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@4"];
+        layer14_ffn_up [label="Layer 14\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@4"];
+        layer14_ffn_down [label="Layer 14\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer14_residual2 [label="Layer 14\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        
+        layer15_norm1 [label="Layer 15\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer15_qkv [label="Layer 15\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@4"];
+        layer15_attn_score [label="Layer 15\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@4"];
+        layer15_attn_out [label="Layer 15\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer15_residual1 [label="Layer 15\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        
+        layer15_norm2 [label="Layer 15\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer15_ffn_gate [label="Layer 15\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@4"];
+        layer15_ffn_up [label="Layer 15\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@4"];
+        layer15_ffn_down [label="Layer 15\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+        layer15_residual2 [label="Layer 15\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@4"];
+    }
+    
+    // Communication between stages
+    comm_stage4_to_stage5 [label="Communication\nP@4 → P@5\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: PCIe", shape=ellipse, style=filled, fillcolor=lightgreen];
+    
+    // Stage 5: P@5 (Layers 16-19)
+    subgraph cluster_stage5 {
+        label="Stage 5: P@5 (P100)";
+        style=dashed;
+        
+        layer16_norm1 [label="Layer 16\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer16_qkv [label="Layer 16\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@5"];
+        layer16_attn_score [label="Layer 16\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@5"];
+        layer16_attn_out [label="Layer 16\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer16_residual1 [label="Layer 16\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        
+        layer16_norm2 [label="Layer 16\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer16_ffn_gate [label="Layer 16\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@5"];
+        layer16_ffn_up [label="Layer 16\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@5"];
+        layer16_ffn_down [label="Layer 16\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer16_residual2 [label="Layer 16\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        
+        layer17_norm1 [label="Layer 17\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer17_qkv [label="Layer 17\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@5"];
+        layer17_attn_score [label="Layer 17\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@5"];
+        layer17_attn_out [label="Layer 17\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer17_residual1 [label="Layer 17\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        
+        layer17_norm2 [label="Layer 17\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer17_ffn_gate [label="Layer 17\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@5"];
+        layer17_ffn_up [label="Layer 17\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@5"];
+        layer17_ffn_down [label="Layer 17\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer17_residual2 [label="Layer 17\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        
+        layer18_norm1 [label="Layer 18\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer18_qkv [label="Layer 18\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@5"];
+        layer18_attn_score [label="Layer 18\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@5"];
+        layer18_attn_out [label="Layer 18\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer18_residual1 [label="Layer 18\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        
+        layer18_norm2 [label="Layer 18\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer18_ffn_gate [label="Layer 18\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@5"];
+        layer18_ffn_up [label="Layer 18\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@5"];
+        layer18_ffn_down [label="Layer 18\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer18_residual2 [label="Layer 18\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        
+        layer19_norm1 [label="Layer 19\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer19_qkv [label="Layer 19\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@5"];
+        layer19_attn_score [label="Layer 19\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@5"];
+        layer19_attn_out [label="Layer 19\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer19_residual1 [label="Layer 19\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        
+        layer19_norm2 [label="Layer 19\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer19_ffn_gate [label="Layer 19\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@5"];
+        layer19_ffn_up [label="Layer 19\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@5"];
+        layer19_ffn_down [label="Layer 19\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+        layer19_residual2 [label="Layer 19\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@5"];
+    }
+    
+    // Communication between stages
+    comm_stage5_to_stage6 [label="Communication\nP@5 → P@6\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: PCIe", shape=ellipse, style=filled, fillcolor=lightgreen];
+    
+    // Stage 6: P@6 (Layers 20-23)
+    subgraph cluster_stage6 {
+        label="Stage 6: P@6 (P100)";
+        style=dashed;
+        
+        layer20_norm1 [label="Layer 20\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer20_qkv [label="Layer 20\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@6"];
+        layer20_attn_score [label="Layer 20\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@6"];
+        layer20_attn_out [label="Layer 20\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer20_residual1 [label="Layer 20\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        
+        layer20_norm2 [label="Layer 20\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer20_ffn_gate [label="Layer 20\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@6"];
+        layer20_ffn_up [label="Layer 20\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@6"];
+        layer20_ffn_down [label="Layer 20\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer20_residual2 [label="Layer 20\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        
+        layer21_norm1 [label="Layer 21\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer21_qkv [label="Layer 21\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@6"];
+        layer21_attn_score [label="Layer 21\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@6"];
+        layer21_attn_out [label="Layer 21\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer21_residual1 [label="Layer 21\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        
+        layer21_norm2 [label="Layer 21\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer21_ffn_gate [label="Layer 21\nFFN Gate\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@6"];
+        layer21_ffn_up [label="Layer 21\nFFN Up\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nGPU: P@6"];
+        layer21_ffn_down [label="Layer 21\nFFN Down\nInput: [batch_size=6, seq_len=384, ffn_hidden_size=11008]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer21_residual2 [label="Layer 21\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        
+        layer22_norm1 [label="Layer 22\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer22_qkv [label="Layer 22\nQKV Linear\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@6"];
+        layer22_attn_score [label="Layer 22\nAttention Score\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nGPU: P@6"];
+        layer22_attn_out [label="Layer 22\nAttention Output\nInput: [batch_size=6, seq_len=384, 32 heads, d_k=128]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer22_residual1 [label="Layer 22\nResidual Add\nInput: [batch_size=6, seq_len=384, hidden_size=4096] x2\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        
+        layer22_norm2 [label="Layer 22\nRMSNorm\nInput: [batch_size=6, seq_len=384, hidden_size=4096]\nOutput: [batch_size=6, seq_len=384, hidden_size=4096]\nGPU: P@6"];
+        layer22_ffn_gate [label="Layer 22\nFFN Gate\nInput: [batch_size=6, seq

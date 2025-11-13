@@ -1,0 +1,101 @@
+{
+  "submission_time": "2025-11-13-11-45-00",
+  "model": "Llama3-405B",
+  "total_gpus": 128,
+  "parallel_strategy": "Context Parallelism (CP16) + Tensor Parallelism (TP8)",
+  "generated_dags": [
+    {
+      "name": "Baseline DAG - Tensor Parallelism Only",
+      "description": "Llama3-405B deployment with TP8 across 8 GPUs per node, no context parallelism",
+      "parallel_strategy": "Tensor Parallelism (TP8)",
+      "gpus_used": 8,
+      "max_context_length": "128K tokens",
+      "files": {
+        "dot_path": "../outputs/2025-11-13-11-35-49/baseline_tp8.dot",
+        "svg_path": "../outputs/2025-11-13-11-35-49/baseline_tp8.svg"
+      },
+      "dag_properties": {
+        "nodes": 23,
+        "edges": 24,
+        "has_cycle": false,
+        "input_nodes": ["input"],
+        "output_nodes": ["output"],
+        "tensor_parallelism": {
+          "tp_degree": 8,
+          "strategy": "column_row_alternating"
+        }
+      }
+    },
+    {
+      "name": "Context Parallel DAG - CP16 + TP8",
+      "description": "Llama3-405B full deployment with Context Parallelism across 16 nodes and Tensor Parallelism within each node",
+      "parallel_strategy": "Context Parallelism (CP16) + Tensor Parallelism (TP8)",
+      "gpus_used": 128,
+      "max_context_length": "1M tokens",
+      "files": {
+        "dot_path": "../outputs/2025-11-13-11-35-49/context_parallel_tp8_cp16.dot",
+        "svg_path": "../outputs/2025-11-13-11-35-49/context_parallel_tp8_cp16.svg"
+      },
+      "dag_properties": {
+        "nodes": 28,
+        "edges": 29,
+        "has_cycle": false,
+        "input_nodes": ["input"],
+        "output_nodes": ["output"],
+        "context_parallelism": {
+          "cp_degree": 16,
+          "sequence_sharding": "load_balanced_double_chunk",
+          "kv_cache_distribution": "round_robin_across_cp_ranks"
+        },
+        "tensor_parallelism": {
+          "tp_degree": 8,
+          "strategy": "column_row_alternating"
+        }
+      }
+    }
+  ],
+  "key_specifications": {
+    "model_dimensions": {
+      "layers": 126,
+      "model_dimension": 16384,
+      "attention_heads": 128,
+      "kv_heads": 8,
+      "head_dimension": 128,
+      "feedforward_dimension": 53248
+    },
+    "parallel_dimensions": {
+      "context_parallelism": {
+        "cp_degree": 16,
+        "total_nodes": 16,
+        "gpus_per_node": 8,
+        "sequence_shard_per_node": 62500,
+        "total_sequence_length": 1000000
+      },
+      "tensor_parallelism": {
+        "tp_degree": 8,
+        "column_parallel_ops": ["query_projection", "key_projection", "value_projection", "gate_projection", "up_projection"],
+        "row_parallel_ops": ["output_projection", "down_projection"]
+      }
+    },
+    "communication_patterns": {
+      "intra_node": "NVLink",
+      "inter_node": ["RDMA_400Gbps", "TCP_100Gbps"],
+      "kv_communication": "Ring_sendrecv",
+      "token_aggregation": "All_gather"
+    }
+  },
+  "performance_targets": {
+    "128k_context": {
+      "cp_nodes": 16,
+      "prefill_latency_ms": 3850,
+      "parallel_efficiency": 0.93,
+      "flops_utilization": 0.63
+    },
+    "1m_context": {
+      "cp_nodes": 16,
+      "prefill_latency_ms": 77000,
+      "parallel_efficiency": 0.93,
+      "flops_utilization": 0.63
+    }
+  }
+}

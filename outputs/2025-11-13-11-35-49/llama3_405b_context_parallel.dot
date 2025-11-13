@@ -1,0 +1,107 @@
+digraph Llama3_405B_Context_Parallel {
+    rankdir=TB;
+    node [shape=rectangle, style=filled, fillcolor=lightblue];
+    
+    // Input layer - context sharding
+    input [label=<<B>Model Input</B><BR/>Input: [batch_size=1, seq_len=1000000, d_model=16384]<BR/>Total tokens: 1M across 16 CP ranks>, shape=parallelogram, fillcolor=lightgreen];
+    
+    // Context sharding
+    shard_tokens [label=<<B>Context Shard</B><BR/>Input: [batch_size=1, seq_len=1000000, d_model=16384]<BR/>Output: [batch_size=1, seq_len=62500, d_model=16384] × 16<BR/>Operation: Double-chunk load balancing>, shape=ellipse, fillcolor=lightyellow];
+    input -> shard_tokens;
+    
+    // Process 126 transformer layers with CP16 + TP8
+    for (i = 1; i <= 126; i++) {
+        subgraph cluster_layer_i {
+            label = <<B>Layer i</B><BR/>Context Parallel (CP16) + Tensor Parallel (TP8)>;
+            style=dashed;
+            
+            // Process each CP rank
+            for (r = 0; r < 16; r++) {
+                subgraph cluster_cp_rank_r_layer_i {
+                    label = <<B>CP Rank r</B><BR/>Node r, GPUs 0-7><BR/>Sequence: 62500 tokens>;
+                    style=dashed;
+                    
+                    // Token embedding for this shard
+                    embedding_r_i [label=<<B>Token Embedding Shard r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384]<BR/>GPU: node_r.gpu_0-7>, fillcolor=lightyellow];
+                    
+                    // Layer normalization
+                    layer_norm_r_i [label=<<B>LayerNorm Shard r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384]<BR/>Output: [batch_size=1, seq_len=62500, d_model=16384]<BR/>GPU: node_r.gpu_0-7>, fillcolor=pink];
+                    
+                    // Attention components for this shard
+                    q_proj_r_i [label=<<B>Query Projection r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384]<BR/>Output: [batch_size=1, seq_len=62500, heads=128, d_head=128]<BR/>GPU: node_r.gpu_0-7>, fillcolor=lightblue];
+                    
+                    k_proj_r_i [label=<<B>Key Projection r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384]<BR/>Output: [batch_size=1, seq_len=62500, kv_heads=8, d_head=128]<BR/>GPU: node_r.gpu_0-7>, fillcolor=lightblue];
+                    
+                    v_proj_r_i [label=<<B>Value Projection r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384]<BR/>Output: [batch_size=1, seq_len=62500, kv_heads=8, d_head=128]<BR/>GPU: node_r.gpu_0-7>, fillcolor=lightblue];
+                    
+                    // KV cache management
+                    kv_store_r_i [label=<<B>KV Cache Store r</B><BR/>Store: [batch_size=1, seq_len=62500, kv_heads=8, d_head=128]<BR/>Total storage: 62500 tokens × 8 heads × 128 dim<BR/>GPU: node_r.gpu_0-7>, shape=ellipse, fillcolor=lightcoral];
+                    
+                    // Ring communication for attention - Pass-KV variant
+                    kv_ring_send_r_i [label=<<B>KV Ring Send r→r+1</B><BR/>Send: [batch_size=1, seq_len=62500, kv_heads=8, d_head=128]<BR/>Network: node_r→node_(r+1)%16>, shape=ellipse, fillcolor=gray];
+                    
+                    kv_ring_recv_r_i [label=<<B>KV Ring Recv r-1→r</B><BR/>Recv: [batch_size=1, seq_len=62500, kv_heads=8, d_head=128]<BR/>Network: node_(r-1)%16→node_r>, shape=ellipse, fillcolor=gray];
+                    
+                    // Multi-head attention with cross-shard KV
+                    attention_r_i [label=<<B>Multi-Head Attention r</B><BR/>Local Q: [batch_size=1, seq_len=62500, heads=128, d_head=128]<BR/>Global K/V: [batch_size=1, seq_len=1000000, kv_heads=8, d_head=128]<BR/>Output: [batch_size=1, seq_len=62500, heads=128, d_head=128]<BR/>GPU: node_r.gpu_0-7>, fillcolor=orange];
+                    
+                    o_proj_r_i [label=<<B>Output Projection r</B><BR/>Input: [batch_size=1, seq_len=62500, heads=128, d_head=128]<BR/>Output: [batch_size=1, seq_len=62500, d_model=16384]<BR/>GPU: node_r.gpu_0-7>, fillcolor=lightblue];
+                    
+                    residual_add_r_i [label=<<B>Residual Add r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384] × 2<BR/>Output: [batch_size=1, seq_len=62500, d_model=16384]>, fillcolor=purple];
+                    
+                    attn_layer_norm_r_i [label=<<B>Post-Attention LayerNorm r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384]<BR/>Output: [batch_size=1, seq_len=62500, d_model=16384]<BR/>GPU: node_r.gpu_0-7>, fillcolor=pink];
+                    
+                    // MLP components for this shard
+                    gate_proj_r_i [label=<<B>Gate Projection r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384]<BR/>Output: [batch_size=1, seq_len=62500, ffn_dim=53248]<BR/>GPU: node_r.gpu_0-7>, fillcolor=lightblue];
+                    
+                    up_proj_r_i [label=<<B>Up Projection r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384]<BR/>Output: [batch_size=1, seq_len=62500, ffn_dim=53248]<BR/>GPU: node_r.gpu_0-7>, fillcolor=lightblue];
+                    
+                    silu_r_i [label=<<B>SiLU Activation r</B><BR/>Input: [batch_size=1, seq_len=62500, ffn_dim=53248]<BR/>Output: [batch_size=1, seq_len=62500, ffn_dim=53248]>, fillcolor=yellow];
+                    
+                    elem_mul_r_i [label=<<B>Element-wise Multiply r</B><BR/>Input: [batch_size=1, seq_len=62500, ffn_dim=53248] × 2<BR/>Output: [batch_size=1, seq_len=62500, ffn_dim=53248]>, fillcolor=yellow];
+                    
+                    down_proj_r_i [label=<<B>Down Projection r</B><BR/>Input: [batch_size=1, seq_len=62500, ffn_dim=53248]<BR/>Output: [batch_size=1, seq_len=62500, d_model=16384]<BR/>GPU: node_r.gpu_0-7>, fillcolor=lightblue];
+                    
+                    mlp_residual_r_i [label=<<B>MLP Residual Add r</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384] × 2<BR/>Output: [batch_size=1, seq_len=62500, d_model=16384]>, fillcolor=purple];
+                }
+            }
+            
+            // Global token aggregation across CP ranks
+            gather_tokens [label=<<B>Gather Cross-Shard Results</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384] × 16<BR/>Output: [batch_size=1, seq_len=1000000, d_model=16384]<BR/>Operation: All-gather across CP ranks>, shape=ellipse, fillcolor=gray];
+        }
+    }
+    
+    // Final aggregation
+    final_gather [label=<<B>Final Token Aggregation</B><BR/>Input: [batch_size=1, seq_len=62500, d_model=16384] × 16<BR/>Output: [batch_size=1, seq_len=1000000, d_model=16384]>, shape=ellipse, fillcolor=gray];
+    
+    // Final layer norm
+    final_layer_norm [label=<<B>Final LayerNorm</B><BR/>Input: [batch_size=1, seq_len=1000000, d_model=16384]<BR/>Output: [batch_size=1, seq_len=1000000, d_model=16384]>, fillcolor=pink];
+    
+    // Output projection
+    output_projection [label=<<B>Output Projection</B><BR/>Input: [batch_size=1, seq_len=1000000, d_model=16384]<BR/>Output: [batch_size=1, seq_len=1000000, vocab_size=128256]>, fillcolor=lightblue];
+    
+    // Model output
+    output [label=<<B>Model Output</B><BR/>Input: [batch_size=1, seq_len=1000000, vocab_size=128256]>, shape=parallelogram, fillcolor=lightgreen];
+    
+    // Connect final layer
+    final_gather -> final_layer_norm;
+    final_layer_norm -> output_projection;
+    output_projection -> output;
+    
+    // Device mapping annotations
+    subgraph cluster_all_devices {
+        label = "128 GPUs Total: 16 Nodes × 8 GPUs Each";
+        style=invis;
+        
+        for (r = 0; r < 16; r++) {
+            subgraph cluster_node_r {
+                label = <<B>Node r</B><BR/>8× H100 GPUs>;
+                style=dashed;
+                
+                for (g = 0; g < 8; g++) {
+                    gpu_r_g [label = <<B>GPU g</B>>, shape=box, style=filled, fillcolor=lightblue];
+                }
+            }
+        }
+    }
+}

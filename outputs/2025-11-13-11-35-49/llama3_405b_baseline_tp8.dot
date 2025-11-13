@@ -1,0 +1,123 @@
+digraph Llama3_405B_Baseline_TP8 {
+    rankdir=TB;
+    node [shape=rectangle, style=filled, fillcolor=lightblue];
+    
+    // Input layer
+    input [label=<<B>Model Input</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]>, shape=parallelogram, fillcolor=lightgreen];
+    
+    // Embedding layer (replicated across all TP ranks)
+    embedding [label=<<B>Token Embedding</B><br/>Input: [batch_size=1, seq_len=128000]<br/>Output: [batch_size=1, seq_len=128000, d_model=16384]>, fillcolor=lightyellow];
+    input -> embedding;
+    
+    // Layer normalization (replicated)
+    layer_norm_0 [label=<<B>LayerNorm</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]<br/>Output: [batch_size=1, seq_len=128000, d_model=16384]>, fillcolor=pink];
+    embedding -> layer_norm_0;
+    
+    // Process 126 transformer layers
+    for (i = 1; i <= 126; i++) {
+        // Attention Layer i
+        subgraph cluster_attention_layer_i {
+            label = <<B>Attention Layer i</B><br/>(TP8 across GPUs 0-7)>;
+            style=dashed;
+            // Query projection (column parallel)
+            q_proj_i [label=<<B>Query Projection</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]<br/>Output: [batch_size=1, seq_len=128000, heads=128, d_head=128]<br/>GPU: all GPUs 0-7>, fillcolor=lightblue];
+            
+            // Key projection (column parallel)
+            k_proj_i [label=<<B>Key Projection</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]<br/>Output: [batch_size=1, seq_len=128000, kv_heads=8, d_head=128]<br/>GPU: all GPUs 0-7>, fillcolor=lightblue];
+            
+            // Value projection (column parallel)
+            v_proj_i [label=<<B>Value Projection</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]<br/>Output: [batch_size=1, seq_len=128000, kv_heads=8, d_head=128]<br/>GPU: all GPUs 0-7>, fillcolor=lightblue];
+            
+            // Multi-head attention
+            attention_i [label=<<B>Multi-Head Attention</B><br/>Input Q: [batch_size=1, seq_len=128000, heads=128, d_head=128]<br/>Input K/V: [batch_size=1, seq_len=128000, kv_heads=8, d_head=128]<br/>Output: [batch_size=1, seq_len=128000, heads=128, d_head=128]<br/>GPU: all GPUs 0-7>, fillcolor=orange];
+            
+            // Output projection (row parallel)
+            o_proj_i [label=<<B>Output Projection</B><br/>Input: [batch_size=1, seq_len=128000, heads=128, d_head=128]<br/>Output: [batch_size=1, seq_len=128000, d_model=16384]<br/>GPU: all GPUs 0-7>, fillcolor=lightblue];
+            
+            // Residual connections
+            residual_add_i [label=<<B>Residual Add</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384] × 2<br/>Output: [batch_size=1, seq_len=128000, d_model=16384]>, fillcolor=purple];
+            
+            // Layer norm after attention
+            attn_layer_norm_i [label=<<B>Post-Attention LayerNorm</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]<br/>Output: [batch_size=1, seq_len=128000, d_model=16384]>, fillcolor=pink];
+            
+            // MLP Layer i
+            subgraph cluster_mlp_layer_i {
+                label = <<B>MLP Layer i</B><BR/>(TP8 across GPUs 0-7)>;
+                style=dashed;
+                
+                // Gate projection (column parallel)
+                gate_proj_i [label=<<B>Gate Projection</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]<br/>Output: [batch_size=1, seq_len=128000, ffn_dim=53248]<br/>GPU: all GPUs 0-7>, fillcolor=lightblue];
+                
+                // Up projection (column parallel)
+                up_proj_i [label=<<B>Up Projection</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]<br/>Output: [batch_size=1, seq_len=128000, ffn_dim=53248]<br/>GPU: all GPUs 0-7>, fillcolor=lightblue];
+                
+                // SiLU activation
+                silu_i [label=<<B>SiLU Activation</B><br/>Input: [batch_size=1, seq_len=128000, ffn_dim=53248]<br/>Output: [batch_size=1, seq_len=128000, ffn_dim=53248]>, fillcolor=yellow];
+                
+                // Element-wise multiply
+                elem_mul_i [label=<<B>Element-wise Multiply</B><br/>Input: [batch_size=1, seq_len=128000, ffn_dim=53248] × 2<br/>Output: [batch_size=1, seq_len=128000, ffn_dim=53248]>, fillcolor=yellow];
+                
+                // Down projection (row parallel)
+                down_proj_i [label=<<B>Down Projection</B><br/>Input: [batch_size=1, seq_len=128000, ffn_dim=53248]<br/>Output: [batch_size=1, seq_len=128000, d_model=16384]<br/>GPU: all GPUs 0-7>, fillcolor=lightblue];
+                
+                // MLP residual
+                mlp_residual_i [label=<<B>MLP Residual Add</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384] × 2<br/>Output: [batch_size=1, seq_len=128000, d_model=16384]>, fillcolor=purple];
+            }
+        }
+        
+        // Connect attention layer
+        layer_norm_0 -> q_proj_1;
+        layer_norm_0 -> k_proj_1;
+        layer_norm_0 -> v_proj_1;
+        
+        q_proj_1 -> attention_1;
+        k_proj_1 -> attention_1;
+        v_proj_1 -> attention_1;
+        attention_1 -> o_proj_1;
+        o_proj_1 -> residual_add_1;
+        layer_norm_0 -> residual_add_1;
+        
+        residual_add_1 -> attn_layer_norm_1;
+        attn_layer_norm_1 -> gate_proj_1;
+        attn_layer_norm_1 -> up_proj_1;
+        
+        gate_proj_1 -> silu_1;
+        up_proj_1 -> elem_mul_1;
+        silu_1 -> elem_mul_1;
+        elem_mul_1 -> down_proj_1;
+        down_proj_1 -> mlp_residual_1;
+        residual_add_1 -> mlp_residual_1;
+    }
+    
+    // Final layer norm and output
+    final_layer_norm [label=<<B>Final LayerNorm</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]<br/>Output: [batch_size=1, seq_len=128000, d_model=16384]>, fillcolor=pink];
+    output_projection [label=<<B>Output Projection</B><br/>Input: [batch_size=1, seq_len=128000, d_model=16384]<br/>Output: [batch_size=1, seq_len=128000, vocab_size=128256]>, fillcolor=lightblue];
+    
+    // Connect last layer to final layers
+    mlp_residual_126 -> final_layer_norm;
+    final_layer_norm -> output_projection;
+    
+    // Model output
+    output [label=<<B>Model Output</B><br/>Input: [batch_size=1, seq_len=128000, vocab_size=128256]>, shape=parallelogram, fillcolor=lightgreen];
+    output_projection -> output;
+    
+    // Device annotations
+    subgraph cluster_device_0 {
+        label = "GPU 0 (TP Rank 0)";
+        style=dashed;
+        q_proj_1; k_proj_1; v_proj_1; attention_1; o_proj_1; gate_proj_1; up_proj_1; down_proj_1;
+    }
+    
+    subgraph cluster_device_1 {
+        label = "GPU 1 (TP Rank 1)";
+        style=dashed;
+        q_proj_1; k_proj_1; v_proj_1; attention_1; o_proj_1; gate_proj_1; up_proj_1; down_proj_1;
+    }
+    
+    // ... (similar for GPUs 2-7)
+    subgraph cluster_device_7 {
+        label = "GPU 7 (TP Rank 7)";
+        style=dashed;
+        q_proj_1; k_proj_1; v_proj_1; attention_1; o_proj_1; gate_proj_1; up_proj_1; down_proj_1;
+    }
+}

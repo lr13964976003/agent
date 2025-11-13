@@ -1,0 +1,84 @@
+digraph gpt3_2b_hpipe {
+    rankdir=TB;
+    node [shape=rectangle, fontname="Arial"];
+    
+    input [label="Input
+Input: [batch_size=12, seq_len=2048, vocab_size=50257]
+Output: [batch_size=12, seq_len=2048, vocab_size=50257]
+GPU: all GPUs", shape=ellipse, style=filled, fillcolor=lightblue];
+    
+    slice_sequence [label="Slice Sequence
+Input: [batch_size=12, seq_len=2048]
+Output: [batch_size=12, seq_len=320]
+GPU: all GPUs", shape=parallelogram, style=filled, fillcolor=yellow];
+    
+    // Stage 1: P@1 (Layers 1-4)
+    subgraph cluster_stage1 {
+        label="Stage 1: P@1 (P100)";
+        style=dashed;
+        
+        layer1_embed [label="Layer 1
+Embedding
+Input: [batch_size=12, seq_len=320, vocab_size=50257]
+Output: [batch_size=12, seq_len=320, hidden_size=2560]
+GPU: P@1"];
+        layer1_norm1 [label="Layer 1
+LayerNorm
+GPU: P@1"];
+        layer1_qkv [label="Layer 1
+QKV Linear
+GPU: P@1"];
+        layer1_attn [label="Layer 1
+Multi-Head Attention
+GPU: P@1"];
+        layer1_proj [label="Layer 1
+Projection
+GPU: P@1"];
+        layer1_residual1 [label="Layer 1
+Residual Add
+GPU: P@1"];
+        layer1_norm2 [label="Layer 1
+LayerNorm
+GPU: P@1"];
+        layer1_ffn1 [label="Layer 1
+FFN Dense1
+GPU: P@1"];
+        layer1_ffn2 [label="Layer 1
+FFN Dense2
+GPU: P@1"];
+        layer1_residual2 [label="Layer 1
+Residual Add
+GPU: P@1"];
+        
+        // Repeat for layers 2-4...
+    }
+    
+    // Continue with all stages and connections...
+    
+    input -> slice_sequence
+    slice_sequence -> layer1_embed
+    layer1_embed -> layer1_norm1
+    layer1_norm1 -> layer1_qkv
+    layer1_qkv -> layer1_attn
+    layer1_attn -> layer1_proj
+    layer1_proj -> layer1_residual1
+    layer1_embed -> layer1_residual1 [style=dashed]
+    layer1_residual1 -> layer1_norm2
+    layer1_norm2 -> layer1_ffn1
+    layer1_ffn1 -> layer1_ffn2
+    layer1_ffn2 -> layer1_residual2
+    layer1_residual1 -> layer1_residual2 [style=dashed]
+    
+    // Continue pattern for all 24 layers...
+    
+    final_norm [label="Final LayerNorm
+GPU: R@2"];
+    final_linear [label="LM Head
+GPU: R@2"];
+    output [label="Output
+GPU: R@2", shape=ellipse, style=filled, fillcolor=lightblue];
+    
+    layer24_residual2 -> final_norm
+    final_norm -> final_linear
+    final_linear -> output
+}

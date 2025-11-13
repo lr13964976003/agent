@@ -1,0 +1,186 @@
+{
+  "deployment_configuration": {
+    "models": {
+      "llama_7b": {
+        "model_name": "LLaMA-7B",
+        "total_layers": 32,
+        "hidden_size": 4096,
+        "ffn_hidden_size": 11008,
+        "num_attention_heads": 32,
+        "vocab_size": 32000,
+        "max_position_embeddings": 2048,
+        "parallel_strategy": "pipeline_parallelism_token_dimension",
+        "batch_size": 6
+      },
+      "gpt3_2b": {
+        "model_name": "GPT3-2B",
+        "total_layers": 24,
+        "hidden_size": 2048,
+        "ffn_hidden_size": 8192,
+        "num_attention_heads": 16,
+        "vocab_size": 50257,
+        "max_position_embeddings": 2048,
+        "parallel_strategy": "pipeline_parallelism_token_dimension",
+        "batch_size": 12
+      }
+    },
+    "hardware_cluster": {
+      "devices": [
+        {
+          "device_id": "P100_1",
+          "device_type": "P100",
+          "host": "host_1",
+          "memory_capacity_mb": 12288,
+          "compute_capability": 6.0,
+          "pcie_bandwidth_gbps": 15.75
+        },
+        {
+          "device_id": "P100_2",
+          "device_type": "P100",
+          "host": "host_1",
+          "memory_capacity_mb": 12288,
+          "compute_capability": 6.0,
+          "pcie_bandwidth_gbps": 15.75
+        },
+        {
+          "device_id": "P100_3",
+          "device_type": "P100",
+          "host": "host_1",
+          "memory_capacity_mb": 12288,
+          "compute_capability": 6.0,
+          "pcie_bandwidth_gbps": 15.75
+        },
+        {
+          "device_id": "P100_4",
+          "device_type": "P100",
+          "host": "host_1",
+          "memory_capacity_mb": 12288,
+          "compute_capability": 6.0,
+          "pcie_bandwidth_gbps": 15.75
+        },
+        {
+          "device_id": "RTX3090_1",
+          "device_type": "RTX3090",
+          "host": "host_2",
+          "memory_capacity_mb": 24576,
+          "compute_capability": 8.6,
+          "pcie_bandwidth_gbps": 31.5
+        },
+        {
+          "device_id": "RTX3090_2",
+          "device_type": "RTX3090",
+          "host": "host_2",
+          "memory_capacity_mb": 24576,
+          "compute_capability": 8.6,
+          "pcie_bandwidth_gbps": 31.5
+        }
+      ],
+      "network_topology": {
+        "inter_host_bandwidth_gbps": 1.0,
+        "intra_host_bandwidth_gbps": 15.75,
+        "hosts": [
+          {
+            "host_id": "host_1",
+            "devices": ["P100_1", "P100_2", "P100_3", "P100_4"]
+          },
+          {
+            "host_id": "host_2",
+            "devices": ["RTX3090_1", "RTX3090_2"]
+          }
+        ]
+      }
+    },
+    "layer_distribution": {
+      "llama_7b": {
+        "partition_strategy": "dynamic_programming_heterogeneous",
+        "layer_ranges": [
+          {"device_id": "P100_1", "layers": [1, 4], "layer_count": 4},
+          {"device_id": "P100_2", "layers": [5, 9], "layer_count": 5},
+          {"device_id": "P100_3", "layers": [10, 14], "layer_count": 5},
+          {"device_id": "P100_4", "layers": [15, 18], "layer_count": 4},
+          {"device_id": "RTX3090_1", "layers": [19, 32], "layer_count": 14}
+        ],
+        "parameters_per_layer_mb": 85.7,
+        "activation_size_mb": 8.4
+      },
+      "gpt3_2b": {
+        "partition_strategy": "dynamic_programming_heterogeneous",
+        "layer_ranges": [
+          {"device_id": "P100_1", "layers": [1, 4], "layer_count": 4},
+          {"device_id": "P100_2", "layers": [5, 8], "layer_count": 4},
+          {"device_id": "P100_3", "layers": [9, 12], "layer_count": 4},
+          {"device_id": "P100_4", "layers": [13, 16], "layer_count": 4},
+          {"device_id": "RTX3090_1", "layers": [17, 20], "layer_count": 4},
+          {"device_id": "RTX3090_2", "layers": [21, 24], "layer_count": 4}
+        ],
+        "parameters_per_layer_mb": 54.2,
+        "activation_size_mb": 4.2
+      }
+    },
+    "sequence_scheduling": {
+      "strategy": "dynamic_programming_optimal_slicing",
+      "max_sequence_length": 2048,
+      "compute_scaling_factor": "linear_with_position",
+      "slicing_algorithm": {
+        "type": "token_level_pipeline",
+        "objective": "minimize_total_latency",
+        "constraints": [
+          "similar_execution_time_per_slice",
+          "maintain_causal_attention",
+          "cache_kv_states"
+        ]
+      },
+      "optimal_slice_configurations": {
+        "llama_7b": {
+          "slice_lengths": [256, 248, 240, 232, 224, 216, 208, 200, 192, 184, 176, 168, 160, 152, 144, 136, 128],
+          "slice_count": 15,
+          "pipeline_stages": 6
+        },
+        "gpt3_2b": {
+          "slice_lengths": [256, 252, 248, 244, 240, 236, 232, 228, 224, 220, 216, 212, 208, 204, 200, 196, 192],
+          "slice_count": 12,
+          "pipeline_stages": 6
+        }
+      }
+    },
+    "runtime_configuration": {
+      "pipeline_mechanism": {
+        "type": "token_dimension_pipeline",
+        "stages": 6,
+        "micro_batches": "dynamic_per_slice",
+        "communication_pattern": "point_to_point_between_stages"
+      },
+      "memory_management": {
+        "kv_cache_size_mb": 2048,
+        "activation_buffering": "double_buffer",
+        "parameter_sharding": "layer_local"
+      },
+      "communication_protocol": {
+        "intra_host": "nccl_pcie",
+        "inter_host": "tcp_ip",
+        "tensor_format": "fp16",
+        "compression": "none"
+      }
+    },
+    "baseline_configurations": {
+      "base": {
+        "strategy": "sequential_uniform",
+        "description": "Uniform LLM distribution, sequential inference"
+      },
+      "gpipe": {
+        "strategy": "micro_batch_pipeline",
+        "micro_batch_size": 1,
+        "uniform_layer_distribution": true
+      },
+      "megatron_lm": {
+        "strategy": "tensor_parallelism_plus_gpipe",
+        "tensor_parallel_size": 2,
+        "pipeline_parallel_size": 3
+      },
+      "terapipe": {
+        "strategy": "token_level_pipeline_uniform",
+        "uniform_slice_size": 128
+      }
+    }
+  }
+}

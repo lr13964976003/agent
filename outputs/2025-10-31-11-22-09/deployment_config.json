@@ -1,0 +1,195 @@
+{
+  "deployment_configurations": {
+    "LLaMA-7B": {
+      "model_spec": {
+        "name": "LLaMA-7B",
+        "parameters": "7B",
+        "layers": 32,
+        "hidden_size": 4096,
+        "ffn_hidden_size": 11008,
+        "attention_heads": 32,
+        "sequence_length": 2048,
+        "vocab_size": 32000
+      },
+      "parallel_strategy": {
+        "type": "pipeline_parallelism",
+        "dimension": "token",
+        "algorithm": "HPipe",
+        "parameters": {
+          "num_stages": 6,
+          "micro_batch_size": 1,
+          "sequence_slicing": "dynamic",
+          "layer_distribution": "optimized"
+        }
+      },
+      "device_mapping": {
+        "devices": [
+          {"id": "P@1", "type": "P100", "memory": 12193, "compute_capability": "6.0", "host": "host1"},
+          {"id": "P@2", "type": "P100", "memory": 12193, "compute_capability": "6.0", "host": "host1"},
+          {"id": "P@3", "type": "P100", "memory": 12193, "compute_capability": "6.0", "host": "host1"},
+          {"id": "P@4", "type": "P100", "memory": 12193, "compute_capability": "6.0", "host": "host1"},
+          {"id": "R@1", "type": "RTX3090", "memory": 24268, "compute_capability": "8.6", "host": "host2"},
+          {"id": "R@2", "type": "RTX3090", "memory": 24268, "compute_capability": "8.6", "host": "host2"}
+        ],
+        "layer_assignment": {
+          "P@1": {"layers": [1, 2, 3], "layer_count": 3, "memory_required": 1873},
+          "P@2": {"layers": [4, 5, 6, 7], "layer_count": 4, "memory_required": 2897},
+          "P@3": {"layers": [8, 9, 10, 11, 12], "layer_count": 5, "memory_required": 3143},
+          "P@4": {"layers": [13, 14, 15, 16, 17, 18], "layer_count": 6, "memory_required": 1991},
+          "R@1": {"layers": [19, 20, 21, 22, 23, 24, 25], "layer_count": 7, "memory_required": 8713},
+          "R@2": {"layers": [26, 27, 28, 29, 30, 31, 32], "layer_count": 7, "memory_required": 10087}
+        }
+      },
+      "sequence_slicing": {
+        "total_length": 2048,
+        "slicing_scheme": [384, 360, 336, 312, 288, 264, 240, 216, 192, 160],
+        "algorithm": "dynamic_programming",
+        "execution_time_constraint": "tₘ=240ms"
+      },
+      "communication": {
+        "intra_host": {"type": "PCIe", "bandwidth": 32, "unit": "GB/s"},
+        "inter_host": {"type": "Ethernet", "bandwidth": 1000, "unit": "Mbps"},
+        "activation_size": 8192,
+        "transmission_overhead": 0.05
+      }
+    },
+    "GPT3-2B": {
+      "model_spec": {
+        "name": "GPT3-2B",
+        "parameters": "2.7B",
+        "layers": 24,
+        "hidden_size": 2560,
+        "ffn_hidden_size": 10240,
+        "attention_heads": 32,
+        "sequence_length": 2048,
+        "vocab_size": 50257
+      },
+      "parallel_strategy": {
+        "type": "pipeline_parallelism",
+        "dimension": "token",
+        "algorithm": "HPipe",
+        "parameters": {
+          "num_stages": 6,
+          "micro_batch_size": 1,
+          "sequence_slicing": "dynamic",
+          "layer_distribution": "optimized"
+        }
+      },
+      "device_mapping": {
+        "devices": [
+          {"id": "P@1", "type": "P100", "memory": 12193, "compute_capability": "6.0", "host": "host1"},
+          {"id": "P@2", "type": "P100", "memory": 12193, "compute_capability": "6.0", "host": "host1"},
+          {"id": "P@3", "type": "P100", "memory": 12193, "compute_capability": "6.0", "host": "host1"},
+          {"id": "P@4", "type": "P100", "memory": 12193, "compute_capability": "6.0", "host": "host1"},
+          {"id": "R@1", "type": "RTX3090", "memory": 24268, "compute_capability": "8.6", "host": "host2"},
+          {"id": "R@2", "type": "RTX3090", "memory": 24268, "compute_capability": "8.6", "host": "host2"}
+        ],
+        "layer_assignment": {
+          "P@1": {"layers": [1, 2, 3, 4], "layer_count": 4, "memory_required": 4693},
+          "P@2": {"layers": [5, 6, 7, 8], "layer_count": 4, "memory_required": 4651},
+          "P@3": {"layers": [9, 10, 11, 12], "layer_count": 4, "memory_required": 3153},
+          "P@4": {"layers": [13, 14, 15, 16], "layer_count": 4, "memory_required": 3295},
+          "R@1": {"layers": [17, 18, 19, 20], "layer_count": 4, "memory_required": 7397},
+          "R@2": {"layers": [21, 22, 23, 24], "layer_count": 4, "memory_required": 9855}
+        }
+      },
+      "sequence_slicing": {
+        "total_length": 2048,
+        "slicing_scheme": [320, 304, 288, 272, 256, 240, 224, 208, 192, 176, 160, 144, 128, 112, 96, 80, 64, 48, 32, 16],
+        "algorithm": "dynamic_programming",
+        "execution_time_constraint": "tₘ=200ms"
+      },
+      "communication": {
+        "intra_host": {"type": "PCIe", "bandwidth": 32, "unit": "GB/s"},
+        "inter_host": {"type": "Ethernet", "bandwidth": 1000, "unit": "Mbps"},
+        "activation_size": 5120,
+        "transmission_overhead": 0.04
+      }
+    }
+  },
+  "baseline_configurations": {
+    "Base": {
+      "type": "sequential",
+      "device_usage": "uniform",
+      "layer_distribution": "equal",
+      "performance": {
+        "LLaMA-7B": {"latency": 20.3, "throughput": 0.56, "unit": "tokens/s"},
+        "GPT3-2B": {"latency": "OOM", "throughput": 0, "unit": "tokens/s"}
+      }
+    },
+    "GPipe": {
+      "type": "pipeline_parallelism",
+      "dimension": "batch",
+      "micro_batch_size": 12,
+      "layer_distribution": "equal",
+      "performance": {
+        "LLaMA-7B": {"latency": 4.57, "throughput": 2.44, "unit": "tokens/s"},
+        "GPT3-2B": {"latency": 3.12, "throughput": 3.85, "unit": "tokens/s"}
+      }
+    },
+    "Megatron-LM": {
+      "type": "hybrid_parallelism",
+      "components": ["tensor_parallelism", "pipeline_parallelism"],
+      "tensor_parallel_size": 2,
+      "pipeline_parallel_size": 3,
+      "performance": {
+        "LLaMA-7B": {"latency": 3.89, "throughput": 2.87, "unit": "tokens/s"},
+        "GPT3-2B": {"latency": 2.45, "throughput": 4.91, "unit": "tokens/s"}
+      }
+    }
+  },
+  "deployment_workflow": {
+    "prepare_phase": {
+      "steps": [
+        "Analyze device specifications (memory, compute, bandwidth)",
+        "Run Algorithm 1: Dynamic programming for workload distribution",
+        "Run Algorithm 2: Dynamic programming for sequence slicing",
+        "Precompute optimal slicing schemes for all sequence lengths",
+        "Generate device-specific layer assignments"
+      ],
+      "algorithms": {
+        "workload_distribution": {
+          "input": ["layer_computation_time", "device_capabilities", "bandwidth_matrix"],
+          "output": ["layer_assignments", "execution_times"],
+          "complexity": "O(N²M)"
+        },
+        "sequence_slicing": {
+          "input": ["sequence_length", "execution_time_matrix", "device_times"],
+          "output": ["slicing_scheme", "expected_latency"],
+          "complexity": "O(N²)"
+        }
+      }
+    },
+    "runtime_phase": {
+      "steps": [
+        "Initialize KV cache across devices",
+        "Load model weights according to layer assignments",
+        "Execute pipeline on token dimension",
+        "Handle intermediate activations between stages",
+        "Aggregate final outputs"
+      ],
+      "pipeline_stages": {
+        "stage_1": {"device": "P@1", "layers": "embedding_attention", "input": "tokens", "output": "hidden_states"},
+        "stage_2": {"device": "P@2", "layers": "attention_ffn", "input": "hidden_states", "output": "hidden_states"},
+        "stage_3": {"device": "P@3", "layers": "attention_ffn", "input": "hidden_states", "output": "hidden_states"},
+        "stage_4": {"device": "P@4", "layers": "attention_ffn", "input": "hidden_states", "output": "hidden_states"},
+        "stage_5": {"device": "R@1", "layers": "attention_ffn", "input": "hidden_states", "output": "hidden_states"},
+        "stage_6": {"device": "R@2", "layers": "attention_lm_head", "input": "hidden_states", "output": "logits"}
+      }
+    }
+  },
+  "performance_targets": {
+    "LLaMA-7B": {
+      "latency": 2.24,
+      "throughput": 5.03,
+      "energy_reduction": 68.2,
+      "unit": "seconds, tokens/s, percent"
+    },
+    "GPT3-2B": {
+      "latency": 2.28,
+      "throughput": 3.85,
+      "energy_reduction": 65.0,
+      "unit": "seconds, tokens/s, percent"
+    }
+  }
+}

@@ -1,0 +1,220 @@
+{
+  "deployment_config": {
+    "model": {
+      "name": "Llama3-405B",
+      "parameters": 405000000000,
+      "layers": 126,
+      "model_dimension": 16384,
+      "attention_heads": {
+        "query_heads": 128,
+        "key_heads": 8,
+        "value_heads": 8,
+        "head_dimension": 128
+      },
+      "feedforward_dimension": 53248,
+      "vocab_size": 128256,
+      "max_context_length": 128000,
+      "extended_context_length": 1000000
+    },
+    "hardware": {
+      "gpu_type": "NVIDIA_H100",
+      "gpu_memory_gb": 96,
+      "gpu_memory_bandwidth_tb_s": 2.4,
+      "node_interconnect": {
+        "intra_node": "NVLink",
+        "inter_node": ["RDMA", "TCP"],
+        "rdma_bandwidth_gbps": 400,
+        "tcp_bandwidth_gbps": 100
+      }
+    },
+    "parallel_strategies": {
+      "tensor_parallelism": {
+        "tp_degree": 8,
+        "strategy": "alternating_row_column",
+        "devices_per_node": 8,
+        "parameters": {
+          "attention_linear_row_parallel": true,
+          "attention_linear_column_parallel": true,
+          "mlp_column_parallel_first": true,
+          "mlp_row_parallel_second": true
+        }
+      },
+      "context_parallelism": {
+        "cp_degree": 16,
+        "max_nodes": 16,
+        "strategy": "sequence_length_sharding",
+        "load_balancing": "double_chunk_sharding",
+        "algorithms": {
+          "pass_kv": {
+            "use_case": ["full_prefill", "partial_prefill_low_hit_rate"],
+            "message_size_bytes": "2 * (T + P) * D * e * NKV / NH",
+            "communication": "ring_sendrecv",
+            "overlap_with_computation": true
+          },
+          "pass_q": {
+            "use_case": ["decode", "partial_prefill_high_hit_rate"],
+            "message_size_bytes": "T * D * e",
+            "communication": ["ring_sendrecv", "all2all"],
+            "overlap_with_computation": true
+          }
+        },
+        "adaptive_selection_heuristic": {
+          "condition_kv": "T >= (N * C * NKV * e) / (2 * NH * BW)",
+          "condition_q": "T/(T+P) <= 2 * (NKV/NH)",
+          "threshold_ratio": 0.125,
+          "tipping_point_tokens": 6400
+        }
+      }
+    },
+    "module_division": {
+      "model_modules": {
+        "attention_layer": {
+          "query_projection": {
+            "dimensions": [16384, 16384],
+            "sharding": "column_parallel",
+            "devices": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+          },
+          "key_projection": {
+            "dimensions": [16384, 1024],
+            "sharding": "column_parallel",
+            "devices": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+          },
+          "value_projection": {
+            "dimensions": [16384, 1024],
+            "sharding": "column_parallel",
+            "devices": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+          },
+          "output_projection": {
+            "dimensions": [16384, 16384],
+            "sharding": "row_parallel",
+            "devices": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+          }
+        },
+        "mlp_layer": {
+          "gate_proj": {
+            "dimensions": [53248, 16384],
+            "sharding": "column_parallel",
+            "devices": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+          },
+          "up_proj": {
+            "dimensions": [53248, 16384],
+            "sharding": "column_parallel",
+            "devices": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+          },
+          "down_proj": {
+            "dimensions": [16384, 53248],
+            "sharding": "row_parallel",
+            "devices": ["gpu_0", "gpu_1", "gpu_2", "gpu_3", "gpu_4", "gpu_5", "gpu_6", "gpu_7"]
+          }
+        },
+        "kv_cache": {
+          "total_capacity_tokens": 1000000,
+          "distribution": "context_parallel",
+          "per_rank_capacity_tokens": 62500,
+          "memory_per_token_bytes": 8192,
+          "total_memory_gb": 7812.5
+        }
+      },
+      "context_parallel_modules": {
+        "sequence_sharding": {
+          "strategy": "load_balanced_double_chunk",
+          "chunks_per_sequence": 32,
+          "chunks_per_rank": 2,
+          "padding_strategy": "multiple_of_16"
+        },
+        "kv_cache_sharding": {
+          "strategy": "round_robin_across_cp_ranks",
+          "kv_heads_per_cp_group": 1,
+          "cp_groups": 8,
+          "total_kv_heads": 8
+        }
+      }
+    },
+    "device_mapping": {
+      "node_architecture": {
+        "total_nodes": 16,
+        "gpus_per_node": 8,
+        "total_gpus": 128,
+        "node_naming": "node_0_to_15"
+      },
+      "tensor_parallel_mapping": {
+        "per_node": {
+          "node_0": {
+            "tp_rank_0": "gpu_0",
+            "tp_rank_1": "gpu_1",
+            "tp_rank_2": "gpu_2",
+            "tp_rank_3": "gpu_3",
+            "tp_rank_4": "gpu_4",
+            "tp_rank_5": "gpu_5",
+            "tp_rank_6": "gpu_6",
+            "tp_rank_7": "gpu_7"
+          },
+          "node_1_to_15": "identical_to_node_0"
+        }
+      },
+      "context_parallel_mapping": {
+        "cp_rank_to_device": {
+          "cp_rank_0": "node_0.gpu_0",
+          "cp_rank_1": "node_1.gpu_0",
+          "cp_rank_2": "node_2.gpu_0",
+          "cp_rank_3": "node_3.gpu_0",
+          "cp_rank_4": "node_4.gpu_0",
+          "cp_rank_5": "node_5.gpu_0",
+          "cp_rank_6": "node_6.gpu_0",
+          "cp_rank_7": "node_7.gpu_0",
+          "cp_rank_8": "node_8.gpu_0",
+          "cp_rank_9": "node_9.gpu_0",
+          "cp_rank_10": "node_10.gpu_0",
+          "cp_rank_11": "node_11.gpu_0",
+          "cp_rank_12": "node_12.gpu_0",
+          "cp_rank_13": "node_13.gpu_0",
+          "cp_rank_14": "node_14.gpu_0",
+          "cp_rank_15": "node_15.gpu_0"
+        },
+        "kv_head_to_cp_group": {
+          "kv_head_0": ["node_0.gpu_0", "node_1.gpu_0", "node_2.gpu_0", "node_3.gpu_0", "node_4.gpu_0", "node_5.gpu_0", "node_6.gpu_0", "node_7.gpu_0", "node_8.gpu_0", "node_9.gpu_0", "node_10.gpu_0", "node_11.gpu_0", "node_12.gpu_0", "node_13.gpu_0", "node_14.gpu_0", "node_15.gpu_0"],
+          "kv_head_1": ["node_0.gpu_1", "node_1.gpu_1", "node_2.gpu_1", "node_3.gpu_1", "node_4.gpu_1", "node_5.gpu_1", "node_6.gpu_1", "node_7.gpu_1", "node_8.gpu_1", "node_9.gpu_1", "node_10.gpu_1", "node_11.gpu_1", "node_12.gpu_1", "node_13.gpu_1", "node_14.gpu_1", "node_15.gpu_1"],
+          "kv_head_2": ["node_0.gpu_2", "node_1.gpu_2", "node_2.gpu_2", "node_3.gpu_2", "node_4.gpu_2", "node_5.gpu_2", "node_6.gpu_2", "node_7.gpu_2", "node_8.gpu_2", "node_9.gpu_2", "node_10.gpu_2", "node_11.gpu_2", "node_12.gpu_2", "node_13.gpu_2", "node_14.gpu_2", "node_15.gpu_2"],
+          "kv_head_3": ["node_0.gpu_3", "node_1.gpu_3", "node_2.gpu_3", "node_3.gpu_3", "node_4.gpu_3", "node_5.gpu_3", "node_6.gpu_3", "node_7.gpu_3", "node_8.gpu_3", "node_9.gpu_3", "node_10.gpu_3", "node_11.gpu_3", "node_12.gpu_3", "node_13.gpu_3", "node_14.gpu_3", "node_15.gpu_3"],
+          "kv_head_4": ["node_0.gpu_4", "node_1.gpu_4", "node_2.gpu_4", "node_3.gpu_4", "node_4.gpu_4", "node_5.gpu_4", "node_6.gpu_4", "node_7.gpu_4", "node_8.gpu_4", "node_9.gpu_4", "node_10.gpu_4", "node_11.gpu_4", "node_12.gpu_4", "node_13.gpu_4", "node_14.gpu_4", "node_15.gpu_4"],
+          "kv_head_5": ["node_0.gpu_5", "node_1.gpu_5", "node_2.gpu_5", "node_3.gpu_5", "node_4.gpu_5", "node_5.gpu_5", "node_6.gpu_5", "node_7.gpu_5", "node_8.gpu_5", "node_9.gpu_5", "node_10.gpu_5", "node_11.gpu_5", "node_12.gpu_5", "node_13.gpu_5", "node_14.gpu_5", "node_15.gpu_5"],
+          "kv_head_6": ["node_0.gpu_6", "node_1.gpu_6", "node_2.gpu_6", "node_3.gpu_6", "node_4.gpu_6", "node_5.gpu_6", "node_6.gpu_6", "node_7.gpu_6", "node_8.gpu_6", "node_9.gpu_6", "node_10.gpu_6", "node_11.gpu_6", "node_12.gpu_6", "node_13.gpu_6", "node_14.gpu_6", "node_15.gpu_6"],
+          "kv_head_7": ["node_0.gpu_7", "node_1.gpu_7", "node_2.gpu_7", "node_3.gpu_7", "node_4.gpu_7", "node_5.gpu_7", "node_6.gpu_7", "node_7.gpu_7", "node_8.gpu_7", "node_9.gpu_7", "node_10.gpu_7", "node_11.gpu_7", "node_12.gpu_7", "node_13.gpu_7", "node_14.gpu_7", "node_15.gpu_7"]
+        }
+      }
+    },
+    "runtime_configuration": {
+      "batch_size": 1,
+      "max_context_tokens": 1000000,
+      "quantization_config": {
+        "activation": "fp8",
+        "weight": "fp8_row_wise",
+        "kv_cache": "fp16"
+      },
+      "attention_implementation": {
+        "prefill": "flash_attention_3",
+        "decode": "flash_decoding",
+        "num_splits": 256
+      },
+      "communication_optimization": {
+        "use_cuda_graphs": true,
+        "overlap_comms": true,
+        "min_bandwidth_gbps": 3
+      }
+    },
+    "performance_targets": {
+      "128k_context": {
+        "cp_nodes": 16,
+        "prefill_latency_ms": 3850,
+        "parallel_efficiency": 0.93,
+        "flops_utilization": 0.63
+      },
+      "1m_context": {
+        "cp_nodes": 16,
+        "prefill_latency_ms": 77000,
+        "parallel_efficiency": 0.93,
+        "flops_utilization": 0.63
+      }
+    }
+  }
+}
