@@ -50,6 +50,8 @@ NOTE
 
 You need to follow the following constraints:
 
+The generated DAG graph structure should be as concise as possible, avoiding repetition and redundancy. <<<要求生成的DAG图结构尽量简洁，避免重复冗余>>>
+
 If multiple models are used in the paper, all the DAGs of them need to be generated.<<<提醒要生成多个dag而不是合并模型>>>
 
 The baseline DAG also needs to be generated, so you will output at least two DAGs.<<<baseline同样需要被生成>>>
@@ -125,5 +127,6 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
