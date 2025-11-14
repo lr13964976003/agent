@@ -1,0 +1,196 @@
+digraph baseline_deployment {
+    rankdir=TB;
+    compound=true;
+    
+    // Graph styling
+    node [shape=rectangle, style=filled, fontname="Arial"];
+    ellipse [shape=ellipse, style=filled, color=lightgrey];
+    parallelogram [shape=parallelogram, style=filled, color=lightblue];
+    
+    // Input node
+    Input [label="Input
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: all GPUs", 
+           shape=parallelogram, color=lightblue];
+    
+    // Stage 0: GPUs 0-7, Layers 0-1
+    subgraph cluster_stage0 {
+        label="Stage 0
+GPUs: [0,1,2,3,4,5,6,7]
+Tensor Parallel Group";
+        style=dashed;
+        color=blue;
+        
+        // Layer 0
+        Layer0_Input_Split [label="TP Split
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: all GPUs in stage 0", 
+                           shape=ellipse, color=lightgrey];
+        
+        Layer0_Linear1 [label="Linear 1 (7.5B params)
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [0,1,2,3,4,5,6,7]", 
+                        color=yellow];
+        
+        Layer0_Activation [label="Activation
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [0,1,2,3,4,5,6,7]", 
+                          color=pink];
+        
+        Layer0_Linear2 [label="Linear 2 (7.5B params)
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [0,1,2,3,4,5,6,7]", 
+                        color=yellow];
+        
+        Layer0_AllReduce [label="TP All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: [0,1,2,3,4,5,6,7]", 
+                          shape=ellipse, color=lightgrey];
+        
+        // Layer 1
+        Layer1_Input_Split [label="TP Split
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [0,1,2,3,4,5,6,7]", 
+                           shape=ellipse, color=lightgrey];
+        
+        Layer1_Linear1 [label="Linear 1 (7.5B params)
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [0,1,2,3,4,5,6,7]", 
+                        color=yellow];
+        
+        Layer1_Activation [label="Activation
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [0,1,2,3,4,5,6,7]", 
+                          color=pink];
+        
+        Layer1_Linear2 [label="Linear 2 (7.5B params)
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [0,1,2,3,4,5,6,7]", 
+                        color=yellow];
+        
+        Layer1_AllReduce [label="TP All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: [0,1,2,3,4,5,6,7]", 
+                          shape=ellipse, color=lightgrey];
+    }
+    
+    // Pipeline communication between stages
+    Stage0_to_Stage1 [label="Pipeline Send
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: [0,1,2,3,4,5,6,7] → [8,9,10,11,12,13,14,15]", 
+                       shape=ellipse, color=lightgrey];
+    
+    // Stage 1: GPUs 8-15, Layers 2-3
+    subgraph cluster_stage1 {
+        label="Stage 1
+GPUs: [8,9,10,11,12,13,14,15]
+Tensor Parallel Group";
+        style=dashed;
+        color=blue;
+        
+        // Layer 2
+        Layer2_Input_Split [label="TP Split
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [8,9,10,11,12,13,14,15]", 
+                           shape=ellipse, color=lightgrey];
+        
+        Layer2_Linear1 [label="Linear 1 (7.5B params)
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [8,9,10,11,12,13,14,15]", 
+                        color=yellow];
+        
+        Layer2_Activation [label="Activation
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [8,9,10,11,12,13,14,15]", 
+                          color=pink];
+        
+        Layer2_Linear2 [label="Linear 2 (7.5B params)
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [8,9,10,11,12,13,14,15]", 
+                        color=yellow];
+        
+        Layer2_AllReduce [label="TP All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: [8,9,10,11,12,13,14,15]", 
+                          shape=ellipse, color=lightgrey];
+        
+        // Layer 3
+        Layer3_Input_Split [label="TP Split
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [8,9,10,11,12,13,14,15]", 
+                           shape=ellipse, color=lightgrey];
+        
+        Layer3_Linear1 [label="Linear 1 (7.5B params)
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [8,9,10,11,12,13,14,15]", 
+                        color=yellow];
+        
+        Layer3_Activation [label="Activation
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [8,9,10,11,12,13,14,15]", 
+                          color=pink];
+        
+        Layer3_Linear2 [label="Linear 2 (7.5B params)
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=2048]
+GPU: [8,9,10,11,12,13,14,15]", 
+                        color=yellow];
+        
+        Layer3_AllReduce [label="TP All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden=2048]
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: [8,9,10,11,12,13,14,15]", 
+                          shape=ellipse, color=lightgrey];
+    }
+    
+    // Output aggregation
+    Output [label="Output
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: [8,9,10,11,12,13,14,15]", 
+            shape=parallelogram, color=lightblue];
+    
+    // Connections
+    Input -> Layer0_Input_Split;
+    Layer0_Input_Split -> Layer0_Linear1;
+    Layer0_Linear1 -> Layer0_Activation;
+    Layer0_Activation -> Layer0_Linear2;
+    Layer0_Linear2 -> Layer0_AllReduce;
+    Layer0_AllReduce -> Layer1_Input_Split;
+    Layer1_Input_Split -> Layer1_Linear1;
+    Layer1_Linear1 -> Layer1_Activation;
+    Layer1_Activation -> Layer1_Linear2;
+    Layer1_Linear2 -> Layer1_AllReduce;
+    Layer1_AllReduce -> Stage0_to_Stage1;
+    Stage0_to_Stage1 -> Layer2_Input_Split;
+    Layer2_Input_Split -> Layer2_Linear1;
+    Layer2_Linear1 -> Layer2_Activation;
+    Layer2_Activation -> Layer2_Linear2;
+    Layer2_Linear2 -> Layer2_AllReduce;
+    Layer2_AllReduce -> Layer3_Input_Split;
+    Layer3_Input_Split -> Layer3_Linear1;
+    Layer3_Linear1 -> Layer3_Activation;
+    Layer3_Activation -> Layer3_Linear2;
+    Layer3_Linear2 -> Layer3_AllReduce;
+    Layer3_AllReduce -> Output;
+}

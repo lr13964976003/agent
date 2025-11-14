@@ -1,0 +1,234 @@
+{
+  "deployment_config": {
+    "models": {
+      "dense_model": {
+        "architecture": "fully_connected",
+        "total_layers": 4,
+        "total_parameters": 30000000000,
+        "parameters_per_layer": 7500000000,
+        "hidden_size": 16384,
+        "precision": "BF16",
+        "bytes_per_parameter": 2,
+        "weight_size_per_layer_bytes": 15000000000,
+        "full_activation_size_per_layer_bytes": 41943040000,
+        "working_activation_size_bytes": 12582912,
+        "total_model_size_bytes": 60000000000
+      }
+    },
+    "methods": {
+      "baseline": {
+        "name": "Tensor Parallelism + Pipeline Parallelism",
+        "parallel_strategy": {
+          "type": "hybrid",
+          "tensor_parallel_size": 8,
+          "pipeline_parallel_size": 2,
+          "total_devices": 16,
+          "description": "Standard TP=8, PP=2 across 16 GPUs"
+        },
+        "device_mapping": {
+          "stage_0": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_parallel_group": [0, 1, 2, 3, 4, 5, 6, 7],
+            "layers": [0, 1],
+            "weight_distribution": "tensor_parallel",
+            "activation_storage": "distributed_across_tensor_group"
+          },
+          "stage_1": {
+            "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_parallel_group": [8, 9, 10, 11, 12, 13, 14, 15],
+            "layers": [2, 3],
+            "weight_distribution": "tensor_parallel",
+            "activation_storage": "distributed_across_tensor_group"
+          }
+        },
+        "memory_allocation": {
+          "weight_distribution": "tensor_parallel_sharding",
+          "activation_storage": "distributed_across_tensor_group",
+          "buffer_storage": "local_per_device"
+        },
+        "communication": {
+          "within_stage": "all_reduce_tensor_parallel",
+          "between_stages": "pipeline_communication",
+          "communication_volume_bytes_per_layer": 41943040000,
+          "communication_pattern": "all_reduce_and_send_recv"
+        }
+      },
+      "proposed": {
+        "name": "Layer-wise Cache-Optimized Deployment",
+        "parallel_strategy": {
+          "type": "layer_parallel",
+          "partitioning_algorithm": "greedy_layer_aggregation",
+          "cache_constraint_bytes": 52428800,
+          "total_devices": 16,
+          "gpu_groups": 4,
+          "gpus_per_group": 4
+        },
+        "device_mapping": {
+          "gpu_group_0": {
+            "group_id": 0,
+            "devices": [0, 1, 2, 3],
+            "layer_range": [0, 0],
+            "memory_allocation": {
+              "working_set_size_bytes": 52428800,
+              "weight_tiles_bytes": 33554432,
+              "activation_chunks_bytes": 12582912,
+              "operator_buffers_bytes": 4194304,
+              "intermediate_state_bytes": 2097152,
+              "cache_utilization": 1.0
+            }
+          },
+          "gpu_group_1": {
+            "group_id": 1,
+            "devices": [4, 5, 6, 7],
+            "layer_range": [1, 1],
+            "memory_allocation": {
+              "working_set_size_bytes": 52428800,
+              "weight_tiles_bytes": 33554432,
+              "activation_chunks_bytes": 12582912,
+              "operator_buffers_bytes": 4194304,
+              "intermediate_state_bytes": 2097152,
+              "cache_utilization": 1.0
+            }
+          },
+          "gpu_group_2": {
+            "group_id": 2,
+            "devices": [8, 9, 10, 11],
+            "layer_range": [2, 2],
+            "memory_allocation": {
+              "working_set_size_bytes": 52428800,
+              "weight_tiles_bytes": 33554432,
+              "activation_chunks_bytes": 12582912,
+              "operator_buffers_bytes": 4194304,
+              "intermediate_state_bytes": 2097152,
+              "cache_utilization": 1.0
+            }
+          },
+          "gpu_group_3": {
+            "group_id": 3,
+            "devices": [12, 13, 14, 15],
+            "layer_range": [3, 3],
+            "memory_allocation": {
+              "working_set_size_bytes": 52428800,
+              "weight_tiles_bytes": 33554432,
+              "activation_chunks_bytes": 12582912,
+              "operator_buffers_bytes": 4194304,
+              "intermediate_state_bytes": 2097152,
+              "cache_utilization": 1.0
+            }
+          }
+        },
+        "memory_allocation": {
+          "strategy": "cache_fitting_working_set",
+          "weights": "tile_streaming_to_cache",
+          "activations": "chunked_processing",
+          "buffers": "pre_allocated_in_cache",
+          "cache_line_alignment": 128
+        },
+        "communication": {
+          "between_groups": "point_to_point",
+          "transfer_size_bytes": 12582912,
+          "transfer_type": "activation_chunk_output",
+          "communication_pattern": "sequential_pipeline",
+          "overlap_strategy": "async_transfer_with_computation",
+          "bandwidth_requirement_bytes_per_second": 90000000000
+        },
+        "execution_flow": {
+          "type": "layer_sequential_pipeline",
+          "pipeline_depth": 4,
+          "stages": [
+            {
+              "stage_id": 0,
+              "group": "gpu_group_0",
+              "layer": 0,
+              "input": "external",
+              "output_to": "gpu_group_1",
+              "transfer_size": 12582912
+            },
+            {
+              "stage_id": 1,
+              "group": "gpu_group_1",
+              "layer": 1,
+              "input_from": "gpu_group_0",
+              "output_to": "gpu_group_2",
+              "transfer_size": 12582912
+            },
+            {
+              "stage_id": 2,
+              "group": "gpu_group_2",
+              "layer": 2,
+              "input_from": "gpu_group_1",
+              "output_to": "gpu_group_3",
+              "transfer_size": 12582912
+            },
+            {
+              "stage_id": 3,
+              "group": "gpu_group_3",
+              "layer": 3,
+              "input_from": "gpu_group_2",
+              "output": "external",
+              "transfer_size": 12582912
+            }
+          ]
+        },
+        "weight_streaming": {
+          "strategy": "tile_based",
+          "tile_size_bytes": 33554432,
+          "tile_cache_size": 33554432,
+          "streaming_overlap": true,
+          "prefetch_distance": 2
+        },
+        "activation_chunking": {
+          "chunk_size_tokens": 64,
+          "full_sequence_length": 10000,
+          "num_chunks": 157,
+          "chunk_overlap": 0
+        }
+      }
+    },
+    "hardware_specifications": {
+      "gpu_type": "NVIDIA_H100",
+      "cache_size_bytes": 52428800,
+      "memory_size_bytes": 85899345920,
+      "memory_bandwidth_bytes_per_second": 3350000000000,
+      "total_devices": 16,
+      "interconnect": "NVLink_4.0",
+      "interconnect_bandwidth_bytes_per_second": 90000000000,
+      "compute_capability": "FP16: 989 TFLOPS"
+    },
+    "input_configuration": {
+      "batch_size": 128,
+      "sequence_length": 10000,
+      "head_count": 32,
+      "head_dimension": 128,
+      "mlp_hidden_size": 16384,
+      "precision": "BF16",
+      "bytes_per_element": 2
+    },
+    "performance_metrics": {
+      "baseline": {
+        "tps": 12800,
+        "tpot_ms": 0.078,
+        "efficiency": 1.0,
+        "cache_hit_rate": 0.3
+      },
+      "proposed": {
+        "tps": 15360,
+        "tpot_ms": 0.065,
+        "efficiency": 1.2,
+        "cache_hit_rate": 0.95,
+        "improvement": {
+          "tps_percentage": 20.0,
+          "tpot_percentage": -16.67,
+          "cache_hit_improvement": 216.67
+        }
+      }
+    },
+    "optimization_flags": {
+      "enable_weight_streaming": true,
+      "enable_activation_chunking": true,
+      "enable_async_communication": true,
+      "enable_cache_line_alignment": true,
+      "memory_footprint_validation": true
+    }
+  }
+}

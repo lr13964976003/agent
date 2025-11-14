@@ -1,0 +1,266 @@
+digraph proposed_deployment {
+    rankdir=TB;
+    compound=true;
+    
+    // Graph styling
+    node [shape=rectangle, style=filled, fontname="Arial"];
+    ellipse [shape=ellipse, style=filled, color=lightgrey];
+    parallelogram [shape=parallelogram, style=filled, color=lightblue];
+    
+    // Model-wide dimensions
+    dim_note [label="Dimensions:
+Batch: 128
+Seq: 10000
+Hidden: 16384
+Precision: BF16", 
+              shape=note, color=lightyellow];
+    
+    // Input node
+    Input [label="Model Input
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: All GPUs (broadcast)", 
+           shape=parallelogram, color=lightblue];
+    
+    // Chunking node
+    Chunking [label="Activation Chunking
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, chunk_size=64, hidden=16384] × 157
+GPU: All GPUs", 
+              shape=ellipse, color=lightgrey];
+    
+    // GPU Group 0: Layer 0
+    subgraph cluster_group0 {
+        label="GPU Group 0
+GPUs: [0,1,2,3]
+Layer 0 Cache-Optimized";
+        style=dashed;
+        color=green;
+        
+        // Weight streaming setup
+        WeightStream0 [label="Weight Tile Streaming
+Input: Full weights (15GB)
+Output: Weight tiles (32MB)
+GPU: [0,1,2,3]
+Cache: 32MB", 
+                       shape=ellipse, color=lightgrey];
+        
+        // Layer 0 operations (detailed)
+        Layer0_Linear1 [label="Linear 1 (Tile processing)
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [0,1,2,3]
+Cache: 32MB weights", 
+                        color=yellow];
+        
+        Layer0_Activation [label="Activation
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [0,1,2,3]", 
+                          color=pink];
+        
+        Layer0_Linear2 [label="Linear 2 (Tile processing)
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [0,1,2,3]
+Cache: 32MB weights", 
+                        color=yellow];
+        
+        // Cache utilization note
+        Cache0 [label="Cache Utilization
+Weights: 32MB
+Activations: 12MB
+Buffers: 4MB
+Total: 48MB/50MB", 
+                shape=note, color=lightgreen];
+    }
+    
+    // GPU-to-GPU transfer between groups
+    Transfer0to1 [label="Pipeline Transfer
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [0,1,2,3] → [4,5,6,7]
+Async overlap", 
+                  shape=ellipse, color=lightgrey];
+    
+    // GPU Group 1: Layer 1
+    subgraph cluster_group1 {
+        label="GPU Group 1
+GPUs: [4,5,6,7]
+Layer 1 Cache-Optimized";
+        style=dashed;
+        color=green;
+        
+        WeightStream1 [label="Weight Tile Streaming
+Input: Full weights (15GB)
+Output: Weight tiles (32MB)
+GPU: [4,5,6,7]
+Cache: 32MB", 
+                       shape=ellipse, color=lightgrey];
+        
+        Layer1_Linear1 [label="Linear 1 (Tile processing)
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [4,5,6,7]
+Cache: 32MB weights", 
+                        color=yellow];
+        
+        Layer1_Activation [label="Activation
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [4,5,6,7]", 
+                          color=pink];
+        
+        Layer1_Linear2 [label="Linear 2 (Tile processing)
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [4,5,6,7]
+Cache: 32MB weights", 
+                        color=yellow];
+        
+        Cache1 [label="Cache Utilization
+Weights: 32MB
+Activations: 12MB
+Buffers: 4MB
+Total: 48MB/50MB", 
+                shape=note, color=lightgreen];
+    }
+    
+    Transfer1to2 [label="Pipeline Transfer
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [4,5,6,7] → [8,9,10,11]
+Async overlap", 
+                  shape=ellipse, color=lightgrey];
+    
+    // GPU Group 2: Layer 2
+    subgraph cluster_group2 {
+        label="GPU Group 2
+GPUs: [8,9,10,11]
+Layer 2 Cache-Optimized";
+        style=dashed;
+        color=green;
+        
+        WeightStream2 [label="Weight Tile Streaming
+Input: Full weights (15GB)
+Output: Weight tiles (32MB)
+GPU: [8,9,10,11]
+Cache: 32MB", 
+                       shape=ellipse, color=lightgrey];
+        
+        Layer2_Linear1 [label="Linear 1 (Tile processing)
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [8,9,10,11]
+Cache: 32MB weights", 
+                        color=yellow];
+        
+        Layer2_Activation [label="Activation
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [8,9,10,11]", 
+                          color=pink];
+        
+        Layer2_Linear2 [label="Linear 2 (Tile processing)
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [8,9,10,11]
+Cache: 32MB weights", 
+                        color=yellow];
+        
+        Cache2 [label="Cache Utilization
+Weights: 32MB
+Activations: 12MB
+Buffers: 4MB
+Total: 48MB/50MB", 
+                shape=note, color=lightgreen];
+    }
+    
+    Transfer2to3 [label="Pipeline Transfer
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [8,9,10,11] → [12,13,14,15]
+Async overlap", 
+                  shape=ellipse, color=lightgrey];
+    
+    // GPU Group 3: Layer 3
+    subgraph cluster_group3 {
+        label="GPU Group 3
+GPUs: [12,13,14,15]
+Layer 3 Cache-Optimized";
+        style=dashed;
+        color=green;
+        
+        WeightStream3 [label="Weight Tile Streaming
+Input: Full weights (15GB)
+Output: Weight tiles (32MB)
+GPU: [12,13,14,15]
+Cache: 32MB", 
+                       shape=ellipse, color=lightgrey];
+        
+        Layer3_Linear1 [label="Linear 1 (Tile processing)
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [12,13,14,15]
+Cache: 32MB weights", 
+                        color=yellow];
+        
+        Layer3_Activation [label="Activation
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [12,13,14,15]", 
+                          color=pink];
+        
+        Layer3_Linear2 [label="Linear 2 (Tile processing)
+Input: [batch_size=128, chunk=64, hidden=16384]
+Output: [batch_size=128, chunk=64, hidden=16384]
+GPU: [12,13,14,15]
+Cache: 32MB weights", 
+                        color=yellow];
+        
+        Cache3 [label="Cache Utilization
+Weights: 32MB
+Activations: 12MB
+Buffers: 4MB
+Total: 48MB/50MB", 
+                shape=note, color=lightgreen];
+    }
+    
+    // Chunk aggregation
+    ChunkAggregation [label="Chunk Aggregation
+Input: [batch_size=128, chunk=64, hidden=16384] × 157
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: [12,13,14,15]", 
+                      shape=ellipse, color=lightgrey];
+    
+    // Output
+    Output [label="Model Output
+Input: [batch_size=128, seq_len=10000, hidden=16384]
+Output: [batch_size=128, seq_len=10000, hidden=16384]
+GPU: [12,13,14,15]", 
+            shape=parallelogram, color=lightblue];
+    
+    // Connections with chunking flow
+    Input -> Chunking;
+    Chunking -> WeightStream0;
+    WeightStream0 -> Layer0_Linear1;
+    Layer0_Linear1 -> Layer0_Activation;
+    Layer0_Activation -> Layer0_Linear2;
+    Layer0_Linear2 -> Transfer0to1;
+    Transfer0to1 -> WeightStream1;
+    WeightStream1 -> Layer1_Linear1;
+    Layer1_Linear1 -> Layer1_Activation;
+    Layer1_Activation -> Layer1_Linear2;
+    Layer1_Linear2 -> Transfer1to2;
+    Transfer1to2 -> WeightStream2;
+    WeightStream2 -> Layer2_Linear1;
+    Layer2_Linear1 -> Layer2_Activation;
+    Layer2_Activation -> Layer2_Linear2;
+    Layer2_Linear2 -> Transfer2to3;
+    Transfer2to3 -> WeightStream3;
+    WeightStream3 -> Layer3_Linear1;
+    Layer3_Linear1 -> Layer3_Activation;
+    Layer3_Activation -> Layer3_Linear2;
+    Layer3_Linear2 -> ChunkAggregation;
+    ChunkAggregation -> Output;
+}
