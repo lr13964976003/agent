@@ -24,8 +24,6 @@ Determine how to deploy the model onto GPUs by according to the paper. Ensure th
 
 After you complete the division of one module, calculate how many parts the module has been divided into and whether it matches the number of GPUs.  <<<要求反思部署方案是否符合实际>>>
 
-Calculate the memory usage for weights, activations, and buffers for each layer, and determine the number of layers allocated to each card according to the allocation method described in the paper.<<<要求计算每层的权重，激活值和缓冲区的内存占比，按照论文的分配方法计算每张卡上分配的层数>>>
-
 Please analyze how the dimensions of the module will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析维度变化是否正确>>>
 
 Generate complete model deployment DAGs(directed acyclic graph) according to you deployment plan and the baseline in the paper by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
@@ -50,8 +48,6 @@ NOTE
 
 You need to follow the following constraints:
 
-The generated DAG graph structure should be as concise as possible, avoiding repetition and redundancy. <<<要求生成的DAG图结构尽量简洁，避免重复冗余>>>
-
 If multiple models are used in the paper, all the DAGs of them need to be generated.<<<提醒要生成多个dag而不是合并模型>>>
 
 The baseline DAG also needs to be generated, so you will output at least two DAGs.<<<baseline同样需要被生成>>>
@@ -63,6 +59,8 @@ Not all knowledge in supplementary materials will be useful to you. You only nee
 Generally speaking, a layer in the model consists of a Multi-Head Attention along with an FFN or (Gate and Experts). <<<提供模型一层的组成信息>>>
 
 A complete DAG must include a total input and output.<<<提醒要包含完整输入输出>>>
+
+Calculate the memory usage for weights, activations, and buffers for each layer, and determine the number of layers allocated to each card according to the allocation method described in the paper.<<<要求计算每层的权重，激活值和缓冲区的内存占比，按照论文的分配方法计算每张卡上分配的层数>>>
 
 If a module contains multiple operations, you must break it down to explicitly represent all of them.<<<包含多个operator的模块要拆>>>
 
@@ -127,6 +125,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
