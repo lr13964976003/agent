@@ -206,7 +206,7 @@ The **baseline** employs **Tensor Parallelism (TP) = 8** and **Pipeline Parallel
 ### 3. Results
 
 
-**Table 1 — Inference performance on 16×H100 GPUs (FP16, batch size 1024)**
+**Table 1 — Inference performance on H100 GPUs (BF16, batch size 128)**
 
 
 | Model      | Method                | TPS (tokens/s) | TPOT (ms) |
