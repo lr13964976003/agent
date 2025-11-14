@@ -1,0 +1,898 @@
+// 4-layer Dense Model - Proposed Layer-wise Distribution
+digraph proposed_dag {
+	graph [nodesep=0.5 rankdir=TB ranksep=1.0 splines=ortho]
+	node [shape=ellipse]
+	node [shape=rectangle]
+	node [shape=parallelogram]
+	input [label="Input
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 0-15" fillcolor=lightblue shape=ellipse style=filled]
+	l0_input_split [label="Input Broadcast
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]×4
+GPU: 0-3" fillcolor=lightyellow shape=parallelogram style=filled]
+	l0_mha_qkv_split [label="QKV Split
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]×4
+GPU: 0-3" fillcolor=lightyellow shape=parallelogram style=filled]
+	l0_mha_qkv_gpu0 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_mha_attn_gpu0 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_up_gpu0 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_gate_gpu0 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_act_gpu0 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_down_gpu0 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_residual_gpu0 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_layernorm_gpu0 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 0" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_mha_qkv_gpu1 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_mha_attn_gpu1 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_up_gpu1 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_gate_gpu1 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_act_gpu1 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_down_gpu1 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_residual_gpu1 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_layernorm_gpu1 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 1" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_mha_qkv_gpu2 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_mha_attn_gpu2 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_up_gpu2 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_gate_gpu2 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_act_gpu2 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_down_gpu2 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_residual_gpu2 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_layernorm_gpu2 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 2" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_mha_qkv_gpu3 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_mha_attn_gpu3 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_up_gpu3 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_gate_gpu3 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_act_gpu3 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_ffn_down_gpu3 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_residual_gpu3 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_layernorm_gpu3 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 3" fillcolor=lightgreen shape=rectangle style=filled]
+	l0_mha_allreduce [label="MHA All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]×4
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 0-3" fillcolor=lightyellow shape=parallelogram style=filled]
+	l0_ffn_allreduce [label="FFN All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]×4
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 0-3" fillcolor=lightyellow shape=parallelogram style=filled]
+	l0_output [label="Layer 0 Output
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 0-3" fillcolor=lightblue shape=ellipse style=filled]
+	subgraph cluster_layer0 {
+		color=red label="Layer 0 (GPUs 0-3)" style=dashed
+		subgraph cluster_l0_gpu0 {
+			color=green label="GPU 0" style=dotted
+		}
+		subgraph cluster_l0_gpu1 {
+			color=green label="GPU 1" style=dotted
+		}
+		subgraph cluster_l0_gpu2 {
+			color=green label="GPU 2" style=dotted
+		}
+		subgraph cluster_l0_gpu3 {
+			color=green label="GPU 3" style=dotted
+		}
+	}
+	send_l0_l1 [label="Pipeline Send
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 3→4" fillcolor=orange shape=ellipse style=filled]
+	l1_input_split [label="Input Broadcast
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]×4
+GPU: 4-7" fillcolor=lightyellow shape=parallelogram style=filled]
+	l1_mha_qkv_split [label="QKV Split
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]×4
+GPU: 4-7" fillcolor=lightyellow shape=parallelogram style=filled]
+	l1_mha_qkv_gpu4 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_mha_attn_gpu4 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_up_gpu4 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_gate_gpu4 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_act_gpu4 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_down_gpu4 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_residual_gpu4 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_layernorm_gpu4 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 4" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_mha_qkv_gpu5 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_mha_attn_gpu5 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_up_gpu5 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_gate_gpu5 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_act_gpu5 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_down_gpu5 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_residual_gpu5 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_layernorm_gpu5 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 5" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_mha_qkv_gpu6 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_mha_attn_gpu6 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_up_gpu6 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_gate_gpu6 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_act_gpu6 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_down_gpu6 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_residual_gpu6 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_layernorm_gpu6 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 6" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_mha_qkv_gpu7 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_mha_attn_gpu7 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_up_gpu7 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_gate_gpu7 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_act_gpu7 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_ffn_down_gpu7 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_residual_gpu7 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_layernorm_gpu7 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 7" fillcolor=lightgreen shape=rectangle style=filled]
+	l1_mha_allreduce [label="MHA All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]×4
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 4-7" fillcolor=lightyellow shape=parallelogram style=filled]
+	l1_ffn_allreduce [label="FFN All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]×4
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 4-7" fillcolor=lightyellow shape=parallelogram style=filled]
+	l1_output [label="Layer 1 Output
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 4-7" fillcolor=lightblue shape=ellipse style=filled]
+	subgraph cluster_layer1 {
+		color=red label="Layer 1 (GPUs 4-7)" style=dashed
+		subgraph cluster_l1_gpu4 {
+			color=green label="GPU 4" style=dotted
+		}
+		subgraph cluster_l1_gpu5 {
+			color=green label="GPU 5" style=dotted
+		}
+		subgraph cluster_l1_gpu6 {
+			color=green label="GPU 6" style=dotted
+		}
+		subgraph cluster_l1_gpu7 {
+			color=green label="GPU 7" style=dotted
+		}
+	}
+	send_l1_l2 [label="Pipeline Send
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 7→8" fillcolor=orange shape=ellipse style=filled]
+	l2_input_split [label="Input Broadcast
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]×4
+GPU: 8-11" fillcolor=lightyellow shape=parallelogram style=filled]
+	l2_mha_qkv_split [label="QKV Split
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]×4
+GPU: 8-11" fillcolor=lightyellow shape=parallelogram style=filled]
+	l2_mha_qkv_gpu8 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 8" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_mha_attn_gpu8 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 8" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_up_gpu8 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 8" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_gate_gpu8 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 8" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_act_gpu8 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 8" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_down_gpu8 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 8" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_residual_gpu8 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 8" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_layernorm_gpu8 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 8" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_mha_qkv_gpu9 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 9" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_mha_attn_gpu9 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 9" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_up_gpu9 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 9" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_gate_gpu9 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 9" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_act_gpu9 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 9" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_down_gpu9 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 9" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_residual_gpu9 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 9" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_layernorm_gpu9 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 9" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_mha_qkv_gpu10 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 10" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_mha_attn_gpu10 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 10" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_up_gpu10 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 10" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_gate_gpu10 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 10" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_act_gpu10 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 10" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_down_gpu10 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 10" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_residual_gpu10 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 10" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_layernorm_gpu10 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 10" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_mha_qkv_gpu11 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 11" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_mha_attn_gpu11 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 11" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_up_gpu11 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 11" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_gate_gpu11 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 11" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_act_gpu11 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 11" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_ffn_down_gpu11 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 11" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_residual_gpu11 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 11" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_layernorm_gpu11 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 11" fillcolor=lightgreen shape=rectangle style=filled]
+	l2_mha_allreduce [label="MHA All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]×4
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 8-11" fillcolor=lightyellow shape=parallelogram style=filled]
+	l2_ffn_allreduce [label="FFN All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]×4
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 8-11" fillcolor=lightyellow shape=parallelogram style=filled]
+	l2_output [label="Layer 2 Output
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 8-11" fillcolor=lightblue shape=ellipse style=filled]
+	subgraph cluster_layer2 {
+		color=red label="Layer 2 (GPUs 8-11)" style=dashed
+		subgraph cluster_l2_gpu8 {
+			color=green label="GPU 8" style=dotted
+		}
+		subgraph cluster_l2_gpu9 {
+			color=green label="GPU 9" style=dotted
+		}
+		subgraph cluster_l2_gpu10 {
+			color=green label="GPU 10" style=dotted
+		}
+		subgraph cluster_l2_gpu11 {
+			color=green label="GPU 11" style=dotted
+		}
+	}
+	send_l2_l3 [label="Pipeline Send
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 11→12" fillcolor=orange shape=ellipse style=filled]
+	l3_input_split [label="Input Broadcast
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]×4
+GPU: 12-15" fillcolor=lightyellow shape=parallelogram style=filled]
+	l3_mha_qkv_split [label="QKV Split
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]×4
+GPU: 12-15" fillcolor=lightyellow shape=parallelogram style=filled]
+	l3_mha_qkv_gpu12 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 12" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_mha_attn_gpu12 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 12" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_up_gpu12 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 12" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_gate_gpu12 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 12" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_act_gpu12 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 12" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_down_gpu12 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 12" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_residual_gpu12 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 12" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_layernorm_gpu12 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 12" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_mha_qkv_gpu13 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 13" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_mha_attn_gpu13 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 13" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_up_gpu13 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 13" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_gate_gpu13 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 13" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_act_gpu13 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 13" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_down_gpu13 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 13" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_residual_gpu13 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 13" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_layernorm_gpu13 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 13" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_mha_qkv_gpu14 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 14" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_mha_attn_gpu14 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 14" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_up_gpu14 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 14" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_gate_gpu14 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 14" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_act_gpu14 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 14" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_down_gpu14 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 14" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_residual_gpu14 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 14" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_layernorm_gpu14 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 14" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_mha_qkv_gpu15 [label="MHA QKV Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+GPU: 15" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_mha_attn_gpu15 [label="MHA Attention
+Input: [batch_size=128, seq_len=10000, num_heads=8, head_dim=128]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 15" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_up_gpu15 [label="FFN Up Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 15" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_gate_gpu15 [label="FFN Gate Linear
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 15" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_act_gpu15 [label="FFN Activation
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+GPU: 15" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_ffn_down_gpu15 [label="FFN Down Linear
+Input: [batch_size=128, seq_len=10000, mlp_hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 15" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_residual_gpu15 [label="Residual Add
+Input: [batch_size=128, seq_len=10000, hidden_size=1024] (x2)
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 15" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_layernorm_gpu15 [label="LayerNorm
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]
+Output: [batch_size=128, seq_len=10000, hidden_size=1024]
+GPU: 15" fillcolor=lightgreen shape=rectangle style=filled]
+	l3_mha_allreduce [label="MHA All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]×4
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 12-15" fillcolor=lightyellow shape=parallelogram style=filled]
+	l3_ffn_allreduce [label="FFN All-Reduce
+Input: [batch_size=128, seq_len=10000, hidden_size=1024]×4
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 12-15" fillcolor=lightyellow shape=parallelogram style=filled]
+	l3_output [label="Layer 3 Output
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 12-15" fillcolor=lightblue shape=ellipse style=filled]
+	subgraph cluster_layer3 {
+		color=red label="Layer 3 (GPUs 12-15)" style=dashed
+		subgraph cluster_l3_gpu12 {
+			color=green label="GPU 12" style=dotted
+		}
+		subgraph cluster_l3_gpu13 {
+			color=green label="GPU 13" style=dotted
+		}
+		subgraph cluster_l3_gpu14 {
+			color=green label="GPU 14" style=dotted
+		}
+		subgraph cluster_l3_gpu15 {
+			color=green label="GPU 15" style=dotted
+		}
+	}
+	final_output [label="Final Output
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+Output: [batch_size=128, seq_len=10000, hidden_size=4096]
+GPU: 12-15" fillcolor=lightblue shape=ellipse style=filled]
+	input -> l0_input_split
+	l0_input_split -> l0_mha_qkv_split
+	l0_mha_qkv_split -> l0_mha_qkv_gpu0
+	l0_mha_qkv_gpu0 -> l0_mha_attn_gpu0
+	l0_input_split -> l0_ffn_up_gpu0
+	l0_input_split -> l0_ffn_gate_gpu0
+	l0_ffn_up_gpu0 -> l0_ffn_act_gpu0
+	l0_ffn_gate_gpu0 -> l0_ffn_act_gpu0
+	l0_ffn_act_gpu0 -> l0_ffn_down_gpu0
+	l0_mha_attn_gpu0 -> l0_residual_gpu0
+	l0_ffn_down_gpu0 -> l0_residual_gpu0
+	l0_residual_gpu0 -> l0_layernorm_gpu0
+	l0_layernorm_gpu0 -> l0_mha_allreduce
+	l0_mha_allreduce -> l0_ffn_allreduce
+	l0_ffn_allreduce -> l0_output
+	l0_mha_qkv_split -> l0_mha_qkv_gpu1
+	l0_mha_qkv_gpu1 -> l0_mha_attn_gpu1
+	l0_input_split -> l0_ffn_up_gpu1
+	l0_input_split -> l0_ffn_gate_gpu1
+	l0_ffn_up_gpu1 -> l0_ffn_act_gpu1
+	l0_ffn_gate_gpu1 -> l0_ffn_act_gpu1
+	l0_ffn_act_gpu1 -> l0_ffn_down_gpu1
+	l0_mha_attn_gpu1 -> l0_residual_gpu1
+	l0_ffn_down_gpu1 -> l0_residual_gpu1
+	l0_residual_gpu1 -> l0_layernorm_gpu1
+	l0_layernorm_gpu1 -> l0_mha_allreduce
+	l0_mha_allreduce -> l0_ffn_allreduce
+	l0_ffn_allreduce -> l0_output
+	l0_mha_qkv_split -> l0_mha_qkv_gpu2
+	l0_mha_qkv_gpu2 -> l0_mha_attn_gpu2
+	l0_input_split -> l0_ffn_up_gpu2
+	l0_input_split -> l0_ffn_gate_gpu2
+	l0_ffn_up_gpu2 -> l0_ffn_act_gpu2
+	l0_ffn_gate_gpu2 -> l0_ffn_act_gpu2
+	l0_ffn_act_gpu2 -> l0_ffn_down_gpu2
+	l0_mha_attn_gpu2 -> l0_residual_gpu2
+	l0_ffn_down_gpu2 -> l0_residual_gpu2
+	l0_residual_gpu2 -> l0_layernorm_gpu2
+	l0_layernorm_gpu2 -> l0_mha_allreduce
+	l0_mha_allreduce -> l0_ffn_allreduce
+	l0_ffn_allreduce -> l0_output
+	l0_mha_qkv_split -> l0_mha_qkv_gpu3
+	l0_mha_qkv_gpu3 -> l0_mha_attn_gpu3
+	l0_input_split -> l0_ffn_up_gpu3
+	l0_input_split -> l0_ffn_gate_gpu3
+	l0_ffn_up_gpu3 -> l0_ffn_act_gpu3
+	l0_ffn_gate_gpu3 -> l0_ffn_act_gpu3
+	l0_ffn_act_gpu3 -> l0_ffn_down_gpu3
+	l0_mha_attn_gpu3 -> l0_residual_gpu3
+	l0_ffn_down_gpu3 -> l0_residual_gpu3
+	l0_residual_gpu3 -> l0_layernorm_gpu3
+	l0_layernorm_gpu3 -> l0_mha_allreduce
+	l0_mha_allreduce -> l0_ffn_allreduce
+	l0_ffn_allreduce -> l0_output
+	l0_output -> send_l0_l1
+	send_l0_l1 -> l1_input_split
+	l1_input_split -> l1_mha_qkv_split
+	l1_mha_qkv_split -> l1_mha_qkv_gpu4
+	l1_mha_qkv_gpu4 -> l1_mha_attn_gpu4
+	l1_input_split -> l1_ffn_up_gpu4
+	l1_input_split -> l1_ffn_gate_gpu4
+	l1_ffn_up_gpu4 -> l1_ffn_act_gpu4
+	l1_ffn_gate_gpu4 -> l1_ffn_act_gpu4
+	l1_ffn_act_gpu4 -> l1_ffn_down_gpu4
+	l1_mha_attn_gpu4 -> l1_residual_gpu4
+	l1_ffn_down_gpu4 -> l1_residual_gpu4
+	l1_residual_gpu4 -> l1_layernorm_gpu4
+	l1_layernorm_gpu4 -> l1_mha_allreduce
+	l1_mha_allreduce -> l1_ffn_allreduce
+	l1_ffn_allreduce -> l1_output
+	l1_mha_qkv_split -> l1_mha_qkv_gpu5
+	l1_mha_qkv_gpu5 -> l1_mha_attn_gpu5
+	l1_input_split -> l1_ffn_up_gpu5
+	l1_input_split -> l1_ffn_gate_gpu5
+	l1_ffn_up_gpu5 -> l1_ffn_act_gpu5
+	l1_ffn_gate_gpu5 -> l1_ffn_act_gpu5
+	l1_ffn_act_gpu5 -> l1_ffn_down_gpu5
+	l1_mha_attn_gpu5 -> l1_residual_gpu5
+	l1_ffn_down_gpu5 -> l1_residual_gpu5
+	l1_residual_gpu5 -> l1_layernorm_gpu5
+	l1_layernorm_gpu5 -> l1_mha_allreduce
+	l1_mha_allreduce -> l1_ffn_allreduce
+	l1_ffn_allreduce -> l1_output
+	l1_mha_qkv_split -> l1_mha_qkv_gpu6
+	l1_mha_qkv_gpu6 -> l1_mha_attn_gpu6
+	l1_input_split -> l1_ffn_up_gpu6
+	l1_input_split -> l1_ffn_gate_gpu6
+	l1_ffn_up_gpu6 -> l1_ffn_act_gpu6
+	l1_ffn_gate_gpu6 -> l1_ffn_act_gpu6
+	l1_ffn_act_gpu6 -> l1_ffn_down_gpu6
+	l1_mha_attn_gpu6 -> l1_residual_gpu6
+	l1_ffn_down_gpu6 -> l1_residual_gpu6
+	l1_residual_gpu6 -> l1_layernorm_gpu6
+	l1_layernorm_gpu6 -> l1_mha_allreduce
+	l1_mha_allreduce -> l1_ffn_allreduce
+	l1_ffn_allreduce -> l1_output
+	l1_mha_qkv_split -> l1_mha_qkv_gpu7
+	l1_mha_qkv_gpu7 -> l1_mha_attn_gpu7
+	l1_input_split -> l1_ffn_up_gpu7
+	l1_input_split -> l1_ffn_gate_gpu7
+	l1_ffn_up_gpu7 -> l1_ffn_act_gpu7
+	l1_ffn_gate_gpu7 -> l1_ffn_act_gpu7
+	l1_ffn_act_gpu7 -> l1_ffn_down_gpu7
+	l1_mha_attn_gpu7 -> l1_residual_gpu7
+	l1_ffn_down_gpu7 -> l1_residual_gpu7
+	l1_residual_gpu7 -> l1_layernorm_gpu7
+	l1_layernorm_gpu7 -> l1_mha_allreduce
+	l1_mha_allreduce -> l1_ffn_allreduce
+	l1_ffn_allreduce -> l1_output
+	l1_output -> send_l1_l2
+	send_l1_l2 -> l2_input_split
+	l2_input_split -> l2_mha_qkv_split
+	l2_mha_qkv_split -> l2_mha_qkv_gpu8
+	l2_mha_qkv_gpu8 -> l2_mha_attn_gpu8
+	l2_input_split -> l2_ffn_up_gpu8
+	l2_input_split -> l2_ffn_gate_gpu8
+	l2_ffn_up_gpu8 -> l2_ffn_act_gpu8
+	l2_ffn_gate_gpu8 -> l2_ffn_act_gpu8
+	l2_ffn_act_gpu8 -> l2_ffn_down_gpu8
+	l2_mha_attn_gpu8 -> l2_residual_gpu8
+	l2_ffn_down_gpu8 -> l2_residual_gpu8
+	l2_residual_gpu8 -> l2_layernorm_gpu8
+	l2_layernorm_gpu8 -> l2_mha_allreduce
+	l2_mha_allreduce -> l2_ffn_allreduce
+	l2_ffn_allreduce -> l2_output
+	l2_mha_qkv_split -> l2_mha_qkv_gpu9
+	l2_mha_qkv_gpu9 -> l2_mha_attn_gpu9
+	l2_input_split -> l2_ffn_up_gpu9
+	l2_input_split -> l2_ffn_gate_gpu9
+	l2_ffn_up_gpu9 -> l2_ffn_act_gpu9
+	l2_ffn_gate_gpu9 -> l2_ffn_act_gpu9
+	l2_ffn_act_gpu9 -> l2_ffn_down_gpu9
+	l2_mha_attn_gpu9 -> l2_residual_gpu9
+	l2_ffn_down_gpu9 -> l2_residual_gpu9
+	l2_residual_gpu9 -> l2_layernorm_gpu9
+	l2_layernorm_gpu9 -> l2_mha_allreduce
+	l2_mha_allreduce -> l2_ffn_allreduce
+	l2_ffn_allreduce -> l2_output
+	l2_mha_qkv_split -> l2_mha_qkv_gpu10
+	l2_mha_qkv_gpu10 -> l2_mha_attn_gpu10
+	l2_input_split -> l2_ffn_up_gpu10
+	l2_input_split -> l2_ffn_gate_gpu10
+	l2_ffn_up_gpu10 -> l2_ffn_act_gpu10
+	l2_ffn_gate_gpu10 -> l2_ffn_act_gpu10
+	l2_ffn_act_gpu10 -> l2_ffn_down_gpu10
+	l2_mha_attn_gpu10 -> l2_residual_gpu10
+	l2_ffn_down_gpu10 -> l2_residual_gpu10
+	l2_residual_gpu10 -> l2_layernorm_gpu10
+	l2_layernorm_gpu10 -> l2_mha_allreduce
+	l2_mha_allreduce -> l2_ffn_allreduce
+	l2_ffn_allreduce -> l2_output
+	l2_mha_qkv_split -> l2_mha_qkv_gpu11
+	l2_mha_qkv_gpu11 -> l2_mha_attn_gpu11
+	l2_input_split -> l2_ffn_up_gpu11
+	l2_input_split -> l2_ffn_gate_gpu11
+	l2_ffn_up_gpu11 -> l2_ffn_act_gpu11
+	l2_ffn_gate_gpu11 -> l2_ffn_act_gpu11
+	l2_ffn_act_gpu11 -> l2_ffn_down_gpu11
+	l2_mha_attn_gpu11 -> l2_residual_gpu11
+	l2_ffn_down_gpu11 -> l2_residual_gpu11
+	l2_residual_gpu11 -> l2_layernorm_gpu11
+	l2_layernorm_gpu11 -> l2_mha_allreduce
+	l2_mha_allreduce -> l2_ffn_allreduce
+	l2_ffn_allreduce -> l2_output
+	l2_output -> send_l2_l3
+	send_l2_l3 -> l3_input_split
+	l3_input_split -> l3_mha_qkv_split
+	l3_mha_qkv_split -> l3_mha_qkv_gpu12
+	l3_mha_qkv_gpu12 -> l3_mha_attn_gpu12
+	l3_input_split -> l3_ffn_up_gpu12
+	l3_input_split -> l3_ffn_gate_gpu12
+	l3_ffn_up_gpu12 -> l3_ffn_act_gpu12
+	l3_ffn_gate_gpu12 -> l3_ffn_act_gpu12
+	l3_ffn_act_gpu12 -> l3_ffn_down_gpu12
+	l3_mha_attn_gpu12 -> l3_residual_gpu12
+	l3_ffn_down_gpu12 -> l3_residual_gpu12
+	l3_residual_gpu12 -> l3_layernorm_gpu12
+	l3_layernorm_gpu12 -> l3_mha_allreduce
+	l3_mha_allreduce -> l3_ffn_allreduce
+	l3_ffn_allreduce -> l3_output
+	l3_mha_qkv_split -> l3_mha_qkv_gpu13
+	l3_mha_qkv_gpu13 -> l3_mha_attn_gpu13
+	l3_input_split -> l3_ffn_up_gpu13
+	l3_input_split -> l3_ffn_gate_gpu13
+	l3_ffn_up_gpu13 -> l3_ffn_act_gpu13
+	l3_ffn_gate_gpu13 -> l3_ffn_act_gpu13
+	l3_ffn_act_gpu13 -> l3_ffn_down_gpu13
+	l3_mha_attn_gpu13 -> l3_residual_gpu13
+	l3_ffn_down_gpu13 -> l3_residual_gpu13
+	l3_residual_gpu13 -> l3_layernorm_gpu13
+	l3_layernorm_gpu13 -> l3_mha_allreduce
+	l3_mha_allreduce -> l3_ffn_allreduce
+	l3_ffn_allreduce -> l3_output
+	l3_mha_qkv_split -> l3_mha_qkv_gpu14
+	l3_mha_qkv_gpu14 -> l3_mha_attn_gpu14
+	l3_input_split -> l3_ffn_up_gpu14
+	l3_input_split -> l3_ffn_gate_gpu14
+	l3_ffn_up_gpu14 -> l3_ffn_act_gpu14
+	l3_ffn_gate_gpu14 -> l3_ffn_act_gpu14
+	l3_ffn_act_gpu14 -> l3_ffn_down_gpu14
+	l3_mha_attn_gpu14 -> l3_residual_gpu14
+	l3_ffn_down_gpu14 -> l3_residual_gpu14
+	l3_residual_gpu14 -> l3_layernorm_gpu14
+	l3_layernorm_gpu14 -> l3_mha_allreduce
+	l3_mha_allreduce -> l3_ffn_allreduce
+	l3_ffn_allreduce -> l3_output
+	l3_mha_qkv_split -> l3_mha_qkv_gpu15
+	l3_mha_qkv_gpu15 -> l3_mha_attn_gpu15
+	l3_input_split -> l3_ffn_up_gpu15
+	l3_input_split -> l3_ffn_gate_gpu15
+	l3_ffn_up_gpu15 -> l3_ffn_act_gpu15
+	l3_ffn_gate_gpu15 -> l3_ffn_act_gpu15
+	l3_ffn_act_gpu15 -> l3_ffn_down_gpu15
+	l3_mha_attn_gpu15 -> l3_residual_gpu15
+	l3_ffn_down_gpu15 -> l3_residual_gpu15
+	l3_residual_gpu15 -> l3_layernorm_gpu15
+	l3_layernorm_gpu15 -> l3_mha_allreduce
+	l3_mha_allreduce -> l3_ffn_allreduce
+	l3_ffn_allreduce -> l3_output
+	l3_output -> final_output
+}

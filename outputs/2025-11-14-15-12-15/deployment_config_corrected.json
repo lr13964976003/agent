@@ -1,0 +1,192 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "Tensor Parallelism + Pipeline Parallelism",
+      "strategy": "TP8_PP2",
+      "total_gpus": 16,
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallelism": {
+          "degree": 8,
+          "splits": ["row", "column"]
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "stages": 2
+        }
+      },
+      "model_specs": {
+        "layers": 4,
+        "total_parameters": 30000000000,
+        "precision": "BF16",
+        "bytes_per_param": 2,
+        "total_model_size_gb": 60
+      },
+      "layer_distribution": {
+        "stage_0": {
+          "layers": [0, 1],
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "parameters_per_layer": 7500000000,
+          "memory_per_layer_gb": 25.7
+        },
+        "stage_1": {
+          "layers": [2, 3],
+          "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+          "parameters_per_layer": 7500000000,
+          "memory_per_layer_gb": 25.7
+        }
+      },
+      "device_mapping": {
+        "pipeline_stage_0": {
+          "layer_0": {
+            "tensor_parallel_group": [0, 1, 2, 3, 4, 5, 6, 7],
+            "parameters_per_device": 937500000,
+            "memory_per_device_gb": 3.21
+          },
+          "layer_1": {
+            "tensor_parallel_group": [0, 1, 2, 3, 4, 5, 6, 7],
+            "parameters_per_device": 937500000,
+            "memory_per_device_gb": 3.21
+          }
+        },
+        "pipeline_stage_1": {
+          "layer_2": {
+            "tensor_parallel_group": [8, 9, 10, 11, 12, 13, 14, 15],
+            "parameters_per_device": 937500000,
+            "memory_per_device_gb": 3.21
+          },
+          "layer_3": {
+            "tensor_parallel_group": [8, 9, 10, 11, 12, 13, 14, 15],
+            "parameters_per_device": 937500000,
+            "memory_per_device_gb": 3.21
+          }
+        }
+      },
+      "hyperparameters": {
+        "batch_size": 128,
+        "sequence_length": 10000,
+        "hidden_size": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "mlp_hidden_size": 16384
+      }
+    },
+    "proposed": {
+      "name": "Layer-wise Distribution",
+      "strategy": "layer_wise_4layer_16gpu",
+      "total_gpus": 16,
+      "parallel_strategy": {
+        "type": "layer_wise",
+        "distribution": "uniform",
+        "gpus_per_layer": 4
+      },
+      "model_specs": {
+        "layers": 4,
+        "total_parameters": 30000000000,
+        "precision": "BF16",
+        "bytes_per_param": 2,
+        "total_model_size_gb": 60,
+        "memory_per_layer_gb": 15
+      },
+      "layer_distribution": {
+        "layer_0": {
+          "gpus": [0, 1, 2, 3],
+          "parameters": 7500000000,
+          "memory_per_gpu_gb": 15,
+          "activation_memory_gb": 10.48,
+          "buffer_memory_gb": 0.2,
+          "total_memory_per_gpu_gb": 25.68
+        },
+        "layer_1": {
+          "gpus": [4, 5, 6, 7],
+          "parameters": 7500000000,
+          "memory_per_gpu_gb": 15,
+          "activation_memory_gb": 10.48,
+          "buffer_memory_gb": 0.2,
+          "total_memory_per_gpu_gb": 25.68
+        },
+        "layer_2": {
+          "gpus": [8, 9, 10, 11],
+          "parameters": 7500000000,
+          "memory_per_gpu_gb": 15,
+          "activation_memory_gb": 10.48,
+          "buffer_memory_gb": 0.2,
+          "total_memory_per_gpu_gb": 25.68
+        },
+        "layer_3": {
+          "gpus": [12, 13, 14, 15],
+          "parameters": 7500000000,
+          "memory_per_gpu_gb": 15,
+          "activation_memory_gb": 10.48,
+          "buffer_memory_gb": 0.2,
+          "total_memory_per_gpu_gb": 25.68
+        }
+      },
+      "device_mapping": {
+        "layer_0": {
+          "tensor_parallel_group": [0, 1, 2, 3],
+          "pipeline_stage": 0,
+          "parameters_per_device": 1875000000,
+          "memory_breakdown": {
+            "weights": 15.0,
+            "activations": 10.48,
+            "buffers": 0.2
+          }
+        },
+        "layer_1": {
+          "tensor_parallel_group": [4, 5, 6, 7],
+          "pipeline_stage": 1,
+          "parameters_per_device": 1875000000,
+          "memory_breakdown": {
+            "weights": 15.0,
+            "activations": 10.48,
+            "buffers": 0.2
+          }
+        },
+        "layer_2": {
+          "tensor_parallel_group": [8, 9, 10, 11],
+          "pipeline_stage": 2,
+          "parameters_per_device": 1875000000,
+          "memory_breakdown": {
+            "weights": 15.0,
+            "activations": 10.48,
+            "buffers": 0.2
+          }
+        },
+        "layer_3": {
+          "tensor_parallel_group": [12, 13, 14, 15],
+          "pipeline_stage": 3,
+          "parameters_per_device": 1875000000,
+          "memory_breakdown": {
+            "weights": 15.0,
+            "activations": 10.48,
+            "buffers": 0.2
+          }
+        }
+      },
+      "communication": {
+        "intra_layer": {
+          "type": "tensor_parallel",
+          "bandwidth": "NVLink"
+        },
+        "inter_layer": {
+          "type": "pipeline_parallel",
+          "bandwidth": "NVLink/PCIe"
+        }
+      },
+      "hyperparameters": {
+        "batch_size": 128,
+        "sequence_length": 10000,
+        "hidden_size": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "mlp_hidden_size": 16384
+      },
+      "performance_metrics": {
+        "expected_tps": 15360,
+        "expected_tpot_ms": 0.065,
+        "improvement_over_baseline": "20%"
+      }
+    }
+  }
+}
