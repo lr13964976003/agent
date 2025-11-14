@@ -1,0 +1,693 @@
+{
+  "deployment_configurations": {
+    "baseline_tensor_pipeline_parallel": {
+      "method": "tensor_parallelism_pipeline_parallelism",
+      "description": "Baseline configuration using 8-way tensor parallelism and 2-way pipeline parallelism",
+      "total_gpus": 16,
+      "parallel_strategy": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "type": "column_row_parallel",
+          "communication": "all_reduce",
+          "collective_operation": "nccl_all_reduce"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "type": "layer_wise_pipeline",
+          "schedule": "1f1b",
+          "micro_batch_size": 16,
+          "num_microbatches": 8
+        }
+      },
+      "model_structure": {
+        "total_layers": 16,
+        "hidden_size": 4096,
+        "mlp_hidden_size": 16384,
+        "num_attention_heads": 32,
+        "head_dimension": 128,
+        "dtype": "float16",
+        "bytes_per_parameter": 2
+      },
+      "module_division": {
+        "pipeline_stage_0": {
+          "stage_id": 0,
+          "layers": [1, 2, 3, 4, 5, 6, 7, 8],
+          "tensor_parallel_group": [0, 1, 2, 3, 4, 5, 6, 7],
+          "modules": {
+            "attention_layers": {
+              "layers_per_stage": 8,
+              "qkv_projection": {
+                "type": "column_parallel",
+                "input_size": 4096,
+                "output_size": 12288,
+                "partition_size": 1536,
+                "devices_per_layer": 8
+              },
+              "attention_output": {
+                "type": "row_parallel",
+                "input_size": 12288,
+                "output_size": 4096,
+                "partition_size": 1536,
+                "devices_per_layer": 8
+              }
+            },
+            "mlp_layers": {
+              "layers_per_stage": 8,
+              "mlp_gate_up": {
+                "type": "column_parallel",
+                "input_size": 4096,
+                "output_size": 32768,
+                "partition_size": 4096,
+                "devices_per_layer": 8
+              },
+              "mlp_down": {
+                "type": "row_parallel",
+                "input_size": 32768,
+                "output_size": 4096,
+                "partition_size": 4096,
+                "devices_per_layer": 8
+              }
+            }
+          }
+        },
+        "pipeline_stage_1": {
+          "stage_id": 1,
+          "layers": [9, 10, 11, 12, 13, 14, 15, 16],
+          "tensor_parallel_group": [8, 9, 10, 11, 12, 13, 14, 15],
+          "modules": {
+            "attention_layers": {
+              "layers_per_stage": 8,
+              "qkv_projection": {
+                "type": "column_parallel",
+                "input_size": 4096,
+                "output_size": 12288,
+                "partition_size": 1536,
+                "devices_per_layer": 8
+              },
+              "attention_output": {
+                "type": "row_parallel",
+                "input_size": 12288,
+                "output_size": 4096,
+                "partition_size": 1536,
+                "devices_per_layer": 8
+              }
+            },
+            "mlp_layers": {
+              "layers_per_stage": 8,
+              "mlp_gate_up": {
+                "type": "column_parallel",
+                "input_size": 4096,
+                "output_size": 32768,
+                "partition_size": 4096,
+                "devices_per_layer": 8
+              },
+              "mlp_down": {
+                "type": "row_parallel",
+                "input_size": 32768,
+                "output_size": 4096,
+                "partition_size": 4096,
+                "devices_per_layer": 8
+              }
+            }
+          }
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "device_id": 0,
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 0,
+          "modules": ["attention_qkv_part_0", "attention_out_part_0", "mlp_gate_up_part_0", "mlp_down_part_0"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_1": {
+          "device_id": 1,
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 1,
+          "modules": ["attention_qkv_part_1", "attention_out_part_1", "mlp_gate_up_part_1", "mlp_down_part_1"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_2": {
+          "device_id": 2,
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 2,
+          "modules": ["attention_qkv_part_2", "attention_out_part_2", "mlp_gate_up_part_2", "mlp_down_part_2"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_3": {
+          "device_id": 3,
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 3,
+          "modules": ["attention_qkv_part_3", "attention_out_part_3", "mlp_gate_up_part_3", "mlp_down_part_3"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_4": {
+          "device_id": 4,
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 4,
+          "modules": ["attention_qkv_part_4", "attention_out_part_4", "mlp_gate_up_part_4", "mlp_down_part_4"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_5": {
+          "device_id": 5,
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 5,
+          "modules": ["attention_qkv_part_5", "attention_out_part_5", "mlp_gate_up_part_5", "mlp_down_part_5"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_6": {
+          "device_id": 6,
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 6,
+          "modules": ["attention_qkv_part_6", "attention_out_part_6", "mlp_gate_up_part_6", "mlp_down_part_6"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_7": {
+          "device_id": 7,
+          "pipeline_stage": 0,
+          "tensor_parallel_rank": 7,
+          "modules": ["attention_qkv_part_7", "attention_out_part_7", "mlp_gate_up_part_7", "mlp_down_part_7"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_8": {
+          "device_id": 8,
+          "pipeline_stage": 1,
+          "tensor_parallel_rank": 0,
+          "modules": ["attention_qkv_part_0", "attention_out_part_0", "mlp_gate_up_part_0", "mlp_down_part_0"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_9": {
+          "device_id": 9,
+          "pipeline_stage": 1,
+          "tensor_parallel_rank": 1,
+          "modules": ["attention_qkv_part_1", "attention_out_part_1", "mlp_gate_up_part_1", "mlp_down_part_1"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_10": {
+          "device_id": 10,
+          "pipeline_stage": 1,
+          "tensor_parallel_rank": 2,
+          "modules": ["attention_qkv_part_2", "attention_out_part_2", "mlp_gate_up_part_2", "mlp_down_part_2"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_11": {
+          "device_id": 11,
+          "pipeline_stage": 1,
+          "tensor_parallel_rank": 3,
+          "modules": ["attention_qkv_part_3", "attention_out_part_3", "mlp_gate_up_part_3", "mlp_down_part_3"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_12": {
+          "device_id": 12,
+          "pipeline_stage": 1,
+          "tensor_parallel_rank": 4,
+          "modules": ["attention_qkv_part_4", "attention_out_part_4", "mlp_gate_up_part_4", "mlp_down_part_4"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_13": {
+          "device_id": 13,
+          "pipeline_stage": 1,
+          "tensor_parallel_rank": 5,
+          "modules": ["attention_qkv_part_5", "attention_out_part_5", "mlp_gate_up_part_5", "mlp_down_part_5"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_14": {
+          "device_id": 14,
+          "pipeline_stage": 1,
+          "tensor_parallel_rank": 6,
+          "modules": ["attention_qkv_part_6", "attention_out_part_6", "mlp_gate_up_part_6", "mlp_down_part_6"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        },
+        "gpu_15": {
+          "device_id": 15,
+          "pipeline_stage": 1,
+          "tensor_parallel_rank": 7,
+          "modules": ["attention_qkv_part_7", "attention_out_part_7", "mlp_gate_up_part_7", "mlp_down_part_7"],
+          "memory_allocation": {
+            "total_memory": 80,
+            "model_memory": 33.55,
+            "activation_memory": 32.768,
+            "communication_buffer": 16.384
+          }
+        }
+      },
+      "communication_topology": {
+        "tensor_parallel_groups": [
+          [0, 1, 2, 3, 4, 5, 6, 7],
+          [8, 9, 10, 11, 12, 13, 14, 15]
+        ],
+        "pipeline_parallel_groups": [
+          [0, 8], [1, 9], [2, 10], [3, 11], [4, 12], [5, 13], [6, 14], [7, 15]
+        ]
+      }
+    },
+    "proposed_layer_wise": {
+      "method": "layer_wise_cache_fitting",
+      "description": "Proposed method with layer-wise partitioning ensuring each layer fits in L2 cache through compression",
+      "total_gpus": 16,
+      "compression_pipeline": {
+        "weight_quantization": {
+          "original_dtype": "float16",
+          "compressed_dtype": "int8",
+          "reduction_factor": 2,
+          "method": "per_channel_scaling"
+        },
+        "structured_sparsity": {
+          "sparsity_ratio": 0.5,
+          "pattern": "2:4_structured",
+          "reduction_factor": 2,
+          "method": "magnitude_pruning"
+        },
+        "activation_compression": {
+          "method": "gradient_checkpointing",
+          "reduction_factor": 4,
+          "accuracy_loss": "<0.1%"
+        },
+        "buffer_optimization": {
+          "method": "operator_fusion",
+          "reduction_factor": 5,
+          "workspace_reduction": "80%"
+        },
+        "final_compression_ratio": 7.5,
+        "memory_per_layer_mb": 49.5
+      },
+      "parallel_strategy": {
+        "type": "layer_wise_parallelism",
+        "degree": 16,
+        "cache_constraint": "L2_cache",
+        "cache_capacity_mb": 50,
+        "optimization": "greedy_layer_aggregation",
+        "fallback": "dynamic_programming"
+      },
+      "model_structure": {
+        "total_layers": 16,
+        "hidden_size": 4096,
+        "mlp_hidden_size": 16384,
+        "num_attention_heads": 32,
+        "head_dimension": 128,
+        "dtype": "float16",
+        "bytes_per_parameter": 2,
+        "layer_memory_mb": 537,
+        "compressed_layer_memory_mb": 49.5
+      },
+      "module_division": {
+        "layer_1": {
+          "layer_id": 1,
+          "layer_type": "transformer_layer",
+          "compression_applied": true,
+          "compressed_weights_mb": 402.7,
+          "compressed_activations_mb": 24.6,
+          "compressed_buffers_mb": 2.0,
+          "total_compressed_mb": 49.5
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "device_id": 0,
+          "assigned_layer": 1,
+          "modules": ["layer_1_attention", "layer_1_mlp", "layer_1_norm"],
+          "compression_details": {
+            "attention_weights": {
+              "original_mb": 134.3,
+              "compressed_mb": 33.6,
+              "method": "int8_quantization"
+            },
+            "mlp_weights": {
+              "original_mb": 402.6,
+              "compressed_mb": 100.7,
+              "method": "int8_quantization_plus_50%_sparsity"
+            },
+            "activations": {
+              "original_mb": 98.3,
+              "compressed_mb": 24.6,
+              "method": "gradient_checkpointing"
+            },
+            "buffers": {
+              "original_mb": 10.0,
+              "compressed_mb": 2.0,
+              "method": "operator_fusion"
+            }
+          },
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_1": {
+          "device_id": 1,
+          "assigned_layer": 2,
+          "modules": ["layer_2_attention", "layer_2_mlp", "layer_2_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_2": {
+          "device_id": 2,
+          "assigned_layer": 3,
+          "modules": ["layer_3_attention", "layer_3_mlp", "layer_3_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_3": {
+          "device_id": 3,
+          "assigned_layer": 4,
+          "modules": ["layer_4_attention", "layer_4_mlp", "layer_4_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_4": {
+          "device_id": 4,
+          "assigned_layer": 5,
+          "modules": ["layer_5_attention", "layer_5_mlp", "layer_5_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_5": {
+          "device_id": 5,
+          "assigned_layer": 6,
+          "modules": ["layer_6_attention", "layer_6_mlp", "layer_6_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_6": {
+          "device_id": 6,
+          "assigned_layer": 7,
+          "modules": ["layer_7_attention", "layer_7_mlp", "layer_7_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_7": {
+          "device_id": 7,
+          "assigned_layer": 8,
+          "modules": ["layer_8_attention", "layer_8_mlp", "layer_8_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_8": {
+          "device_id": 8,
+          "assigned_layer": 9,
+          "modules": ["layer_9_attention", "layer_9_mlp", "layer_9_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_9": {
+          "device_id": 9,
+          "assigned_layer": 10,
+          "modules": ["layer_10_attention", "layer_10_mlp", "layer_10_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_10": {
+          "device_id": 10,
+          "assigned_layer": 11,
+          "modules": ["layer_11_attention", "layer_11_mlp", "layer_11_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_11": {
+          "device_id": 11,
+          "assigned_layer": 12,
+          "modules": ["layer_12_attention", "layer_12_mlp", "layer_12_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_12": {
+          "device_id": 12,
+          "assigned_layer": 13,
+          "modules": ["layer_13_attention", "layer_13_mlp", "layer_13_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_13": {
+          "device_id": 13,
+          "assigned_layer": 14,
+          "modules": ["layer_14_attention", "layer_14_mlp", "layer_14_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_14": {
+          "device_id": 14,
+          "assigned_layer": 15,
+          "modules": ["layer_15_attention", "layer_15_mlp", "layer_15_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        },
+        "gpu_15": {
+          "device_id": 15,
+          "assigned_layer": 16,
+          "modules": ["layer_16_attention", "layer_16_mlp", "layer_16_norm"],
+          "memory_allocation": {
+            "total_l2_cache": 50,
+            "model_weights": 134.3,
+            "activations": 24.6,
+            "buffers": 2.0,
+            "cache_usage": 49.5,
+            "cache_efficiency": 0.99,
+            "compression_ratio": 7.5
+          }
+        }
+      },
+      "communication_topology": {
+        "layer_wise_links": [
+          [0, 1],
+          [1, 2],
+          [2, 3],
+          [3, 4],
+          [4, 5],
+          [5, 6],
+          [6, 7],
+          [7, 8],
+          [8, 9],
+          [9, 10],
+          [10, 11],
+          [11, 12],
+          [12, 13],
+          [13, 14],
+          [14, 15]
+        ],
+        "communication_pattern": "pipeline",
+        "bandwidth_gbps": 900,
+        "latency_us": 5,
+        "activation_compression": {
+          "enabled": true,
+          "method": "lossless_compression",
+          "compression_ratio": 3.5
+        }
+      }
+    }
+  },
+  "runtime_parameters": {
+    "batch_size": 128,
+    "sequence_length": 10000,
+    "precision": "float16",
+    "optimization": {
+      "enable_cuda_graphs": true,
+      "enable_kernel_fusion": true,
+      "memory_pool": "l2_cache",
+      "prefetching": true,
+      "compression_pipeline": true,
+      "dynamic_reconfiguration": true
+    },
+    "monitoring": {
+      "cache_hit_rate": true,
+      "memory_utilization": true,
+      "communication_overhead": true,
+      "accuracy_validation": true
+    }
+  },
+  "edge_case_handling": {
+    "single_layer_exceeds_cache": {
+      "method": "aggressive_compression",
+      "int4_quantization": true,
+      "sparsity_ratio": 0.75,
+      "intra_layer_partitioning": true
+    },
+    "variable_layer_sizes": {
+      "method": "dynamic_programming",
+      "load_balancing": true,
+      "adaptive_compression": true
+    },
+    "communication_bottlenecks": {
+      "method": "overlapped_execution",
+      "activation_compression": true,
+      "async_communication": true
+    }
+  }
+}

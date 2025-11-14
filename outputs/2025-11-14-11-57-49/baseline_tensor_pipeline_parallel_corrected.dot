@@ -1,0 +1,488 @@
+// 16-layer Transformer with Tensor Parallelism (TP=8) and Pipeline Parallelism (PP=2)
+digraph baseline_tensor_pipeline_parallel {
+	rankdir=TB size="20,20"
+	node [shape=rectangle style=filled]
+	
+	// Model Input
+	input [label="Model Input\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nAll GPUs" fillcolor=lightgreen shape=ellipse]
+	
+	// Pipeline Stage 0: GPUs 0-7 (8 layers)
+	node [fillcolor=lightblue]
+	
+	// Layer 1
+	layer1_norm1 [label="Layer 1\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer1_qkv_proj [label="Layer 1 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer1_attn [label="Layer 1 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 0-7" fillcolor=lightcoral]
+	layer1_attn_out [label="Layer 1 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer1_attn_allreduce [label="Layer 1 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer1_residual1 [label="Layer 1 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+	layer1_norm2 [label="Layer 1 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer1_mlp_gate_up [label="Layer 1 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer1_mlp_activation [label="Layer 1 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightcyan]
+	layer1_mlp_down [label="Layer 1 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer1_mlp_allreduce [label="Layer 1 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer1_residual2 [label="Layer 1 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+
+	// Layer 2
+	layer2_norm1 [label="Layer 2\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer2_qkv_proj [label="Layer 2 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer2_attn [label="Layer 2 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 0-7" fillcolor=lightcoral]
+	layer2_attn_out [label="Layer 2 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer2_attn_allreduce [label="Layer 2 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer2_residual1 [label="Layer 2 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+	layer2_norm2 [label="Layer 2 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer2_mlp_gate_up [label="Layer 2 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer2_mlp_activation [label="Layer 2 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightcyan]
+	layer2_mlp_down [label="Layer 2 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer2_mlp_allreduce [label="Layer 2 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer2_residual2 [label="Layer 2 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+
+	// Layer 3
+	layer3_norm1 [label="Layer 3\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer3_qkv_proj [label="Layer 3 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer3_attn [label="Layer 3 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 0-7" fillcolor=lightcoral]
+	layer3_attn_out [label="Layer 3 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer3_attn_allreduce [label="Layer 3 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer3_residual1 [label="Layer 3 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+	layer3_norm2 [label="Layer 3 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer3_mlp_gate_up [label="Layer 3 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer3_mlp_activation [label="Layer 3 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightcyan]
+	layer3_mlp_down [label="Layer 3 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer3_mlp_allreduce [label="Layer 3 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer3_residual2 [label="Layer 3 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+
+	// Layer 4
+	layer4_norm1 [label="Layer 4\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer4_qkv_proj [label="Layer 4 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer4_attn [label="Layer 4 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 0-7" fillcolor=lightcoral]
+	layer4_attn_out [label="Layer 4 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer4_attn_allreduce [label="Layer 4 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer4_residual1 [label="Layer 4 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+	layer4_norm2 [label="Layer 4 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer4_mlp_gate_up [label="Layer 4 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer4_mlp_activation [label="Layer 4 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightcyan]
+	layer4_mlp_down [label="Layer 4 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer4_mlp_allreduce [label="Layer 4 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer4_residual2 [label="Layer 4 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+
+	// Layer 5
+	layer5_norm1 [label="Layer 5\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer5_qkv_proj [label="Layer 5 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer5_attn [label="Layer 5 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 0-7" fillcolor=lightcoral]
+	layer5_attn_out [label="Layer 5 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer5_attn_allreduce [label="Layer 5 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer5_residual1 [label="Layer 5 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+	layer5_norm2 [label="Layer 5 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer5_mlp_gate_up [label="Layer 5 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer5_mlp_activation [label="Layer 5 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightcyan]
+	layer5_mlp_down [label="Layer 5 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer5_mlp_allreduce [label="Layer 5 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer5_residual2 [label="Layer 5 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+
+	// Layer 6
+	layer6_norm1 [label="Layer 6\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer6_qkv_proj [label="Layer 6 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer6_attn [label="Layer 6 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 0-7" fillcolor=lightcoral]
+	layer6_attn_out [label="Layer 6 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer6_attn_allreduce [label="Layer 6 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer6_residual1 [label="Layer 6 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+	layer6_norm2 [label="Layer 6 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer6_mlp_gate_up [label="Layer 6 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer6_mlp_activation [label="Layer 6 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightcyan]
+	layer6_mlp_down [label="Layer 6 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer6_mlp_allreduce [label="Layer 6 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer6_residual2 [label="Layer 6 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+
+	// Layer 7
+	layer7_norm1 [label="Layer 7\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer7_qkv_proj [label="Layer 7 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer7_attn [label="Layer 7 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 0-7" fillcolor=lightcoral]
+	layer7_attn_out [label="Layer 7 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer7_attn_allreduce [label="Layer 7 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer7_residual1 [label="Layer 7 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+	layer7_norm2 [label="Layer 7 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer7_mlp_gate_up [label="Layer 7 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer7_mlp_activation [label="Layer 7 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightcyan]
+	layer7_mlp_down [label="Layer 7 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer7_mlp_allreduce [label="Layer 7 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer7_residual2 [label="Layer 7 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+
+	// Layer 8
+	layer8_norm1 [label="Layer 8\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer8_qkv_proj [label="Layer 8 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer8_attn [label="Layer 8 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 0-7" fillcolor=lightcoral]
+	layer8_attn_out [label="Layer 8 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer8_attn_allreduce [label="Layer 8 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer8_residual1 [label="Layer 8 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+	layer8_norm2 [label="Layer 8 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightyellow]
+	layer8_mlp_gate_up [label="Layer 8 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer8_mlp_activation [label="Layer 8 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightcyan]
+	layer8_mlp_down [label="Layer 8 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer8_mlp_allreduce [label="Layer 8 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgoldenrod]
+	layer8_residual2 [label="Layer 8 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 0-7" fillcolor=lightgreen]
+
+	// Pipeline Communication
+	pipeline_send_recv [label="Pipeline Send/Recv\nBetween Stage 0 and 1\nActivation: [128, 10000, 4096]\nBandwidth: 900 Gbps" fillcolor=lightpink shape=parallelogram]
+
+	// Pipeline Stage 1: GPUs 8-15 (8 layers)
+	// Layer 9
+	layer9_norm1 [label="Layer 9\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer9_qkv_proj [label="Layer 9 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer9_attn [label="Layer 9 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 8-15" fillcolor=lightcoral]
+	layer9_attn_out [label="Layer 9 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer9_attn_allreduce [label="Layer 9 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer9_residual1 [label="Layer 9 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+	layer9_norm2 [label="Layer 9 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer9_mlp_gate_up [label="Layer 9 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer9_mlp_activation [label="Layer 9 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightcyan]
+	layer9_mlp_down [label="Layer 9 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer9_mlp_allreduce [label="Layer 9 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer9_residual2 [label="Layer 9 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+
+	// Layer 10
+	layer10_norm1 [label="Layer 10\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer10_qkv_proj [label="Layer 10 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer10_attn [label="Layer 10 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 8-15" fillcolor=lightcoral]
+	layer10_attn_out [label="Layer 10 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer10_attn_allreduce [label="Layer 10 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer10_residual1 [label="Layer 10 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+	layer10_norm2 [label="Layer 10 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer10_mlp_gate_up [label="Layer 10 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer10_mlp_activation [label="Layer 10 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightcyan]
+	layer10_mlp_down [label="Layer 10 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer10_mlp_allreduce [label="Layer 10 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer10_residual2 [label="Layer 10 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+
+	// Layer 11
+	layer11_norm1 [label="Layer 11\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer11_qkv_proj [label="Layer 11 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer11_attn [label="Layer 11 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 8-15" fillcolor=lightcoral]
+	layer11_attn_out [label="Layer 11 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer11_attn_allreduce [label="Layer 11 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer11_residual1 [label="Layer 11 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+	layer11_norm2 [label="Layer 11 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer11_mlp_gate_up [label="Layer 11 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer11_mlp_activation [label="Layer 11 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightcyan]
+	layer11_mlp_down [label="Layer 11 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer11_mlp_allreduce [label="Layer 11 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer11_residual2 [label="Layer 11 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+
+	// Layer 12
+	layer12_norm1 [label="Layer 12\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer12_qkv_proj [label="Layer 12 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer12_attn [label="Layer 12 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 8-15" fillcolor=lightcoral]
+	layer12_attn_out [label="Layer 12 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer12_attn_allreduce [label="Layer 12 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer12_residual1 [label="Layer 12 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+	layer12_norm2 [label="Layer 12 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer12_mlp_gate_up [label="Layer 12 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer12_mlp_activation [label="Layer 12 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightcyan]
+	layer12_mlp_down [label="Layer 12 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer12_mlp_allreduce [label="Layer 12 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer12_residual2 [label="Layer 12 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+
+	// Layer 13
+	layer13_norm1 [label="Layer 13\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer13_qkv_proj [label="Layer 13 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer13_attn [label="Layer 13 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 8-15" fillcolor=lightcoral]
+	layer13_attn_out [label="Layer 13 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer13_attn_allreduce [label="Layer 13 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer13_residual1 [label="Layer 13 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+	layer13_norm2 [label="Layer 13 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer13_mlp_gate_up [label="Layer 13 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer13_mlp_activation [label="Layer 13 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightcyan]
+	layer13_mlp_down [label="Layer 13 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer13_mlp_allreduce [label="Layer 13 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer13_residual2 [label="Layer 13 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+
+	// Layer 14
+	layer14_norm1 [label="Layer 14\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer14_qkv_proj [label="Layer 14 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer14_attn [label="Layer 14 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 8-15" fillcolor=lightcoral]
+	layer14_attn_out [label="Layer 14 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer14_attn_allreduce [label="Layer 14 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer14_residual1 [label="Layer 14 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+	layer14_norm2 [label="Layer 14 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer14_mlp_gate_up [label="Layer 14 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer14_mlp_activation [label="Layer 14 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightcyan]
+	layer14_mlp_down [label="Layer 14 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer14_mlp_allreduce [label="Layer 14 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer14_residual2 [label="Layer 14 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+
+	// Layer 15
+	layer15_norm1 [label="Layer 15\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer15_qkv_proj [label="Layer 15 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer15_attn [label="Layer 15 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 8-15" fillcolor=lightcoral]
+	layer15_attn_out [label="Layer 15 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer15_attn_allreduce [label="Layer 15 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer15_residual1 [label="Layer 15 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+	layer15_norm2 [label="Layer 15 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer15_mlp_gate_up [label="Layer 15 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer15_mlp_activation [label="Layer 15 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightcyan]
+	layer15_mlp_down [label="Layer 15 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer15_mlp_allreduce [label="Layer 15 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer15_residual2 [label="Layer 15 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+
+	// Layer 16
+	layer16_norm1 [label="Layer 16\nInput Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer16_qkv_proj [label="Layer 16 QKV Projection\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 1536]\nPer GPU" fillcolor=lightcoral]
+	layer16_attn [label="Layer 16 Multi-Head Attention\nInput: [128, 10000, 32, 128]\nOutput: [128, 10000, 32, 128]\nGPUs 8-15" fillcolor=lightcoral]
+	layer16_attn_out [label="Layer 16 Attention Output\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcoral]
+	layer16_attn_allreduce [label="Layer 16 All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer16_residual1 [label="Layer 16 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+	layer16_norm2 [label="Layer 16 MLP Layer Norm\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightyellow]
+	layer16_mlp_gate_up [label="Layer 16 MLP Gate+Up\nColumn Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nPer GPU" fillcolor=lightcyan]
+	layer16_mlp_activation [label="Layer 16 MLP Activation (GELU)\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightcyan]
+	layer16_mlp_down [label="Layer 16 MLP Down\nRow Parallel\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 512]\nPer GPU" fillcolor=lightcyan]
+	layer16_mlp_allreduce [label="Layer 16 MLP All-Reduce\nSum Reduction\nInput: [128, 10000, 512]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgoldenrod]
+	layer16_residual2 [label="Layer 16 Residual Add\nInput1: [128, 10000, 4096]\nInput2: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nGPUs 8-15" fillcolor=lightgreen]
+
+	// Model Output
+	output [label="Model Output\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]\nAll GPUs" fillcolor=lightgreen shape=ellipse]
+
+	// Connections for Pipeline Stage 0
+	input -> layer1_norm1
+	layer1_norm1 -> layer1_qkv_proj
+	layer1_qkv_proj -> layer1_attn
+	layer1_attn -> layer1_attn_out
+	layer1_attn_out -> layer1_attn_allreduce
+	layer1_attn_allreduce -> layer1_residual1
+	input -> layer1_residual1
+	layer1_residual1 -> layer1_norm2
+	layer1_norm2 -> layer1_mlp_gate_up
+	layer1_mlp_gate_up -> layer1_mlp_activation
+	layer1_mlp_activation -> layer1_mlp_down
+	layer1_mlp_down -> layer1_mlp_allreduce
+	layer1_mlp_allreduce -> layer1_residual2
+	layer1_residual1 -> layer1_residual2
+
+	layer1_residual2 -> layer2_norm1
+	layer2_norm1 -> layer2_qkv_proj
+	layer2_qkv_proj -> layer2_attn
+	layer2_attn -> layer2_attn_out
+	layer2_attn_out -> layer2_attn_allreduce
+	layer2_attn_allreduce -> layer2_residual1
+	layer1_residual2 -> layer2_residual1
+	layer2_residual1 -> layer2_norm2
+	layer2_norm2 -> layer2_mlp_gate_up
+	layer2_mlp_gate_up -> layer2_mlp_activation
+	layer2_mlp_activation -> layer2_mlp_down
+	layer2_mlp_down -> layer2_mlp_allreduce
+	layer2_mlp_allreduce -> layer2_residual2
+	layer2_residual1 -> layer2_residual2
+
+	layer2_residual2 -> layer3_norm1
+	layer3_norm1 -> layer3_qkv_proj
+	layer3_qkv_proj -> layer3_attn
+	layer3_attn -> layer3_attn_out
+	layer3_attn_out -> layer3_attn_allreduce
+	layer3_attn_allreduce -> layer3_residual1
+	layer2_residual2 -> layer3_residual1
+	layer3_residual1 -> layer3_norm2
+	layer3_norm2 -> layer3_mlp_gate_up
+	layer3_mlp_gate_up -> layer3_mlp_activation
+	layer3_mlp_activation -> layer3_mlp_down
+	layer3_mlp_down -> layer3_mlp_allreduce
+	layer3_mlp_allreduce -> layer3_residual2
+	layer3_residual1 -> layer3_residual2
+
+	layer3_residual2 -> layer4_norm1
+	layer4_norm1 -> layer4_qkv_proj
+	layer4_qkv_proj -> layer4_attn
+	layer4_attn -> layer4_attn_out
+	layer4_attn_out -> layer4_attn_allreduce
+	layer4_attn_allreduce -> layer4_residual1
+	layer3_residual2 -> layer4_residual1
+	layer4_residual1 -> layer4_norm2
+	layer4_norm2 -> layer4_mlp_gate_up
+	layer4_mlp_gate_up -> layer4_mlp_activation
+	layer4_mlp_activation -> layer4_mlp_down
+	layer4_mlp_down -> layer4_mlp_allreduce
+	layer4_mlp_allreduce -> layer4_residual2
+	layer4_residual1 -> layer4_residual2
+
+	layer4_residual2 -> layer5_norm1
+	layer5_norm1 -> layer5_qkv_proj
+	layer5_qkv_proj -> layer5_attn
+	layer5_attn -> layer5_attn_out
+	layer5_attn_out -> layer5_attn_allreduce
+	layer5_attn_allreduce -> layer5_residual1
+	layer4_residual2 -> layer5_residual1
+	layer5_residual1 -> layer5_norm2
+	layer5_norm2 -> layer5_mlp_gate_up
+	layer5_mlp_gate_up -> layer5_mlp_activation
+	layer5_mlp_activation -> layer5_mlp_down
+	layer5_mlp_down -> layer5_mlp_allreduce
+	layer5_mlp_allreduce -> layer5_residual2
+	layer5_residual1 -> layer5_residual2
+
+	layer5_residual2 -> layer6_norm1
+	layer6_norm1 -> layer6_qkv_proj
+	layer6_qkv_proj -> layer6_attn
+	layer6_attn -> layer6_attn_out
+	layer6_attn_out -> layer6_attn_allreduce
+	layer6_attn_allreduce -> layer6_residual1
+	layer5_residual2 -> layer6_residual1
+	layer6_residual1 -> layer6_norm2
+	layer6_norm2 -> layer6_mlp_gate_up
+	layer6_mlp_gate_up -> layer6_mlp_activation
+	layer6_mlp_activation -> layer6_mlp_down
+	layer6_mlp_down -> layer6_mlp_allreduce
+	layer6_mlp_allreduce -> layer6_residual2
+	layer6_residual1 -> layer6_residual2
+
+	layer6_residual2 -> layer7_norm1
+	layer7_norm1 -> layer7_qkv_proj
+	layer7_qkv_proj -> layer7_attn
+	layer7_attn -> layer7_attn_out
+	layer7_attn_out -> layer7_attn_allreduce
+	layer7_attn_allreduce -> layer7_residual1
+	layer6_residual2 -> layer7_residual1
+	layer7_residual1 -> layer7_norm2
+	layer7_norm2 -> layer7_mlp_gate_up
+	layer7_mlp_gate_up -> layer7_mlp_activation
+	layer7_mlp_activation -> layer7_mlp_down
+	layer7_mlp_down -> layer7_mlp_allreduce
+	layer7_mlp_allreduce -> layer7_residual2
+	layer7_residual1 -> layer7_residual2
+
+	layer7_residual2 -> layer8_norm1
+	layer8_norm1 -> layer8_qkv_proj
+	layer8_qkv_proj -> layer8_attn
+	layer8_attn -> layer8_attn_out
+	layer8_attn_out -> layer8_attn_allreduce
+	layer8_attn_allreduce -> layer8_residual1
+	layer7_residual2 -> layer8_residual1
+	layer8_residual1 -> layer8_norm2
+	layer8_norm2 -> layer8_mlp_gate_up
+	layer8_mlp_gate_up -> layer8_mlp_activation
+	layer8_mlp_activation -> layer8_mlp_down
+	layer8_mlp_down -> layer8_mlp_allreduce
+	layer8_mlp_allreduce -> layer8_residual2
+	layer8_residual1 -> layer8_residual2
+
+	// Pipeline communication
+	layer8_residual2 -> pipeline_send_recv
+	pipeline_send_recv -> layer9_norm1
+
+	// Connections for Pipeline Stage 1
+	layer9_norm1 -> layer9_qkv_proj
+	layer9_qkv_proj -> layer9_attn
+	layer9_attn -> layer9_attn_out
+	layer9_attn_out -> layer9_attn_allreduce
+	layer9_attn_allreduce -> layer9_residual1
+	pipeline_send_recv -> layer9_residual1
+	layer9_residual1 -> layer9_norm2
+	layer9_norm2 -> layer9_mlp_gate_up
+	layer9_mlp_gate_up -> layer9_mlp_activation
+	layer9_mlp_activation -> layer9_mlp_down
+	layer9_mlp_down -> layer9_mlp_allreduce
+	layer9_mlp_allreduce -> layer9_residual2
+	layer9_residual1 -> layer9_residual2
+
+	layer9_residual2 -> layer10_norm1
+	layer10_norm1 -> layer10_qkv_proj
+	layer10_qkv_proj -> layer10_attn
+	layer10_attn -> layer10_attn_out
+	layer10_attn_out -> layer10_attn_allreduce
+	layer10_attn_allreduce -> layer10_residual1
+	layer9_residual2 -> layer10_residual1
+	layer10_residual1 -> layer10_norm2
+	layer10_norm2 -> layer10_mlp_gate_up
+	layer10_mlp_gate_up -> layer10_mlp_activation
+	layer10_mlp_activation -> layer10_mlp_down
+	layer10_mlp_down -> layer10_mlp_allreduce
+	layer10_mlp_allreduce -> layer10_residual2
+	layer10_residual1 -> layer10_residual2
+
+	layer10_residual2 -> layer11_norm1
+	layer11_norm1 -> layer11_qkv_proj
+	layer11_qkv_proj -> layer11_attn
+	layer11_attn -> layer11_attn_out
+	layer11_attn_out -> layer11_attn_allreduce
+	layer11_attn_allreduce -> layer11_residual1
+	layer10_residual2 -> layer11_residual1
+	layer11_residual1 -> layer11_norm2
+	layer11_norm2 -> layer11_mlp_gate_up
+	layer11_mlp_gate_up -> layer11_mlp_activation
+	layer11_mlp_activation -> layer11_mlp_down
+	layer11_mlp_down -> layer11_mlp_allreduce
+	layer11_mlp_allreduce -> layer11_residual2
+	layer11_residual1 -> layer11_residual2
+
+	layer11_residual2 -> layer12_norm1
+	layer12_norm1 -> layer12_qkv_proj
+	layer12_qkv_proj -> layer12_attn
+	layer12_attn -> layer12_attn_out
+	layer12_attn_out -> layer12_attn_allreduce
+	layer12_attn_allreduce -> layer12_residual1
+	layer11_residual2 -> layer12_residual1
+	layer12_residual1 -> layer12_norm2
+	layer12_norm2 -> layer12_mlp_gate_up
+	layer12_mlp_gate_up -> layer12_mlp_activation
+	layer12_mlp_activation -> layer12_mlp_down
+	layer12_mlp_down -> layer12_mlp_allreduce
+	layer12_mlp_allreduce -> layer12_residual2
+	layer12_residual1 -> layer12_residual2
+
+	layer12_residual2 -> layer13_norm1
+	layer13_norm1 -> layer13_qkv_proj
+	layer13_qkv_proj -> layer13_attn
+	layer13_attn -> layer13_attn_out
+	layer13_attn_out -> layer13_attn_allreduce
+	layer13_attn_allreduce -> layer13_residual1
+	layer12_residual2 -> layer13_residual1
+	layer13_residual1 -> layer13_norm2
+	layer13_norm2 -> layer13_mlp_gate_up
+	layer13_mlp_gate_up -> layer13_mlp_activation
+	layer13_mlp_activation -> layer13_mlp_down
+	layer13_mlp_down -> layer13_mlp_allreduce
+	layer13_mlp_allreduce -> layer13_residual2
+	layer13_residual1 -> layer13_residual2
+
+	layer13_residual2 -> layer14_norm1
+	layer14_norm1 -> layer14_qkv_proj
+	layer14_qkv_proj -> layer14_attn
+	layer14_attn -> layer14_attn_out
+	layer14_attn_out -> layer14_attn_allreduce
+	layer14_attn_allreduce -> layer14_residual1
+	layer13_residual2 -> layer14_residual1
+	layer14_residual1 -> layer14_norm2
+	layer14_norm2 -> layer14_mlp_gate_up
+	layer14_mlp_gate_up -> layer14_mlp_activation
+	layer14_mlp_activation -> layer14_mlp_down
+	layer14_mlp_down -> layer14_mlp_allreduce
+	layer14_mlp_allreduce -> layer14_residual2
+	layer14_residual1 -> layer14_residual2
+
+	layer14_residual2 -> layer15_norm1
+	layer15_norm1 -> layer15_qkv_proj
+	layer15_qkv_proj -> layer15_attn
+	layer15_attn -> layer15_attn_out
+	layer15_attn_out -> layer15_attn_allreduce
+	layer15_attn_allreduce -> layer15_residual1
+	layer14_residual2 -> layer15_residual1
+	layer15_residual1 -> layer15_norm2
+	layer15_norm2 -> layer15_mlp_gate_up
+	layer15_mlp_gate_up -> layer15_mlp_activation
+	layer15_mlp_activation -> layer15_mlp_down
+	layer15_mlp_down -> layer15_mlp_allreduce
+	layer15_mlp_allreduce -> layer15_residual2
+	layer15_residual1 -> layer15_residual2
+
+	layer15_residual2 -> layer16_norm1
+	layer16_norm1 -> layer16_qkv_proj
+	layer16_qkv_proj -> layer16_attn
+	layer16_attn -> layer16_attn_out
+	layer16_attn_out -> layer16_attn_allreduce
+	layer15_residual2 -> layer16_residual1
+	layer16_attn_allreduce -> layer16_residual1
+	layer16_residual1 -> layer16_norm2
+	layer16_norm2 -> layer16_mlp_gate_up
+	layer16_mlp_gate_up -> layer16_mlp_activation
+	layer16_mlp_activation -> layer16_mlp_down
+	layer16_mlp_down -> layer16_mlp_allreduce
+	layer16_mlp_allreduce -> layer16_residual2
+	layer16_residual1 -> layer16_residual2
+	layer16_residual2 -> output
+}

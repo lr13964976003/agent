@@ -1,0 +1,167 @@
+// 16-layer Transformer with Tensor Parallelism (TP=8) and Pipeline Parallelism (PP=2)
+digraph baseline_tensor_pipeline_parallel {
+	rankdir=TB size="20,20"
+	node [shape=rectangle style=filled]
+	input [label="Model Input
+Input: [batch_size=128, seq_len=10000, hidden_size=4096]
+All GPUs" fillcolor=lightgreen shape=ellipse]
+	node [fillcolor=lightblue]
+	subgraph cluster_stage0 {
+		label="Pipeline Stage 0
+GPUs 0-7 (Tensor Parallel Group 0)"
+		layer1_norm1 [label="Layer 1
+Input Layer Norm
+Input: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightyellow]
+		layer1_qkv_proj [label="Layer 1 QKV Projection
+Column Parallel
+Input: [128, 10000, 4096]
+Output: [128, 10000, 1536]
+Per GPU" fillcolor=lightcoral]
+		layer1_attn [label="Layer 1 Multi-Head Attention
+Input: [128, 10000, 32, 128]
+Output: [128, 10000, 32, 128]
+All 8 GPUs" fillcolor=lightcoral]
+		layer1_attn_out [label="Layer 1 Attention Output
+Row Parallel
+Input: [128, 10000, 4096]
+Output: [128, 10000, 512]
+Per GPU" fillcolor=lightcoral]
+		layer1_attn_allreduce [label="Layer 1 All-Reduce
+Sum Reduction
+Input: [128, 10000, 512]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightgoldenrod]
+		layer1_residual1 [label="Layer 1 Residual Add
+Input1: [128, 10000, 4096]
+Input2: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightgreen]
+		layer1_norm2 [label="Layer 1 MLP Layer Norm
+Input: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightyellow]
+		layer1_mlp_gate_up [label="Layer 1 MLP Gate+Up
+Column Parallel
+Input: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+Per GPU" fillcolor=lightcyan]
+		layer1_mlp_activation [label="Layer 1 MLP Activation (GELU)
+Input: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightcyan]
+		layer1_mlp_down [label="Layer 1 MLP Down
+Row Parallel
+Input: [128, 10000, 4096]
+Output: [128, 10000, 512]
+Per GPU" fillcolor=lightcyan]
+		layer1_mlp_allreduce [label="Layer 1 MLP All-Reduce
+Sum Reduction
+Input: [128, 10000, 512]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightgoldenrod]
+		layer1_residual2 [label="Layer 1 Residual Add
+Input1: [128, 10000, 4096]
+Input2: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightgreen]
+		layers_2_to_8 [label="Layers 2-8
+[Repeated Structure]
+8 layers total
+Each: Same as Layer 1" fillcolor=lightgray]
+	}
+	pipeline_send_recv_1 [label="Pipeline Send/Recv
+Between Stage 0 and 1
+Activation: [128, 10000, 4096]
+Bandwidth: 900 Gbps" fillcolor=lightpink shape=parallelogram]
+	node [fillcolor=lightblue]
+	subgraph cluster_stage1 {
+		label="Pipeline Stage 1
+GPUs 8-15 (Tensor Parallel Group 1)"
+		layer9_norm1 [label="Layer 9
+Input Layer Norm
+Input: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightyellow]
+		layer9_qkv_proj [label="Layer 9 QKV Projection
+Column Parallel
+Input: [128, 10000, 4096]
+Output: [128, 10000, 1536]
+Per GPU" fillcolor=lightcoral]
+		layer9_attn [label="Layer 9 Multi-Head Attention
+Input: [128, 10000, 32, 128]
+Output: [128, 10000, 32, 128]
+All 8 GPUs" fillcolor=lightcoral]
+		layer9_attn_out [label="Layer 9 Attention Output
+Row Parallel
+Input: [128, 10000, 4096]
+Output: [128, 10000, 512]
+Per GPU" fillcolor=lightcoral]
+		layer9_attn_allreduce [label="Layer 9 All-Reduce
+Sum Reduction
+Input: [128, 10000, 512]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightgoldenrod]
+		layer9_residual1 [label="Layer 9 Residual Add
+Input1: [128, 10000, 4096]
+Input2: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightgreen]
+		layer9_norm2 [label="Layer 9 MLP Layer Norm
+Input: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightyellow]
+		layer9_mlp_gate_up [label="Layer 9 MLP Gate+Up
+Column Parallel
+Input: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+Per GPU" fillcolor=lightcyan]
+		layer9_mlp_activation [label="Layer 9 MLP Activation (GELU)
+Input: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightcyan]
+		layer9_mlp_down [label="Layer 9 MLP Down
+Row Parallel
+Input: [128, 10000, 4096]
+Output: [128, 10000, 512]
+Per GPU" fillcolor=lightcyan]
+		layer9_mlp_allreduce [label="Layer 9 MLP All-Reduce
+Sum Reduction
+Input: [128, 10000, 512]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightgoldenrod]
+		layer9_residual2 [label="Layer 9 Residual Add
+Input1: [128, 10000, 4096]
+Input2: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightgreen]
+		layers_10_to_16 [label="Layers 10-16
+[Repeated Structure]
+8 layers total
+Each: Same as Layer 9" fillcolor=lightgray]
+	}
+	output [label="Model Output
+Input: [128, 10000, 4096]
+Output: [128, 10000, 4096]
+All 8 GPUs" fillcolor=lightgreen shape=ellipse]
+	input -> layer1_norm1
+	layer1_norm1 -> layer1_qkv_proj
+	layer1_qkv_proj -> layer1_attn
+	layer1_attn -> layer1_attn_out
+	layer1_attn_out -> layer1_attn_allreduce
+	layer1_attn_allreduce -> layer1_residual1
+	input -> layer1_residual1
+	layer1_residual1 -> layer1_norm2
+	layer1_norm2 -> layer1_mlp_gate_up
+	layer1_mlp_gate_up -> layer1_mlp_activation
+	layer1_mlp_activation -> layer1_mlp_down
+	layer1_mlp_down -> layer1_mlp_allreduce
+	layer1_mlp_allreduce -> layer1_residual2
+	layer1_residual1 -> layer1_residual2
+	layer1_residual2 -> layers_2_to_8
+	layers_2_to_8 -> pipeline_send_recv_1
+	pipeline_send_recv_1 -> layer9_norm1
+	layer9_residual2 -> layers_10_to_16
+	layers_10_to_16 -> output
+}
