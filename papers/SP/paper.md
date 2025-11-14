@@ -178,13 +178,13 @@ for p in parallel on devices:
 ### 1. Experimental Setup
 
 
-We evaluate our proposed **Ring Attention + Sequence Parallelism (RA+SP)** strategy under an inference-only setting. Experiments are conducted on **16 NVIDIA H100 GPUs** interconnected via NVLink and NVSwitch. One model architectures is tested:
+We evaluate our proposed **Ring Attention + Sequence Parallelism (RA+SP)** strategy under an inference-only setting. Experiments are conducted on sufficient GPU resources, interconnected via NVLink and NVSwitch. One model architectures is tested:
 
 
 * **Dense Transformer**: 4 layers, standard feed-forward architecture.
 
 
-Precision is set to **FP16**, **batch size** is fixed at **1024**, sequence length is fixed at 10000 tokens, the number of heads is fixed at 16, dimension of each head is fixed at 512, the hidden size of MLP is fixed at 32768.
+Precision is set to **BF16**, **batch size** is fixed at **128**, sequence length is fixed at 100000 tokens, the number of heads is fixed at 32, dimension of each head is fixed at 128, the hidden size of MLP is fixed at 32768.
 
 
 The **baseline** employs **Tensor Parallelism (TP) = 8** and **Pipeline Parallelism (PP) = 2**, without sequence parallelism or ring-based attention communication.
