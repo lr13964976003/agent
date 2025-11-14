@@ -172,9 +172,11 @@ After partitioning, each group $P_i$ is deployed on a separate accelerator card 
 We evaluate our proposed layer-wise deployment method for large models in the inference stage. The hardware platform consists of 16 NVIDIA H100 GPUs. We use two model types:
 
 
-* **Dense model:** A 16-layer fully connected dense network.
+* **Dense model:** A 4-layer fully connected dense network.
 
-Both models use FP16 precision and are tested with a batch size of 128 and a sequence length of 10000. The number of head is fixed at 32, the dimension of each head is fixed at 128, the hidden size of MLP is fixed at 16384. The baseline comparison is a standard tensor parallelism (TP) and pipeline parallelism (PP) setup, specifically TP=8 and PP=2, which fully utilizes the 16 GPUs (8 × 2 = 16).
+Both models use BF16 precision and the model's weight size is 30B. Calculate the memory usage for weights, activations, and buffers for each layer, and determine the number of layers allocated to each card according to the allocation method.
+
+Both models are tested with a batch size of 128 and a sequence length of 10000. The number of head is fixed at 32, the dimension of each head is fixed at 128, the hidden size of MLP is fixed at 16384. The baseline comparison is a standard tensor parallelism (TP) and pipeline parallelism (PP) setup, specifically TP=8 and PP=2, which fully utilizes the 16 GPUs (8 × 2 = 16).
 
 
 We measure performance with two key metrics:
