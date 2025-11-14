@@ -24,6 +24,8 @@ Determine how to deploy the model onto GPUs by according to the paper. Ensure th
 
 After you complete the division of one module, calculate how many parts the module has been divided into and whether it matches the number of GPUs.  <<<要求反思部署方案是否符合实际>>>
 
+Calculate the memory usage for weights, activations, and buffers for each layer, and determine the number of layers allocated to each card according to the allocation method described in the paper.<<<要求计算每层的权重，激活值和缓冲区的内存占比，按照论文的分配方法计算每张卡上分配的层数>>>
+
 Please analyze how the dimensions of the module will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析维度变化是否正确>>>
 
 Generate complete model deployment DAGs(directed acyclic graph) according to you deployment plan and the baseline in the paper by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
@@ -36,9 +38,7 @@ The aggregation and split of data need to be represented by nodes. <<<显示数�
 
 Ensure no loss of dimensional information, modules structure, and the model's input and output. Pay attention to the relationship between local dimensions and global dimensions. <<<保障维度正确>>>
 
-Prohibit simplification of modules (such as Expert, etc.) <<<禁止简化模块>>>
-
-Omitt the completely repeated layers, and the repetition count should be indicated. <<<省略完全重复的层，并标明重复次数>>>
+Omit repeated modules in the DAG graph and indicate the number of repetitions. <<<省略DAG图中重复的模块，并标明重复次数>>>
 
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
@@ -127,6 +127,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
