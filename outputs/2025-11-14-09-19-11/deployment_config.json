@@ -1,0 +1,345 @@
+{
+  "paper": "Ring Attention with Sequence Parallelism",
+  "date": "2025-11-14",
+  "configurations": {
+    "baseline": {
+      "name": "Tensor Parallel + Pipeline Parallel",
+      "model": {
+        "type": "Dense Transformer",
+        "layers": 4,
+        "heads": 32,
+        "head_dimension": 128,
+        "hidden_size": 4096,
+        "mlp_hidden_size": 32768,
+        "precision": "bf16"
+      },
+      "parallel_strategy": {
+        "tensor_parallel": {
+          "degree": 8,
+          "type": "column_and_row_parallel",
+          "parameters": {
+            "attention_weights": {
+              "qkv_projection": "column_parallel",
+              "output_projection": "row_parallel"
+            },
+            "mlp_weights": {
+              "fc1": "column_parallel",
+              "fc2": "row_parallel"
+            }
+          }
+        },
+        "pipeline_parallel": {
+          "degree": 2,
+          "type": "layer_wise",
+          "layer_distribution": [
+            {"device_range": [0, 1, 2, 3, 4, 5, 6, 7], "layers": [0, 1]},
+            {"device_range": [8, 9, 10, 11, 12, 13, 14, 15], "layers": [2, 3]}
+          ]
+        }
+      },
+      "device_mapping": {
+        "pipeline_stage_0": {
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": [0, 1],
+          "tensor_parallel_group": {"devices_per_layer": 8}
+        },
+        "pipeline_stage_1": {
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": [2, 3],
+          "tensor_parallel_group": {"devices_per_layer": 8}
+        }
+      },
+      "memory_distribution": {
+        "per_device": {
+          "sequence_length": 100000,
+          "batch_size": 128,
+          "activation_memory": "full_sequence_per_device"
+        }
+      },
+      "communication": {
+        "attention": "all_gather_for_kv",
+        "mlp": "all_reduce_for_outputs"
+      }
+    },
+    "proposed": {
+      "name": "Ring Attention + Sequence Parallelism",
+      "model": {
+        "type": "Dense Transformer",
+        "layers": 4,
+        "heads": 32,
+        "head_dimension": 128,
+        "hidden_size": 4096,
+        "mlp_hidden_size": 32768,
+        "precision": "bf16"
+      },
+      "parallel_strategy": {
+        "ring_attention": {
+          "type": "ring_topology",
+          "degree": 16,
+          "sequence_parallel": true,
+          "stages": 16,
+          "communication_pattern": "sequential_peer_to_peer"
+        },
+        "sequence_parallelism": {
+          "type": "sequence_dimension_split",
+          "degree": 16,
+          "sequence_length_per_device": 6250,
+          "total_sequence_length": 100000
+        }
+      },
+      "module_division": {
+        "layer_structure": {
+          "per_device": {
+            "layers": [0, 1, 2, 3],
+            "sequence_slice": "device_specific",
+            "attention_heads": "full_heads_per_device"
+          }
+        },
+        "attention_computation": {
+          "ring_stages": 16,
+          "kv_blocks_per_stage": 1,
+          "block_size": {"sequence": 6250, "hidden": 4096, "batch": 128}
+        }
+      },
+      "device_mapping": {
+        "ring_topology": {
+          "device_order": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+          "ring_connections": [
+            {"from": 0, "to": 1},
+            {"from": 1, "to": 2},
+            {"from": 2, "to": 3},
+            {"from": 3, "to": 4},
+            {"from": 4, "to": 5},
+            {"from": 5, "to": 6},
+            {"from": 6, "to": 7},
+            {"from": 7, "to": 8},
+            {"from": 8, "to": 9},
+            {"from": 9, "to": 10},
+            {"from": 10, "to": 11},
+            {"from": 11, "to": 12},
+            {"from": 12, "to": 13},
+            {"from": 13, "to": 14},
+            {"from": 14, "to": 15},
+            {"from": 15, "to": 0}
+          ]
+        },
+        "per_device_mapping": {
+          "device_0": {
+            "sequence_range": [0, 6250],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 0,
+            "kv_block_id": 0,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 15}
+            }
+          },
+          "device_1": {
+            "sequence_range": [6250, 12500],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 1,
+            "kv_block_id": 1,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 0}
+            }
+          },
+          "device_2": {
+            "sequence_range": [12500, 18750],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 2,
+            "kv_block_id": 2,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 1}
+            }
+          },
+          "device_3": {
+            "sequence_range": [18750, 25000],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 3,
+            "kv_block_id": 3,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 2}
+            }
+          },
+          "device_4": {
+            "sequence_range": [25000, 31250],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 4,
+            "kv_block_id": 4,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 3}
+            }
+          },
+          "device_5": {
+            "sequence_range": [31250, 37500],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 5,
+            "kv_block_id": 5,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 4}
+            }
+          },
+          "device_6": {
+            "sequence_range": [37500, 43750],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 6,
+            "kv_block_id": 6,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 5}
+            }
+          },
+          "device_7": {
+            "sequence_range": [43750, 50000],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 7,
+            "kv_block_id": 7,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 6}
+            }
+          },
+          "device_8": {
+            "sequence_range": [50000, 56250],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 8,
+            "kv_block_id": 8,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 7}
+            }
+          },
+          "device_9": {
+            "sequence_range": [56250, 62500],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 9,
+            "kv_block_id": 9,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 8}
+            }
+          },
+          "device_10": {
+            "sequence_range": [62500, 68750],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 10,
+            "kv_block_id": 10,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 9}
+            }
+          },
+          "device_11": {
+            "sequence_range": [68750, 75000],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 11,
+            "kv_block_id": 11,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 10}
+            }
+          },
+          "device_12": {
+            "sequence_range": [75000, 81250],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 12,
+            "kv_block_id": 12,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 11}
+            }
+          },
+          "device_13": {
+            "sequence_range": [81250, 87500],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 13,
+            "kv_block_id": 13,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 12}
+            }
+          },
+          "device_14": {
+            "sequence_range": [87500, 93750],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 14,
+            "kv_block_id": 14,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 13}
+            }
+          },
+          "device_15": {
+            "sequence_range": [93750, 100000],
+            "layers": [0, 1, 2, 3],
+            "ring_stage": 15,
+            "kv_block_id": 15,
+            "compute": {
+              "local_q": {"shape": [128, 6250, 4096]},
+              "local_kv": {"shape": [128, 6250, 4096]},
+              "incoming_kv": {"shape": [128, 6250, 4096], "from_device": 14}
+            }
+          }
+        }
+      },
+      "memory_distribution": {
+        "per_device": {
+          "sequence_length": 6250,
+          "batch_size": 128,
+          "activation_memory": "sequence_partitioned",
+          "memory_reduction_factor": 16
+        }
+      },
+      "communication": {
+        "pattern": "ring",
+        "method": "sequential_peer_to_peer",
+        "primitives": ["nccl_send", "nccl_recv"],
+        "stages": 16,
+        "overlap": true,
+        "precision": "bf16"
+      },
+      "performance_metrics": {
+        "expected_tps": "1.45M tokens/s",
+        "expected_tpot": "0.70 ms",
+        "improvement_over_baseline": {
+          "tps_increase": "20.8%",
+          "tpot_decrease": "17.6%"
+        }
+      }
+    }
+  },
+  "implementation_details": {
+    "prerequisites": [
+      "NCCL library with send/recv primitives",
+      "MPI support for point-to-point communication",
+      "BF16 precision support",
+      "High-speed interconnect (NVLink/NVSwitch)"
+    ],
+    "optimization_techniques": [
+      "Mixed precision (bf16)",
+      "Fused kernels for projection and softmax",
+      "Computation-communication overlap",
+      "Asynchronous communication"
+    ]
+  }
+}

@@ -1,0 +1,203 @@
+digraph proposed_ring_attention_sequence_parallel {
+    rankdir=TB;
+    node [shape=box, fontname="Arial"];
+    
+    // Global input
+    input [label="Input\nInput: [batch_size=128, seq_len=100000, hidden=4096]\nOutput: [batch_size=128, seq_len=100000, hidden=4096]\nGPU: all GPUs", shape=ellipse];
+    
+    // Input split for sequence parallelism
+    split_input [label="Split Sequence\nInput: [batch_size=128, seq_len=100000, hidden=4096]\nOutput: [batch_size=128, seq_len=6250, hidden=4096]\nGPU: all GPUs (seq parallel)", shape=parallelogram];
+    
+    // Repeat for each GPU device
+    devices = [f"device_{i}" for i in range(16)]
+    
+    // Device 0 as representative
+    subgraph cluster_device_0 {
+        label="Device 0 (Ring Stage 0)\nSequence: 0-6250";
+        style=dashed;
+        
+        // Input for device 0
+        input_0 [label="Local Input\nInput: [batch_size=128, seq_len=6250, hidden=4096]\nOutput: [batch_size=128, seq_len=6250, hidden=4096]\nGPU: 0", shape=ellipse];
+        
+        // Layer 0 for device 0
+        subgraph cluster_device0_layer0 {
+            label="Layer 0 (Device 0)";
+            style=dashed;
+            
+            layer0_norm_0 [label="LayerNorm\nGPU: 0", shape=box];
+            layer0_q_proj_0 [label="Q Projection\nInput: [batch_size=128, seq_len=6250, hidden=4096]\nOutput: [batch_size=128, seq_len=6250, heads=32, head_dim=128]\nGPU: 0", shape=box];
+            layer0_k_proj_0 [label="K Projection\nInput: [batch_size=128, seq_len=6250, hidden=4096]\nOutput: [batch_size=128, seq_len=6250, heads=32, head_dim=128]\nGPU: 0", shape=box];
+            layer0_v_proj_0 [label="V Projection\nInput: [batch_size=128, seq_len=6250, hidden=4096]\nOutput: [batch_size=128, seq_len=6250, heads=32, head_dim=128]\nGPU: 0", shape=box];
+            
+            // Ring attention stages
+            stage0_recv_kv [label="Recv KV\nInput: [batch_size=128, seq_len=6250, heads=32, head_dim=128]\nOutput: [batch_size=128, seq_len=6250, heads=32, head_dim=128]\nGPU: 0 (from GPU 15)", shape=ellipse];
+            stage0_compute [label="Attention Step\nInput: [batch_size=128, seq_len=6250, heads=32, head_dim=128]\nOutput: [batch_size=128, seq_len=6250, hidden=4096]\nGPU: 0", shape=box];
+            stage0_send_kv [label="Send KV\nInput: [batch_size=128, seq_len=6250, heads=32, head_dim=128]\nOutput: [batch_size=128, seq_len=6250, heads=32, head_dim=128]\nGPU: 0 (to GPU 1)", shape=ellipse];
+            
+            // Accumulation
+            stage0_accumulate [label="Accumulate\nInput: [batch_size=128, seq_len=6250, hidden=4096]\nOutput: [batch_size=128, seq_len=6250, hidden=4096]\nGPU: 0", shape=box];
+            
+            // Output projection
+            layer0_out_proj_0 [label="Output Projection\nGPU: 0", shape=box];
+            layer0_residual_0 [label="Residual Add\nGPU: 0", shape=box];
+            layer0_norm2_0 [label="LayerNorm\nGPU: 0", shape=box];
+            layer0_mlp_fc1_0 [label="MLP FC1\nGPU: 0", shape=box];
+            layer0_mlp_fc2_0 [label="MLP FC2\nGPU: 0", shape=box];
+            layer0_mlp_residual_0 [label="MLP Residual Add\nGPU: 0", shape=box];
+        }
+        
+        // Layer 1 for device 0
+        subgraph cluster_device0_layer1 {
+            label="Layer 1 (Device 0)";
+            style=dashed;
+            
+            layer1_norm_0 [label="LayerNorm\nGPU: 0", shape=box];
+            layer1_q_proj_0 [label="Q Projection\nGPU: 0", shape=box];
+            layer1_k_proj_0 [label="K Projection\nGPU: 0", shape=box];
+            layer1_v_proj_0 [label="V Projection\nGPU: 0", shape=box];
+            
+            layer1_ring_stage0 [label="Ring Attention\nGPU: 0", shape=box];
+            layer1_accumulate_0 [label="Accumulate\nGPU: 0", shape=box];
+            layer1_out_proj_0 [label="Output Projection\nGPU: 0", shape=box];
+            layer1_residual_0 [label="Residual Add\nGPU: 0", shape=box];
+            layer1_norm2_0 [label="LayerNorm\nGPU: 0", shape=box];
+            layer1_mlp_fc1_0 [label="MLP FC1\nGPU: 0", shape=box];
+            layer1_mlp_fc2_0 [label="MLP FC2\nGPU: 0", shape=box];
+            layer1_mlp_residual_0 [label="MLP Residual Add\nGPU: 0", shape=box];
+        }
+        
+        // Layer 2 for device 0
+        subgraph cluster_device0_layer2 {
+            label="Layer 2 (Device 0)";
+            style=dashed;
+            
+            layer2_norm_0 [label="LayerNorm\nGPU: 0", shape=box];
+            layer2_q_proj_0 [label="Q Projection\nGPU: 0", shape=box];
+            layer2_k_proj_0 [label="K Projection\nGPU: 0", shape=box];
+            layer2_v_proj_0 [label="V Projection\nGPU: 0", shape=box];
+            
+            layer2_ring_stage0 [label="Ring Attention\nGPU: 0", shape=box];
+            layer2_accumulate_0 [label="Accumulate\nGPU: 0", shape=box];
+            layer2_out_proj_0 [label="Output Projection\nGPU: 0", shape=box];
+            layer2_residual_0 [label="Residual Add\nGPU: 0", shape=box];
+            layer2_norm2_0 [label="LayerNorm\nGPU: 0", shape=box];
+            layer2_mlp_fc1_0 [label="MLP FC1\nGPU: 0", shape=box];
+            layer2_mlp_fc2_0 [label="MLP FC2\nGPU: 0", shape=box];
+            layer2_mlp_residual_0 [label="MLP Residual Add\nGPU: 0", shape=box];
+        }
+        
+        // Layer 3 for device 0
+        subgraph cluster_device0_layer3 {
+            label="Layer 3 (Device 0)";
+            style=dashed;
+            
+            layer3_norm_0 [label="LayerNorm\nGPU: 0", shape=box];
+            layer3_q_proj_0 [label="Q Projection\nGPU: 0", shape=box];
+            layer3_k_proj_0 [label="K Projection\nGPU: 0", shape=box];
+            layer3_v_proj_0 [label="V Projection\nGPU: 0", shape=box];
+            
+            layer3_ring_stage0 [label="Ring Attention\nGPU: 0", shape=box];
+            layer3_accumulate_0 [label="Accumulate\nGPU: 0", shape=box];
+            layer3_out_proj_0 [label="Output Projection\nGPU: 0", shape=box];
+            layer3_residual_0 [label="Residual Add\nGPU: 0", shape=box];
+            layer3_norm2_0 [label="LayerNorm\nGPU: 0", shape=box];
+            layer3_mlp_fc1_0 [label="MLP FC1\nGPU: 0", shape=box];
+            layer3_mlp_fc2_0 [label="MLP FC2\nGPU: 0", shape=box];
+            layer3_mlp_residual_0 [label="MLP Residual Add\nGPU: 0", shape=box];
+        }
+        
+        output_0 [label="Local Output\nInput: [batch_size=128, seq_len=6250, hidden=4096]\nOutput: [batch_size=128, seq_len=6250, hidden=4096]\nGPU: 0", shape=ellipse];
+    }
+    
+    // Aggregation
+    aggregate_output [label="Aggregate Sequence\nInput: [batch_size=128, seq_len=6250, hidden=4096]\nOutput: [batch_size=128, seq_len=100000, hidden=4096]\nGPU: all GPUs (seq parallel)", shape=parallelogram];
+    
+    // Global output
+    final_output [label="Output\nInput: [batch_size=128, seq_len=100000, hidden=4096]\nOutput: [batch_size=128, seq_len=100000, hidden=4096]\nGPU: all GPUs", shape=ellipse];
+    
+    // Connections for device 0
+    input -> split_input;
+    split_input -> input_0;
+    
+    input_0 -> layer0_norm_0;
+    layer0_norm_0 -> layer0_q_proj_0;
+    layer0_norm_0 -> layer0_k_proj_0;
+    layer0_norm_0 -> layer0_v_proj_0;
+    
+    layer0_k_proj_0 -> stage0_compute;
+    layer0_v_proj_0 -> stage0_compute;
+    layer0_q_proj_0 -> stage0_compute;
+    stage0_recv_kv -> stage0_compute;
+    stage0_compute -> stage0_accumulate;
+    stage0_compute -> stage0_send_kv;
+    
+    stage0_accumulate -> layer0_out_proj_0;
+    layer0_out_proj_0 -> layer0_residual_0;
+    input_0 -> layer0_residual_0 [style=dashed];
+    layer0_residual_0 -> layer0_norm2_0;
+    layer0_norm2_0 -> layer0_mlp_fc1_0;
+    layer0_mlp_fc1_0 -> layer0_mlp_fc2_0;
+    layer0_mlp_fc2_0 -> layer0_mlp_residual_0;
+    layer0_residual_0 -> layer0_mlp_residual_0 [style=dashed];
+    
+    // Continue with remaining layers for device 0
+    layer0_mlp_residual_0 -> layer1_norm_0;
+    layer1_norm_0 -> layer1_q_proj_0;
+    layer1_norm_0 -> layer1_k_proj_0;
+    layer1_norm_0 -> layer1_v_proj_0;
+    layer1_q_proj_0 -> layer1_ring_stage0;
+    layer1_k_proj_0 -> layer1_ring_stage0;
+    layer1_v_proj_0 -> layer1_ring_stage0;
+    layer1_ring_stage0 -> layer1_accumulate_0;
+    layer1_accumulate_0 -> layer1_out_proj_0;
+    layer1_out_proj_0 -> layer1_residual_0;
+    layer0_mlp_residual_0 -> layer1_residual_0 [style=dashed];
+    layer1_residual_0 -> layer1_norm2_0;
+    layer1_norm2_0 -> layer1_mlp_fc1_0;
+    layer1_mlp_fc1_0 -> layer1_mlp_fc2_0;
+    layer1_mlp_fc2_0 -> layer1_mlp_residual_0;
+    layer1_residual_0 -> layer1_mlp_residual_0 [style=dashed];
+    
+    layer1_mlp_residual_0 -> layer2_norm_0;
+    layer2_norm_0 -> layer2_q_proj_0;
+    layer2_norm_0 -> layer2_k_proj_0;
+    layer2_norm_0 -> layer2_v_proj_0;
+    layer2_q_proj_0 -> layer2_ring_stage0;
+    layer2_k_proj_0 -> layer2_ring_stage0;
+    layer2_v_proj_0 -> layer2_ring_stage0;
+    layer2_ring_stage0 -> layer2_accumulate_0;
+    layer2_accumulate_0 -> layer2_out_proj_0;
+    layer2_out_proj_0 -> layer2_residual_0;
+    layer1_mlp_residual_0 -> layer2_residual_0 [style=dashed];
+    layer2_residual_0 -> layer2_norm2_0;
+    layer2_norm2_0 -> layer2_mlp_fc1_0;
+    layer2_mlp_fc1_0 -> layer2_mlp_fc2_0;
+    layer2_mlp_fc2_0 -> layer2_mlp_residual_0;
+    layer2_residual_0 -> layer2_mlp_residual_0 [style=dashed];
+    
+    layer2_mlp_residual_0 -> layer3_norm_0;
+    layer3_norm_0 -> layer3_q_proj_0;
+    layer3_norm_0 -> layer3_k_proj_0;
+    layer3_norm_0 -> layer3_v_proj_0;
+    layer3_q_proj_0 -> layer3_ring_stage0;
+    layer3_k_proj_0 -> layer3_ring_stage0;
+    layer3_v_proj_0 -> layer3_ring_stage0;
+    layer3_ring_stage0 -> layer3_accumulate_0;
+    layer3_accumulate_0 -> layer3_out_proj_0;
+    layer3_out_proj_0 -> layer3_residual_0;
+    layer2_mlp_residual_0 -> layer3_residual_0 [style=dashed];
+    layer3_residual_0 -> layer3_norm2_0;
+    layer3_norm2_0 -> layer3_mlp_fc1_0;
+    layer3_mlp_fc1_0 -> layer3_mlp_fc2_0;
+    layer3_mlp_fc2_0 -> layer3_mlp_residual_0;
+    layer3_residual_0 -> layer3_mlp_residual_0 [style=dashed];
+    
+    layer3_mlp_residual_0 -> output_0;
+    output_0 -> aggregate_output;
+    
+    // Ring connections (conceptual)
+    edge [style=dashed, color=red];
+    stage0_send_kv -> stage0_recv_kv [label="ring", constraint=false];
+    
+    aggregate_output -> final_output;
+}
