@@ -60,8 +60,6 @@ Generally speaking, a layer in the model consists of a Multi-Head Attention alon
 
 A complete DAG must include a total input and output.<<<提醒要包含完整输入输出>>>
 
-Calculate the memory usage for weights, activations, and buffers for each layer, and determine the number of layers allocated to each card according to the allocation method described in the paper.<<<要求计算每层的权重，激活值和缓冲区的内存占比，按照论文的分配方法计算每张卡上分配的层数>>>
-
 If a module contains multiple operations, you must break it down to explicitly represent all of them.<<<包含多个operator的模块要拆>>>
 
 Each nodes must have the attributions: INPUT DIMENSION and OUTPUT DIMENSION. Sample: Input: \[batch\_size=?, seq\_len=?, heads=?, d\_k=?],Output:\[batch\_size=?, seq\_len=?, heads=?, d\_k=?]<<<每个计算节点必须注明输入维度和输出维度>>>
@@ -125,6 +123,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
