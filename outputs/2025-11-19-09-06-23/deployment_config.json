@@ -1,0 +1,994 @@
+{
+  "deployments": {
+    "baseline": {
+      "name": "Baseline MoE Deployment",
+      "description": "Traditional tensor and pipeline parallelism with expert colocation",
+      "parallel_strategy": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "type": "column_and_row_parallel",
+          "parameters": {
+            "column_split_dim": 4096,
+            "row_split_dim": 32768,
+            "all_reduce_method": "nccl"
+          }
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "type": "gpipe",
+          "parameters": {
+            "num_microbatches": 4,
+            "chunks": 1
+          }
+        },
+        "expert_parallelism": {
+          "degree": 1,
+          "type": "colocated_experts",
+          "parameters": {
+            "experts_per_gpu": 8,
+            "expert_replicas": 1
+          }
+        }
+      },
+      "model_modules": {
+        "layers": [
+          {
+            "layer_id": 0,
+            "type": "moe_layer",
+            "experts": [
+              {
+                "expert_id": 0,
+                "type": "mlp",
+                "parameters": {
+                  "input_dim": 4096,
+                  "hidden_dim": 32768,
+                  "output_dim": 4096,
+                  "activation": "gelu",
+                  "precision": "bf16"
+                },
+                "weight_shape": [32768, 4096],
+                "memory_required_mb": 512
+              }
+            ],
+            "gating_network": {
+              "type": "top_k_router",
+              "parameters": {
+                "k": 2,
+                "input_dim": 4096,
+                "num_experts": 16,
+                "capacity_factor": 1.0
+              }
+            }
+          }
+        ]
+      },
+      "device_mapping": [
+        {
+          "device_id": 0,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 0,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [0, 1],
+              "pipeline_stage": 0
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 1,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [0, 1],
+              "pipeline_stage": 0
+            }
+          ]
+        },
+        {
+          "device_id": 1,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 0,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [2, 3],
+              "pipeline_stage": 0
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 1,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [2, 3],
+              "pipeline_stage": 0
+            }
+          ]
+        },
+        {
+          "device_id": 2,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 0,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [4, 5],
+              "pipeline_stage": 0
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 1,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [4, 5],
+              "pipeline_stage": 0
+            }
+          ]
+        },
+        {
+          "device_id": 3,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 0,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [6, 7],
+              "pipeline_stage": 0
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 1,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [6, 7],
+              "pipeline_stage": 0
+            }
+          ]
+        },
+        {
+          "device_id": 4,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 0,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [0, 1],
+              "pipeline_stage": 0
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 1,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [0, 1],
+              "pipeline_stage": 0
+            }
+          ]
+        },
+        {
+          "device_id": 5,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 0,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [2, 3],
+              "pipeline_stage": 0
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 1,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [2, 3],
+              "pipeline_stage": 0
+            }
+          ]
+        },
+        {
+          "device_id": 6,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 0,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [4, 5],
+              "pipeline_stage": 0
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 1,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [4, 5],
+              "pipeline_stage": 0
+            }
+          ]
+        },
+        {
+          "device_id": 7,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 0,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [6, 7],
+              "pipeline_stage": 0
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 1,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [6, 7],
+              "pipeline_stage": 0
+            }
+          ]
+        },
+        {
+          "device_id": 8,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 2,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [0, 1],
+              "pipeline_stage": 1
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 3,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [0, 1],
+              "pipeline_stage": 1
+            }
+          ]
+        },
+        {
+          "device_id": 9,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 2,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [2, 3],
+              "pipeline_stage": 1
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 3,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [2, 3],
+              "pipeline_stage": 1
+            }
+          ]
+        },
+        {
+          "device_id": 10,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 2,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [4, 5],
+              "pipeline_stage": 1
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 3,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [4, 5],
+              "pipeline_stage": 1
+            }
+          ]
+        },
+        {
+          "device_id": 11,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 2,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [6, 7],
+              "pipeline_stage": 1
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 3,
+              "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+              "tensor_shard": [6, 7],
+              "pipeline_stage": 1
+            }
+          ]
+        },
+        {
+          "device_id": 12,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 2,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [0, 1],
+              "pipeline_stage": 1
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 3,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [0, 1],
+              "pipeline_stage": 1
+            }
+          ]
+        },
+        {
+          "device_id": 13,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 2,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [2, 3],
+              "pipeline_stage": 1
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 3,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [2, 3],
+              "pipeline_stage": 1
+            }
+          ]
+        },
+        {
+          "device_id": 14,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 2,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [4, 5],
+              "pipeline_stage": 1
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 3,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [4, 5],
+              "pipeline_stage": 1
+            }
+          ]
+        },
+        {
+          "device_id": 15,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "moe_layer",
+              "layer_id": 2,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [6, 7],
+              "pipeline_stage": 1
+            },
+            {
+              "type": "moe_layer",
+              "layer_id": 3,
+              "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+              "tensor_shard": [6, 7],
+              "pipeline_stage": 1
+            }
+          ]
+        }
+      ]
+    },
+    "proposed": {
+      "name": "Cross-Node Expert Parallelism",
+      "description": "Large-scale expert parallelism with one expert per GPU",
+      "parallel_strategy": {
+        "expert_parallelism": {
+          "degree": 16,
+          "type": "cross_node_distribution",
+          "parameters": {
+            "experts_per_gpu": 1,
+            "one_expert_per_gpu": true,
+            "topology_aware": true,
+            "communication_overlap": true,
+            "async_token_routing": true
+          }
+        },
+        "tensor_parallelism": {
+          "degree": 1,
+          "type": "none",
+          "parameters": {}
+        },
+        "pipeline_parallelism": {
+          "degree": 1,
+          "type": "none",
+          "parameters": {}
+        }
+      },
+      "model_modules": {
+        "layers": [
+          {
+            "layer_id": 0,
+            "type": "moe_layer",
+            "experts": [
+              {
+                "expert_id": 0,
+                "type": "mlp",
+                "parameters": {
+                  "input_dim": 4096,
+                  "hidden_dim": 32768,
+                  "output_dim": 4096,
+                  "activation": "gelu",
+                  "precision": "bf16"
+                },
+                "weight_shape": [32768, 4096],
+                "memory_required_mb": 512
+              }
+            ],
+            "gating_network": {
+              "type": "top_k_router",
+              "parameters": {
+                "k": 2,
+                "input_dim": 4096,
+                "num_experts": 16,
+                "capacity_factor": 1.0
+              }
+            }
+          }
+        ]
+      },
+      "device_mapping": [
+        {
+          "device_id": 0,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 0,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 0,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 0,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 0,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 1,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 1,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 1,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 1,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 1,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 2,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 2,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 2,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 2,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 2,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 3,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 3,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 3,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 3,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 3,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 4,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 4,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 4,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 4,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 4,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 5,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 5,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 5,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 5,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 5,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 6,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 6,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 6,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 6,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 6,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 7,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 7,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 7,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 7,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 7,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 8,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 8,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 8,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 8,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 8,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 9,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 9,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 9,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 9,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 9,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 10,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 10,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 10,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 10,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 10,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 11,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 11,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 11,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 11,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 11,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 12,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 12,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 12,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 12,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 12,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 13,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 13,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 13,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 13,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 13,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 14,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 14,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 14,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 14,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 14,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        },
+        {
+          "device_id": 15,
+          "gpu_type": "H100",
+          "modules": [
+            {
+              "type": "expert",
+              "layer_id": 0,
+              "expert_id": 15,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 1,
+              "expert_id": 15,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 2,
+              "expert_id": 15,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            },
+            {
+              "type": "expert",
+              "layer_id": 3,
+              "expert_id": 15,
+              "full_expert_weights": true,
+              "memory_allocation_mb": 512
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

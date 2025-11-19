@@ -1,0 +1,798 @@
+// Proposed Large-Scale Expert Parallelism with EP=16
+digraph proposed_moe {
+	graph [bgcolor=white fontname=Arial fontsize=12 rankdir=TB splines=ortho]
+	input [label=<<b>Model Input</b><br/>
+    Batch Size: 128<br/>
+    Sequence Length: 10000<br/>
+    Hidden Dim: 4096> fontname=Arial shape=plaintext]
+	global_router [label=<<b>Global Token Router</b><br/>
+    All GPUs<br/>
+    Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+    Output: [token routing decisions per expert]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	layernorm_0 [label=<<b>LayerNorm (Layer 0)</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_qkv_0 [label=<<b>MHA QKV Linear</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, heads=32, d_k=128]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_attn_0 [label=<<b>MHA Attention</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, heads=32, d_k=128]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_out_0 [label=<<b>MHA Output Linear</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	attn_res_0 [label=<<b>Attention Residual Add</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	local_gating_0 [label=<<b>Layer 0 Local Gating</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [token assignments → expert destinations]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	token_batch_0 [label=<<b>Token Batching & Async Send</b><br/>
+        All GPUs<br/>
+        Input: [tokens with expert assignments]<br/>
+        Output: [batches per expert]> fillcolor=lightyellow fontname=Arial shape=ellipse style=filled]
+	expert_0_0 [label=<<b>Expert 0 (Layer 0)</b><br/>
+            GPU: 0<br/>
+            Expert ID: 0<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_1 [label=<<b>Expert 1 (Layer 0)</b><br/>
+            GPU: 1<br/>
+            Expert ID: 1<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_2 [label=<<b>Expert 2 (Layer 0)</b><br/>
+            GPU: 2<br/>
+            Expert ID: 2<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_3 [label=<<b>Expert 3 (Layer 0)</b><br/>
+            GPU: 3<br/>
+            Expert ID: 3<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_4 [label=<<b>Expert 4 (Layer 0)</b><br/>
+            GPU: 4<br/>
+            Expert ID: 4<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_5 [label=<<b>Expert 5 (Layer 0)</b><br/>
+            GPU: 5<br/>
+            Expert ID: 5<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_6 [label=<<b>Expert 6 (Layer 0)</b><br/>
+            GPU: 6<br/>
+            Expert ID: 6<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_7 [label=<<b>Expert 7 (Layer 0)</b><br/>
+            GPU: 7<br/>
+            Expert ID: 7<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_8 [label=<<b>Expert 8 (Layer 0)</b><br/>
+            GPU: 8<br/>
+            Expert ID: 8<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_9 [label=<<b>Expert 9 (Layer 0)</b><br/>
+            GPU: 9<br/>
+            Expert ID: 9<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_10 [label=<<b>Expert 10 (Layer 0)</b><br/>
+            GPU: 10<br/>
+            Expert ID: 10<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_11 [label=<<b>Expert 11 (Layer 0)</b><br/>
+            GPU: 11<br/>
+            Expert ID: 11<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_12 [label=<<b>Expert 12 (Layer 0)</b><br/>
+            GPU: 12<br/>
+            Expert ID: 12<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_13 [label=<<b>Expert 13 (Layer 0)</b><br/>
+            GPU: 13<br/>
+            Expert ID: 13<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_14 [label=<<b>Expert 14 (Layer 0)</b><br/>
+            GPU: 14<br/>
+            Expert ID: 14<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_0_15 [label=<<b>Expert 15 (Layer 0)</b><br/>
+            GPU: 15<br/>
+            Expert ID: 15<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_results_0 [label=<<b>Expert Results Collection</b><br/>
+        All GPUs<br/>
+        Input: [processed tokens from 16 experts]<br/>
+        Output: [reordered tokens, batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightyellow fontname=Arial shape=ellipse style=filled]
+	moe_combine_0 [label=<<b>MoE Output Combine</b><br/>
+        All GPUs<br/>
+        Input: [expert outputs, gating weights]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	moe_res_0 [label=<<b>MoE Residual Add</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	layernorm_1 [label=<<b>LayerNorm (Layer 1)</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_qkv_1 [label=<<b>MHA QKV Linear</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, heads=32, d_k=128]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_attn_1 [label=<<b>MHA Attention</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, heads=32, d_k=128]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_out_1 [label=<<b>MHA Output Linear</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	attn_res_1 [label=<<b>Attention Residual Add</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	local_gating_1 [label=<<b>Layer 1 Local Gating</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [token assignments → expert destinations]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	token_batch_1 [label=<<b>Token Batching & Async Send</b><br/>
+        All GPUs<br/>
+        Input: [tokens with expert assignments]<br/>
+        Output: [batches per expert]> fillcolor=lightyellow fontname=Arial shape=ellipse style=filled]
+	expert_1_0 [label=<<b>Expert 0 (Layer 1)</b><br/>
+            GPU: 0<br/>
+            Expert ID: 0<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_1 [label=<<b>Expert 1 (Layer 1)</b><br/>
+            GPU: 1<br/>
+            Expert ID: 1<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_2 [label=<<b>Expert 2 (Layer 1)</b><br/>
+            GPU: 2<br/>
+            Expert ID: 2<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_3 [label=<<b>Expert 3 (Layer 1)</b><br/>
+            GPU: 3<br/>
+            Expert ID: 3<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_4 [label=<<b>Expert 4 (Layer 1)</b><br/>
+            GPU: 4<br/>
+            Expert ID: 4<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_5 [label=<<b>Expert 5 (Layer 1)</b><br/>
+            GPU: 5<br/>
+            Expert ID: 5<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_6 [label=<<b>Expert 6 (Layer 1)</b><br/>
+            GPU: 6<br/>
+            Expert ID: 6<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_7 [label=<<b>Expert 7 (Layer 1)</b><br/>
+            GPU: 7<br/>
+            Expert ID: 7<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_8 [label=<<b>Expert 8 (Layer 1)</b><br/>
+            GPU: 8<br/>
+            Expert ID: 8<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_9 [label=<<b>Expert 9 (Layer 1)</b><br/>
+            GPU: 9<br/>
+            Expert ID: 9<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_10 [label=<<b>Expert 10 (Layer 1)</b><br/>
+            GPU: 10<br/>
+            Expert ID: 10<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_11 [label=<<b>Expert 11 (Layer 1)</b><br/>
+            GPU: 11<br/>
+            Expert ID: 11<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_12 [label=<<b>Expert 12 (Layer 1)</b><br/>
+            GPU: 12<br/>
+            Expert ID: 12<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_13 [label=<<b>Expert 13 (Layer 1)</b><br/>
+            GPU: 13<br/>
+            Expert ID: 13<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_14 [label=<<b>Expert 14 (Layer 1)</b><br/>
+            GPU: 14<br/>
+            Expert ID: 14<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_1_15 [label=<<b>Expert 15 (Layer 1)</b><br/>
+            GPU: 15<br/>
+            Expert ID: 15<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_results_1 [label=<<b>Expert Results Collection</b><br/>
+        All GPUs<br/>
+        Input: [processed tokens from 16 experts]<br/>
+        Output: [reordered tokens, batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightyellow fontname=Arial shape=ellipse style=filled]
+	moe_combine_1 [label=<<b>MoE Output Combine</b><br/>
+        All GPUs<br/>
+        Input: [expert outputs, gating weights]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	moe_res_1 [label=<<b>MoE Residual Add</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	layernorm_2 [label=<<b>LayerNorm (Layer 2)</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_qkv_2 [label=<<b>MHA QKV Linear</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, heads=32, d_k=128]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_attn_2 [label=<<b>MHA Attention</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, heads=32, d_k=128]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_out_2 [label=<<b>MHA Output Linear</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	attn_res_2 [label=<<b>Attention Residual Add</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	local_gating_2 [label=<<b>Layer 2 Local Gating</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [token assignments → expert destinations]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	token_batch_2 [label=<<b>Token Batching & Async Send</b><br/>
+        All GPUs<br/>
+        Input: [tokens with expert assignments]<br/>
+        Output: [batches per expert]> fillcolor=lightyellow fontname=Arial shape=ellipse style=filled]
+	expert_2_0 [label=<<b>Expert 0 (Layer 2)</b><br/>
+            GPU: 0<br/>
+            Expert ID: 0<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_1 [label=<<b>Expert 1 (Layer 2)</b><br/>
+            GPU: 1<br/>
+            Expert ID: 1<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_2 [label=<<b>Expert 2 (Layer 2)</b><br/>
+            GPU: 2<br/>
+            Expert ID: 2<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_3 [label=<<b>Expert 3 (Layer 2)</b><br/>
+            GPU: 3<br/>
+            Expert ID: 3<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_4 [label=<<b>Expert 4 (Layer 2)</b><br/>
+            GPU: 4<br/>
+            Expert ID: 4<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_5 [label=<<b>Expert 5 (Layer 2)</b><br/>
+            GPU: 5<br/>
+            Expert ID: 5<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_6 [label=<<b>Expert 6 (Layer 2)</b><br/>
+            GPU: 6<br/>
+            Expert ID: 6<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_7 [label=<<b>Expert 7 (Layer 2)</b><br/>
+            GPU: 7<br/>
+            Expert ID: 7<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_8 [label=<<b>Expert 8 (Layer 2)</b><br/>
+            GPU: 8<br/>
+            Expert ID: 8<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_9 [label=<<b>Expert 9 (Layer 2)</b><br/>
+            GPU: 9<br/>
+            Expert ID: 9<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_10 [label=<<b>Expert 10 (Layer 2)</b><br/>
+            GPU: 10<br/>
+            Expert ID: 10<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_11 [label=<<b>Expert 11 (Layer 2)</b><br/>
+            GPU: 11<br/>
+            Expert ID: 11<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_12 [label=<<b>Expert 12 (Layer 2)</b><br/>
+            GPU: 12<br/>
+            Expert ID: 12<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_13 [label=<<b>Expert 13 (Layer 2)</b><br/>
+            GPU: 13<br/>
+            Expert ID: 13<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_14 [label=<<b>Expert 14 (Layer 2)</b><br/>
+            GPU: 14<br/>
+            Expert ID: 14<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_2_15 [label=<<b>Expert 15 (Layer 2)</b><br/>
+            GPU: 15<br/>
+            Expert ID: 15<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_results_2 [label=<<b>Expert Results Collection</b><br/>
+        All GPUs<br/>
+        Input: [processed tokens from 16 experts]<br/>
+        Output: [reordered tokens, batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightyellow fontname=Arial shape=ellipse style=filled]
+	moe_combine_2 [label=<<b>MoE Output Combine</b><br/>
+        All GPUs<br/>
+        Input: [expert outputs, gating weights]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	moe_res_2 [label=<<b>MoE Residual Add</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	layernorm_3 [label=<<b>LayerNorm (Layer 3)</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_qkv_3 [label=<<b>MHA QKV Linear</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, heads=32, d_k=128]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_attn_3 [label=<<b>MHA Attention</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, heads=32, d_k=128]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_out_3 [label=<<b>MHA Output Linear</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	attn_res_3 [label=<<b>Attention Residual Add</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	local_gating_3 [label=<<b>Layer 3 Local Gating</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [token assignments → expert destinations]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	token_batch_3 [label=<<b>Token Batching & Async Send</b><br/>
+        All GPUs<br/>
+        Input: [tokens with expert assignments]<br/>
+        Output: [batches per expert]> fillcolor=lightyellow fontname=Arial shape=ellipse style=filled]
+	expert_3_0 [label=<<b>Expert 0 (Layer 3)</b><br/>
+            GPU: 0<br/>
+            Expert ID: 0<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_1 [label=<<b>Expert 1 (Layer 3)</b><br/>
+            GPU: 1<br/>
+            Expert ID: 1<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_2 [label=<<b>Expert 2 (Layer 3)</b><br/>
+            GPU: 2<br/>
+            Expert ID: 2<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_3 [label=<<b>Expert 3 (Layer 3)</b><br/>
+            GPU: 3<br/>
+            Expert ID: 3<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_4 [label=<<b>Expert 4 (Layer 3)</b><br/>
+            GPU: 4<br/>
+            Expert ID: 4<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_5 [label=<<b>Expert 5 (Layer 3)</b><br/>
+            GPU: 5<br/>
+            Expert ID: 5<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_6 [label=<<b>Expert 6 (Layer 3)</b><br/>
+            GPU: 6<br/>
+            Expert ID: 6<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_7 [label=<<b>Expert 7 (Layer 3)</b><br/>
+            GPU: 7<br/>
+            Expert ID: 7<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_8 [label=<<b>Expert 8 (Layer 3)</b><br/>
+            GPU: 8<br/>
+            Expert ID: 8<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_9 [label=<<b>Expert 9 (Layer 3)</b><br/>
+            GPU: 9<br/>
+            Expert ID: 9<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_10 [label=<<b>Expert 10 (Layer 3)</b><br/>
+            GPU: 10<br/>
+            Expert ID: 10<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_11 [label=<<b>Expert 11 (Layer 3)</b><br/>
+            GPU: 11<br/>
+            Expert ID: 11<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_12 [label=<<b>Expert 12 (Layer 3)</b><br/>
+            GPU: 12<br/>
+            Expert ID: 12<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_13 [label=<<b>Expert 13 (Layer 3)</b><br/>
+            GPU: 13<br/>
+            Expert ID: 13<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_14 [label=<<b>Expert 14 (Layer 3)</b><br/>
+            GPU: 14<br/>
+            Expert ID: 14<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_3_15 [label=<<b>Expert 15 (Layer 3)</b><br/>
+            GPU: 15<br/>
+            Expert ID: 15<br/>
+            Input: [token batch, hidden_dim=4096]<br/>
+            Output: [processed tokens, hidden_dim=4096]<br/>
+            Memory: 512MB<br/>
+            FFN: 4096→32768→4096> fillcolor=lightcoral fontname=Arial shape=rectangle style=filled]
+	expert_results_3 [label=<<b>Expert Results Collection</b><br/>
+        All GPUs<br/>
+        Input: [processed tokens from 16 experts]<br/>
+        Output: [reordered tokens, batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightyellow fontname=Arial shape=ellipse style=filled]
+	moe_combine_3 [label=<<b>MoE Output Combine</b><br/>
+        All GPUs<br/>
+        Input: [expert outputs, gating weights]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	moe_res_3 [label=<<b>MoE Residual Add</b><br/>
+        All GPUs<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	output [label=<<b>Model Output</b><br/>
+    Batch Size: 128<br/>
+    Sequence Length: 10000<br/>
+    Hidden Dim: 4096> fontname=Arial shape=plaintext]
+	input -> global_router
+	global_router -> layernorm_0
+	layernorm_0 -> mha_qkv_0
+	mha_qkv_0 -> mha_attn_0
+	mha_attn_0 -> mha_out_0
+	mha_out_0 -> attn_res_0
+	layernorm_0 -> attn_res_0
+	attn_res_0 -> local_gating_0
+	local_gating_0 -> token_batch_0
+	token_batch_0 -> expert_0_0
+	expert_0_0 -> expert_results_0
+	token_batch_0 -> expert_0_1
+	expert_0_1 -> expert_results_0
+	token_batch_0 -> expert_0_2
+	expert_0_2 -> expert_results_0
+	token_batch_0 -> expert_0_3
+	expert_0_3 -> expert_results_0
+	token_batch_0 -> expert_0_4
+	expert_0_4 -> expert_results_0
+	token_batch_0 -> expert_0_5
+	expert_0_5 -> expert_results_0
+	token_batch_0 -> expert_0_6
+	expert_0_6 -> expert_results_0
+	token_batch_0 -> expert_0_7
+	expert_0_7 -> expert_results_0
+	token_batch_0 -> expert_0_8
+	expert_0_8 -> expert_results_0
+	token_batch_0 -> expert_0_9
+	expert_0_9 -> expert_results_0
+	token_batch_0 -> expert_0_10
+	expert_0_10 -> expert_results_0
+	token_batch_0 -> expert_0_11
+	expert_0_11 -> expert_results_0
+	token_batch_0 -> expert_0_12
+	expert_0_12 -> expert_results_0
+	token_batch_0 -> expert_0_13
+	expert_0_13 -> expert_results_0
+	token_batch_0 -> expert_0_14
+	expert_0_14 -> expert_results_0
+	token_batch_0 -> expert_0_15
+	expert_0_15 -> expert_results_0
+	expert_results_0 -> moe_combine_0
+	moe_combine_0 -> moe_res_0
+	attn_res_0 -> moe_res_0
+	moe_res_0 -> layernorm_1
+	layernorm_1 -> mha_qkv_1
+	mha_qkv_1 -> mha_attn_1
+	mha_attn_1 -> mha_out_1
+	mha_out_1 -> attn_res_1
+	layernorm_1 -> attn_res_1
+	attn_res_1 -> local_gating_1
+	local_gating_1 -> token_batch_1
+	token_batch_1 -> expert_1_0
+	expert_1_0 -> expert_results_1
+	token_batch_1 -> expert_1_1
+	expert_1_1 -> expert_results_1
+	token_batch_1 -> expert_1_2
+	expert_1_2 -> expert_results_1
+	token_batch_1 -> expert_1_3
+	expert_1_3 -> expert_results_1
+	token_batch_1 -> expert_1_4
+	expert_1_4 -> expert_results_1
+	token_batch_1 -> expert_1_5
+	expert_1_5 -> expert_results_1
+	token_batch_1 -> expert_1_6
+	expert_1_6 -> expert_results_1
+	token_batch_1 -> expert_1_7
+	expert_1_7 -> expert_results_1
+	token_batch_1 -> expert_1_8
+	expert_1_8 -> expert_results_1
+	token_batch_1 -> expert_1_9
+	expert_1_9 -> expert_results_1
+	token_batch_1 -> expert_1_10
+	expert_1_10 -> expert_results_1
+	token_batch_1 -> expert_1_11
+	expert_1_11 -> expert_results_1
+	token_batch_1 -> expert_1_12
+	expert_1_12 -> expert_results_1
+	token_batch_1 -> expert_1_13
+	expert_1_13 -> expert_results_1
+	token_batch_1 -> expert_1_14
+	expert_1_14 -> expert_results_1
+	token_batch_1 -> expert_1_15
+	expert_1_15 -> expert_results_1
+	expert_results_1 -> moe_combine_1
+	moe_combine_1 -> moe_res_1
+	attn_res_1 -> moe_res_1
+	moe_res_1 -> layernorm_2
+	layernorm_2 -> mha_qkv_2
+	mha_qkv_2 -> mha_attn_2
+	mha_attn_2 -> mha_out_2
+	mha_out_2 -> attn_res_2
+	layernorm_2 -> attn_res_2
+	attn_res_2 -> local_gating_2
+	local_gating_2 -> token_batch_2
+	token_batch_2 -> expert_2_0
+	expert_2_0 -> expert_results_2
+	token_batch_2 -> expert_2_1
+	expert_2_1 -> expert_results_2
+	token_batch_2 -> expert_2_2
+	expert_2_2 -> expert_results_2
+	token_batch_2 -> expert_2_3
+	expert_2_3 -> expert_results_2
+	token_batch_2 -> expert_2_4
+	expert_2_4 -> expert_results_2
+	token_batch_2 -> expert_2_5
+	expert_2_5 -> expert_results_2
+	token_batch_2 -> expert_2_6
+	expert_2_6 -> expert_results_2
+	token_batch_2 -> expert_2_7
+	expert_2_7 -> expert_results_2
+	token_batch_2 -> expert_2_8
+	expert_2_8 -> expert_results_2
+	token_batch_2 -> expert_2_9
+	expert_2_9 -> expert_results_2
+	token_batch_2 -> expert_2_10
+	expert_2_10 -> expert_results_2
+	token_batch_2 -> expert_2_11
+	expert_2_11 -> expert_results_2
+	token_batch_2 -> expert_2_12
+	expert_2_12 -> expert_results_2
+	token_batch_2 -> expert_2_13
+	expert_2_13 -> expert_results_2
+	token_batch_2 -> expert_2_14
+	expert_2_14 -> expert_results_2
+	token_batch_2 -> expert_2_15
+	expert_2_15 -> expert_results_2
+	expert_results_2 -> moe_combine_2
+	moe_combine_2 -> moe_res_2
+	attn_res_2 -> moe_res_2
+	moe_res_2 -> layernorm_3
+	layernorm_3 -> mha_qkv_3
+	mha_qkv_3 -> mha_attn_3
+	mha_attn_3 -> mha_out_3
+	mha_out_3 -> attn_res_3
+	layernorm_3 -> attn_res_3
+	attn_res_3 -> local_gating_3
+	local_gating_3 -> token_batch_3
+	token_batch_3 -> expert_3_0
+	expert_3_0 -> expert_results_3
+	token_batch_3 -> expert_3_1
+	expert_3_1 -> expert_results_3
+	token_batch_3 -> expert_3_2
+	expert_3_2 -> expert_results_3
+	token_batch_3 -> expert_3_3
+	expert_3_3 -> expert_results_3
+	token_batch_3 -> expert_3_4
+	expert_3_4 -> expert_results_3
+	token_batch_3 -> expert_3_5
+	expert_3_5 -> expert_results_3
+	token_batch_3 -> expert_3_6
+	expert_3_6 -> expert_results_3
+	token_batch_3 -> expert_3_7
+	expert_3_7 -> expert_results_3
+	token_batch_3 -> expert_3_8
+	expert_3_8 -> expert_results_3
+	token_batch_3 -> expert_3_9
+	expert_3_9 -> expert_results_3
+	token_batch_3 -> expert_3_10
+	expert_3_10 -> expert_results_3
+	token_batch_3 -> expert_3_11
+	expert_3_11 -> expert_results_3
+	token_batch_3 -> expert_3_12
+	expert_3_12 -> expert_results_3
+	token_batch_3 -> expert_3_13
+	expert_3_13 -> expert_results_3
+	token_batch_3 -> expert_3_14
+	expert_3_14 -> expert_results_3
+	token_batch_3 -> expert_3_15
+	expert_3_15 -> expert_results_3
+	expert_results_3 -> moe_combine_3
+	moe_combine_3 -> moe_res_3
+	attn_res_3 -> moe_res_3
+	moe_res_3 -> output
+}

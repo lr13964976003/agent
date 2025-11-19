@@ -1,0 +1,443 @@
+// Baseline MoE with TP=8, PP=2
+digraph baseline_moe {
+	graph [bgcolor=white fontname=Arial fontsize=12 rankdir=TB]
+	input [label=<<b>Model Input</b><br/>
+    Batch Size: 128<br/>
+    Sequence Length: 10000<br/>
+    Hidden Dim: 4096> fontname=Arial shape=plaintext]
+	pipeline_split [label=<<b>Pipeline Split</b><br/>
+    Stage 0: Devices 0-7<br/>
+    Stage 1: Devices 8-15> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	layernorm_0_s0 [label=<<b>LayerNorm (Layer 0)</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_qkv_0_s0 [label=<<b>MHA QKV Linear (TP=8)</b><br/>
+        GPU: 0-7 (column parallel)<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, heads=4, d_k=128]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_attn_0_s0 [label=<<b>MHA Attention (TP=8)</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, heads=4, d_k=128]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=512]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_out_0_s0 [label=<<b>MHA Output Linear (TP=8)</b><br/>
+        GPU: 0-7 (row parallel)<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=512]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	attn_res_0_s0 [label=<<b>Attention Residual Add</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	moe_gating_0_s0 [label=<<b>MoE Gating Network</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [routing decisions, expert assignments]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	expert_0_gpu0_s0 [label=<<b>Expert MLP (Layer 0)</b><br/>
+            GPU: 0<br/>
+            Experts: 0-1<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_0_gpu1_s0 [label=<<b>Expert MLP (Layer 0)</b><br/>
+            GPU: 1<br/>
+            Experts: 2-3<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_0_gpu2_s0 [label=<<b>Expert MLP (Layer 0)</b><br/>
+            GPU: 2<br/>
+            Experts: 4-5<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_0_gpu3_s0 [label=<<b>Expert MLP (Layer 0)</b><br/>
+            GPU: 3<br/>
+            Experts: 6-7<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_0_gpu4_s0 [label=<<b>Expert MLP (Layer 0)</b><br/>
+            GPU: 4<br/>
+            Experts: 8-9<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_0_gpu5_s0 [label=<<b>Expert MLP (Layer 0)</b><br/>
+            GPU: 5<br/>
+            Experts: 10-11<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_0_gpu6_s0 [label=<<b>Expert MLP (Layer 0)</b><br/>
+            GPU: 6<br/>
+            Experts: 12-13<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_0_gpu7_s0 [label=<<b>Expert MLP (Layer 0)</b><br/>
+            GPU: 7<br/>
+            Experts: 14-15<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_agg_0_s0 [label=<<b>Expert Output Aggregation</b><br/>
+        GPU: 0-7<br/>
+        Input: [expert outputs from 16 experts]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	moe_res_0_s0 [label=<<b>MoE Residual Add</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	layernorm_1_s0 [label=<<b>LayerNorm (Layer 1)</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_qkv_1_s0 [label=<<b>MHA QKV Linear (TP=8)</b><br/>
+        GPU: 0-7 (column parallel)<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, heads=4, d_k=128]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_attn_1_s0 [label=<<b>MHA Attention (TP=8)</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, heads=4, d_k=128]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=512]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_out_1_s0 [label=<<b>MHA Output Linear (TP=8)</b><br/>
+        GPU: 0-7 (row parallel)<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=512]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	attn_res_1_s0 [label=<<b>Attention Residual Add</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	moe_gating_1_s0 [label=<<b>MoE Gating Network</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [routing decisions, expert assignments]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	expert_1_gpu0_s0 [label=<<b>Expert MLP (Layer 1)</b><br/>
+            GPU: 0<br/>
+            Experts: 0-1<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_1_gpu1_s0 [label=<<b>Expert MLP (Layer 1)</b><br/>
+            GPU: 1<br/>
+            Experts: 2-3<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_1_gpu2_s0 [label=<<b>Expert MLP (Layer 1)</b><br/>
+            GPU: 2<br/>
+            Experts: 4-5<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_1_gpu3_s0 [label=<<b>Expert MLP (Layer 1)</b><br/>
+            GPU: 3<br/>
+            Experts: 6-7<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_1_gpu4_s0 [label=<<b>Expert MLP (Layer 1)</b><br/>
+            GPU: 4<br/>
+            Experts: 8-9<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_1_gpu5_s0 [label=<<b>Expert MLP (Layer 1)</b><br/>
+            GPU: 5<br/>
+            Experts: 10-11<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_1_gpu6_s0 [label=<<b>Expert MLP (Layer 1)</b><br/>
+            GPU: 6<br/>
+            Experts: 12-13<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_1_gpu7_s0 [label=<<b>Expert MLP (Layer 1)</b><br/>
+            GPU: 7<br/>
+            Experts: 14-15<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_agg_1_s0 [label=<<b>Expert Output Aggregation</b><br/>
+        GPU: 0-7<br/>
+        Input: [expert outputs from 16 experts]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	moe_res_1_s0 [label=<<b>MoE Residual Add</b><br/>
+        GPU: 0-7<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	pipeline_comm [label=<<b>Pipeline Communication</b><br/>
+    Stage 0 → Stage 1<br/>
+    Transfer: 4 layers output<br/>
+    Async communication> fillcolor=lightyellow fontname=Arial shape=ellipse style=filled]
+	layernorm_2_s1 [label=<<b>LayerNorm (Layer 2)</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_qkv_2_s1 [label=<<b>MHA QKV Linear (TP=8)</b><br/>
+        GPU: 8-15 (column parallel)<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, heads=4, d_k=128]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_attn_2_s1 [label=<<b>MHA Attention (TP=8)</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, heads=4, d_k=128]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=512]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_out_2_s1 [label=<<b>MHA Output Linear (TP=8)</b><br/>
+        GPU: 8-15 (row parallel)<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=512]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	attn_res_2_s1 [label=<<b>Attention Residual Add</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	moe_gating_2_s1 [label=<<b>MoE Gating Network</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [routing decisions, expert assignments]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	expert_2_gpu8_s1 [label=<<b>Expert MLP (Layer 2)</b><br/>
+            GPU: 8<br/>
+            Experts: 0-1<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_2_gpu9_s1 [label=<<b>Expert MLP (Layer 2)</b><br/>
+            GPU: 9<br/>
+            Experts: 2-3<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_2_gpu10_s1 [label=<<b>Expert MLP (Layer 2)</b><br/>
+            GPU: 10<br/>
+            Experts: 4-5<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_2_gpu11_s1 [label=<<b>Expert MLP (Layer 2)</b><br/>
+            GPU: 11<br/>
+            Experts: 6-7<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_2_gpu12_s1 [label=<<b>Expert MLP (Layer 2)</b><br/>
+            GPU: 12<br/>
+            Experts: 8-9<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_2_gpu13_s1 [label=<<b>Expert MLP (Layer 2)</b><br/>
+            GPU: 13<br/>
+            Experts: 10-11<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_2_gpu14_s1 [label=<<b>Expert MLP (Layer 2)</b><br/>
+            GPU: 14<br/>
+            Experts: 12-13<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_2_gpu15_s1 [label=<<b>Expert MLP (Layer 2)</b><br/>
+            GPU: 15<br/>
+            Experts: 14-15<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_agg_2_s1 [label=<<b>Expert Output Aggregation</b><br/>
+        GPU: 8-15<br/>
+        Input: [expert outputs from 16 experts]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	moe_res_2_s1 [label=<<b>MoE Residual Add</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	layernorm_3_s1 [label=<<b>LayerNorm (Layer 3)</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_qkv_3_s1 [label=<<b>MHA QKV Linear (TP=8)</b><br/>
+        GPU: 8-15 (column parallel)<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [batch_size=128, seq_len=10000, heads=4, d_k=128]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_attn_3_s1 [label=<<b>MHA Attention (TP=8)</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, heads=4, d_k=128]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=512]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	mha_out_3_s1 [label=<<b>MHA Output Linear (TP=8)</b><br/>
+        GPU: 8-15 (row parallel)<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=512]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	attn_res_3_s1 [label=<<b>Attention Residual Add</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	moe_gating_3_s1 [label=<<b>MoE Gating Network</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096]<br/>
+        Output: [routing decisions, expert assignments]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	expert_3_gpu8_s1 [label=<<b>Expert MLP (Layer 3)</b><br/>
+            GPU: 8<br/>
+            Experts: 0-1<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_3_gpu9_s1 [label=<<b>Expert MLP (Layer 3)</b><br/>
+            GPU: 9<br/>
+            Experts: 2-3<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_3_gpu10_s1 [label=<<b>Expert MLP (Layer 3)</b><br/>
+            GPU: 10<br/>
+            Experts: 4-5<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_3_gpu11_s1 [label=<<b>Expert MLP (Layer 3)</b><br/>
+            GPU: 11<br/>
+            Experts: 6-7<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_3_gpu12_s1 [label=<<b>Expert MLP (Layer 3)</b><br/>
+            GPU: 12<br/>
+            Experts: 8-9<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_3_gpu13_s1 [label=<<b>Expert MLP (Layer 3)</b><br/>
+            GPU: 13<br/>
+            Experts: 10-11<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_3_gpu14_s1 [label=<<b>Expert MLP (Layer 3)</b><br/>
+            GPU: 14<br/>
+            Experts: 12-13<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_3_gpu15_s1 [label=<<b>Expert MLP (Layer 3)</b><br/>
+            GPU: 15<br/>
+            Experts: 14-15<br/>
+            Input: [variable tokens, hidden_dim=4096]<br/>
+            Output: [variable tokens, hidden_dim=4096]<br/>
+            Params: 512MB total> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	expert_agg_3_s1 [label=<<b>Expert Output Aggregation</b><br/>
+        GPU: 8-15<br/>
+        Input: [expert outputs from 16 experts]<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightgreen fontname=Arial shape=parallelogram style=filled]
+	moe_res_3_s1 [label=<<b>MoE Residual Add</b><br/>
+        GPU: 8-15<br/>
+        Input: [batch_size=128, seq_len=10000, hidden_dim=4096] (x2)<br/>
+        Output: [batch_size=128, seq_len=10000, hidden_dim=4096]> fillcolor=lightblue fontname=Arial shape=rectangle style=filled]
+	output [label=<<b>Model Output</b><br/>
+    Batch Size: 128<br/>
+    Sequence Length: 10000<br/>
+    Hidden Dim: 4096> fontname=Arial shape=plaintext]
+	input -> pipeline_split
+	pipeline_split -> layernorm_0_s0
+	layernorm_0_s0 -> mha_qkv_0_s0
+	mha_qkv_0_s0 -> mha_attn_0_s0
+	mha_attn_0_s0 -> mha_out_0_s0
+	mha_out_0_s0 -> attn_res_0_s0
+	layernorm_0_s0 -> attn_res_0_s0
+	attn_res_0_s0 -> moe_gating_0_s0
+	moe_gating_0_s0 -> expert_0_gpu0_s0
+	expert_0_gpu0_s0 -> expert_agg_0_s0
+	moe_gating_0_s0 -> expert_0_gpu1_s0
+	expert_0_gpu1_s0 -> expert_agg_0_s0
+	moe_gating_0_s0 -> expert_0_gpu2_s0
+	expert_0_gpu2_s0 -> expert_agg_0_s0
+	moe_gating_0_s0 -> expert_0_gpu3_s0
+	expert_0_gpu3_s0 -> expert_agg_0_s0
+	moe_gating_0_s0 -> expert_0_gpu4_s0
+	expert_0_gpu4_s0 -> expert_agg_0_s0
+	moe_gating_0_s0 -> expert_0_gpu5_s0
+	expert_0_gpu5_s0 -> expert_agg_0_s0
+	moe_gating_0_s0 -> expert_0_gpu6_s0
+	expert_0_gpu6_s0 -> expert_agg_0_s0
+	moe_gating_0_s0 -> expert_0_gpu7_s0
+	expert_0_gpu7_s0 -> expert_agg_0_s0
+	expert_agg_0_s0 -> moe_res_0_s0
+	attn_res_0_s0 -> moe_res_0_s0
+	moe_res_0_s0 -> layernorm_1_s0
+	layernorm_1_s0 -> mha_qkv_1_s0
+	mha_qkv_1_s0 -> mha_attn_1_s0
+	mha_attn_1_s0 -> mha_out_1_s0
+	mha_out_1_s0 -> attn_res_1_s0
+	layernorm_1_s0 -> attn_res_1_s0
+	attn_res_1_s0 -> moe_gating_1_s0
+	moe_gating_1_s0 -> expert_1_gpu0_s0
+	expert_1_gpu0_s0 -> expert_agg_1_s0
+	moe_gating_1_s0 -> expert_1_gpu1_s0
+	expert_1_gpu1_s0 -> expert_agg_1_s0
+	moe_gating_1_s0 -> expert_1_gpu2_s0
+	expert_1_gpu2_s0 -> expert_agg_1_s0
+	moe_gating_1_s0 -> expert_1_gpu3_s0
+	expert_1_gpu3_s0 -> expert_agg_1_s0
+	moe_gating_1_s0 -> expert_1_gpu4_s0
+	expert_1_gpu4_s0 -> expert_agg_1_s0
+	moe_gating_1_s0 -> expert_1_gpu5_s0
+	expert_1_gpu5_s0 -> expert_agg_1_s0
+	moe_gating_1_s0 -> expert_1_gpu6_s0
+	expert_1_gpu6_s0 -> expert_agg_1_s0
+	moe_gating_1_s0 -> expert_1_gpu7_s0
+	expert_1_gpu7_s0 -> expert_agg_1_s0
+	expert_agg_1_s0 -> moe_res_1_s0
+	attn_res_1_s0 -> moe_res_1_s0
+	moe_res_1_s0 -> pipeline_comm
+	pipeline_comm -> layernorm_2_s1
+	pipeline_comm -> layernorm_2_s1
+	layernorm_2_s1 -> mha_qkv_2_s1
+	mha_qkv_2_s1 -> mha_attn_2_s1
+	mha_attn_2_s1 -> mha_out_2_s1
+	mha_out_2_s1 -> attn_res_2_s1
+	layernorm_2_s1 -> attn_res_2_s1
+	attn_res_2_s1 -> moe_gating_2_s1
+	moe_gating_2_s1 -> expert_2_gpu8_s1
+	expert_2_gpu8_s1 -> expert_agg_2_s1
+	moe_gating_2_s1 -> expert_2_gpu9_s1
+	expert_2_gpu9_s1 -> expert_agg_2_s1
+	moe_gating_2_s1 -> expert_2_gpu10_s1
+	expert_2_gpu10_s1 -> expert_agg_2_s1
+	moe_gating_2_s1 -> expert_2_gpu11_s1
+	expert_2_gpu11_s1 -> expert_agg_2_s1
+	moe_gating_2_s1 -> expert_2_gpu12_s1
+	expert_2_gpu12_s1 -> expert_agg_2_s1
+	moe_gating_2_s1 -> expert_2_gpu13_s1
+	expert_2_gpu13_s1 -> expert_agg_2_s1
+	moe_gating_2_s1 -> expert_2_gpu14_s1
+	expert_2_gpu14_s1 -> expert_agg_2_s1
+	moe_gating_2_s1 -> expert_2_gpu15_s1
+	expert_2_gpu15_s1 -> expert_agg_2_s1
+	expert_agg_2_s1 -> moe_res_2_s1
+	attn_res_2_s1 -> moe_res_2_s1
+	moe_res_2_s1 -> layernorm_3_s1
+	layernorm_3_s1 -> mha_qkv_3_s1
+	mha_qkv_3_s1 -> mha_attn_3_s1
+	mha_attn_3_s1 -> mha_out_3_s1
+	mha_out_3_s1 -> attn_res_3_s1
+	layernorm_3_s1 -> attn_res_3_s1
+	attn_res_3_s1 -> moe_gating_3_s1
+	moe_gating_3_s1 -> expert_3_gpu8_s1
+	expert_3_gpu8_s1 -> expert_agg_3_s1
+	moe_gating_3_s1 -> expert_3_gpu9_s1
+	expert_3_gpu9_s1 -> expert_agg_3_s1
+	moe_gating_3_s1 -> expert_3_gpu10_s1
+	expert_3_gpu10_s1 -> expert_agg_3_s1
+	moe_gating_3_s1 -> expert_3_gpu11_s1
+	expert_3_gpu11_s1 -> expert_agg_3_s1
+	moe_gating_3_s1 -> expert_3_gpu12_s1
+	expert_3_gpu12_s1 -> expert_agg_3_s1
+	moe_gating_3_s1 -> expert_3_gpu13_s1
+	expert_3_gpu13_s1 -> expert_agg_3_s1
+	moe_gating_3_s1 -> expert_3_gpu14_s1
+	expert_3_gpu14_s1 -> expert_agg_3_s1
+	moe_gating_3_s1 -> expert_3_gpu15_s1
+	expert_3_gpu15_s1 -> expert_agg_3_s1
+	expert_agg_3_s1 -> moe_res_3_s1
+	attn_res_3_s1 -> moe_res_3_s1
+	moe_res_3_s1 -> output
+}
