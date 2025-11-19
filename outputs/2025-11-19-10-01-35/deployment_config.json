@@ -1,0 +1,181 @@
+{
+  "deployment_configuration": {
+    "models": {
+      "dense_transformer_2layer": {
+        "layers": 2,
+        "hidden_size": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "max_position_embeddings": 10000,
+        "intermediate_size": 32768,
+        "vocab_size": 50257,
+        "activation": "gelu"
+      },
+      "dense_transformer_4layer": {
+        "layers": 4,
+        "hidden_size": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "max_position_embeddings": 10000,
+        "intermediate_size": 32768,
+        "vocab_size": 50257,
+        "activation": "gelu"
+      },
+      "baseline_tensor_pipeline": {
+        "layers": 2,
+        "hidden_size": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "max_position_embeddings": 10000,
+        "intermediate_size": 32768,
+        "vocab_size": 50257,
+        "activation": "gelu",
+        "baseline": true
+      }
+    },
+    "parallel_strategies": {
+      "helix_two_level": {
+        "strategy_type": "two_level_attention_partitioning",
+        "total_devices": 16,
+        "head_partitions": 4,
+        "dimension_partitions": 4,
+        "total_partitions": 16,
+        "head_group_size": 8,
+        "dimension_slice_size": 32,
+        "communication_pattern": "hierarchical",
+        "precision": "fp16"
+      },
+      "baseline_tensor_pipeline": {
+        "strategy_type": "tensor_parallelism_plus_pipeline",
+        "tensor_parallel_degree": 8,
+        "pipeline_parallel_degree": 2,
+        "total_devices": 16,
+        "pipeline_stages": 2,
+        "devices_per_stage": 8,
+        "communication_pattern": "all_reduce_plus_pipeline",
+        "precision": "fp16"
+      }
+    },
+    "device_mapping": {
+      "helix_two_level": {
+        "device_assignments": [
+          {"device_id": 0, "partition": {"head_group": 0, "dimension_slice": 0}},
+          {"device_id": 1, "partition": {"head_group": 0, "dimension_slice": 1}},
+          {"device_id": 2, "partition": {"head_group": 0, "dimension_slice": 2}},
+          {"device_id": 3, "partition": {"head_group": 0, "dimension_slice": 3}},
+          {"device_id": 4, "partition": {"head_group": 1, "dimension_slice": 0}},
+          {"device_id": 5, "partition": {"head_group": 1, "dimension_slice": 1}},
+          {"device_id": 6, "partition": {"head_group": 1, "dimension_slice": 2}},
+          {"device_id": 7, "partition": {"head_group": 1, "dimension_slice": 3}},
+          {"device_id": 8, "partition": {"head_group": 2, "dimension_slice": 0}},
+          {"device_id": 9, "partition": {"head_group": 2, "dimension_slice": 1}},
+          {"device_id": 10, "partition": {"head_group": 2, "dimension_slice": 2}},
+          {"device_id": 11, "partition": {"head_group": 2, "dimension_slice": 3}},
+          {"device_id": 12, "partition": {"head_group": 3, "dimension_slice": 0}},
+          {"device_id": 13, "partition": {"head_group": 3, "dimension_slice": 1}},
+          {"device_id": 14, "partition": {"head_group": 3, "dimension_slice": 2}},
+          {"device_id": 15, "partition": {"head_group": 3, "dimension_slice": 3}}
+        ]
+      },
+      "baseline_tensor_pipeline": {
+        "device_assignments": [
+          {"stage": 0, "tensor_parallel_group": [0, 1, 2, 3, 4, 5, 6, 7]},
+          {"stage": 1, "tensor_parallel_group": [8, 9, 10, 11, 12, 13, 14, 15]}
+        ]
+      }
+    },
+    "module_partitioning": {
+      "attention_layer": {
+        "weight_matrices": {
+          "query_projection": {
+            "shape": [4096, 4096],
+            "partitioning": {
+              "rows": 4,
+              "cols": 4,
+              "block_size": [1024, 1024],
+              "device_mapping": "helix_two_level"
+            }
+          },
+          "key_projection": {
+            "shape": [4096, 4096],
+            "partitioning": {
+              "rows": 4,
+              "cols": 4,
+              "block_size": [1024, 1024],
+              "device_mapping": "helix_two_level"
+            }
+          },
+          "value_projection": {
+            "shape": [4096, 4096],
+            "partitioning": {
+              "rows": 4,
+              "cols": 4,
+              "block_size": [1024, 1024],
+              "device_mapping": "helix_two_level"
+            }
+          },
+          "output_projection": {
+            "shape": [4096, 4096],
+            "partitioning": {
+              "rows": 4,
+              "cols": 4,
+              "block_size": [1024, 1024],
+              "device_mapping": "helix_two_level"
+            }
+          }
+        },
+        "attention_computation": {
+          "heads_per_partition": 8,
+          "dimensions_per_head_per_partition": 32,
+          "softmax_scale": 5.656854249492381,
+          "attention_mask": "causal"
+        }
+      },
+      "mlp_layer": {
+        "gate_proj": {
+          "shape": [4096, 32768],
+          "partitioning": {
+            "tensor_parallel": true,
+            "column_parallel": true,
+            "devices": "baseline_tensor_pipeline"
+          }
+        },
+        "up_proj": {
+          "shape": [4096, 32768],
+          "partitioning": {
+            "tensor_parallel": true,
+            "column_parallel": true,
+            "devices": "baseline_tensor_pipeline"
+          }
+        },
+        "down_proj": {
+          "shape": [32768, 4096],
+          "partitioning": {
+            "tensor_parallel": true,
+            "row_parallel": true,
+            "devices": "baseline_tensor_pipeline"
+          }
+        }
+      }
+    },
+    "communication_overhead": {
+      "helix_two_level": {
+        "all_gather_within_groups": 3,
+        "all_gather_across_groups": 1,
+        "expected_tpot_ms": 0.22
+      },
+      "baseline_tensor_pipeline": {
+        "all_reduce_per_layer": 1,
+        "pipeline_communication": 2,
+        "expected_tpot_ms": 0.35
+      }
+    },
+    "runtime_parameters": {
+      "batch_size": 128,
+      "sequence_length": 10000,
+      "precision": "fp16",
+      "memory_efficient_attention": true,
+      "gradient_checkpointing": false
+    }
+  }
+}
