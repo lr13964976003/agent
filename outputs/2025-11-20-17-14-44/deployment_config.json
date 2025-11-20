@@ -1,0 +1,252 @@
+{
+  "deployment_config": {
+    "models": {
+      "baseline_model": {
+        "name": "4-layer_dense_transformer_baseline",
+        "type": "dense_transformer",
+        "layers": 4,
+        "hidden_size": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "mlp_hidden_size": 32768,
+        "precision": "fp16",
+        "parallel_strategy": {
+          "type": "tensor_parallelism_plus_pipeline_parallelism",
+          "tensor_parallel_degree": 8,
+          "pipeline_parallel_degree": 2,
+          "total_devices": 16,
+          "device_mapping": {
+            "pipeline_stage_0": {
+              "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+              "layers": [0, 1],
+              "tensor_parallel_group": "tp_group_0"
+            },
+            "pipeline_stage_1": {
+              "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+              "layers": [2, 3],
+              "tensor_parallel_group": "tp_group_1"
+            }
+          },
+          "communication": {
+            "tensor_parallel": "all_reduce",
+            "pipeline_parallel": "send_recv"
+          }
+        }
+      },
+      "proposed_model": {
+        "name": "4-layer_dense_transformer_helix",
+        "type": "dense_transformer",
+        "layers": 4,
+        "hidden_size": 4096,
+        "num_heads": 32,
+        "head_dim": 128,
+        "mlp_hidden_size": 32768,
+        "precision": "fp16",
+        "parallel_strategy": {
+          "type": "two_level_attention_partitioning",
+          "head_partitions": 4,
+          "dimension_partitions": 4,
+          "total_partitions": 16,
+          "heads_per_group": 8,
+          "slice_dimension": 32,
+          "total_devices": 16,
+          "device_mapping": {
+            "grid": "4x4",
+            "devices": [
+              {
+                "device_id": 0,
+                "head_group": 0,
+                "dimension_slice": 0,
+                "head_range": [0, 7],
+                "dimension_range": [0, 31],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 1,
+                "head_group": 0,
+                "dimension_slice": 1,
+                "head_range": [0, 7],
+                "dimension_range": [32, 63],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 2,
+                "head_group": 0,
+                "dimension_slice": 2,
+                "head_range": [0, 7],
+                "dimension_range": [64, 95],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 3,
+                "head_group": 0,
+                "dimension_slice": 3,
+                "head_range": [0, 7],
+                "dimension_range": [96, 127],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 4,
+                "head_group": 1,
+                "dimension_slice": 0,
+                "head_range": [8, 15],
+                "dimension_range": [0, 31],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 5,
+                "head_group": 1,
+                "dimension_slice": 1,
+                "head_range": [8, 15],
+                "dimension_range": [32, 63],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 6,
+                "head_group": 1,
+                "dimension_slice": 2,
+                "head_range": [8, 15],
+                "dimension_range": [64, 95],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 7,
+                "head_group": 1,
+                "dimension_slice": 3,
+                "head_range": [8, 15],
+                "dimension_range": [96, 127],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 8,
+                "head_group": 2,
+                "dimension_slice": 0,
+                "head_range": [16, 23],
+                "dimension_range": [0, 31],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 9,
+                "head_group": 2,
+                "dimension_slice": 1,
+                "head_range": [16, 23],
+                "dimension_range": [32, 63],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 10,
+                "head_group": 2,
+                "dimension_slice": 2,
+                "head_range": [16, 23],
+                "dimension_range": [64, 95],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 11,
+                "head_group": 2,
+                "dimension_slice": 3,
+                "head_range": [16, 23],
+                "dimension_range": [96, 127],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 12,
+                "head_group": 3,
+                "dimension_slice": 0,
+                "head_range": [24, 31],
+                "dimension_range": [0, 31],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 13,
+                "head_group": 3,
+                "dimension_slice": 1,
+                "head_range": [24, 31],
+                "dimension_range": [32, 63],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 14,
+                "head_group": 3,
+                "dimension_slice": 2,
+                "head_range": [24, 31],
+                "dimension_range": [64, 95],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              },
+              {
+                "device_id": 15,
+                "head_group": 3,
+                "dimension_slice": 3,
+                "head_range": [24, 31],
+                "dimension_range": [96, 127],
+                "weight_shape": [1024, 1024],
+                "compute_shape": [128, 10000, 32]
+              }
+            ]
+          },
+          "communication": {
+            "input_distribution": "broadcast",
+            "intra_group_concatenation": "reduce_scatter",
+            "final_concatenation": "all_gather",
+            "bandwidth_requirements": "high_nvlink_intra_group"
+          },
+          "aggregation_stages": {
+            "stage_1": {
+              "type": "dimension_concatenation",
+              "groups": 4,
+              "devices_per_group": 4,
+              "input_shape": [128, 10000, 32],
+              "output_shape": [128, 10000, 128]
+            },
+            "stage_2": {
+              "type": "head_concatenation",
+              "groups": 1,
+              "devices": 16,
+              "input_shape": [128, 10000, 1024],
+              "output_shape": [128, 10000, 4096]
+            }
+          }
+        }
+      }
+    },
+    "infrastructure": {
+      "hardware": {
+        "gpu_type": "NVIDIA_H100",
+        "gpu_memory_gb": 80,
+        "gpu_count": 16,
+        "interconnect": {
+          "intra_node": "NVLink",
+          "inter_node": "InfiniBand"
+        }
+      },
+      "software": {
+        "cuda_version": "12.1",
+        "cudnn_version": "8.9",
+        "nccl_version": "2.18",
+        "precision": "fp16"
+      }
+    },
+    "runtime_parameters": {
+      "batch_size": 128,
+      "sequence_length": 10000,
+      "warmup_iterations": 100,
+      "measurement_iterations": 1000,
+      "random_seed": 42
+    }
+  }
+}
