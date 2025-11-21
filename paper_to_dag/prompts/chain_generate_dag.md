@@ -30,7 +30,7 @@ Generate complete model deployment DAGs(directed acyclic graph) according to you
 
 Draw the DAG diagram as simply and intuitively as possible, including only the important parts. <<<尽可能简洁直观的画出DAG图，只包含重要的部分>>>
 
-Omit the repeated layers in the DAG diagram, retaining only the representative ones, and the number of repetitions needs to be labeled. <<<省略DAG图中重复的层，只保留具有代表性的层，重复次数需要标定>>>
+Omit layers with high similarity or repetition in the DAG graph, retaining only representative layers. Repeated modules can be labeled with the number of repetitions. <<<省略DAG图中相似度很高或者重复的层，只保留具有代表性的层，重复的模块可以标定重复次数>>>
 
 Card Boundary Division (specify which GPU each node is on) <<<按不同GPU划分边界>>>
 
@@ -119,6 +119,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
