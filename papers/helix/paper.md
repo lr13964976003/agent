@@ -234,10 +234,10 @@ We evaluate our proposed two-level attention partitioning method on inference ta
 Two model types are tested:
 
 
-* A **4-layer Dense Transformer model**.
+* A **16-layer Dense Transformer model**.
 
 
-The batch size is fixed at 128, the sequence length is fixed at 10000 , num of heads is fixed at 32, dimension of each head is fixed at 128, hidden size of MLP is fixed at 32768 for all tests.
+The batch size is fixed at 128, the sequence length is fixed at 10000 , num of heads is fixed at 32, dimension of each head is fixed at 128, hidden size of MLP is fixed at 16384 for all tests.
 
 
 ---
