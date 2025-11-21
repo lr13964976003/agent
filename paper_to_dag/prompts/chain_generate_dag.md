@@ -86,10 +86,6 @@ Use ellipses to represent communication, rectangles for computation, and paralle
 
 Ensure that each node you create is connected to at least one other node. <<<不允许生成无用节点>>>
 
-Ensure that you generate a complete DAG, not a simplified version that requires me to make further modifications. <<<不允许在dag中省略内容>>>
-
-For multi-layer models, it is not allowed to generate only one of the layers.<<<不允许省略层>>>
-
 Sometimes, a complete DAG can be very large and contain a lot of similar content. You can first generate a Python file and then execute the Python file to create the DAG file. <<<提醒可以生成python文件来生成dag>>>
 
 By executing Python, you need to generate images and .dot files.<<<图像和dot文件都需要生成>>>
@@ -123,6 +119,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
