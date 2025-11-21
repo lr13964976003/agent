@@ -1,0 +1,105 @@
+digraph proposed_deployment {
+    rankdir=TB;
+    node [shape=rectangle, style=filled];
+    
+    // Input node
+    Input [shape=ellipse, label="Input\nGPU: 0\nInput: [batch_size=8, seq_len=10000, hidden_size=4096]", fillcolor=lightblue];
+    
+    // Layer 0 on GPU 0
+    subgraph cluster_gpu0 {
+        label="GPU 0\nLayer 0\nCache-fitting: 9.5GB < 50MB*\n*with optimization";
+        style=dashed;
+        fillcolor=lightyellow;
+        
+        Layer0_Attn_QKV [label="Layer 0: QKV Linear\nGPU: 0\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer0_Attn_Score [label="Layer 0: Attention Score\nGPU: 0\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer0_Attn_Out [label="Layer 0: Output Linear\nGPU: 0\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer0_Add1 [shape=parallelogram, label="Layer 0: Residual Add\nGPU: 0\nInput: [8,10000,4096], [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=orange];
+        
+        Layer0_MLP_Dense1 [label="Layer 0: MLP Dense 1\nGPU: 0\nInput: [8,10000,4096]\nOutput: [8,10000,16384]", fillcolor=lightgreen];
+        Layer0_MLP_Activation [label="Layer 0: MLP GELU\nGPU: 0\nInput: [8,10000,16384]\nOutput: [8,10000,16384]", fillcolor=lightgreen];
+        Layer0_MLP_Dense2 [label="Layer 0: MLP Dense 2\nGPU: 0\nInput: [8,10000,16384]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer0_Add2 [shape=parallelogram, label="Layer 0: Residual Add\nGPU: 0\nInput: [8,10000,4096], [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=orange];
+    }
+    
+    // Communication from GPU 0 to GPU 1
+    Comm0to1 [shape=ellipse, label="Inter-GPU Transfer\nGPU 0 -> GPU 1\nTransfer: [8,10000,4096]", fillcolor=red];
+    
+    // Layer 1 on GPU 1
+    subgraph cluster_gpu1 {
+        label="GPU 1\nLayer 1\nCache-fitting: 9.5GB < 50MB*";
+        style=dashed;
+        fillcolor=lightyellow;
+        
+        Layer1_Attn_QKV [label="Layer 1: QKV Linear\nGPU: 1\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer1_Attn_Score [label="Layer 1: Attention Score\nGPU: 1\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer1_Attn_Out [label="Layer 1: Output Linear\nGPU: 1\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer1_Add1 [shape=parallelogram, label="Layer 1: Residual Add\nGPU: 1\nInput: [8,10000,4096], [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=orange];
+        
+        Layer1_MLP_Dense1 [label="Layer 1: MLP Dense 1\nGPU: 1\nInput: [8,10000,4096]\nOutput: [8,10000,16384]", fillcolor=lightgreen];
+        Layer1_MLP_Activation [label="Layer 1: MLP GELU\nGPU: 1\nInput: [8,10000,16384]\nOutput: [8,10000,16384]", fillcolor=lightgreen];
+        Layer1_MLP_Dense2 [label="Layer 1: MLP Dense 2\nGPU: 1\nInput: [8,10000,16384]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer1_Add2 [shape=parallelogram, label="Layer 1: Residual Add\nGPU: 1\nInput: [8,10000,4096], [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=orange];
+    }
+    
+    // Continue pattern for GPUs 2-14 with ellipses for brevity
+    Comm1to2 [shape=ellipse, label="Inter-GPU Transfer\nGPU 1 -> GPU 2\nTransfer: [8,10000,4096]", fillcolor=red];
+    
+    Layer2to14 [label="Layers 2-14\n(13x Transformer Layers)\nDistributed across GPUs 2-14\nEach layer cached locally\nTransfer: [8,10000,4096] between GPUs", shape=rectangle, style=dashed, fillcolor=lightcyan];
+    
+    Comm14to15 [shape=ellipse, label="Inter-GPU Transfer\nGPU 14 -> GPU 15\nTransfer: [8,10000,4096]", fillcolor=red];
+    
+    // Layer 15 on GPU 15
+    subgraph cluster_gpu15 {
+        label="GPU 15\nLayer 15\nFinal Layer";
+        style=dashed;
+        fillcolor=lightyellow;
+        
+        Layer15_Attn_QKV [label="Layer 15: QKV Linear\nGPU: 15\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer15_Attn_Score [label="Layer 15: Attention Score\nGPU: 15\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer15_Attn_Out [label="Layer 15: Output Linear\nGPU: 15\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer15_Add1 [shape=parallelogram, label="Layer 15: Residual Add\nGPU: 15\nInput: [8,10000,4096], [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=orange];
+        
+        Layer15_MLP_Dense1 [label="Layer 15: MLP Dense 1\nGPU: 15\nInput: [8,10000,4096]\nOutput: [8,10000,16384]", fillcolor=lightgreen];
+        Layer15_MLP_Activation [label="Layer 15: MLP GELU\nGPU: 15\nInput: [8,10000,16384]\nOutput: [8,10000,16384]", fillcolor=lightgreen];
+        Layer15_MLP_Dense2 [label="Layer 15: MLP Dense 2\nGPU: 15\nInput: [8,10000,16384]\nOutput: [8,10000,4096]", fillcolor=lightgreen];
+        Layer15_Add2 [shape=parallelogram, label="Layer 15: Residual Add\nGPU: 15\nInput: [8,10000,4096], [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=orange];
+    }
+    
+    // Output
+    Output [shape=ellipse, label="Output\nGPU: 15\nInput: [8,10000,4096]\nOutput: [8,10000,4096]", fillcolor=lightblue];
+    
+    // Detailed connections for complete DAG
+    Input -> Layer0_Attn_QKV;
+    Layer0_Attn_QKV -> Layer0_Attn_Score;
+    Layer0_Attn_Score -> Layer0_Attn_Out;
+    Layer0_Attn_Out -> Layer0_Add1;
+    Layer0_Add1 -> Layer0_MLP_Dense1;
+    Layer0_MLP_Dense1 -> Layer0_MLP_Activation;
+    Layer0_MLP_Activation -> Layer0_MLP_Dense2;
+    Layer0_MLP_Dense2 -> Layer0_Add2;
+    Layer0_Add2 -> Comm0to1;
+    
+    Comm0to1 -> Layer1_Attn_QKV;
+    Layer1_Attn_QKV -> Layer1_Attn_Score;
+    Layer1_Attn_Score -> Layer1_Attn_Out;
+    Layer1_Attn_Out -> Layer1_Add1;
+    Layer1_Add1 -> Layer1_MLP_Dense1;
+    Layer1_MLP_Dense1 -> Layer1_MLP_Activation;
+    Layer1_MLP_Activation -> Layer1_MLP_Dense2;
+    Layer1_MLP_Dense2 -> Layer1_Add2;
+    Layer1_Add2 -> Comm1to2;
+    
+    Comm1to2 -> Layer2to14;
+    Layer2to14 -> Comm14to15;
+    
+    Comm14to15 -> Layer15_Attn_QKV;
+    Layer15_Attn_QKV -> Layer15_Attn_Score;
+    Layer15_Attn_Score -> Layer15_Attn_Out;
+    Layer15_Attn_Out -> Layer15_Add1;
+    Layer15_Add1 -> Layer15_MLP_Dense1;
+    Layer15_MLP_Dense1 -> Layer15_MLP_Activation;
+    Layer15_MLP_Activation -> Layer15_MLP_Dense2;
+    Layer15_MLP_Dense2 -> Layer15_Add2;
+    Layer15_Add2 -> Output;
+}

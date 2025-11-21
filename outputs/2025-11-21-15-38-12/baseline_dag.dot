@@ -1,0 +1,79 @@
+digraph baseline_deployment {
+    rankdir=TB;
+    node [shape=rectangle, style=filled];
+    
+    // Input node
+    Input [shape=ellipse, label="Input\nGPU: all GPUs\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]", fillcolor=lightblue];
+    
+    // Stage 0 - Pipeline Stage 0
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0\nGPUs: 0-7\nTensor Parallel Size: 8";
+        style=dashed;
+        fillcolor=lightyellow;
+        
+        // Layer 0
+        Layer0_Attn_QKV [label="Layer 0: QKV Linear\nGPU: 0-7 (TP)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=lightgreen];
+        Layer0_Attn_Score [label="Layer 0: Attention Score\nGPU: 0-7 (TP)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=lightgreen];
+        Layer0_Attn_Out [label="Layer 0: Output Linear\nGPU: 0-7 (TP)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=lightgreen];
+        Layer0_Add1 [shape=parallelogram, label="Layer 0: Residual Add\nGPU: 0-7 (TP)\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=orange];
+        
+        Layer0_MLP_Dense1 [label="Layer 0: MLP Dense 1\nGPU: 0-7 (TP)\nInput: [128,10000,4096]\nOutput: [128,10000,16384]", fillcolor=lightgreen];
+        Layer0_MLP_Activation [label="Layer 0: MLP GELU\nGPU: 0-7 (TP)\nInput: [128,10000,16384]\nOutput: [128,10000,16384]", fillcolor=lightgreen];
+        Layer0_MLP_Dense2 [label="Layer 0: MLP Dense 2\nGPU: 0-7 (TP)\nInput: [128,10000,16384]\nOutput: [128,10000,4096]", fillcolor=lightgreen];
+        Layer0_Add2 [shape=parallelogram, label="Layer 0: Residual Add\nGPU: 0-7 (TP)\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=orange];
+        
+        // Layer 1-7 (repeated pattern)
+        Layer1 [label="Layers 1-7\n(8x Transformer Layers)\nGPU: 0-7 (TP)\nSame structure as Layer 0\nx8 repetitions", fillcolor=lightcyan];
+    }
+    
+    // Communication between stages
+    Stage0_to_Stage1 [shape=ellipse, label="Pipeline Communication\nBetween GPU 7 and GPU 8\nTransfer: [128,10000,4096]", fillcolor=red];
+    
+    // Stage 1 - Pipeline Stage 1
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1\nGPUs: 8-15\nTensor Parallel Size: 8";
+        style=dashed;
+        fillcolor=lightyellow;
+        
+        // Layer 8
+        Layer8_Attn_QKV [label="Layer 8: QKV Linear\nGPU: 8-15 (TP)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=lightgreen];
+        Layer8_Attn_Score [label="Layer 8: Attention Score\nGPU: 8-15 (TP)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=lightgreen];
+        Layer8_Attn_Out [label="Layer 8: Output Linear\nGPU: 8-15 (TP)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=lightgreen];
+        Layer8_Add1 [shape=parallelogram, label="Layer 8: Residual Add\nGPU: 8-15 (TP)\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=orange];
+        
+        Layer8_MLP_Dense1 [label="Layer 8: MLP Dense 1\nGPU: 8-15 (TP)\nInput: [128,10000,4096]\nOutput: [128,10000,16384]", fillcolor=lightgreen];
+        Layer8_MLP_Activation [label="Layer 8: MLP GELU\nGPU: 8-15 (TP)\nInput: [128,10000,16384]\nOutput: [128,10000,16384]", fillcolor=lightgreen];
+        Layer8_MLP_Dense2 [label="Layer 8: MLP Dense 2\nGPU: 8-15 (TP)\nInput: [128,10000,16384]\nOutput: [128,10000,4096]", fillcolor=lightgreen];
+        Layer8_Add2 [shape=parallelogram, label="Layer 8: Residual Add\nGPU: 8-15 (TP)\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=orange];
+        
+        // Layer 9-15 (repeated pattern)
+        Layer9to15 [label="Layers 9-15\n(7x Transformer Layers)\nGPU: 8-15 (TP)\nSame structure as Layer 8\nx7 repetitions", fillcolor=lightcyan];
+    }
+    
+    // Output
+    Output [shape=ellipse, label="Output\nGPU: 15 (TP rank 7)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]", fillcolor=lightblue];
+    
+    // Connections
+    Input -> Layer0_Attn_QKV;
+    Layer0_Attn_QKV -> Layer0_Attn_Score;
+    Layer0_Attn_Score -> Layer0_Attn_Out;
+    Layer0_Attn_Out -> Layer0_Add1;
+    Layer0_Add1 -> Layer0_MLP_Dense1;
+    Layer0_MLP_Dense1 -> Layer0_MLP_Activation;
+    Layer0_MLP_Activation -> Layer0_MLP_Dense2;
+    Layer0_MLP_Dense2 -> Layer0_Add2;
+    Layer0_Add2 -> Layer1;
+    
+    Layer1 -> Stage0_to_Stage1;
+    Stage0_to_Stage1 -> Layer8_Attn_QKV;
+    
+    Layer8_Attn_QKV -> Layer8_Attn_Score;
+    Layer8_Attn_Score -> Layer8_Attn_Out;
+    Layer8_Attn_Out -> Layer8_Add1;
+    Layer8_Add1 -> Layer8_MLP_Dense1;
+    Layer8_MLP_Dense1 -> Layer8_MLP_Activation;
+    Layer8_MLP_Activation -> Layer8_MLP_Dense2;
+    Layer8_MLP_Dense2 -> Layer8_Add2;
+    Layer8_Add2 -> Layer9to15;
+    Layer9to15 -> Output;
+}
