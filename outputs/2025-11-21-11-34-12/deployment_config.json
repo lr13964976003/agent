@@ -1,0 +1,224 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "Tensor Parallel + Pipeline Parallel Baseline",
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallelism": {
+          "degree": 8,
+          "axis": "hidden"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "stages": 2
+        }
+      },
+      "model_parameters": {
+        "layers": 16,
+        "hidden_size": 4096,
+        "attention_heads": 32,
+        "head_dimension": 128,
+        "sequence_length": 10000,
+        "batch_size": 128,
+        "mlp_hidden_size": 16384,
+        "precision": "FP16"
+      },
+      "device_mapping": {
+        "stage_0": {
+          "tensor_parallel_group": [0, 1, 2, 3, 4, 5, 6, 7],
+          "pipeline_stage": 0,
+          "layers": [0, 1, 2, 3, 4, 5, 6, 7]
+        },
+        "stage_1": {
+          "tensor_parallel_group": [8, 9, 10, 11, 12, 13, 14, 15],
+          "pipeline_stage": 1,
+          "layers": [8, 9, 10, 11, 12, 13, 14, 15]
+        }
+      },
+      "modules": {
+        "attention_layer": {
+          "type": "multi_head_attention",
+          "parameters_per_device": 524288,
+          "tensor_shape": [512, 512],
+          "distribution": "column_parallel"
+        },
+        "mlp_layer": {
+          "type": "feed_forward",
+          "parameters_per_device": 8388608,
+          "tensor_shape": [2048, 4096],
+          "distribution": "hybrid_parallel"
+        }
+      },
+      "communication_patterns": {
+        "tensor_parallel": {
+          "operation": "all_reduce",
+          "bandwidth": "900GB/s",
+          "latency": "0.15ms"
+        },
+        "pipeline_parallel": {
+          "operation": "send_recv",
+          "bandwidth": "400Gbps",
+          "latency": "0.20ms"
+        }
+      }
+    },
+    "proposed": {
+      "name": "Two-Level Attention Partitioning",
+      "parallel_strategy": {
+        "type": "two_level_partitioning",
+        "parameters": {
+          "head_groups": 4,
+          "dimension_slices": 4,
+          "total_partitions": 16,
+          "partition_type": "head_and_dimension"
+        }
+      },
+      "model_parameters": {
+        "layers": 16,
+        "hidden_size": 4096,
+        "attention_heads": 32,
+        "head_dimension": 128,
+        "sequence_length": 10000,
+        "batch_size": 128,
+        "mlp_hidden_size": 16384,
+        "precision": "FP16"
+      },
+      "partition_specification": {
+        "heads_per_group": 8,
+        "dimensions_per_slice": 32,
+        "partition_dimensions": {
+          "head_group": 4,
+          "slice_group": 4
+        }
+      },
+      "device_mapping": {
+        "partition_0_0": {"device_id": 0, "head_group": 0, "slice_group": 0},
+        "partition_0_1": {"device_id": 1, "head_group": 0, "slice_group": 1},
+        "partition_0_2": {"device_id": 2, "head_group": 0, "slice_group": 2},
+        "partition_0_3": {"device_id": 3, "head_group": 0, "slice_group": 3},
+        "partition_1_0": {"device_id": 4, "head_group": 1, "slice_group": 0},
+        "partition_1_1": {"device_id": 5, "head_group": 1, "slice_group": 1},
+        "partition_1_2": {"device_id": 6, "head_group": 1, "slice_group": 2},
+        "partition_1_3": {"device_id": 7, "head_group": 1, "slice_group": 3},
+        "partition_2_0": {"device_id": 8, "head_group": 2, "slice_group": 0},
+        "partition_2_1": {"device_id": 9, "head_group": 2, "slice_group": 1},
+        "partition_2_2": {"device_id": 10, "head_group": 2, "slice_group": 2},
+        "partition_2_3": {"device_id": 11, "head_group": 2, "slice_group": 3},
+        "partition_3_0": {"device_id": 12, "head_group": 3, "slice_group": 0},
+        "partition_3_1": {"device_id": 13, "head_group": 3, "slice_group": 1},
+        "partition_3_2": {"device_id": 14, "head_group": 3, "slice_group": 2},
+        "partition_3_3": {"device_id": 15, "head_group": 3, "slice_group": 3}
+      },
+      "modules": {
+        "query_projection": {
+          "type": "linear_projection",
+          "parameters_per_device": 1048576,
+          "tensor_shape": [256, 4096],
+          "input_shape": [128, 10000, 4096],
+          "output_shape": [128, 10000, 256],
+          "weight_matrix": "W_Q",
+          "partition_dimension": [0, 1]
+        },
+        "key_projection": {
+          "type": "linear_projection",
+          "parameters_per_device": 1048576,
+          "tensor_shape": [256, 4096],
+          "input_shape": [128, 10000, 4096],
+          "output_shape": [128, 10000, 256],
+          "weight_matrix": "W_K",
+          "partition_dimension": [0, 1]
+        },
+        "value_projection": {
+          "type": "linear_projection",
+          "parameters_per_device": 1048576,
+          "tensor_shape": [256, 4096],
+          "input_shape": [128, 10000, 4096],
+          "output_shape": [128, 10000, 256],
+          "weight_matrix": "W_V",
+          "partition_dimension": [0, 1]
+        },
+        "attention_computation": {
+          "type": "scaled_dot_product_attention",
+          "parameters": {
+            "attention_heads_per_partition": 8,
+            "head_dimension_per_partition": 32,
+            "scale_factor": 5.657,
+            "softmax_axis": -1
+          },
+          "input_shapes": {
+            "query": [128, 10000, 8, 32],
+            "key": [128, 10000, 8, 32],
+            "value": [128, 10000, 8, 32]
+          },
+          "output_shape": [128, 10000, 256]
+        },
+        "output_projection": {
+          "type": "linear_projection",
+          "parameters_per_device": 1048576,
+          "tensor_shape": [4096, 256],
+          "input_shape": [128, 10000, 256],
+          "output_shape": [128, 10000, 4096],
+          "partition_dimension": [1, 0]
+        }
+      },
+      "communication_patterns": {
+        "input_distribution": {
+          "operation": "broadcast",
+          "source": "host",
+          "targets": "all_devices",
+          "bandwidth": "900GB/s",
+          "latency": "0.01ms"
+        },
+        "intra_group_concatenation": {
+          "operation": "all_gather",
+          "groups": [
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],
+            [8, 9, 10, 11],
+            [12, 13, 14, 15]
+          ],
+          "bandwidth": "900GB/s",
+          "latency": "0.08ms"
+        },
+        "output_gather": {
+          "operation": "concatenate",
+          "pattern": "hierarchical",
+          "latency": "0.14ms"
+        }
+      },
+      "memory_requirements": {
+        "parameters_per_device": "11GB",
+        "activations_per_device": "6GB",
+        "communication_buffer": "1GB",
+        "total_per_device": "18GB"
+      },
+      "performance_characteristics": {
+        "throughput": "1,580,000 tokens/sec",
+        "tpot": "0.22ms",
+        "improvement_over_baseline": {
+          "throughput": "31.7%",
+          "latency": "37.1%"
+        }
+      }
+    }
+  },
+  "hardware_specifications": {
+    "gpus": 16,
+    "gpu_type": "NVIDIA H100",
+    "gpu_memory": "80GB HBM3",
+    "interconnect": {
+      "nvlink": "4.0 (900GB/s)",
+      "nvswitch": "enabled",
+      "infiniband": "NDR 400Gbps"
+    },
+    "cpu": "Dual AMD EPYC 9654 (96 cores each)",
+    "system_memory": "2TB DDR5-4800"
+  },
+  "software_requirements": {
+    "cuda": "12.2",
+    "pytorch": "2.1.0",
+    "nccl": "2.18.3",
+    "transformer_engine": "1.2",
+    "nvidia_driver": "535.54.03"
+  }
+}

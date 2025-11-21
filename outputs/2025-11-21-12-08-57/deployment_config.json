@@ -1,0 +1,267 @@
+{
+  "deployments": {
+    "baseline": {
+      "name": "TP8_PP2_Baseline",
+      "description": "Traditional MoE deployment with tensor and pipeline parallelism",
+      "parallel_strategy": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "method": "row_column_split"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "method": "gpipe",
+          "stages": 2
+        },
+        "expert_parallelism": {
+          "degree": 2,
+          "method": "colocated_experts"
+        }
+      },
+      "model_configuration": {
+        "layers": 16,
+        "experts_per_layer": 16,
+        "token_dimension": 4096,
+        "mlp_hidden_dimension": 16384,
+        "mha_heads": 32,
+        "mha_head_dimension": 128,
+        "precision": "BF16",
+        "batch_size": 128,
+        "sequence_length": 10000
+      },
+      "device_mapping": {
+        "stage_0": {
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": "0-7",
+          "experts_per_gpu": 2,
+          "memory_per_expert_mb": 128,
+          "tensor_shard": "1/8_width"
+        },
+        "stage_1": {
+          "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": "8-15",
+          "experts_per_gpu": 2,
+          "memory_per_expert_mb": 128,
+          "tensor_shard": "1/8_width"
+        }
+      },
+      "communication_parameters": {
+        "intra_stage_bandwidth": "900GB/s_NVLink",
+        "inter_stage_bandwidth": "400GB/s_InfiniBand",
+        "collective_ops": ["all_reduce", "all_gather", "reduce_scatter"]
+      }
+    },
+    "proposed": {
+      "name": "EP16_OneExpertPerGPU",
+      "description": "Large-scale cross-node expert parallelism with one expert per GPU",
+      "parallel_strategy": {
+        "expert_parallelism": {
+          "degree": 16,
+          "method": "one_expert_per_gpu",
+          "distribution": "cross_node"
+        },
+        "tensor_parallelism": {
+          "degree": 1,
+          "method": "none",
+          "note": "Experts fit in single GPU memory"
+        },
+        "pipeline_parallelism": {
+          "degree": 1,
+          "method": "none",
+          "note": "All layers accessible to all GPUs"
+        }
+      },
+      "model_configuration": {
+        "layers": 16,
+        "experts_per_layer": 16,
+        "token_dimension": 4096,
+        "mlp_hidden_dimension": 16384,
+        "mha_heads": 32,
+        "mha_head_dimension": 128,
+        "precision": "BF16",
+        "batch_size": 128,
+        "sequence_length": 10000
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "device_id": 0,
+          "expert_id": 0,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_1": {
+          "device_id": 1,
+          "expert_id": 1,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_2": {
+          "device_id": 2,
+          "expert_id": 2,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_3": {
+          "device_id": 3,
+          "expert_id": 3,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_4": {
+          "device_id": 4,
+          "expert_id": 4,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_5": {
+          "device_id": 5,
+          "expert_id": 5,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_6": {
+          "device_id": 6,
+          "expert_id": 6,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_7": {
+          "device_id": 7,
+          "expert_id": 7,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_8": {
+          "device_id": 8,
+          "expert_id": 8,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_9": {
+          "device_id": 9,
+          "expert_id": 9,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_10": {
+          "device_id": 10,
+          "expert_id": 10,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_11": {
+          "device_id": 11,
+          "expert_id": 11,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_12": {
+          "device_id": 12,
+          "expert_id": 12,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_13": {
+          "device_id": 13,
+          "expert_id": 13,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_14": {
+          "device_id": 14,
+          "expert_id": 14,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        },
+        "gpu_15": {
+          "device_id": 15,
+          "expert_id": 15,
+          "layers": "all_16_layers",
+          "expert_memory_mb": 128,
+          "communication_buffer_mb": 2000,
+          "compute_utilization": "95%"
+        }
+      },
+      "routing_configuration": {
+        "gating_method": "top_k",
+        "k_value": 2,
+        "load_balancing": {
+          "enabled": true,
+          "monitoring_interval": 100,
+          "rebalancing_threshold": 0.1,
+          "learning_rate": 0.01
+        },
+        "token_batching": {
+          "method": "destination_expert_grouping",
+          "async_threshold": "1MB",
+          "buffer_size": "256MB"
+        }
+      },
+      "communication_parameters": {
+        "intra_node_bandwidth": "900GB/s_NVLink",
+        "inter_node_bandwidth": "400GB/s_InfiniBand",
+        "collective_operations": ["send_recv", "all_gather"],
+        "overlap_strategy": "cuda_streams",
+        "streams": ["compute", "communication", "synchronization"]
+      },
+      "performance_metrics": {
+        "expected_tps": 450000,
+        "expected_tpot_ms": 2.2,
+        "scaling_efficiency": "100%",
+        "communication_overhead": "minimal"
+      }
+    }
+  },
+  "deployment_instructions": {
+    "hardware_requirements": {
+      "gpus": 16,
+      "type": "NVIDIA_H100",
+      "memory_per_gpu": "80GB_HBM3",
+      "interconnect": ["NVLink", "NVSwitch", "InfiniBand"]
+    },
+    "software_requirements": {
+      "cuda": "12.1+",
+      "nccl": "2.18.3+",
+      "pytorch": "2.1.0+",
+      "driver": "535.54.03+"
+    },
+    "initialization_steps": [
+      "Verify 16 H100 GPUs are available",
+      "Check NCCL connectivity between all GPUs",
+      "Allocate 2GB communication buffer per GPU",
+      "Load expert weights (128MB per expert)",
+      "Initialize load balancing monitor",
+      "Start asynchronous communication threads"
+    ]
+  }
+}

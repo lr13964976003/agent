@@ -1,0 +1,999 @@
+digraph baseline_transformer_dag {
+	graph [bb="0,0,11353,12265",
+		rankdir=TB,
+		size="20,30"
+	];
+	node [fillcolor=lightblue,
+		label="\N",
+		shape=ellipse,
+		style=filled
+	];
+	input	[fillcolor=lightgreen,
+		height=1.8889,
+		label="Input\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+Host",
+		pos="500.56,12197",
+		shape=parallelogram,
+		width=13.219];
+	stage0_start	[fillcolor=lightgreen,
+		height=1.4722,
+		label="Pipeline Stage 0\nLayers 0-7\nDevices: 0-7",
+		pos="500.56,12040",
+		shape=parallelogram,
+		width=3.859];
+	input -> stage0_start	[pos="e,500.56,12094 500.56,12129 500.56,12121 500.56,12112 500.56,12104"];
+	layer_0_norm	[height=0.94444,
+		label="LayerNorm (Layer 0)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="500.56,11917",
+		shape=box,
+		width=6.375];
+	stage0_start -> layer_0_norm	[pos="e,500.56,11952 500.56,11987 500.56,11979 500.56,11970 500.56,11962"];
+	layer_0_attn	[height=1.1528,
+		label="MHA-TP (Layer 0)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)",
+		pos="374.56,11806",
+		shape=box,
+		width=6.25];
+	layer_0_norm -> layer_0_attn	[pos="e,421.48,11848 462.42,11883 451.94,11874 440.37,11864 429.17,11854"];
+	layer_0_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="500.56,11562",
+		shape=box,
+		width=11.653];
+	layer_0_norm -> layer_0_residual1	[pos="e,619.69,11597 566.41,11883 581.69,11873 596.88,11861 608.56,11847 671.81,11772 712.33,11714 658.56,11632 650.64,11620 640.07,11610 \
+628.14,11602"];
+	layer_0_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (TP)",
+		pos="324.56,11680",
+		width=9.0156];
+	layer_0_attn -> layer_0_attn_reduce	[pos="e,343.65,11729 358.05,11764 354.67,11756 351.05,11747 347.48,11738"];
+	layer_0_attn_reduce -> layer_0_residual1	[pos="e,450.37,11596 394.37,11633 410.02,11623 426.47,11612 441.62,11602"];
+	layer_0_norm2	[height=0.94444,
+		label="LayerNorm (Layer 0)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="676.56,11458",
+		shape=box,
+		width=6.375];
+	layer_0_residual1 -> layer_0_norm2	[pos="e,619.41,11492 557.7,11528 574.54,11518 593.11,11508 610.46,11498"];
+	layer_0_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="502.56,11111",
+		shape=box,
+		width=11.653];
+	layer_0_residual1 -> layer_0_residual2	[pos="e,431.91,11145 463.97,11528 454.11,11518 444.32,11505 437.56,11492 374.26,11371 326.7,11309 390.56,11188 398.3,11174 410.25,11161 \
+423.51,11151"];
+	layer_0_mlp	[height=0.94444,
+		label="MLP-TP (Layer 0)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 0-7 (TP)",
+		pos="724.56,11354",
+		shape=box,
+		width=6.375];
+	layer_0_norm2 -> layer_0_mlp	[pos="e,708.89,11389 692.15,11424 696.13,11416 700.46,11407 704.63,11398"];
+	layer_0_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+0-7 (TP)",
+		pos="724.56,11236",
+		width=9.0156];
+	layer_0_mlp -> layer_0_mlp_reduce	[pos="e,724.56,11284 724.56,11320 724.56,11312 724.56,11303 724.56,11295"];
+	layer_1_norm	[height=0.94444,
+		label="LayerNorm (Layer 1)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="1296.6,11236",
+		shape=box,
+		width=6.375];
+	layer_0_mlp -> layer_1_norm	[pos="e,1133.5,11270 887.33,11320 961.13,11305 1048.5,11288 1123.5,11272"];
+	layer_0_mlp_reduce -> layer_0_residual2	[pos="e,562.06,11145 642.53,11190 618.98,11176 593.55,11162 570.92,11150"];
+	layer_1_attn	[height=1.1528,
+		label="MHA-TP (Layer 1)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)",
+		pos="1230.6,11111",
+		shape=box,
+		width=6.25];
+	layer_1_norm -> layer_1_attn	[pos="e,1252.3,11152 1278.9,11202 1272.2,11190 1264.4,11175 1257,11161"];
+	layer_1_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="1356.6,10867",
+		shape=box,
+		width=11.653];
+	layer_1_norm -> layer_1_residual1	[pos="e,1475.7,10901 1392.4,11202 1418.4,11190 1444.7,11173 1464.6,11152 1503.9,11110 1503.2,11089 1514.6,11033 1523,10991 1538,10973 \
+1514.6,10937 1506.6,10925 1496.1,10915 1484.1,10907"];
+	layer_1_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (TP)",
+		pos="1180.6,10985",
+		width=9.0156];
+	layer_1_attn -> layer_1_attn_reduce	[pos="e,1199.7,11033 1214.1,11069 1210.7,11060 1207,11052 1203.5,11043"];
+	layer_1_attn_reduce -> layer_1_residual1	[pos="e,1306.4,10901 1250.4,10938 1266,10928 1282.5,10917 1297.6,10907"];
+	layer_1_norm2	[height=0.94444,
+		label="LayerNorm (Layer 1)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="1532.6,10763",
+		shape=box,
+		width=6.375];
+	layer_1_residual1 -> layer_1_norm2	[pos="e,1475.4,10797 1413.7,10833 1430.5,10823 1449.1,10812 1466.5,10802"];
+	layer_1_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="1357.6,10415",
+		shape=box,
+		width=11.653];
+	layer_1_residual1 -> layer_1_residual2	[pos="e,1287.8,10449 1320,10833 1310.1,10822 1300.3,10810 1293.6,10797 1230.3,10676 1182.9,10614 1246.6,10493 1254.3,10478 1266.2,10466 \
+1279.4,10455"];
+	layer_1_mlp	[height=0.94444,
+		label="MLP-TP (Layer 1)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 0-7 (TP)",
+		pos="1580.6,10659",
+		shape=box,
+		width=6.375];
+	layer_1_norm2 -> layer_1_mlp	[pos="e,1564.9,10693 1548.1,10729 1552.1,10720 1556.5,10711 1560.6,10702"];
+	layer_1_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+0-7 (TP)",
+		pos="1580.6,10541",
+		width=9.0156];
+	layer_1_mlp -> layer_1_mlp_reduce	[pos="e,1580.6,10589 1580.6,10625 1580.6,10617 1580.6,10608 1580.6,10599"];
+	layer_2_norm	[height=0.94444,
+		label="LayerNorm (Layer 2)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="2152.6,10541",
+		shape=box,
+		width=6.375];
+	layer_1_mlp -> layer_2_norm	[pos="e,1989.5,10575 1743.3,10625 1817.1,10610 1904.5,10592 1979.5,10577"];
+	layer_1_mlp_reduce -> layer_1_residual2	[pos="e,1417.3,10449 1498.2,10494 1474.5,10481 1449,10467 1426.2,10454"];
+	layer_2_attn	[height=1.1528,
+		label="MHA-TP (Layer 2)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)",
+		pos="2024.6,10415",
+		shape=box,
+		width=6.25];
+	layer_2_norm -> layer_2_attn	[pos="e,2066.7,10457 2118.3,10507 2104.8,10494 2089,10479 2074.3,10464"];
+	layer_2_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="2102.6,10172",
+		shape=box,
+		width=11.653];
+	layer_2_norm -> layer_2_residual1	[pos="e,2221.7,10206 2213,10507 2231,10494 2248.5,10477 2258.6,10457 2301.1,10371 2312.9,10322 2260.6,10242 2252.6,10230 2242.1,10220 \
+2230.1,10211"];
+	layer_2_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (TP)",
+		pos="1926.6,10290",
+		width=9.0156];
+	layer_2_attn -> layer_2_attn_reduce	[pos="e,1964,10338 1992.2,10374 1985.2,10365 1977.7,10355 1970.4,10346"];
+	layer_2_attn_reduce -> layer_2_residual1	[pos="e,2052.4,10206 1996.4,10243 2012,10232 2028.5,10222 2043.6,10212"];
+	layer_2_norm2	[height=0.94444,
+		label="LayerNorm (Layer 2)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="2278.6,10068",
+		shape=box,
+		width=6.375];
+	layer_2_residual1 -> layer_2_norm2	[pos="e,2221.4,10102 2159.7,10138 2176.5,10128 2195.1,10117 2212.5,10107"];
+	layer_2_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="2103.6,9720",
+		shape=box,
+		width=11.653];
+	layer_2_residual1 -> layer_2_residual2	[pos="e,2033.8,9754 2066,10138 2056.1,10127 2046.3,10115 2039.6,10102 1976.3,9980.4 1928.9,9918.6 1992.6,9797.5 2000.3,9782.8 2012.2,9770.4 \
+2025.4,9760.1"];
+	layer_2_mlp	[height=0.94444,
+		label="MLP-TP (Layer 2)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 0-7 (TP)",
+		pos="2326.6,9963.7",
+		shape=box,
+		width=6.375];
+	layer_2_norm2 -> layer_2_mlp	[pos="e,2310.9,9998 2294.1,10034 2298.1,10025 2302.5,10016 2306.6,10007"];
+	layer_2_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+0-7 (TP)",
+		pos="2326.6,9845.6",
+		width=9.0156];
+	layer_2_mlp -> layer_2_mlp_reduce	[pos="e,2326.6,9893.7 2326.6,9929.4 2326.6,9921.4 2326.6,9912.6 2326.6,9903.9"];
+	layer_3_norm	[height=0.94444,
+		label="LayerNorm (Layer 3)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="2898.6,9845.6",
+		shape=box,
+		width=6.375];
+	layer_2_mlp -> layer_3_norm	[pos="e,2735.5,9879.7 2489.3,9929.6 2563.1,9914.7 2650.5,9896.9 2725.5,9881.7"];
+	layer_2_mlp_reduce -> layer_2_residual2	[pos="e,2163.3,9754.1 2244.2,9798.9 2220.5,9785.8 2195,9771.6 2172.2,9759"];
+	layer_3_attn	[height=1.1528,
+		label="MHA-TP (Layer 3)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)",
+		pos="2770.6,9720",
+		shape=box,
+		width=6.25];
+	layer_3_norm -> layer_3_attn	[pos="e,2812.7,9761.7 2864.3,9811.5 2850.8,9798.4 2835,9783.2 2820.3,9769"];
+	layer_3_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="2848.6,9476.3",
+		shape=box,
+		width=11.653];
+	layer_3_norm -> layer_3_residual1	[pos="e,2967.7,9510.5 2959,9811.5 2977,9798.5 2994.5,9781.7 3004.6,9761.5 3047.1,9675.9 3058.9,9626.3 3006.6,9546.3 2998.6,9534.2 2988.1,\
+9524.2 2976.1,9516"];
+	layer_3_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (TP)",
+		pos="2672.6,9594.4",
+		width=9.0156];
+	layer_3_attn -> layer_3_attn_reduce	[pos="e,2710,9642.6 2738.2,9678.2 2731.2,9669.4 2723.7,9659.9 2716.4,9650.7"];
+	layer_3_attn_reduce -> layer_3_residual1	[pos="e,2798.4,9510.4 2742.4,9547.4 2758,9537 2774.5,9526.2 2789.6,9516.2"];
+	layer_3_norm2	[height=0.94444,
+		label="LayerNorm (Layer 3)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="3024.6,9372.3",
+		shape=box,
+		width=6.375];
+	layer_3_residual1 -> layer_3_norm2	[pos="e,2967.4,9406.5 2905.7,9442.2 2922.5,9432.5 2941.1,9421.7 2958.5,9411.6"];
+	layer_3_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="2850.6,9024.7",
+		shape=box,
+		width=11.653];
+	layer_3_residual1 -> layer_3_residual2	[pos="e,2779.9,9058.8 2812,9442.2 2802.1,9431.6 2792.3,9419.3 2785.6,9406.3 2722.3,9285.1 2674.7,9223.1 2738.6,9102.2 2746.3,9087.5 2758.3,\
+9075.1 2771.5,9064.9"];
+	layer_3_mlp	[height=0.94444,
+		label="MLP-TP (Layer 3)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 0-7 (TP)",
+		pos="3072.6,9268.3",
+		shape=box,
+		width=6.375];
+	layer_3_norm2 -> layer_3_mlp	[pos="e,3056.9,9302.6 3040.1,9338.2 3044.1,9329.8 3048.5,9320.5 3052.6,9311.7"];
+	layer_3_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+0-7 (TP)",
+		pos="3072.6,9150.2",
+		width=9.0156];
+	layer_3_mlp -> layer_3_mlp_reduce	[pos="e,3072.6,9198.4 3072.6,9234.1 3072.6,9226.1 3072.6,9217.3 3072.6,9208.6"];
+	layer_4_norm	[height=0.94444,
+		label="LayerNorm (Layer 4)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="3644.6,9150.2",
+		shape=box,
+		width=6.375];
+	layer_3_mlp -> layer_4_norm	[pos="e,3481.5,9184.3 3235.3,9234.3 3309.1,9219.3 3396.5,9201.6 3471.5,9186.4"];
+	layer_3_mlp_reduce -> layer_3_residual2	[pos="e,2910.1,9058.8 2990.5,9103.6 2967,9090.5 2941.6,9076.3 2918.9,9063.7"];
+	layer_4_attn	[height=1.1528,
+		label="MHA-TP (Layer 4)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)",
+		pos="3578.6,9024.7",
+		shape=box,
+		width=6.25];
+	layer_4_norm -> layer_4_attn	[pos="e,3600.3,9066.4 3626.9,9116.1 3620.2,9103.6 3612.4,9089 3605,9075.3"];
+	layer_4_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="3704.6,8781",
+		shape=box,
+		width=11.653];
+	layer_4_norm -> layer_4_residual1	[pos="e,3823.7,8815.2 3740.4,9116.2 3766.4,9103.7 3792.7,9087.3 3812.6,9066.2 3851.9,9024.4 3851.2,9003.4 3862.6,8947.2 3871,8905.3 3886,\
+8886.8 3862.6,8851 3854.6,8838.9 3844.1,8828.9 3832.1,8820.6"];
+	layer_4_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (TP)",
+		pos="3528.6,8899.1",
+		width=9.0156];
+	layer_4_attn -> layer_4_attn_reduce	[pos="e,3547.7,8947.3 3562.1,8982.9 3558.7,8974.5 3555,8965.5 3551.5,8956.7"];
+	layer_4_attn_reduce -> layer_4_residual1	[pos="e,3654.4,8815.1 3598.4,8852 3614,8841.7 3630.5,8830.9 3645.6,8820.9"];
+	layer_4_norm2	[height=0.94444,
+		label="LayerNorm (Layer 4)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="3880.6,8677",
+		shape=box,
+		width=6.375];
+	layer_4_residual1 -> layer_4_norm2	[pos="e,3823.4,8711.1 3761.7,8746.9 3778.5,8737.1 3797.1,8726.4 3814.5,8716.3"];
+	layer_4_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="3705.6,8329.3",
+		shape=box,
+		width=11.653];
+	layer_4_residual1 -> layer_4_residual2	[pos="e,3635.8,8363.4 3668,8746.9 3658.1,8736.3 3648.3,8723.9 3641.6,8711 3578.3,8589.7 3530.9,8527.9 3594.6,8406.8 3602.3,8392.2 3614.2,\
+8379.8 3627.4,8369.5"];
+	layer_4_mlp	[height=0.94444,
+		label="MLP-TP (Layer 4)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 0-7 (TP)",
+		pos="3928.6,8573",
+		shape=box,
+		width=6.375];
+	layer_4_norm2 -> layer_4_mlp	[pos="e,3912.9,8607.3 3896.1,8642.9 3900.1,8634.4 3904.5,8625.2 3908.6,8616.3"];
+	layer_4_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+0-7 (TP)",
+		pos="3928.6,8454.9",
+		width=9.0156];
+	layer_4_mlp -> layer_4_mlp_reduce	[pos="e,3928.6,8503 3928.6,8538.7 3928.6,8530.7 3928.6,8522 3928.6,8513.2"];
+	layer_5_norm	[height=0.94444,
+		label="LayerNorm (Layer 5)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="4500.6,8454.9",
+		shape=box,
+		width=6.375];
+	layer_4_mlp -> layer_5_norm	[pos="e,4337.5,8489 4091.3,8539 4165.1,8524 4252.5,8506.3 4327.5,8491"];
+	layer_4_mlp_reduce -> layer_4_residual2	[pos="e,3765.3,8363.5 3846.2,8408.2 3822.5,8395.1 3797,8381 3774.2,8368.4"];
+	layer_5_attn	[height=1.1528,
+		label="MHA-TP (Layer 5)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)",
+		pos="4372.6,8329.3",
+		shape=box,
+		width=6.25];
+	layer_5_norm -> layer_5_attn	[pos="e,4414.7,8371 4466.3,8420.8 4452.8,8407.8 4437,8392.6 4422.3,8378.4"];
+	layer_5_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="4450.6,8085.7",
+		shape=box,
+		width=11.653];
+	layer_5_norm -> layer_5_residual1	[pos="e,4569.7,8119.9 4561,8420.9 4579,8407.8 4596.5,8391 4606.6,8370.8 4649.1,8285.2 4660.9,8235.7 4608.6,8155.7 4600.6,8143.6 4590.1,\
+8133.6 4578.1,8125.3"];
+	layer_5_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (TP)",
+		pos="4274.6,8203.7",
+		width=9.0156];
+	layer_5_attn -> layer_5_attn_reduce	[pos="e,4312,8251.9 4340.2,8287.5 4333.2,8278.7 4325.7,8269.3 4318.4,8260"];
+	layer_5_attn_reduce -> layer_5_residual1	[pos="e,4400.4,8119.8 4344.4,8156.7 4360,8146.4 4376.5,8135.5 4391.6,8125.5"];
+	layer_5_norm2	[height=0.94444,
+		label="LayerNorm (Layer 5)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="4626.6,7981.7",
+		shape=box,
+		width=6.375];
+	layer_5_residual1 -> layer_5_norm2	[pos="e,4569.4,8015.8 4507.7,8051.5 4524.5,8041.8 4543.1,8031 4560.5,8021"];
+	layer_5_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="4325.6,7634",
+		shape=box,
+		width=11.653];
+	layer_5_residual1 -> layer_5_residual2	[pos="e,4324.4,7668.2 4414.6,8051.5 4404.9,8040.9 4395.2,8028.5 4388.6,8015.7 4330.7,7904.3 4323.8,7752.2 4324.2,7678.5"];
+	layer_5_mlp	[height=0.94444,
+		label="MLP-TP (Layer 5)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 0-7 (TP)",
+		pos="4674.6,7877.7",
+		shape=box,
+		width=6.375];
+	layer_5_norm2 -> layer_5_mlp	[pos="e,4658.9,7912 4642.1,7947.5 4646.1,7939.1 4650.5,7929.9 4654.6,7921"];
+	layer_5_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+0-7 (TP)",
+		pos="4674.6,7759.6",
+		width=9.0156];
+	layer_5_mlp -> layer_5_mlp_reduce	[pos="e,4674.6,7807.7 4674.6,7843.4 4674.6,7835.4 4674.6,7826.6 4674.6,7817.9"];
+	layer_6_norm	[height=0.94444,
+		label="LayerNorm (Layer 6)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="5246.6,7759.6",
+		shape=box,
+		width=6.375];
+	layer_5_mlp -> layer_6_norm	[pos="e,5083.5,7793.7 4837.3,7843.6 4911.1,7828.7 4998.5,7810.9 5073.5,7795.7"];
+	layer_5_mlp_reduce -> layer_5_residual2	[pos="e,4419,7668.1 4551.5,7715 4511.4,7700.8 4467.2,7685.2 4428.7,7671.5"];
+	layer_6_attn	[height=1.1528,
+		label="MHA-TP (Layer 6)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)",
+		pos="4990.6,7634",
+		shape=box,
+		width=6.25];
+	layer_6_norm -> layer_6_attn	[pos="e,5074.9,7675.7 5178,7725.5 5149.1,7711.5 5115.1,7695.1 5084,7680.1"];
+	layer_6_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="5117.6,7390.3",
+		shape=box,
+		width=11.653];
+	layer_6_norm -> layer_6_residual1	[pos="e,5236.7,7424.5 5262.3,7725.4 5287.7,7666.6 5329.5,7542.8 5275.6,7460.3 5267.6,7448.2 5257.1,7438.2 5245.1,7430"];
+	layer_6_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (TP)",
+		pos="4941.6,7508.4",
+		width=9.0156];
+	layer_6_attn -> layer_6_attn_reduce	[pos="e,4960.3,7556.6 4974.4,7592.2 4971.1,7583.8 4967.5,7574.9 4964,7566.1"];
+	layer_6_attn_reduce -> layer_6_residual1	[pos="e,5067.4,7424.4 5011.4,7461.4 5027,7451 5043.5,7440.2 5058.6,7430.2"];
+	layer_6_norm2	[height=0.94444,
+		label="LayerNorm (Layer 6)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="5293.6,7286.3",
+		shape=box,
+		width=6.375];
+	layer_6_residual1 -> layer_6_norm2	[pos="e,5236.4,7320.5 5174.7,7356.2 5191.5,7346.5 5210.1,7335.7 5227.5,7325.6"];
+	layer_6_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="4992.6,6938.7",
+		shape=box,
+		width=11.653];
+	layer_6_residual1 -> layer_6_residual2	[pos="e,4991.4,6972.9 5081.6,7356.1 5071.9,7345.5 5062.2,7333.2 5055.6,7320.3 4997.7,7209 4990.8,7056.8 4991.2,6983.2"];
+	layer_6_mlp	[height=0.94444,
+		label="MLP-TP (Layer 6)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 0-7 (TP)",
+		pos="5341.6,7182.3",
+		shape=box,
+		width=6.375];
+	layer_6_norm2 -> layer_6_mlp	[pos="e,5325.9,7216.6 5309.1,7252.2 5313.1,7243.8 5317.5,7234.5 5321.6,7225.7"];
+	layer_6_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+0-7 (TP)",
+		pos="5341.6,7064.2",
+		width=9.0156];
+	layer_6_mlp -> layer_6_mlp_reduce	[pos="e,5341.6,7112.4 5341.6,7148.1 5341.6,7140.1 5341.6,7131.3 5341.6,7122.6"];
+	layer_7_norm	[height=0.94444,
+		label="LayerNorm (Layer 7)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="5913.6,7064.2",
+		shape=box,
+		width=6.375];
+	layer_6_mlp -> layer_7_norm	[pos="e,5750.5,7098.3 5504.3,7148.3 5578.1,7133.3 5665.5,7115.6 5740.5,7100.4"];
+	layer_6_mlp_reduce -> layer_6_residual2	[pos="e,5086,6972.7 5218.5,7019.7 5178.4,7005.5 5134.2,6989.8 5095.7,6976.2"];
+	layer_7_attn	[height=1.1528,
+		label="MHA-TP (Layer 7)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)",
+		pos="5785.6,6938.7",
+		shape=box,
+		width=6.25];
+	layer_7_norm -> layer_7_attn	[pos="e,5827.7,6980.4 5879.3,7030.1 5865.8,7017.1 5850,7001.9 5835.3,6987.7"];
+	layer_7_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="5863.6,6695",
+		shape=box,
+		width=11.653];
+	layer_7_norm -> layer_7_residual1	[pos="e,5982.7,6729.2 5974,7030.2 5992,7017.1 6009.5,7000.4 6019.6,6980.2 6062.1,6894.5 6073.9,6845 6021.6,6765 6013.6,6752.9 6003.1,6742.9 \
+5991.1,6734.6"];
+	layer_7_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (TP)",
+		pos="5687.6,6813.1",
+		width=9.0156];
+	layer_7_attn -> layer_7_attn_reduce	[pos="e,5725,6861.3 5753.2,6896.9 5746.2,6888 5738.7,6878.6 5731.4,6869.3"];
+	layer_7_attn_reduce -> layer_7_residual1	[pos="e,5813.4,6729.1 5757.4,6766 5773,6755.7 5789.5,6744.9 5804.6,6734.9"];
+	layer_7_norm2	[height=0.94444,
+		label="LayerNorm (Layer 7)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 0-7 (all)",
+		pos="5734.6,6591",
+		shape=box,
+		width=6.375];
+	layer_7_residual1 -> layer_7_norm2	[pos="e,5776.7,6625.3 5821.7,6660.9 5809.9,6651.5 5796.9,6641.3 5784.6,6631.6"];
+	layer_7_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)",
+		pos="5838.6,6250.8",
+		shape=box,
+		width=11.653];
+	layer_7_residual1 -> layer_7_residual2	[pos="e,5957.7,6285 5937,6661 5951.2,6651.3 5964.5,6639.4 5973.6,6625 6045.6,6510.2 6070.8,6434.3 5996.6,6320.8 5988.6,6308.7 5978.1,6298.7 \
+5966.1,6290.5"];
+	layer_7_mlp	[height=0.94444,
+		label="MLP-TP (Layer 7)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 0-7 (TP)",
+		pos="5710.6,6487",
+		shape=box,
+		width=6.375];
+	layer_7_norm2 -> layer_7_mlp	[pos="e,5718.4,6521.3 5726.8,6556.9 5724.8,6548.7 5722.7,6539.8 5720.7,6531.2"];
+	layer_7_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+0-7 (TP)",
+		pos="5662.6,6368.9",
+		width=9.0156];
+	layer_7_mlp -> layer_7_mlp_reduce	[pos="e,5682,6417 5696.8,6452.7 5693.4,6444.5 5689.6,6435.4 5685.9,6426.4"];
+	layer_7_mlp_reduce -> layer_7_residual2	[pos="e,5788.4,6284.9 5732.4,6321.9 5748,6311.5 5764.5,6300.7 5779.6,6290.7"];
+	pipeline_send	[fillcolor=lightyellow,
+		height=1.3356,
+		label="Send Pipeline\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+0-7 → 8-15",
+		pos="5838.6,6132.7",
+		width=9.0156];
+	layer_7_residual2 -> pipeline_send	[pos="e,5838.6,6180.9 5838.6,6216.6 5838.6,6208.6 5838.6,6199.8 5838.6,6191.1"];
+	stage1_start	[fillcolor=lightgreen,
+		height=1.4722,
+		label="Pipeline Stage 1\nLayers 8-15\nDevices: 8-15",
+		pos="5838.6,5995.7",
+		shape=parallelogram,
+		width=3.859];
+	pipeline_send -> stage1_start	[pos="e,5838.6,6048.7 5838.6,6084.5 5838.6,6076.2 5838.6,6067.4 5838.6,6058.8"];
+	layer_8_norm	[height=0.94444,
+		label="LayerNorm (Layer 8)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="5838.6,5872.7",
+		shape=box,
+		width=6.375];
+	stage1_start -> layer_8_norm	[pos="e,5838.6,5906.8 5838.6,5942.6 5838.6,5934.1 5838.6,5925.3 5838.6,5917"];
+	layer_8_attn	[height=1.1528,
+		label="MHA-TP (Layer 8)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)",
+		pos="5712.6,5761.2",
+		shape=box,
+		width=6.25];
+	layer_8_norm -> layer_8_attn	[pos="e,5759.5,5802.9 5800.4,5838.5 5789.9,5829.4 5778.4,5819.4 5767.2,5809.6"];
+	layer_8_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="5838.6,5517.5",
+		shape=box,
+		width=11.653];
+	layer_8_norm -> layer_8_residual1	[pos="e,5957.7,5551.7 5904.4,5838.5 5919.7,5828.6 5934.9,5816.5 5946.6,5802.7 6009.8,5727.6 6050.3,5669.6 5996.6,5587.5 5988.6,5575.4 \
+5978.1,5565.4 5966.1,5557.1"];
+	layer_8_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (TP)",
+		pos="5662.6,5635.6",
+		width=9.0156];
+	layer_8_attn -> layer_8_attn_reduce	[pos="e,5681.7,5683.8 5696.1,5719.4 5692.7,5711 5689,5702 5685.5,5693.2"];
+	layer_8_attn_reduce -> layer_8_residual1	[pos="e,5788.4,5551.6 5732.4,5588.5 5748,5578.2 5764.5,5567.4 5779.6,5557.4"];
+	layer_8_norm2	[height=0.94444,
+		label="LayerNorm (Layer 8)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="6014.6,5413.5",
+		shape=box,
+		width=6.375];
+	layer_8_residual1 -> layer_8_norm2	[pos="e,5957.4,5447.6 5895.7,5483.4 5912.5,5473.6 5931.1,5462.9 5948.5,5452.8"];
+	layer_8_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="5839.6,5065.8",
+		shape=box,
+		width=11.653];
+	layer_8_residual1 -> layer_8_residual2	[pos="e,5769.8,5099.9 5802.6,5483.3 5792.9,5472.7 5783.2,5460.4 5776.6,5447.5 5713.4,5326.1 5664.9,5264.5 5728.6,5143.3 5736.3,5128.7 \
+5748.2,5116.3 5761.4,5106"];
+	layer_8_mlp	[height=0.94444,
+		label="MLP-TP (Layer 8)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 8-15 (TP)",
+		pos="6062.6,5309.5",
+		shape=box,
+		width=6.375];
+	layer_8_norm2 -> layer_8_mlp	[pos="e,6046.9,5343.8 6030.1,5379.4 6034.1,5370.9 6038.5,5361.7 6042.6,5352.8"];
+	layer_8_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+8-15 (TP)",
+		pos="6062.6,5191.4",
+		width=9.0156];
+	layer_8_mlp -> layer_8_mlp_reduce	[pos="e,6062.6,5239.5 6062.6,5275.2 6062.6,5267.2 6062.6,5258.5 6062.6,5249.7"];
+	layer_9_norm	[height=0.94444,
+		label="LayerNorm (Layer 9)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="6634.6,5191.4",
+		shape=box,
+		width=6.375];
+	layer_8_mlp -> layer_9_norm	[pos="e,6471.5,5225.5 6225.3,5275.5 6299.1,5260.5 6386.5,5242.8 6461.5,5227.5"];
+	layer_8_mlp_reduce -> layer_8_residual2	[pos="e,5899.3,5100 5980.2,5144.7 5956.5,5131.6 5931,5117.5 5908.2,5104.9"];
+	layer_9_attn	[height=1.1528,
+		label="MHA-TP (Layer 9)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer \
+GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)",
+		pos="6506.6,5065.8",
+		shape=box,
+		width=6.25];
+	layer_9_norm -> layer_9_attn	[pos="e,6548.7,5107.5 6600.3,5157.3 6586.8,5144.3 6571,5129.1 6556.3,5114.9"];
+	layer_9_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="6584.6,4822.2",
+		shape=box,
+		width=11.653];
+	layer_9_norm -> layer_9_residual1	[pos="e,6703.7,4856.4 6695,5157.4 6713,5144.3 6730.5,5127.5 6740.6,5107.3 6783.1,5021.7 6794.9,4972.2 6742.6,4892.2 6734.6,4880.1 6724.1,\
+4870.1 6712.1,4861.8"];
+	layer_9_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (TP)",
+		pos="6408.6,4940.2",
+		width=9.0156];
+	layer_9_attn -> layer_9_attn_reduce	[pos="e,6446,4988.4 6474.2,5024 6467.2,5015.2 6459.7,5005.8 6452.4,4996.5"];
+	layer_9_attn_reduce -> layer_9_residual1	[pos="e,6534.4,4856.3 6478.4,4893.2 6494,4882.9 6510.5,4872 6525.6,4862"];
+	layer_9_norm2	[height=0.94444,
+		label="LayerNorm (Layer 9)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="6760.6,4718.2",
+		shape=box,
+		width=6.375];
+	layer_9_residual1 -> layer_9_norm2	[pos="e,6703.4,4752.3 6641.7,4788 6658.5,4778.3 6677.1,4767.5 6694.5,4757.5"];
+	layer_9_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="6459.6,4370.5",
+		shape=box,
+		width=11.653];
+	layer_9_residual1 -> layer_9_residual2	[pos="e,6458.4,4404.7 6548.6,4788 6538.9,4777.4 6529.2,4765 6522.6,4752.2 6464.7,4640.8 6457.8,4488.7 6458.2,4415"];
+	layer_9_mlp	[height=0.94444,
+		label="MLP-TP (Layer 9)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 8-15 (TP)",
+		pos="6808.6,4614.2",
+		shape=box,
+		width=6.375];
+	layer_9_norm2 -> layer_9_mlp	[pos="e,6792.9,4648.5 6776.1,4684 6780.1,4675.6 6784.5,4666.4 6788.6,4657.5"];
+	layer_9_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+8-15 (TP)",
+		pos="6808.6,4496.1",
+		width=9.0156];
+	layer_9_mlp -> layer_9_mlp_reduce	[pos="e,6808.6,4544.2 6808.6,4579.9 6808.6,4571.9 6808.6,4563.1 6808.6,4554.4"];
+	layer_10_norm	[height=0.94444,
+		label="LayerNorm (Layer 10)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="7380.6,4496.1",
+		shape=box,
+		width=6.375];
+	layer_9_mlp -> layer_10_norm	[pos="e,7217.5,4530.2 6971.3,4580.1 7045.1,4565.2 7132.5,4547.4 7207.5,4532.2"];
+	layer_9_mlp_reduce -> layer_9_residual2	[pos="e,6553,4404.6 6685.5,4451.5 6645.4,4437.3 6601.2,4421.7 6562.7,4408"];
+	layer_10_attn	[height=1.1528,
+		label="MHA-TP (Layer 10)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)",
+		pos="7252.6,4370.5",
+		shape=box,
+		width=6.25];
+	layer_10_norm -> layer_10_attn	[pos="e,7294.7,4412.2 7346.3,4462 7332.8,4448.9 7317,4433.7 7302.3,4419.5"];
+	layer_10_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="7330.6,4126.8",
+		shape=box,
+		width=11.653];
+	layer_10_norm -> layer_10_residual1	[pos="e,7449.7,4161 7441,4462 7459,4449 7476.5,4432.2 7486.6,4412 7529.1,4326.4 7540.9,4276.9 7488.6,4196.8 7480.6,4184.7 7470.1,4174.7 \
+7458.1,4166.5"];
+	layer_10_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (TP)",
+		pos="7154.6,4244.9",
+		width=9.0156];
+	layer_10_attn -> layer_10_attn_reduce	[pos="e,7192,4293.1 7220.2,4328.7 7213.2,4319.9 7205.7,4310.4 7198.4,4301.2"];
+	layer_10_attn_reduce -> layer_10_residual1	[pos="e,7280.4,4160.9 7224.4,4197.9 7240,4187.6 7256.5,4176.7 7271.6,4166.7"];
+	layer_10_norm2	[height=0.94444,
+		label="LayerNorm (Layer 10)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="7506.6,4022.8",
+		shape=box,
+		width=6.375];
+	layer_10_residual1 -> layer_10_norm2	[pos="e,7449.4,4057 7387.7,4092.7 7404.5,4083 7423.1,4072.2 7440.5,4062.1"];
+	layer_10_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="7331.6,3675.2",
+		shape=box,
+		width=11.653];
+	layer_10_residual1 -> layer_10_residual2	[pos="e,7261.8,3709.2 7294.6,4092.6 7284.9,4082 7275.2,4069.7 7268.6,4056.8 7205.4,3935.4 7156.9,3873.8 7220.6,3752.7 7228.3,3738 7240.2,\
+3725.6 7253.4,3715.3"];
+	layer_10_mlp	[height=0.94444,
+		label="MLP-TP (Layer 10)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 8-15 (TP)",
+		pos="7554.6,3918.8",
+		shape=box,
+		width=6.375];
+	layer_10_norm2 -> layer_10_mlp	[pos="e,7538.9,3953.1 7522.1,3988.7 7526.1,3980.3 7530.5,3971 7534.6,3962.2"];
+	layer_10_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+8-15 (TP)",
+		pos="7554.6,3800.7",
+		width=9.0156];
+	layer_10_mlp -> layer_10_mlp_reduce	[pos="e,7554.6,3848.9 7554.6,3884.6 7554.6,3876.6 7554.6,3867.8 7554.6,3859.1"];
+	layer_11_norm	[height=0.94444,
+		label="LayerNorm (Layer 11)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="8126.6,3800.7",
+		shape=box,
+		width=6.375];
+	layer_10_mlp -> layer_11_norm	[pos="e,7963.5,3834.8 7717.3,3884.8 7791.1,3869.8 7878.5,3852.1 7953.5,3836.9"];
+	layer_10_mlp_reduce -> layer_10_residual2	[pos="e,7391.3,3709.3 7472.2,3754.1 7448.5,3741 7423,3726.8 7400.2,3714.2"];
+	layer_11_attn	[height=1.1528,
+		label="MHA-TP (Layer 11)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)",
+		pos="7998.6,3675.2",
+		shape=box,
+		width=6.25];
+	layer_11_norm -> layer_11_attn	[pos="e,8040.7,3716.9 8092.3,3766.6 8078.8,3753.6 8063,3738.4 8048.3,3724.2"];
+	layer_11_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="8076.6,3431.5",
+		shape=box,
+		width=11.653];
+	layer_11_norm -> layer_11_residual1	[pos="e,8195.7,3465.7 8187,3766.7 8205,3753.6 8222.5,3736.9 8232.6,3716.7 8275.1,3631 8286.9,3581.5 8234.6,3501.5 8226.6,3489.4 8216.1,\
+3479.4 8204.1,3471.1"];
+	layer_11_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (TP)",
+		pos="7900.6,3549.6",
+		width=9.0156];
+	layer_11_attn -> layer_11_attn_reduce	[pos="e,7938,3597.8 7966.2,3633.4 7959.2,3624.5 7951.7,3615.1 7944.4,3605.8"];
+	layer_11_attn_reduce -> layer_11_residual1	[pos="e,8026.4,3465.6 7970.4,3502.5 7986,3492.2 8002.5,3481.4 8017.6,3471.4"];
+	layer_11_norm2	[height=0.94444,
+		label="LayerNorm (Layer 11)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="8252.6,3327.5",
+		shape=box,
+		width=6.375];
+	layer_11_residual1 -> layer_11_norm2	[pos="e,8195.4,3361.6 8133.7,3397.4 8150.5,3387.6 8169.1,3376.9 8186.5,3366.8"];
+	layer_11_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="7951.6,2979.8",
+		shape=box,
+		width=11.653];
+	layer_11_residual1 -> layer_11_residual2	[pos="e,7950.4,3014 8040.6,3397.3 8030.9,3386.7 8021.2,3374.4 8014.6,3361.5 7956.7,3250.2 7949.8,3098 7950.2,3024.3"];
+	layer_11_mlp	[height=0.94444,
+		label="MLP-TP (Layer 11)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 8-15 (TP)",
+		pos="8300.6,3223.5",
+		shape=box,
+		width=6.375];
+	layer_11_norm2 -> layer_11_mlp	[pos="e,8284.9,3257.8 8268.1,3293.4 8272.1,3284.9 8276.5,3275.7 8280.6,3266.9"];
+	layer_11_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+8-15 (TP)",
+		pos="8300.6,3105.4",
+		width=9.0156];
+	layer_11_mlp -> layer_11_mlp_reduce	[pos="e,8300.6,3153.5 8300.6,3189.2 8300.6,3181.2 8300.6,3172.5 8300.6,3163.7"];
+	layer_12_norm	[height=0.94444,
+		label="LayerNorm (Layer 12)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="8872.6,3105.4",
+		shape=box,
+		width=6.375];
+	layer_11_mlp -> layer_12_norm	[pos="e,8709.5,3139.5 8463.3,3189.5 8537.1,3174.5 8624.5,3156.8 8699.5,3141.5"];
+	layer_11_mlp_reduce -> layer_11_residual2	[pos="e,8045,3013.9 8177.5,3060.8 8137.4,3046.6 8093.2,3031 8054.7,3017.3"];
+	layer_12_attn	[height=1.1528,
+		label="MHA-TP (Layer 12)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)",
+		pos="8616.6,2979.8",
+		shape=box,
+		width=6.25];
+	layer_12_norm -> layer_12_attn	[pos="e,8700.9,3021.5 8804,3071.3 8775.1,3057.4 8741.1,3040.9 8710,3025.9"];
+	layer_12_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="8743.6,2736.2",
+		shape=box,
+		width=11.653];
+	layer_12_norm -> layer_12_residual1	[pos="e,8862.7,2770.4 8888.3,3071.2 8913.7,3012.4 8955.5,2888.7 8901.6,2806.2 8893.6,2794.1 8883.1,2784.1 8871.1,2775.8"];
+	layer_12_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (TP)",
+		pos="8567.6,2854.2",
+		width=9.0156];
+	layer_12_attn -> layer_12_attn_reduce	[pos="e,8586.3,2902.4 8600.4,2938 8597.1,2929.7 8593.5,2920.7 8590,2911.9"];
+	layer_12_attn_reduce -> layer_12_residual1	[pos="e,8693.4,2770.3 8637.4,2807.2 8653,2796.9 8669.5,2786 8684.6,2776"];
+	layer_12_norm2	[height=0.94444,
+		label="LayerNorm (Layer 12)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="8919.6,2632.2",
+		shape=box,
+		width=6.375];
+	layer_12_residual1 -> layer_12_norm2	[pos="e,8862.4,2666.3 8800.7,2702 8817.5,2692.3 8836.1,2681.5 8853.5,2671.5"];
+	layer_12_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="8618.6,2284.5",
+		shape=box,
+		width=11.653];
+	layer_12_residual1 -> layer_12_residual2	[pos="e,8617.4,2318.7 8707.6,2702 8697.9,2691.4 8688.2,2679 8681.6,2666.2 8623.7,2554.8 8616.8,2402.7 8617.2,2329"];
+	layer_12_mlp	[height=0.94444,
+		label="MLP-TP (Layer 12)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 8-15 (TP)",
+		pos="8967.6,2528.2",
+		shape=box,
+		width=6.375];
+	layer_12_norm2 -> layer_12_mlp	[pos="e,8951.9,2562.5 8935.1,2598 8939.1,2589.6 8943.5,2580.4 8947.6,2571.5"];
+	layer_12_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+8-15 (TP)",
+		pos="8967.6,2410.1",
+		width=9.0156];
+	layer_12_mlp -> layer_12_mlp_reduce	[pos="e,8967.6,2458.2 8967.6,2493.9 8967.6,2485.9 8967.6,2477.1 8967.6,2468.4"];
+	layer_13_norm	[height=0.94444,
+		label="LayerNorm (Layer 13)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="9539.6,2410.1",
+		shape=box,
+		width=6.375];
+	layer_12_mlp -> layer_13_norm	[pos="e,9376.5,2444.2 9130.3,2494.1 9204.1,2479.2 9291.5,2461.4 9366.5,2446.2"];
+	layer_12_mlp_reduce -> layer_12_residual2	[pos="e,8712,2318.6 8844.5,2365.5 8804.4,2351.3 8760.2,2335.7 8721.7,2322"];
+	layer_13_attn	[height=1.1528,
+		label="MHA-TP (Layer 13)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)",
+		pos="9283.6,2284.5",
+		shape=box,
+		width=6.25];
+	layer_13_norm -> layer_13_attn	[pos="e,9367.9,2326.2 9471,2376 9442.1,2362 9408.1,2345.6 9377,2330.6"];
+	layer_13_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="9410.6,2040.8",
+		shape=box,
+		width=11.653];
+	layer_13_norm -> layer_13_residual1	[pos="e,9529.7,2075 9555.3,2375.9 9580.7,2317.1 9622.5,2193.3 9568.6,2110.8 9560.6,2098.7 9550.1,2088.7 9538.1,2080.5"];
+	layer_13_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (TP)",
+		pos="9234.6,2158.9",
+		width=9.0156];
+	layer_13_attn -> layer_13_attn_reduce	[pos="e,9253.3,2207.1 9267.4,2242.7 9264.1,2234.3 9260.5,2225.4 9257,2216.6"];
+	layer_13_attn_reduce -> layer_13_residual1	[pos="e,9360.4,2074.9 9304.4,2111.9 9320,2101.6 9336.5,2090.7 9351.6,2080.7"];
+	layer_13_norm2	[height=0.94444,
+		label="LayerNorm (Layer 13)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="9586.6,1936.8",
+		shape=box,
+		width=6.375];
+	layer_13_residual1 -> layer_13_norm2	[pos="e,9529.4,1971 9467.7,2006.7 9484.5,1997 9503.1,1986.2 9520.5,1976.1"];
+	layer_13_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="9411.6,1589.2",
+		shape=box,
+		width=11.653];
+	layer_13_residual1 -> layer_13_residual2	[pos="e,9341.8,1623.2 9374.6,2006.6 9364.9,1996 9355.2,1983.7 9348.6,1970.8 9285.4,1849.4 9236.9,1787.8 9300.6,1666.7 9308.3,1652 9320.2,\
+1639.6 9333.4,1629.3"];
+	layer_13_mlp	[height=0.94444,
+		label="MLP-TP (Layer 13)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 8-15 (TP)",
+		pos="9634.6,1832.8",
+		shape=box,
+		width=6.375];
+	layer_13_norm2 -> layer_13_mlp	[pos="e,9618.9,1867.1 9602.1,1902.7 9606.1,1894.3 9610.5,1885 9614.6,1876.2"];
+	layer_13_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+8-15 (TP)",
+		pos="9634.6,1714.7",
+		width=9.0156];
+	layer_13_mlp -> layer_13_mlp_reduce	[pos="e,9634.6,1762.9 9634.6,1798.6 9634.6,1790.6 9634.6,1781.8 9634.6,1773.1"];
+	layer_14_norm	[height=0.94444,
+		label="LayerNorm (Layer 14)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="10207,1714.7",
+		shape=box,
+		width=6.375];
+	layer_13_mlp -> layer_14_norm	[pos="e,10043,1748.8 9797.3,1798.8 9871.1,1783.8 9958.5,1766.1 10033,1750.9"];
+	layer_13_mlp_reduce -> layer_13_residual2	[pos="e,9471.3,1623.3 9552.2,1668.1 9528.5,1655 9503,1640.8 9480.2,1628.2"];
+	layer_14_attn	[height=1.1528,
+		label="MHA-TP (Layer 14)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)",
+		pos="10079,1589.2",
+		shape=box,
+		width=6.25];
+	layer_14_norm -> layer_14_attn	[pos="e,10121,1630.9 10172,1680.6 10159,1667.6 10143,1652.4 10128,1638.2"];
+	layer_14_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="10157,1345.5",
+		shape=box,
+		width=11.653];
+	layer_14_norm -> layer_14_residual1	[pos="e,10276,1379.7 10267,1680.7 10285,1667.6 10303,1650.9 10313,1630.7 10355,1545 10367,1495.5 10315,1415.5 10307,1403.4 10296,1393.4 \
+10284,1385.1"];
+	layer_14_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (TP)",
+		pos="9980.6,1463.6",
+		width=9.0156];
+	layer_14_attn -> layer_14_attn_reduce	[pos="e,10018,1511.8 10046,1547.4 10039,1538.5 10032,1529.1 10024,1519.8"];
+	layer_14_attn_reduce -> layer_14_residual1	[pos="e,10106,1379.6 10050,1416.5 10066,1406.2 10082,1395.4 10098,1385.4"];
+	layer_14_norm2	[height=0.94444,
+		label="LayerNorm (Layer 14)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="10333,1241.5",
+		shape=box,
+		width=6.375];
+	layer_14_residual1 -> layer_14_norm2	[pos="e,10275,1275.6 10214,1311.4 10231,1301.6 10249,1290.9 10266,1280.8"];
+	layer_14_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="10158,893.83",
+		shape=box,
+		width=11.653];
+	layer_14_residual1 -> layer_14_residual2	[pos="e,10088,927.86 10121,1311.3 10111,1300.7 10101,1288.4 10095,1275.5 10031,1154.1 9982.9,1092.5 10047,971.33 10054,956.66 10066,944.26 \
+10079,933.98"];
+	layer_14_mlp	[height=0.94444,
+		label="MLP-TP (Layer 14)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 8-15 (TP)",
+		pos="10381,1137.5",
+		shape=box,
+		width=6.375];
+	layer_14_norm2 -> layer_14_mlp	[pos="e,10365,1171.8 10348,1207.4 10352,1198.9 10356,1189.7 10361,1180.9"];
+	layer_14_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+8-15 (TP)",
+		pos="10381,1019.4",
+		width=9.0156];
+	layer_14_mlp -> layer_14_mlp_reduce	[pos="e,10381,1067.5 10381,1103.2 10381,1095.2 10381,1086.5 10381,1077.7"];
+	layer_15_norm	[height=0.94444,
+		label="LayerNorm (Layer 15)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="10953,1019.4",
+		shape=box,
+		width=6.375];
+	layer_14_mlp -> layer_15_norm	[pos="e,10789,1053.5 10543,1103.5 10617,1088.5 10704,1070.8 10779,1055.5"];
+	layer_14_mlp_reduce -> layer_14_residual2	[pos="e,10217,927.96 10298,972.75 10274,959.64 10249,945.49 10226,932.89"];
+	layer_15_attn	[height=1.1528,
+		label="MHA-TP (Layer 15)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)",
+		pos="10825,893.83",
+		shape=box,
+		width=6.25];
+	layer_15_norm -> layer_15_attn	[pos="e,10867,935.55 10918,985.3 10905,972.27 10889,957.05 10874,942.86"];
+	layer_15_residual1	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="10903,650.17",
+		shape=box,
+		width=11.653];
+	layer_15_norm -> layer_15_residual1	[pos="e,11022,684.38 11013,985.38 11031,972.31 11049,955.54 11059,935.33 11101,849.7 11113,800.19 11061,720.17 11053,708.06 11042,698.06 \
+11030,689.81"];
+	layer_15_attn_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (TP)",
+		pos="10727,768.25",
+		width=9.0156];
+	layer_15_attn -> layer_15_attn_reduce	[pos="e,10764,816.44 10792,852.02 10785,843.22 10778,833.76 10770,824.5"];
+	layer_15_attn_reduce -> layer_15_residual1	[pos="e,10852,684.27 10796,721.2 10812,710.89 10828,700.04 10844,690.04"];
+	layer_15_norm2	[height=0.94444,
+		label="LayerNorm (Layer 15)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+4096]\nGPU: 8-15 (all)",
+		pos="10774,546.17",
+		shape=box,
+		width=6.375];
+	layer_15_residual1 -> layer_15_norm2	[pos="e,10816,580.47 10861,616.05 10849,606.7 10836,596.43 10824,586.73"];
+	layer_15_residual2	[height=0.94444,
+		label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [\
+batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)",
+		pos="10878,206",
+		shape=box,
+		width=11.653];
+	layer_15_residual1 -> layer_15_residual2	[pos="e,10997,240.21 10976,616.13 10990,606.5 11004,594.58 11013,580.17 11085,465.33 11110,389.44 11036,276 11028,263.89 11017,253.9 11005,\
+245.65"];
+	layer_15_mlp	[height=0.94444,
+		label="MLP-TP (Layer 15)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=\
+2048]\nGPU: 8-15 (TP)",
+		pos="10750,442.17",
+		shape=box,
+		width=6.375];
+	layer_15_norm2 -> layer_15_mlp	[pos="e,10757,476.47 10766,512.05 10764,503.86 10762,494.96 10760,486.36"];
+	layer_15_mlp_reduce	[fillcolor=lightyellow,
+		height=1.3356,
+		label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+8-15 (TP)",
+		pos="10702,324.08",
+		width=9.0156];
+	layer_15_mlp -> layer_15_mlp_reduce	[pos="e,10721,372.19 10736,407.9 10732,399.65 10729,390.57 10725,381.54"];
+	layer_15_mlp_reduce -> layer_15_residual2	[pos="e,10827,240.1 10771,277.04 10787,266.72 10803,255.87 10819,245.88"];
+	output	[fillcolor=lightgreen,
+		height=1.8889,
+		label="Output\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: \
+8-15",
+		pos="10878,68",
+		shape=parallelogram,
+		width=13.219];
+	layer_15_residual2 -> output	[pos="e,10878,136.26 10878,171.73 10878,163.9 10878,155.24 10878,146.35"];
+}

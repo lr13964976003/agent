@@ -1,0 +1,403 @@
+digraph proposed_transformer_dag {
+	rankdir=TB size="30,40"
+	input [label="Input\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: Host" fillcolor=lightgreen shape=parallelogram style=filled]
+	input_broadcast [label="Input Broadcast\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-15 (all)" fillcolor=lightyellow shape=ellipse style=filled]
+	input -> input_broadcast
+	layer_0_norm1 [label="LayerNorm (Layer 0)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-15 (all)" fillcolor=lightblue shape=box style=filled]
+	input_broadcast -> layer_0_norm1
+	layer_0_q_proj_0_0 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 0" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_0_0
+	layer_0_k_proj_0_0 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 0" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_0_0
+	layer_0_v_proj_0_0 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 0" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_0_0
+	layer_0_q_reshape_0_0 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 0" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_0_0 -> layer_0_q_reshape_0_0
+	layer_0_k_reshape_0_0 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 0" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_0_0 -> layer_0_k_reshape_0_0
+	layer_0_v_reshape_0_0 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 0" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_0_0 -> layer_0_v_reshape_0_0
+	layer_0_attn_0_0 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 0" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_0_0 -> layer_0_attn_0_0
+	layer_0_k_reshape_0_0 -> layer_0_attn_0_0
+	layer_0_v_reshape_0_0 -> layer_0_attn_0_0
+	layer_0_attn_reshape_0_0 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 0" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_0_0 -> layer_0_attn_reshape_0_0
+	layer_0_q_proj_0_1 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 1" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_0_1
+	layer_0_k_proj_0_1 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 1" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_0_1
+	layer_0_v_proj_0_1 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 1" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_0_1
+	layer_0_q_reshape_0_1 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 1" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_0_1 -> layer_0_q_reshape_0_1
+	layer_0_k_reshape_0_1 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 1" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_0_1 -> layer_0_k_reshape_0_1
+	layer_0_v_reshape_0_1 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 1" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_0_1 -> layer_0_v_reshape_0_1
+	layer_0_attn_0_1 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 1" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_0_1 -> layer_0_attn_0_1
+	layer_0_k_reshape_0_1 -> layer_0_attn_0_1
+	layer_0_v_reshape_0_1 -> layer_0_attn_0_1
+	layer_0_attn_reshape_0_1 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 1" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_0_1 -> layer_0_attn_reshape_0_1
+	layer_0_q_proj_0_2 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 2" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_0_2
+	layer_0_k_proj_0_2 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 2" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_0_2
+	layer_0_v_proj_0_2 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 2" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_0_2
+	layer_0_q_reshape_0_2 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 2" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_0_2 -> layer_0_q_reshape_0_2
+	layer_0_k_reshape_0_2 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 2" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_0_2 -> layer_0_k_reshape_0_2
+	layer_0_v_reshape_0_2 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 2" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_0_2 -> layer_0_v_reshape_0_2
+	layer_0_attn_0_2 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 2" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_0_2 -> layer_0_attn_0_2
+	layer_0_k_reshape_0_2 -> layer_0_attn_0_2
+	layer_0_v_reshape_0_2 -> layer_0_attn_0_2
+	layer_0_attn_reshape_0_2 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 2" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_0_2 -> layer_0_attn_reshape_0_2
+	layer_0_q_proj_0_3 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 3" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_0_3
+	layer_0_k_proj_0_3 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 3" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_0_3
+	layer_0_v_proj_0_3 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 3" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_0_3
+	layer_0_q_reshape_0_3 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 3" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_0_3 -> layer_0_q_reshape_0_3
+	layer_0_k_reshape_0_3 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 3" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_0_3 -> layer_0_k_reshape_0_3
+	layer_0_v_reshape_0_3 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 3" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_0_3 -> layer_0_v_reshape_0_3
+	layer_0_attn_0_3 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 3" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_0_3 -> layer_0_attn_0_3
+	layer_0_k_reshape_0_3 -> layer_0_attn_0_3
+	layer_0_v_reshape_0_3 -> layer_0_attn_0_3
+	layer_0_attn_reshape_0_3 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 3" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_0_3 -> layer_0_attn_reshape_0_3
+	layer_0_q_proj_1_0 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 4" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_1_0
+	layer_0_k_proj_1_0 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 4" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_1_0
+	layer_0_v_proj_1_0 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 4" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_1_0
+	layer_0_q_reshape_1_0 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 4" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_1_0 -> layer_0_q_reshape_1_0
+	layer_0_k_reshape_1_0 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 4" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_1_0 -> layer_0_k_reshape_1_0
+	layer_0_v_reshape_1_0 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 4" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_1_0 -> layer_0_v_reshape_1_0
+	layer_0_attn_1_0 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 4" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_1_0 -> layer_0_attn_1_0
+	layer_0_k_reshape_1_0 -> layer_0_attn_1_0
+	layer_0_v_reshape_1_0 -> layer_0_attn_1_0
+	layer_0_attn_reshape_1_0 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 4" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_1_0 -> layer_0_attn_reshape_1_0
+	layer_0_q_proj_1_1 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 5" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_1_1
+	layer_0_k_proj_1_1 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 5" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_1_1
+	layer_0_v_proj_1_1 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 5" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_1_1
+	layer_0_q_reshape_1_1 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 5" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_1_1 -> layer_0_q_reshape_1_1
+	layer_0_k_reshape_1_1 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 5" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_1_1 -> layer_0_k_reshape_1_1
+	layer_0_v_reshape_1_1 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 5" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_1_1 -> layer_0_v_reshape_1_1
+	layer_0_attn_1_1 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 5" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_1_1 -> layer_0_attn_1_1
+	layer_0_k_reshape_1_1 -> layer_0_attn_1_1
+	layer_0_v_reshape_1_1 -> layer_0_attn_1_1
+	layer_0_attn_reshape_1_1 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 5" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_1_1 -> layer_0_attn_reshape_1_1
+	layer_0_q_proj_1_2 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 6" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_1_2
+	layer_0_k_proj_1_2 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 6" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_1_2
+	layer_0_v_proj_1_2 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 6" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_1_2
+	layer_0_q_reshape_1_2 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 6" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_1_2 -> layer_0_q_reshape_1_2
+	layer_0_k_reshape_1_2 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 6" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_1_2 -> layer_0_k_reshape_1_2
+	layer_0_v_reshape_1_2 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 6" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_1_2 -> layer_0_v_reshape_1_2
+	layer_0_attn_1_2 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 6" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_1_2 -> layer_0_attn_1_2
+	layer_0_k_reshape_1_2 -> layer_0_attn_1_2
+	layer_0_v_reshape_1_2 -> layer_0_attn_1_2
+	layer_0_attn_reshape_1_2 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 6" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_1_2 -> layer_0_attn_reshape_1_2
+	layer_0_q_proj_1_3 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 7" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_1_3
+	layer_0_k_proj_1_3 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 7" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_1_3
+	layer_0_v_proj_1_3 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 7" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_1_3
+	layer_0_q_reshape_1_3 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 7" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_1_3 -> layer_0_q_reshape_1_3
+	layer_0_k_reshape_1_3 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 7" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_1_3 -> layer_0_k_reshape_1_3
+	layer_0_v_reshape_1_3 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 7" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_1_3 -> layer_0_v_reshape_1_3
+	layer_0_attn_1_3 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 7" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_1_3 -> layer_0_attn_1_3
+	layer_0_k_reshape_1_3 -> layer_0_attn_1_3
+	layer_0_v_reshape_1_3 -> layer_0_attn_1_3
+	layer_0_attn_reshape_1_3 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 7" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_1_3 -> layer_0_attn_reshape_1_3
+	layer_0_q_proj_2_0 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 8" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_2_0
+	layer_0_k_proj_2_0 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 8" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_2_0
+	layer_0_v_proj_2_0 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 8" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_2_0
+	layer_0_q_reshape_2_0 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 8" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_2_0 -> layer_0_q_reshape_2_0
+	layer_0_k_reshape_2_0 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 8" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_2_0 -> layer_0_k_reshape_2_0
+	layer_0_v_reshape_2_0 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 8" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_2_0 -> layer_0_v_reshape_2_0
+	layer_0_attn_2_0 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 8" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_2_0 -> layer_0_attn_2_0
+	layer_0_k_reshape_2_0 -> layer_0_attn_2_0
+	layer_0_v_reshape_2_0 -> layer_0_attn_2_0
+	layer_0_attn_reshape_2_0 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 8" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_2_0 -> layer_0_attn_reshape_2_0
+	layer_0_q_proj_2_1 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 9" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_2_1
+	layer_0_k_proj_2_1 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 9" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_2_1
+	layer_0_v_proj_2_1 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 9" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_2_1
+	layer_0_q_reshape_2_1 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 9" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_2_1 -> layer_0_q_reshape_2_1
+	layer_0_k_reshape_2_1 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 9" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_2_1 -> layer_0_k_reshape_2_1
+	layer_0_v_reshape_2_1 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 9" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_2_1 -> layer_0_v_reshape_2_1
+	layer_0_attn_2_1 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 9" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_2_1 -> layer_0_attn_2_1
+	layer_0_k_reshape_2_1 -> layer_0_attn_2_1
+	layer_0_v_reshape_2_1 -> layer_0_attn_2_1
+	layer_0_attn_reshape_2_1 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 9" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_2_1 -> layer_0_attn_reshape_2_1
+	layer_0_q_proj_2_2 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 10" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_2_2
+	layer_0_k_proj_2_2 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 10" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_2_2
+	layer_0_v_proj_2_2 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 10" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_2_2
+	layer_0_q_reshape_2_2 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 10" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_2_2 -> layer_0_q_reshape_2_2
+	layer_0_k_reshape_2_2 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 10" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_2_2 -> layer_0_k_reshape_2_2
+	layer_0_v_reshape_2_2 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 10" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_2_2 -> layer_0_v_reshape_2_2
+	layer_0_attn_2_2 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 10" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_2_2 -> layer_0_attn_2_2
+	layer_0_k_reshape_2_2 -> layer_0_attn_2_2
+	layer_0_v_reshape_2_2 -> layer_0_attn_2_2
+	layer_0_attn_reshape_2_2 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 10" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_2_2 -> layer_0_attn_reshape_2_2
+	layer_0_q_proj_2_3 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 11" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_2_3
+	layer_0_k_proj_2_3 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 11" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_2_3
+	layer_0_v_proj_2_3 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 11" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_2_3
+	layer_0_q_reshape_2_3 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 11" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_2_3 -> layer_0_q_reshape_2_3
+	layer_0_k_reshape_2_3 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 11" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_2_3 -> layer_0_k_reshape_2_3
+	layer_0_v_reshape_2_3 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 11" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_2_3 -> layer_0_v_reshape_2_3
+	layer_0_attn_2_3 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 11" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_2_3 -> layer_0_attn_2_3
+	layer_0_k_reshape_2_3 -> layer_0_attn_2_3
+	layer_0_v_reshape_2_3 -> layer_0_attn_2_3
+	layer_0_attn_reshape_2_3 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 11" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_2_3 -> layer_0_attn_reshape_2_3
+	layer_0_q_proj_3_0 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 12" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_3_0
+	layer_0_k_proj_3_0 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 12" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_3_0
+	layer_0_v_proj_3_0 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 12" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_3_0
+	layer_0_q_reshape_3_0 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 12" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_3_0 -> layer_0_q_reshape_3_0
+	layer_0_k_reshape_3_0 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 12" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_3_0 -> layer_0_k_reshape_3_0
+	layer_0_v_reshape_3_0 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 12" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_3_0 -> layer_0_v_reshape_3_0
+	layer_0_attn_3_0 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 12" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_3_0 -> layer_0_attn_3_0
+	layer_0_k_reshape_3_0 -> layer_0_attn_3_0
+	layer_0_v_reshape_3_0 -> layer_0_attn_3_0
+	layer_0_attn_reshape_3_0 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 12" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_3_0 -> layer_0_attn_reshape_3_0
+	layer_0_q_proj_3_1 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 13" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_3_1
+	layer_0_k_proj_3_1 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 13" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_3_1
+	layer_0_v_proj_3_1 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 13" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_3_1
+	layer_0_q_reshape_3_1 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 13" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_3_1 -> layer_0_q_reshape_3_1
+	layer_0_k_reshape_3_1 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 13" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_3_1 -> layer_0_k_reshape_3_1
+	layer_0_v_reshape_3_1 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 13" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_3_1 -> layer_0_v_reshape_3_1
+	layer_0_attn_3_1 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 13" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_3_1 -> layer_0_attn_3_1
+	layer_0_k_reshape_3_1 -> layer_0_attn_3_1
+	layer_0_v_reshape_3_1 -> layer_0_attn_3_1
+	layer_0_attn_reshape_3_1 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 13" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_3_1 -> layer_0_attn_reshape_3_1
+	layer_0_q_proj_3_2 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 14" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_3_2
+	layer_0_k_proj_3_2 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 14" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_3_2
+	layer_0_v_proj_3_2 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 14" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_3_2
+	layer_0_q_reshape_3_2 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 14" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_3_2 -> layer_0_q_reshape_3_2
+	layer_0_k_reshape_3_2 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 14" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_3_2 -> layer_0_k_reshape_3_2
+	layer_0_v_reshape_3_2 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 14" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_3_2 -> layer_0_v_reshape_3_2
+	layer_0_attn_3_2 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 14" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_3_2 -> layer_0_attn_3_2
+	layer_0_k_reshape_3_2 -> layer_0_attn_3_2
+	layer_0_v_reshape_3_2 -> layer_0_attn_3_2
+	layer_0_attn_reshape_3_2 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 14" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_3_2 -> layer_0_attn_reshape_3_2
+	layer_0_q_proj_3_3 [label="Query Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 15" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_q_proj_3_3
+	layer_0_k_proj_3_3 [label="Key Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 15" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_k_proj_3_3
+	layer_0_v_proj_3_3 [label="Value Projection\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 8×32=256]\nGPU: 15" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_v_proj_3_3
+	layer_0_q_reshape_3_3 [label="Reshape Query\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 15" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_proj_3_3 -> layer_0_q_reshape_3_3
+	layer_0_k_reshape_3_3 [label="Reshape Key\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 15" fillcolor=lightblue shape=box style=filled]
+	layer_0_k_proj_3_3 -> layer_0_k_reshape_3_3
+	layer_0_v_reshape_3_3 [label="Reshape Value\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 15" fillcolor=lightblue shape=box style=filled]
+	layer_0_v_proj_3_3 -> layer_0_v_reshape_3_3
+	layer_0_attn_3_3 [label="Scaled Dot-Product Attention\nInput: Q[128,10000,8,32], K[128,10000,8,32], V[128,10000,8,32]\nOutput: [batch_size=128, seq_len=10000, 8, 32]\nGPU: 15" fillcolor=lightblue shape=box style=filled]
+	layer_0_q_reshape_3_3 -> layer_0_attn_3_3
+	layer_0_k_reshape_3_3 -> layer_0_attn_3_3
+	layer_0_v_reshape_3_3 -> layer_0_attn_3_3
+	layer_0_attn_reshape_3_3 [label="Reshape Attention Output\nInput: [batch_size=128, seq_len=10000, 8, 32]\nOutput: [batch_size=128, seq_len=10000, 256]\nGPU: 15" fillcolor=lightblue shape=box style=filled]
+	layer_0_attn_3_3 -> layer_0_attn_reshape_3_3
+	layer_0_concat_intra_0 [label="Intra-Group Concatenation\nInput: 4×[batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 1024]\nGPU: [0, 1, 2, 3]" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_0_attn_reshape_0_0 -> layer_0_concat_intra_0
+	layer_0_attn_reshape_0_1 -> layer_0_concat_intra_0
+	layer_0_attn_reshape_0_2 -> layer_0_concat_intra_0
+	layer_0_attn_reshape_0_3 -> layer_0_concat_intra_0
+	layer_0_concat_intra_1 [label="Intra-Group Concatenation\nInput: 4×[batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 1024]\nGPU: [4, 5, 6, 7]" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_0_attn_reshape_1_0 -> layer_0_concat_intra_1
+	layer_0_attn_reshape_1_1 -> layer_0_concat_intra_1
+	layer_0_attn_reshape_1_2 -> layer_0_concat_intra_1
+	layer_0_attn_reshape_1_3 -> layer_0_concat_intra_1
+	layer_0_concat_intra_2 [label="Intra-Group Concatenation\nInput: 4×[batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 1024]\nGPU: [8, 9, 10, 11]" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_0_attn_reshape_2_0 -> layer_0_concat_intra_2
+	layer_0_attn_reshape_2_1 -> layer_0_concat_intra_2
+	layer_0_attn_reshape_2_2 -> layer_0_concat_intra_2
+	layer_0_attn_reshape_2_3 -> layer_0_concat_intra_2
+	layer_0_concat_intra_3 [label="Intra-Group Concatenation\nInput: 4×[batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 1024]\nGPU: [12, 13, 14, 15]" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_0_attn_reshape_3_0 -> layer_0_concat_intra_3
+	layer_0_attn_reshape_3_1 -> layer_0_concat_intra_3
+	layer_0_attn_reshape_3_2 -> layer_0_concat_intra_3
+	layer_0_attn_reshape_3_3 -> layer_0_concat_intra_3
+	layer_0_concat_inter [label="Inter-Group Concatenation\nInput: 4×[batch_size=128, seq_len=10000, 1024]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 0-15 (hierarchical)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_0_concat_intra_0 -> layer_0_concat_inter
+	layer_0_concat_intra_1 -> layer_0_concat_inter
+	layer_0_concat_intra_2 -> layer_0_concat_inter
+	layer_0_concat_intra_3 -> layer_0_concat_inter
+	layer_0_out_proj_0_0 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 0" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_0_1 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 1" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_0_2 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 2" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_0_3 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 3" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_1_0 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 4" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_1_1 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 5" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_1_2 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 6" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_1_3 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 7" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_2_0 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 8" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_2_1 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 9" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_2_2 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 10" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_2_3 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 11" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_3_0 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 12" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_3_1 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 13" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_3_2 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 14" fillcolor=lightblue shape=box style=filled]
+	layer_0_out_proj_3_3 [label="Output Projection\nInput: [batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 15" fillcolor=lightblue shape=box style=filled]
+	layer_0_final_concat [label="Final Attention Concatenation\nInput: 16×[batch_size=128, seq_len=10000, 256]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 0-15 (all)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_0_concat_inter -> layer_0_final_concat
+	layer_0_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, 4096], [batch_size=128, seq_len=10000, 4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm1 -> layer_0_residual1
+	layer_0_concat_inter -> layer_0_residual1
+	layer_0_norm2 [label="LayerNorm\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_0_residual1 -> layer_0_norm2
+	layer_0_mlp_gate [label="MLP Gate\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 16384]\nGPU: 0-15 (distributed)" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm2 -> layer_0_mlp_gate
+	layer_0_mlp_up [label="MLP Up\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, 16384]\nGPU: 0-15 (distributed)" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm2 -> layer_0_mlp_up
+	layer_0_mlp_act [label="MLP Activation\nInput: [batch_size=128, seq_len=10000, 16384]\nOutput: [batch_size=128, seq_len=10000, 16384]\nGPU: 0-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_0_mlp_gate -> layer_0_mlp_act
+	layer_0_mlp_down [label="MLP Down\nInput: [batch_size=128, seq_len=10000, 16384]\nOutput: [batch_size=128, seq_len=10000, 4096]\nGPU: 0-15 (distributed)" fillcolor=lightblue shape=box style=filled]
+	layer_0_mlp_act -> layer_0_mlp_down
+	layer_0_final_residual [label="Residual Add\nInput: [batch_size=128, seq_len=10000, 4096], [batch_size=128, seq_len=10000, 4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_0_residual1 -> layer_0_final_residual
+	layer_0_mlp_down -> layer_0_final_residual
+	"layer_1_..." [label="Layer 1 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_0_final_residual -> "layer_1_..."
+	"layer_2_..." [label="Layer 2 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_3_..." [label="Layer 3 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_4_..." [label="Layer 4 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_5_..." [label="Layer 5 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_6_..." [label="Layer 6 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_7_..." [label="Layer 7 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_8_..." [label="Layer 8 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_9_..." [label="Layer 9 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_10_..." [label="Layer 10 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_11_..." [label="Layer 11 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_12_..." [label="Layer 12 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_13_..." [label="Layer 13 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_14_..." [label="Layer 14 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	"layer_15_..." [label="Layer 15 (Same as Layer 0)\n16 partitions, 4 head groups × 4 dim slices\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_1_ellipsis [label="Layer 1\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_0_final_residual -> layer_1_ellipsis
+	layer_2_ellipsis [label="Layer 2\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_1_ellipsis -> layer_2_ellipsis
+	layer_3_ellipsis [label="Layer 3\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_2_ellipsis -> layer_3_ellipsis
+	layer_4_ellipsis [label="Layer 4\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_3_ellipsis -> layer_4_ellipsis
+	layer_5_ellipsis [label="Layer 5\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_4_ellipsis -> layer_5_ellipsis
+	layer_6_ellipsis [label="Layer 6\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_5_ellipsis -> layer_6_ellipsis
+	layer_7_ellipsis [label="Layer 7\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_6_ellipsis -> layer_7_ellipsis
+	layer_8_ellipsis [label="Layer 8\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_7_ellipsis -> layer_8_ellipsis
+	layer_9_ellipsis [label="Layer 9\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_8_ellipsis -> layer_9_ellipsis
+	layer_10_ellipsis [label="Layer 10\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_9_ellipsis -> layer_10_ellipsis
+	layer_11_ellipsis [label="Layer 11\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_10_ellipsis -> layer_11_ellipsis
+	layer_12_ellipsis [label="Layer 12\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_11_ellipsis -> layer_12_ellipsis
+	layer_13_ellipsis [label="Layer 13\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_12_ellipsis -> layer_13_ellipsis
+	layer_14_ellipsis [label="Layer 14\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_13_ellipsis -> layer_14_ellipsis
+	layer_15_ellipsis [label="Layer 15\n(Same partitioning as Layer 0)\n16 partitions, hierarchical concat\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_14_ellipsis -> layer_15_ellipsis
+	final_output [label="Output\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_15_ellipsis -> final_output
+}

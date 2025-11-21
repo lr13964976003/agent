@@ -1,0 +1,301 @@
+digraph baseline_transformer_dag {
+	rankdir=TB size="20,30"
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	input [label="Input\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: Host" fillcolor=lightgreen shape=parallelogram style=filled]
+	stage0_start [label="Pipeline Stage 0\nLayers 0-7\nDevices: 0-7" fillcolor=lightgreen shape=parallelogram style=filled]
+	input -> stage0_start
+	layer_0_norm [label="LayerNorm (Layer 0)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	stage0_start -> layer_0_norm
+	layer_0_attn [label="MHA-TP (Layer 0)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm -> layer_0_attn
+	layer_0_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_0_attn -> layer_0_attn_reduce
+	layer_0_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm -> layer_0_residual1
+	layer_0_attn_reduce -> layer_0_residual1
+	layer_0_norm2 [label="LayerNorm (Layer 0)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_0_residual1 -> layer_0_norm2
+	layer_0_mlp [label="MLP-TP (Layer 0)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_0_norm2 -> layer_0_mlp
+	layer_0_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_0_mlp -> layer_0_mlp_reduce
+	layer_0_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_0_residual1 -> layer_0_residual2
+	layer_0_mlp_reduce -> layer_0_residual2
+	layer_1_norm [label="LayerNorm (Layer 1)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_0_mlp -> layer_1_norm
+	layer_1_attn [label="MHA-TP (Layer 1)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_1_norm -> layer_1_attn
+	layer_1_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_1_attn -> layer_1_attn_reduce
+	layer_1_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_1_norm -> layer_1_residual1
+	layer_1_attn_reduce -> layer_1_residual1
+	layer_1_norm2 [label="LayerNorm (Layer 1)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_1_residual1 -> layer_1_norm2
+	layer_1_mlp [label="MLP-TP (Layer 1)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_1_norm2 -> layer_1_mlp
+	layer_1_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_1_mlp -> layer_1_mlp_reduce
+	layer_1_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_1_residual1 -> layer_1_residual2
+	layer_1_mlp_reduce -> layer_1_residual2
+	layer_2_norm [label="LayerNorm (Layer 2)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_1_mlp -> layer_2_norm
+	layer_2_attn [label="MHA-TP (Layer 2)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_2_norm -> layer_2_attn
+	layer_2_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_2_attn -> layer_2_attn_reduce
+	layer_2_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_2_norm -> layer_2_residual1
+	layer_2_attn_reduce -> layer_2_residual1
+	layer_2_norm2 [label="LayerNorm (Layer 2)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_2_residual1 -> layer_2_norm2
+	layer_2_mlp [label="MLP-TP (Layer 2)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_2_norm2 -> layer_2_mlp
+	layer_2_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_2_mlp -> layer_2_mlp_reduce
+	layer_2_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_2_residual1 -> layer_2_residual2
+	layer_2_mlp_reduce -> layer_2_residual2
+	layer_3_norm [label="LayerNorm (Layer 3)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_2_mlp -> layer_3_norm
+	layer_3_attn [label="MHA-TP (Layer 3)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_3_norm -> layer_3_attn
+	layer_3_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_3_attn -> layer_3_attn_reduce
+	layer_3_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_3_norm -> layer_3_residual1
+	layer_3_attn_reduce -> layer_3_residual1
+	layer_3_norm2 [label="LayerNorm (Layer 3)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_3_residual1 -> layer_3_norm2
+	layer_3_mlp [label="MLP-TP (Layer 3)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_3_norm2 -> layer_3_mlp
+	layer_3_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_3_mlp -> layer_3_mlp_reduce
+	layer_3_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_3_residual1 -> layer_3_residual2
+	layer_3_mlp_reduce -> layer_3_residual2
+	layer_4_norm [label="LayerNorm (Layer 4)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_3_mlp -> layer_4_norm
+	layer_4_attn [label="MHA-TP (Layer 4)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_4_norm -> layer_4_attn
+	layer_4_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_4_attn -> layer_4_attn_reduce
+	layer_4_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_4_norm -> layer_4_residual1
+	layer_4_attn_reduce -> layer_4_residual1
+	layer_4_norm2 [label="LayerNorm (Layer 4)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_4_residual1 -> layer_4_norm2
+	layer_4_mlp [label="MLP-TP (Layer 4)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_4_norm2 -> layer_4_mlp
+	layer_4_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_4_mlp -> layer_4_mlp_reduce
+	layer_4_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_4_residual1 -> layer_4_residual2
+	layer_4_mlp_reduce -> layer_4_residual2
+	layer_5_norm [label="LayerNorm (Layer 5)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_4_mlp -> layer_5_norm
+	layer_5_attn [label="MHA-TP (Layer 5)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_5_norm -> layer_5_attn
+	layer_5_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_5_attn -> layer_5_attn_reduce
+	layer_5_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_5_norm -> layer_5_residual1
+	layer_5_attn_reduce -> layer_5_residual1
+	layer_5_norm2 [label="LayerNorm (Layer 5)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_5_residual1 -> layer_5_norm2
+	layer_5_mlp [label="MLP-TP (Layer 5)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_5_norm2 -> layer_5_mlp
+	layer_5_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_5_mlp -> layer_5_mlp_reduce
+	layer_5_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_5_residual1 -> layer_5_residual2
+	layer_5_mlp_reduce -> layer_5_residual2
+	layer_6_norm [label="LayerNorm (Layer 6)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_5_mlp -> layer_6_norm
+	layer_6_attn [label="MHA-TP (Layer 6)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_6_norm -> layer_6_attn
+	layer_6_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_6_attn -> layer_6_attn_reduce
+	layer_6_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_6_norm -> layer_6_residual1
+	layer_6_attn_reduce -> layer_6_residual1
+	layer_6_norm2 [label="LayerNorm (Layer 6)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_6_residual1 -> layer_6_norm2
+	layer_6_mlp [label="MLP-TP (Layer 6)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_6_norm2 -> layer_6_mlp
+	layer_6_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_6_mlp -> layer_6_mlp_reduce
+	layer_6_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_6_residual1 -> layer_6_residual2
+	layer_6_mlp_reduce -> layer_6_residual2
+	layer_7_norm [label="LayerNorm (Layer 7)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_6_mlp -> layer_7_norm
+	layer_7_attn [label="MHA-TP (Layer 7)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_7_norm -> layer_7_attn
+	layer_7_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_7_attn -> layer_7_attn_reduce
+	layer_7_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_7_norm -> layer_7_residual1
+	layer_7_attn_reduce -> layer_7_residual1
+	layer_7_norm2 [label="LayerNorm (Layer 7)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_7_residual1 -> layer_7_norm2
+	layer_7_mlp [label="MLP-TP (Layer 7)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 0-7 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_7_norm2 -> layer_7_mlp
+	layer_7_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_7_mlp -> layer_7_mlp_reduce
+	layer_7_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_7_residual1 -> layer_7_residual2
+	layer_7_mlp_reduce -> layer_7_residual2
+	pipeline_send [label="Send Pipeline\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 0-7 → 8-15" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_7_residual2 -> pipeline_send
+	stage1_start [label="Pipeline Stage 1\nLayers 8-15\nDevices: 8-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	pipeline_send -> stage1_start
+	layer_8_norm [label="LayerNorm (Layer 8)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	stage1_start -> layer_8_norm
+	layer_8_attn [label="MHA-TP (Layer 8)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_8_norm -> layer_8_attn
+	layer_8_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_8_attn -> layer_8_attn_reduce
+	layer_8_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_8_norm -> layer_8_residual1
+	layer_8_attn_reduce -> layer_8_residual1
+	layer_8_norm2 [label="LayerNorm (Layer 8)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_8_residual1 -> layer_8_norm2
+	layer_8_mlp [label="MLP-TP (Layer 8)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_8_norm2 -> layer_8_mlp
+	layer_8_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_8_mlp -> layer_8_mlp_reduce
+	layer_8_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_8_residual1 -> layer_8_residual2
+	layer_8_mlp_reduce -> layer_8_residual2
+	layer_9_norm [label="LayerNorm (Layer 9)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_8_mlp -> layer_9_norm
+	layer_9_attn [label="MHA-TP (Layer 9)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_9_norm -> layer_9_attn
+	layer_9_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_9_attn -> layer_9_attn_reduce
+	layer_9_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_9_norm -> layer_9_residual1
+	layer_9_attn_reduce -> layer_9_residual1
+	layer_9_norm2 [label="LayerNorm (Layer 9)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_9_residual1 -> layer_9_norm2
+	layer_9_mlp [label="MLP-TP (Layer 9)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_9_norm2 -> layer_9_mlp
+	layer_9_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_9_mlp -> layer_9_mlp_reduce
+	layer_9_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_9_residual1 -> layer_9_residual2
+	layer_9_mlp_reduce -> layer_9_residual2
+	layer_10_norm [label="LayerNorm (Layer 10)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_9_mlp -> layer_10_norm
+	layer_10_attn [label="MHA-TP (Layer 10)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_10_norm -> layer_10_attn
+	layer_10_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_10_attn -> layer_10_attn_reduce
+	layer_10_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_10_norm -> layer_10_residual1
+	layer_10_attn_reduce -> layer_10_residual1
+	layer_10_norm2 [label="LayerNorm (Layer 10)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_10_residual1 -> layer_10_norm2
+	layer_10_mlp [label="MLP-TP (Layer 10)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_10_norm2 -> layer_10_mlp
+	layer_10_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_10_mlp -> layer_10_mlp_reduce
+	layer_10_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_10_residual1 -> layer_10_residual2
+	layer_10_mlp_reduce -> layer_10_residual2
+	layer_11_norm [label="LayerNorm (Layer 11)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_10_mlp -> layer_11_norm
+	layer_11_attn [label="MHA-TP (Layer 11)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_11_norm -> layer_11_attn
+	layer_11_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_11_attn -> layer_11_attn_reduce
+	layer_11_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_11_norm -> layer_11_residual1
+	layer_11_attn_reduce -> layer_11_residual1
+	layer_11_norm2 [label="LayerNorm (Layer 11)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_11_residual1 -> layer_11_norm2
+	layer_11_mlp [label="MLP-TP (Layer 11)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_11_norm2 -> layer_11_mlp
+	layer_11_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_11_mlp -> layer_11_mlp_reduce
+	layer_11_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_11_residual1 -> layer_11_residual2
+	layer_11_mlp_reduce -> layer_11_residual2
+	layer_12_norm [label="LayerNorm (Layer 12)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_11_mlp -> layer_12_norm
+	layer_12_attn [label="MHA-TP (Layer 12)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_12_norm -> layer_12_attn
+	layer_12_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_12_attn -> layer_12_attn_reduce
+	layer_12_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_12_norm -> layer_12_residual1
+	layer_12_attn_reduce -> layer_12_residual1
+	layer_12_norm2 [label="LayerNorm (Layer 12)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_12_residual1 -> layer_12_norm2
+	layer_12_mlp [label="MLP-TP (Layer 12)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_12_norm2 -> layer_12_mlp
+	layer_12_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_12_mlp -> layer_12_mlp_reduce
+	layer_12_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_12_residual1 -> layer_12_residual2
+	layer_12_mlp_reduce -> layer_12_residual2
+	layer_13_norm [label="LayerNorm (Layer 13)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_12_mlp -> layer_13_norm
+	layer_13_attn [label="MHA-TP (Layer 13)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_13_norm -> layer_13_attn
+	layer_13_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_13_attn -> layer_13_attn_reduce
+	layer_13_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_13_norm -> layer_13_residual1
+	layer_13_attn_reduce -> layer_13_residual1
+	layer_13_norm2 [label="LayerNorm (Layer 13)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_13_residual1 -> layer_13_norm2
+	layer_13_mlp [label="MLP-TP (Layer 13)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_13_norm2 -> layer_13_mlp
+	layer_13_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_13_mlp -> layer_13_mlp_reduce
+	layer_13_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_13_residual1 -> layer_13_residual2
+	layer_13_mlp_reduce -> layer_13_residual2
+	layer_14_norm [label="LayerNorm (Layer 14)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_13_mlp -> layer_14_norm
+	layer_14_attn [label="MHA-TP (Layer 14)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_14_norm -> layer_14_attn
+	layer_14_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_14_attn -> layer_14_attn_reduce
+	layer_14_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_14_norm -> layer_14_residual1
+	layer_14_attn_reduce -> layer_14_residual1
+	layer_14_norm2 [label="LayerNorm (Layer 14)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_14_residual1 -> layer_14_norm2
+	layer_14_mlp [label="MLP-TP (Layer 14)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_14_norm2 -> layer_14_mlp
+	layer_14_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_14_mlp -> layer_14_mlp_reduce
+	layer_14_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_14_residual1 -> layer_14_residual2
+	layer_14_mlp_reduce -> layer_14_residual2
+	layer_15_norm [label="LayerNorm (Layer 15)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_14_mlp -> layer_15_norm
+	layer_15_attn [label="MHA-TP (Layer 15)\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=512]\nPer GPU: 4 heads, head_dim=128\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_15_norm -> layer_15_attn
+	layer_15_attn_reduce [label="All-Reduce Attention\nInput: [batch_size=128, seq_len=10000, hidden_size=512]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_15_attn -> layer_15_attn_reduce
+	layer_15_residual1 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_15_norm -> layer_15_residual1
+	layer_15_attn_reduce -> layer_15_residual1
+	layer_15_norm2 [label="LayerNorm (Layer 15)\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_15_residual1 -> layer_15_norm2
+	layer_15_mlp [label="MLP-TP (Layer 15)\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=2048]\nGPU: 8-15 (TP)" fillcolor=lightblue shape=box style=filled]
+	layer_15_norm2 -> layer_15_mlp
+	layer_15_mlp_reduce [label="All-Reduce MLP\nInput: [batch_size=128, seq_len=10000, hidden_size=2048]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (TP)" fillcolor=lightyellow shape=ellipse style=filled]
+	layer_15_mlp -> layer_15_mlp_reduce
+	layer_15_residual2 [label="Residual Add\nInput: [batch_size=128, seq_len=10000, hidden_size=4096], [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15 (all)" fillcolor=lightblue shape=box style=filled]
+	layer_15_residual1 -> layer_15_residual2
+	layer_15_mlp_reduce -> layer_15_residual2
+	output [label="Output\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]\nGPU: 8-15" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_15_residual2 -> output
+}
