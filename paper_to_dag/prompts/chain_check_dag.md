@@ -16,11 +16,13 @@ You are tested to completed the following tasks:
 
 Check if there are any errors in the DAG. The specific inspection items are as follows:<<<任务内容>>>
 
+Check whether the DAG diagram is concise and clear, with no highly similar repeated modules.<<<检查DAG图是否做到简洁明晰，没有相似度很高的重复模块>>>
+
 Check if the DAG contains a cycle. <<<检查dag中是否包含环>>>
 
-Check whether all nodes in the DAG, except for the input, have at least one input node.<<<检查是否除了input外，有节点没有输入>>>
+In addition to input and output, ensure that each of the remaining nodes includes both input and output.<<<除了input和output外，要保证其余每个节点都包含输入输出>>>
 
-Check whether all nodes in the DAG, except for the output, have at least one output node.<<<检查是否除了output外，有节点没有输出>>>
+Check whether each node has the input/output shapes and the corresponding GPU index.<<<检查每个节点是否都有输入输出的形状和所在GPU的序号>>>
 
 
 
@@ -51,4 +53,5 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
+
 
