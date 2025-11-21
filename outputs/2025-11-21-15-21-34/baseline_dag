@@ -1,0 +1,1151 @@
+// Baseline Model Deployment (TP=8, PP=2)
+digraph {
+	fontname=Arial rankdir=TB size="20,15"
+	subgraph cluster_legend {
+		color=gray label=Legend style=dashed
+		legend_compute [label=Computation color=lightblue shape=rectangle style=filled]
+		legend_comm [label=Communication color=lightgreen shape=ellipse style=filled]
+		legend_route [label="Routing/Aggregation" color=lightyellow shape=parallelogram style=filled]
+		legend_gather [label="All-Gather" color=orange shape=ellipse style=filled]
+		legend_reduce [label="All-Reduce" color=red shape=ellipse style=filled]
+	}
+	subgraph cluster_stage0 {
+		label="Pipeline Stage 0 (Devices 0-7)" style=rounded
+		input [label="Input Embedding
+Input: [batch=128, seq=10000, hidden=4096]
+Device: All GPUs
+Layer: Embedding" color=lightyellow shape=parallelogram style=filled]
+		mha_q_0 [label="Layer0_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_0 [label="Layer0_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_0 [label="Layer0_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_0 [label="Layer0_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_0 [label="Layer0_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_0 [label="Layer0_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_0 [label="Layer0_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_0 [label="Layer0_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_0 [label="Layer0_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_0 [label="Layer0_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_0 [label="Layer0_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_0 [label="Layer0_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer0 {
+			label="Layer 0 (TP=8 across devices 0-7)" style=dashed
+		}
+		mha_q_1 [label="Layer1_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_1 [label="Layer1_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_1 [label="Layer1_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_1 [label="Layer1_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_1 [label="Layer1_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_1 [label="Layer1_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_1 [label="Layer1_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_1 [label="Layer1_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_1 [label="Layer1_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_1 [label="Layer1_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_1 [label="Layer1_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_1 [label="Layer1_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer1 {
+			label="Layer 1 (TP=8 across devices 0-7)" style=dashed
+		}
+		mha_q_2 [label="Layer2_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_2 [label="Layer2_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_2 [label="Layer2_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_2 [label="Layer2_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_2 [label="Layer2_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_2 [label="Layer2_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_2 [label="Layer2_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_2 [label="Layer2_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_2 [label="Layer2_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_2 [label="Layer2_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_2 [label="Layer2_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_2 [label="Layer2_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer2 {
+			label="Layer 2 (TP=8 across devices 0-7)" style=dashed
+		}
+		mha_q_3 [label="Layer3_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_3 [label="Layer3_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_3 [label="Layer3_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_3 [label="Layer3_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_3 [label="Layer3_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_3 [label="Layer3_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_3 [label="Layer3_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_3 [label="Layer3_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_3 [label="Layer3_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_3 [label="Layer3_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_3 [label="Layer3_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_3 [label="Layer3_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer3 {
+			label="Layer 3 (TP=8 across devices 0-7)" style=dashed
+		}
+		mha_q_4 [label="Layer4_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_4 [label="Layer4_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_4 [label="Layer4_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_4 [label="Layer4_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_4 [label="Layer4_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_4 [label="Layer4_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_4 [label="Layer4_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_4 [label="Layer4_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_4 [label="Layer4_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_4 [label="Layer4_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_4 [label="Layer4_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_4 [label="Layer4_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer4 {
+			label="Layer 4 (TP=8 across devices 0-7)" style=dashed
+		}
+		mha_q_5 [label="Layer5_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_5 [label="Layer5_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_5 [label="Layer5_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_5 [label="Layer5_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_5 [label="Layer5_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_5 [label="Layer5_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_5 [label="Layer5_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_5 [label="Layer5_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_5 [label="Layer5_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_5 [label="Layer5_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_5 [label="Layer5_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_5 [label="Layer5_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer5 {
+			label="Layer 5 (TP=8 across devices 0-7)" style=dashed
+		}
+		mha_q_6 [label="Layer6_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_6 [label="Layer6_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_6 [label="Layer6_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_6 [label="Layer6_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_6 [label="Layer6_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_6 [label="Layer6_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_6 [label="Layer6_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_6 [label="Layer6_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_6 [label="Layer6_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_6 [label="Layer6_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_6 [label="Layer6_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_6 [label="Layer6_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer6 {
+			label="Layer 6 (TP=8 across devices 0-7)" style=dashed
+		}
+		mha_q_7 [label="Layer7_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_7 [label="Layer7_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_7 [label="Layer7_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_7 [label="Layer7_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_7 [label="Layer7_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_7 [label="Layer7_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_7 [label="Layer7_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_7 [label="Layer7_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_7 [label="Layer7_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_7 [label="Layer7_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_7 [label="Layer7_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_7 [label="Layer7_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 0-7" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer7 {
+			label="Layer 7 (TP=8 across devices 0-7)" style=dashed
+		}
+	}
+	subgraph cluster_stage1 {
+		label="Pipeline Stage 1 (Devices 8-15)" style=rounded
+		mha_q_8 [label="Layer8_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_8 [label="Layer8_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_8 [label="Layer8_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_8 [label="Layer8_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_8 [label="Layer8_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_8 [label="Layer8_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_8 [label="Layer8_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_8 [label="Layer8_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_8 [label="Layer8_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_8 [label="Layer8_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_8 [label="Layer8_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_8 [label="Layer8_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer8 {
+			label="Layer 8 (TP=8 across devices 8-15)" style=dashed
+		}
+		mha_q_9 [label="Layer9_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_9 [label="Layer9_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_9 [label="Layer9_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_9 [label="Layer9_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_9 [label="Layer9_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_9 [label="Layer9_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_9 [label="Layer9_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_9 [label="Layer9_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_9 [label="Layer9_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_9 [label="Layer9_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_9 [label="Layer9_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_9 [label="Layer9_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer9 {
+			label="Layer 9 (TP=8 across devices 8-15)" style=dashed
+		}
+		mha_q_10 [label="Layer10_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_10 [label="Layer10_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_10 [label="Layer10_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_10 [label="Layer10_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_10 [label="Layer10_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_10 [label="Layer10_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_10 [label="Layer10_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_10 [label="Layer10_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_10 [label="Layer10_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_10 [label="Layer10_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_10 [label="Layer10_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_10 [label="Layer10_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer10 {
+			label="Layer 10 (TP=8 across devices 8-15)" style=dashed
+		}
+		mha_q_11 [label="Layer11_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_11 [label="Layer11_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_11 [label="Layer11_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_11 [label="Layer11_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_11 [label="Layer11_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_11 [label="Layer11_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_11 [label="Layer11_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_11 [label="Layer11_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_11 [label="Layer11_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_11 [label="Layer11_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_11 [label="Layer11_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_11 [label="Layer11_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer11 {
+			label="Layer 11 (TP=8 across devices 8-15)" style=dashed
+		}
+		mha_q_12 [label="Layer12_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_12 [label="Layer12_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_12 [label="Layer12_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_12 [label="Layer12_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_12 [label="Layer12_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_12 [label="Layer12_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_12 [label="Layer12_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_12 [label="Layer12_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_12 [label="Layer12_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_12 [label="Layer12_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_12 [label="Layer12_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_12 [label="Layer12_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer12 {
+			label="Layer 12 (TP=8 across devices 8-15)" style=dashed
+		}
+		mha_q_13 [label="Layer13_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_13 [label="Layer13_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_13 [label="Layer13_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_13 [label="Layer13_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_13 [label="Layer13_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_13 [label="Layer13_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_13 [label="Layer13_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_13 [label="Layer13_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_13 [label="Layer13_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_13 [label="Layer13_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_13 [label="Layer13_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_13 [label="Layer13_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer13 {
+			label="Layer 13 (TP=8 across devices 8-15)" style=dashed
+		}
+		mha_q_14 [label="Layer14_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_14 [label="Layer14_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_14 [label="Layer14_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_14 [label="Layer14_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_14 [label="Layer14_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_14 [label="Layer14_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_14 [label="Layer14_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_14 [label="Layer14_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_14 [label="Layer14_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_14 [label="Layer14_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_14 [label="Layer14_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_14 [label="Layer14_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer14 {
+			label="Layer 14 (TP=8 across devices 8-15)" style=dashed
+		}
+		mha_q_15 [label="Layer15_MHA_Q
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_k_15 [label="Layer15_MHA_K
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		mha_v_15 [label="Layer15_MHA_V
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_score_15 [label="Layer15_Attn_Score
+Input: [batch=128, seq=10000, heads=32, seq=10000]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_out_15 [label="Layer15_Attn_Out
+Input: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		attn_allreduce_15 [label="Layer15_Attn_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		attn_residual_15 [label="Layer15_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		ffn_up_15 [label="Layer15_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_gate_15 [label="Layer15_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_down_15 [label="Layer15_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (TP)" color=lightblue shape=rectangle style=filled]
+		ffn_allreduce_15 [label="Layer15_FFN_AllReduce
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15 (All-Reduce)" color=red shape=ellipse style=filled]
+		ffn_residual_15 [label="Layer15_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: 8-15" color=lightyellow shape=parallelogram style=filled]
+		subgraph cluster_layer15 {
+			label="Layer 15 (TP=8 across devices 8-15)" style=dashed
+		}
+	}
+	pipeline_comm_0 [label="Pipeline Communication
+Transfer: [batch=128, seq=10000, hidden=4096]
+Devices: 0-7 → 8-15" color=lightgreen shape=ellipse style=filled]
+	output [label="Output Projection
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, vocab_size]
+Device: 8-15 (TP)" color=lightyellow shape=parallelogram style=filled]
+	input -> mha_q_0
+	input -> mha_k_0
+	input -> mha_v_0
+	mha_q_0 -> attn_score_0
+	mha_k_0 -> attn_score_0
+	attn_v_0 -> attn_out_0
+	attn_score_0 -> attn_out_0
+	attn_out_0 -> attn_allreduce_0
+	attn_allreduce_0 -> attn_residual_0
+	input -> attn_residual_0
+	attn_residual_0 -> ffn_up_0
+	attn_residual_0 -> ffn_gate_0
+	ffn_up_0 -> ffn_down_0
+	ffn_gate_0 -> ffn_down_0
+	ffn_down_0 -> ffn_allreduce_0
+	ffn_allreduce_0 -> ffn_residual_0
+	attn_residual_0 -> ffn_residual_0
+	ffn_residual_0 -> mha_q_1
+	ffn_residual_0 -> mha_k_1
+	ffn_residual_0 -> mha_v_1
+	mha_q_1 -> attn_score_1
+	mha_k_1 -> attn_score_1
+	attn_v_1 -> attn_out_1
+	attn_score_1 -> attn_out_1
+	attn_out_1 -> attn_allreduce_1
+	attn_allreduce_1 -> attn_residual_1
+	ffn_residual_0 -> attn_residual_1
+	attn_residual_1 -> ffn_up_1
+	attn_residual_1 -> ffn_gate_1
+	ffn_up_1 -> ffn_down_1
+	ffn_gate_1 -> ffn_down_1
+	ffn_down_1 -> ffn_allreduce_1
+	ffn_allreduce_1 -> ffn_residual_1
+	attn_residual_1 -> ffn_residual_1
+	ffn_residual_1 -> mha_q_2
+	ffn_residual_1 -> mha_k_2
+	ffn_residual_1 -> mha_v_2
+	mha_q_2 -> attn_score_2
+	mha_k_2 -> attn_score_2
+	attn_v_2 -> attn_out_2
+	attn_score_2 -> attn_out_2
+	attn_out_2 -> attn_allreduce_2
+	attn_allreduce_2 -> attn_residual_2
+	ffn_residual_1 -> attn_residual_2
+	attn_residual_2 -> ffn_up_2
+	attn_residual_2 -> ffn_gate_2
+	ffn_up_2 -> ffn_down_2
+	ffn_gate_2 -> ffn_down_2
+	ffn_down_2 -> ffn_allreduce_2
+	ffn_allreduce_2 -> ffn_residual_2
+	attn_residual_2 -> ffn_residual_2
+	ffn_residual_2 -> mha_q_3
+	ffn_residual_2 -> mha_k_3
+	ffn_residual_2 -> mha_v_3
+	mha_q_3 -> attn_score_3
+	mha_k_3 -> attn_score_3
+	attn_v_3 -> attn_out_3
+	attn_score_3 -> attn_out_3
+	attn_out_3 -> attn_allreduce_3
+	attn_allreduce_3 -> attn_residual_3
+	ffn_residual_2 -> attn_residual_3
+	attn_residual_3 -> ffn_up_3
+	attn_residual_3 -> ffn_gate_3
+	ffn_up_3 -> ffn_down_3
+	ffn_gate_3 -> ffn_down_3
+	ffn_down_3 -> ffn_allreduce_3
+	ffn_allreduce_3 -> ffn_residual_3
+	attn_residual_3 -> ffn_residual_3
+	ffn_residual_3 -> mha_q_4
+	ffn_residual_3 -> mha_k_4
+	ffn_residual_3 -> mha_v_4
+	mha_q_4 -> attn_score_4
+	mha_k_4 -> attn_score_4
+	attn_v_4 -> attn_out_4
+	attn_score_4 -> attn_out_4
+	attn_out_4 -> attn_allreduce_4
+	attn_allreduce_4 -> attn_residual_4
+	ffn_residual_3 -> attn_residual_4
+	attn_residual_4 -> ffn_up_4
+	attn_residual_4 -> ffn_gate_4
+	ffn_up_4 -> ffn_down_4
+	ffn_gate_4 -> ffn_down_4
+	ffn_down_4 -> ffn_allreduce_4
+	ffn_allreduce_4 -> ffn_residual_4
+	attn_residual_4 -> ffn_residual_4
+	ffn_residual_4 -> mha_q_5
+	ffn_residual_4 -> mha_k_5
+	ffn_residual_4 -> mha_v_5
+	mha_q_5 -> attn_score_5
+	mha_k_5 -> attn_score_5
+	attn_v_5 -> attn_out_5
+	attn_score_5 -> attn_out_5
+	attn_out_5 -> attn_allreduce_5
+	attn_allreduce_5 -> attn_residual_5
+	ffn_residual_4 -> attn_residual_5
+	attn_residual_5 -> ffn_up_5
+	attn_residual_5 -> ffn_gate_5
+	ffn_up_5 -> ffn_down_5
+	ffn_gate_5 -> ffn_down_5
+	ffn_down_5 -> ffn_allreduce_5
+	ffn_allreduce_5 -> ffn_residual_5
+	attn_residual_5 -> ffn_residual_5
+	ffn_residual_5 -> mha_q_6
+	ffn_residual_5 -> mha_k_6
+	ffn_residual_5 -> mha_v_6
+	mha_q_6 -> attn_score_6
+	mha_k_6 -> attn_score_6
+	attn_v_6 -> attn_out_6
+	attn_score_6 -> attn_out_6
+	attn_out_6 -> attn_allreduce_6
+	attn_allreduce_6 -> attn_residual_6
+	ffn_residual_5 -> attn_residual_6
+	attn_residual_6 -> ffn_up_6
+	attn_residual_6 -> ffn_gate_6
+	ffn_up_6 -> ffn_down_6
+	ffn_gate_6 -> ffn_down_6
+	ffn_down_6 -> ffn_allreduce_6
+	ffn_allreduce_6 -> ffn_residual_6
+	attn_residual_6 -> ffn_residual_6
+	ffn_residual_6 -> mha_q_7
+	ffn_residual_6 -> mha_k_7
+	ffn_residual_6 -> mha_v_7
+	mha_q_7 -> attn_score_7
+	mha_k_7 -> attn_score_7
+	attn_v_7 -> attn_out_7
+	attn_score_7 -> attn_out_7
+	attn_out_7 -> attn_allreduce_7
+	attn_allreduce_7 -> attn_residual_7
+	ffn_residual_6 -> attn_residual_7
+	attn_residual_7 -> ffn_up_7
+	attn_residual_7 -> ffn_gate_7
+	ffn_up_7 -> ffn_down_7
+	ffn_gate_7 -> ffn_down_7
+	ffn_down_7 -> ffn_allreduce_7
+	ffn_allreduce_7 -> ffn_residual_7
+	attn_residual_7 -> ffn_residual_7
+	ffn_residual_7 -> pipeline_comm_0
+	pipeline_comm_0 -> mha_q_8
+	pipeline_comm_0 -> mha_k_8
+	pipeline_comm_0 -> mha_v_8
+	mha_q_8 -> attn_score_8
+	mha_k_8 -> attn_score_8
+	attn_v_8 -> attn_out_8
+	attn_score_8 -> attn_out_8
+	attn_out_8 -> attn_allreduce_8
+	attn_allreduce_8 -> attn_residual_8
+	pipeline_comm_0 -> attn_residual_8
+	attn_residual_8 -> ffn_up_8
+	attn_residual_8 -> ffn_gate_8
+	ffn_up_8 -> ffn_down_8
+	ffn_gate_8 -> ffn_down_8
+	ffn_down_8 -> ffn_allreduce_8
+	ffn_allreduce_8 -> ffn_residual_8
+	attn_residual_8 -> ffn_residual_8
+	ffn_residual_8 -> mha_q_9
+	ffn_residual_8 -> mha_k_9
+	ffn_residual_8 -> mha_v_9
+	mha_q_9 -> attn_score_9
+	mha_k_9 -> attn_score_9
+	attn_v_9 -> attn_out_9
+	attn_score_9 -> attn_out_9
+	attn_out_9 -> attn_allreduce_9
+	attn_allreduce_9 -> attn_residual_9
+	ffn_residual_8 -> attn_residual_9
+	attn_residual_9 -> ffn_up_9
+	attn_residual_9 -> ffn_gate_9
+	ffn_up_9 -> ffn_down_9
+	ffn_gate_9 -> ffn_down_9
+	ffn_down_9 -> ffn_allreduce_9
+	ffn_allreduce_9 -> ffn_residual_9
+	attn_residual_9 -> ffn_residual_9
+	ffn_residual_9 -> mha_q_10
+	ffn_residual_9 -> mha_k_10
+	ffn_residual_9 -> mha_v_10
+	mha_q_10 -> attn_score_10
+	mha_k_10 -> attn_score_10
+	attn_v_10 -> attn_out_10
+	attn_score_10 -> attn_out_10
+	attn_out_10 -> attn_allreduce_10
+	attn_allreduce_10 -> attn_residual_10
+	ffn_residual_9 -> attn_residual_10
+	attn_residual_10 -> ffn_up_10
+	attn_residual_10 -> ffn_gate_10
+	ffn_up_10 -> ffn_down_10
+	ffn_gate_10 -> ffn_down_10
+	ffn_down_10 -> ffn_allreduce_10
+	ffn_allreduce_10 -> ffn_residual_10
+	attn_residual_10 -> ffn_residual_10
+	ffn_residual_10 -> mha_q_11
+	ffn_residual_10 -> mha_k_11
+	ffn_residual_10 -> mha_v_11
+	mha_q_11 -> attn_score_11
+	mha_k_11 -> attn_score_11
+	attn_v_11 -> attn_out_11
+	attn_score_11 -> attn_out_11
+	attn_out_11 -> attn_allreduce_11
+	attn_allreduce_11 -> attn_residual_11
+	ffn_residual_10 -> attn_residual_11
+	attn_residual_11 -> ffn_up_11
+	attn_residual_11 -> ffn_gate_11
+	ffn_up_11 -> ffn_down_11
+	ffn_gate_11 -> ffn_down_11
+	ffn_down_11 -> ffn_allreduce_11
+	ffn_allreduce_11 -> ffn_residual_11
+	attn_residual_11 -> ffn_residual_11
+	ffn_residual_11 -> mha_q_12
+	ffn_residual_11 -> mha_k_12
+	ffn_residual_11 -> mha_v_12
+	mha_q_12 -> attn_score_12
+	mha_k_12 -> attn_score_12
+	attn_v_12 -> attn_out_12
+	attn_score_12 -> attn_out_12
+	attn_out_12 -> attn_allreduce_12
+	attn_allreduce_12 -> attn_residual_12
+	ffn_residual_11 -> attn_residual_12
+	attn_residual_12 -> ffn_up_12
+	attn_residual_12 -> ffn_gate_12
+	ffn_up_12 -> ffn_down_12
+	ffn_gate_12 -> ffn_down_12
+	ffn_down_12 -> ffn_allreduce_12
+	ffn_allreduce_12 -> ffn_residual_12
+	attn_residual_12 -> ffn_residual_12
+	ffn_residual_12 -> mha_q_13
+	ffn_residual_12 -> mha_k_13
+	ffn_residual_12 -> mha_v_13
+	mha_q_13 -> attn_score_13
+	mha_k_13 -> attn_score_13
+	attn_v_13 -> attn_out_13
+	attn_score_13 -> attn_out_13
+	attn_out_13 -> attn_allreduce_13
+	attn_allreduce_13 -> attn_residual_13
+	ffn_residual_12 -> attn_residual_13
+	attn_residual_13 -> ffn_up_13
+	attn_residual_13 -> ffn_gate_13
+	ffn_up_13 -> ffn_down_13
+	ffn_gate_13 -> ffn_down_13
+	ffn_down_13 -> ffn_allreduce_13
+	ffn_allreduce_13 -> ffn_residual_13
+	attn_residual_13 -> ffn_residual_13
+	ffn_residual_13 -> mha_q_14
+	ffn_residual_13 -> mha_k_14
+	ffn_residual_13 -> mha_v_14
+	mha_q_14 -> attn_score_14
+	mha_k_14 -> attn_score_14
+	attn_v_14 -> attn_out_14
+	attn_score_14 -> attn_out_14
+	attn_out_14 -> attn_allreduce_14
+	attn_allreduce_14 -> attn_residual_14
+	ffn_residual_13 -> attn_residual_14
+	attn_residual_14 -> ffn_up_14
+	attn_residual_14 -> ffn_gate_14
+	ffn_up_14 -> ffn_down_14
+	ffn_gate_14 -> ffn_down_14
+	ffn_down_14 -> ffn_allreduce_14
+	ffn_allreduce_14 -> ffn_residual_14
+	attn_residual_14 -> ffn_residual_14
+	ffn_residual_14 -> mha_q_15
+	ffn_residual_14 -> mha_k_15
+	ffn_residual_14 -> mha_v_15
+	mha_q_15 -> attn_score_15
+	mha_k_15 -> attn_score_15
+	attn_v_15 -> attn_out_15
+	attn_score_15 -> attn_out_15
+	attn_out_15 -> attn_allreduce_15
+	attn_allreduce_15 -> attn_residual_15
+	ffn_residual_14 -> attn_residual_15
+	attn_residual_15 -> ffn_up_15
+	attn_residual_15 -> ffn_gate_15
+	ffn_up_15 -> ffn_down_15
+	ffn_gate_15 -> ffn_down_15
+	ffn_down_15 -> ffn_allreduce_15
+	ffn_allreduce_15 -> ffn_residual_15
+	attn_residual_15 -> ffn_residual_15
+	ffn_residual_15 -> output
+}

@@ -1,0 +1,49 @@
+{
+  "baseline_deployment": {
+    "dag_file": "../outputs/2025-11-21-15-21-34/baseline_dag.dot",
+    "image_file": "../outputs/2025-11-21-15-21-34/baseline_dag.svg",
+    "description": "Baseline model with Tensor Parallelism (TP=8) and Pipeline Parallelism (PP=2) across 16 GPUs",
+    "configuration": {
+      "strategy": "tensor_pipeline_parallelism",
+      "tensor_parallel_size": 8,
+      "pipeline_parallel_size": 2,
+      "total_devices": 16,
+      "layers_per_stage": 8,
+      "devices_per_stage": "0-7, 8-15"
+    }
+  },
+  "proposed_deployment": {
+    "dag_file": "../outputs/2025-11-21-15-21-34/proposed_dag.dot",
+    "image_file": "../outputs/2025-11-21-15-21-34/proposed_dag.svg",
+    "description": "Proposed layer-wise deployment with 1 layer per GPU across 16 GPUs",
+    "configuration": {
+      "strategy": "layerwise_cache_partitioning",
+      "layers_per_device": 1,
+      "total_devices": 16,
+      "device_assignment": "sequential",
+      "cache_utilization": "18.2%"
+    }
+  },
+  "verification": {
+    "baseline_dag": {
+      "total_nodes": 81,
+      "has_cycle": false,
+      "pipeline_stages": 2,
+      "tensor_parallel_groups": 2,
+      "communication_nodes": ["pipeline_comm_0", "all_reduce_ops"]
+    },
+    "proposed_dag": {
+      "total_nodes": 161,
+      "has_cycle": false,
+      "layer_partitions": 16,
+      "communication_nodes": ["comm_0" to "comm_14"],
+      "gpu_load_balancing": "1 layer per GPU"
+    }
+  },
+  "dimensional_analysis": {
+    "input_shape": "[batch=128, seq=10000, hidden=4096]",
+    "attention_shape": "[batch=128, seq=10000, heads=32, d_k=128]",
+    "ffn_shape": "[batch=128, seq=10000, ffn=16384]",
+    "output_shape": "[batch=128, seq=10000, vocab_size=128256]"
+  }
+}

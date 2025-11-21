@@ -1,0 +1,1313 @@
+// Proposed Layer-wise Deployment (16 GPUs)
+digraph {
+	fontname=Arial rankdir=TB size="25,20"
+	subgraph cluster_legend {
+		color=gray label=Legend style=dashed
+		legend_compute [label=Computation color=lightblue shape=rectangle style=filled]
+		legend_comm [label=Communication color=lightgreen shape=ellipse style=filled]
+		legend_route [label="Routing/Aggregation" color=lightyellow shape=parallelogram style=filled]
+		legend_split [label=Split color=orange shape=parallelogram style=filled]
+		legend_gather [label=Gather color=purple shape=parallelogram style=filled]
+	}
+	input [label="Input Embedding
+Input: [batch=128, seq=10000, hidden=4096]
+Device: GPU-0
+Layer: Embedding+Pre-process" color=lightyellow shape=parallelogram style=filled]
+	subgraph cluster_gpu0 {
+		color=color1 label="GPU-0 (Layer 0)" style=rounded
+		mha_q_0 [label="GPU0_Layer0_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		mha_k_0 [label="GPU0_Layer0_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		mha_v_0 [label="GPU0_Layer0_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		attn_score_0 [label="GPU0_Layer0_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		attn_out_0 [label="GPU0_Layer0_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		attn_residual_0 [label="GPU0_Layer0_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-0" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_0 [label="GPU0_Layer0_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		ffn_up_0 [label="GPU0_Layer0_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		ffn_gate_0 [label="GPU0_Layer0_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		ffn_act_0 [label="GPU0_Layer0_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		ffn_down_0 [label="GPU0_Layer0_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+		ffn_residual_0 [label="GPU0_Layer0_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-0" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_0 [label="GPU0_Layer0_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-0" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu1 {
+		color=color2 label="GPU-1 (Layer 1)" style=rounded
+		mha_q_1 [label="GPU1_Layer1_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		mha_k_1 [label="GPU1_Layer1_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		mha_v_1 [label="GPU1_Layer1_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		attn_score_1 [label="GPU1_Layer1_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		attn_out_1 [label="GPU1_Layer1_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		attn_residual_1 [label="GPU1_Layer1_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-1" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_1 [label="GPU1_Layer1_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		ffn_up_1 [label="GPU1_Layer1_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		ffn_gate_1 [label="GPU1_Layer1_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		ffn_act_1 [label="GPU1_Layer1_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		ffn_down_1 [label="GPU1_Layer1_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+		ffn_residual_1 [label="GPU1_Layer1_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-1" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_1 [label="GPU1_Layer1_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-1" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu2 {
+		color=color3 label="GPU-2 (Layer 2)" style=rounded
+		mha_q_2 [label="GPU2_Layer2_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		mha_k_2 [label="GPU2_Layer2_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		mha_v_2 [label="GPU2_Layer2_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		attn_score_2 [label="GPU2_Layer2_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		attn_out_2 [label="GPU2_Layer2_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		attn_residual_2 [label="GPU2_Layer2_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-2" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_2 [label="GPU2_Layer2_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		ffn_up_2 [label="GPU2_Layer2_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		ffn_gate_2 [label="GPU2_Layer2_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		ffn_act_2 [label="GPU2_Layer2_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		ffn_down_2 [label="GPU2_Layer2_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+		ffn_residual_2 [label="GPU2_Layer2_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-2" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_2 [label="GPU2_Layer2_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-2" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu3 {
+		color=color4 label="GPU-3 (Layer 3)" style=rounded
+		mha_q_3 [label="GPU3_Layer3_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		mha_k_3 [label="GPU3_Layer3_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		mha_v_3 [label="GPU3_Layer3_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		attn_score_3 [label="GPU3_Layer3_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		attn_out_3 [label="GPU3_Layer3_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		attn_residual_3 [label="GPU3_Layer3_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-3" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_3 [label="GPU3_Layer3_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		ffn_up_3 [label="GPU3_Layer3_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		ffn_gate_3 [label="GPU3_Layer3_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		ffn_act_3 [label="GPU3_Layer3_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		ffn_down_3 [label="GPU3_Layer3_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+		ffn_residual_3 [label="GPU3_Layer3_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-3" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_3 [label="GPU3_Layer3_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-3" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu4 {
+		color=color5 label="GPU-4 (Layer 4)" style=rounded
+		mha_q_4 [label="GPU4_Layer4_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		mha_k_4 [label="GPU4_Layer4_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		mha_v_4 [label="GPU4_Layer4_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		attn_score_4 [label="GPU4_Layer4_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		attn_out_4 [label="GPU4_Layer4_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		attn_residual_4 [label="GPU4_Layer4_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-4" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_4 [label="GPU4_Layer4_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		ffn_up_4 [label="GPU4_Layer4_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		ffn_gate_4 [label="GPU4_Layer4_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		ffn_act_4 [label="GPU4_Layer4_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		ffn_down_4 [label="GPU4_Layer4_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+		ffn_residual_4 [label="GPU4_Layer4_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-4" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_4 [label="GPU4_Layer4_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-4" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu5 {
+		color=color6 label="GPU-5 (Layer 5)" style=rounded
+		mha_q_5 [label="GPU5_Layer5_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		mha_k_5 [label="GPU5_Layer5_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		mha_v_5 [label="GPU5_Layer5_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		attn_score_5 [label="GPU5_Layer5_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		attn_out_5 [label="GPU5_Layer5_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		attn_residual_5 [label="GPU5_Layer5_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-5" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_5 [label="GPU5_Layer5_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		ffn_up_5 [label="GPU5_Layer5_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		ffn_gate_5 [label="GPU5_Layer5_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		ffn_act_5 [label="GPU5_Layer5_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		ffn_down_5 [label="GPU5_Layer5_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+		ffn_residual_5 [label="GPU5_Layer5_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-5" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_5 [label="GPU5_Layer5_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-5" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu6 {
+		color=color7 label="GPU-6 (Layer 6)" style=rounded
+		mha_q_6 [label="GPU6_Layer6_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		mha_k_6 [label="GPU6_Layer6_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		mha_v_6 [label="GPU6_Layer6_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		attn_score_6 [label="GPU6_Layer6_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		attn_out_6 [label="GPU6_Layer6_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		attn_residual_6 [label="GPU6_Layer6_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-6" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_6 [label="GPU6_Layer6_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		ffn_up_6 [label="GPU6_Layer6_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		ffn_gate_6 [label="GPU6_Layer6_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		ffn_act_6 [label="GPU6_Layer6_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		ffn_down_6 [label="GPU6_Layer6_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+		ffn_residual_6 [label="GPU6_Layer6_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-6" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_6 [label="GPU6_Layer6_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-6" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu7 {
+		color=color8 label="GPU-7 (Layer 7)" style=rounded
+		mha_q_7 [label="GPU7_Layer7_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		mha_k_7 [label="GPU7_Layer7_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		mha_v_7 [label="GPU7_Layer7_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		attn_score_7 [label="GPU7_Layer7_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		attn_out_7 [label="GPU7_Layer7_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		attn_residual_7 [label="GPU7_Layer7_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-7" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_7 [label="GPU7_Layer7_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		ffn_up_7 [label="GPU7_Layer7_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		ffn_gate_7 [label="GPU7_Layer7_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		ffn_act_7 [label="GPU7_Layer7_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		ffn_down_7 [label="GPU7_Layer7_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+		ffn_residual_7 [label="GPU7_Layer7_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-7" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_7 [label="GPU7_Layer7_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-7" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu8 {
+		color=color1 label="GPU-8 (Layer 8)" style=rounded
+		mha_q_8 [label="GPU8_Layer8_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		mha_k_8 [label="GPU8_Layer8_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		mha_v_8 [label="GPU8_Layer8_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		attn_score_8 [label="GPU8_Layer8_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		attn_out_8 [label="GPU8_Layer8_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		attn_residual_8 [label="GPU8_Layer8_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-8" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_8 [label="GPU8_Layer8_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		ffn_up_8 [label="GPU8_Layer8_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		ffn_gate_8 [label="GPU8_Layer8_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		ffn_act_8 [label="GPU8_Layer8_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		ffn_down_8 [label="GPU8_Layer8_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+		ffn_residual_8 [label="GPU8_Layer8_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-8" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_8 [label="GPU8_Layer8_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-8" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu9 {
+		color=color2 label="GPU-9 (Layer 9)" style=rounded
+		mha_q_9 [label="GPU9_Layer9_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		mha_k_9 [label="GPU9_Layer9_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		mha_v_9 [label="GPU9_Layer9_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		attn_score_9 [label="GPU9_Layer9_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		attn_out_9 [label="GPU9_Layer9_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		attn_residual_9 [label="GPU9_Layer9_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-9" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_9 [label="GPU9_Layer9_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		ffn_up_9 [label="GPU9_Layer9_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		ffn_gate_9 [label="GPU9_Layer9_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		ffn_act_9 [label="GPU9_Layer9_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		ffn_down_9 [label="GPU9_Layer9_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+		ffn_residual_9 [label="GPU9_Layer9_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-9" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_9 [label="GPU9_Layer9_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-9" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu10 {
+		color=color3 label="GPU-10 (Layer 10)" style=rounded
+		mha_q_10 [label="GPU10_Layer10_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		mha_k_10 [label="GPU10_Layer10_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		mha_v_10 [label="GPU10_Layer10_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		attn_score_10 [label="GPU10_Layer10_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		attn_out_10 [label="GPU10_Layer10_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		attn_residual_10 [label="GPU10_Layer10_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-10" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_10 [label="GPU10_Layer10_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		ffn_up_10 [label="GPU10_Layer10_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		ffn_gate_10 [label="GPU10_Layer10_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		ffn_act_10 [label="GPU10_Layer10_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		ffn_down_10 [label="GPU10_Layer10_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+		ffn_residual_10 [label="GPU10_Layer10_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-10" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_10 [label="GPU10_Layer10_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-10" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu11 {
+		color=color4 label="GPU-11 (Layer 11)" style=rounded
+		mha_q_11 [label="GPU11_Layer11_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		mha_k_11 [label="GPU11_Layer11_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		mha_v_11 [label="GPU11_Layer11_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		attn_score_11 [label="GPU11_Layer11_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		attn_out_11 [label="GPU11_Layer11_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		attn_residual_11 [label="GPU11_Layer11_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-11" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_11 [label="GPU11_Layer11_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		ffn_up_11 [label="GPU11_Layer11_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		ffn_gate_11 [label="GPU11_Layer11_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		ffn_act_11 [label="GPU11_Layer11_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		ffn_down_11 [label="GPU11_Layer11_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+		ffn_residual_11 [label="GPU11_Layer11_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-11" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_11 [label="GPU11_Layer11_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-11" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu12 {
+		color=color5 label="GPU-12 (Layer 12)" style=rounded
+		mha_q_12 [label="GPU12_Layer12_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		mha_k_12 [label="GPU12_Layer12_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		mha_v_12 [label="GPU12_Layer12_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		attn_score_12 [label="GPU12_Layer12_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		attn_out_12 [label="GPU12_Layer12_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		attn_residual_12 [label="GPU12_Layer12_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-12" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_12 [label="GPU12_Layer12_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		ffn_up_12 [label="GPU12_Layer12_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		ffn_gate_12 [label="GPU12_Layer12_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		ffn_act_12 [label="GPU12_Layer12_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		ffn_down_12 [label="GPU12_Layer12_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+		ffn_residual_12 [label="GPU12_Layer12_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-12" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_12 [label="GPU12_Layer12_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-12" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu13 {
+		color=color6 label="GPU-13 (Layer 13)" style=rounded
+		mha_q_13 [label="GPU13_Layer13_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		mha_k_13 [label="GPU13_Layer13_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		mha_v_13 [label="GPU13_Layer13_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		attn_score_13 [label="GPU13_Layer13_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		attn_out_13 [label="GPU13_Layer13_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		attn_residual_13 [label="GPU13_Layer13_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-13" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_13 [label="GPU13_Layer13_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		ffn_up_13 [label="GPU13_Layer13_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		ffn_gate_13 [label="GPU13_Layer13_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		ffn_act_13 [label="GPU13_Layer13_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		ffn_down_13 [label="GPU13_Layer13_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+		ffn_residual_13 [label="GPU13_Layer13_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-13" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_13 [label="GPU13_Layer13_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-13" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu14 {
+		color=color7 label="GPU-14 (Layer 14)" style=rounded
+		mha_q_14 [label="GPU14_Layer14_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		mha_k_14 [label="GPU14_Layer14_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		mha_v_14 [label="GPU14_Layer14_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		attn_score_14 [label="GPU14_Layer14_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		attn_out_14 [label="GPU14_Layer14_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		attn_residual_14 [label="GPU14_Layer14_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-14" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_14 [label="GPU14_Layer14_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		ffn_up_14 [label="GPU14_Layer14_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		ffn_gate_14 [label="GPU14_Layer14_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		ffn_act_14 [label="GPU14_Layer14_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		ffn_down_14 [label="GPU14_Layer14_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+		ffn_residual_14 [label="GPU14_Layer14_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-14" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_14 [label="GPU14_Layer14_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-14" color=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_gpu15 {
+		color=color8 label="GPU-15 (Layer 15)" style=rounded
+		mha_q_15 [label="GPU15_Layer15_MHA_Q
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		mha_k_15 [label="GPU15_Layer15_MHA_K
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		mha_v_15 [label="GPU15_Layer15_MHA_V
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, heads=32, d_k=128]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		attn_score_15 [label="GPU15_Layer15_Attn_Score
+Input1: [batch=128, seq=10000, heads=32, d_k=128]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, heads=32, seq=10000]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		attn_out_15 [label="GPU15_Layer15_Attn_Out
+Input1: [batch=128, seq=10000, heads=32, seq=10000]
+Input2: [batch=128, seq=10000, heads=32, d_k=128]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		attn_residual_15 [label="GPU15_Layer15_Attn_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-15" color=lightyellow shape=parallelogram style=filled]
+		layernorm1_15 [label="GPU15_Layer15_LayerNorm1
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		ffn_up_15 [label="GPU15_Layer15_FFN_Up
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		ffn_gate_15 [label="GPU15_Layer15_FFN_Gate
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		ffn_act_15 [label="GPU15_Layer15_FFN_Act
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, ffn=16384]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		ffn_down_15 [label="GPU15_Layer15_FFN_Down
+Input: [batch=128, seq=10000, ffn=16384]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+		ffn_residual_15 [label="GPU15_Layer15_FFN_Residual
+Input1: [batch=128, seq=10000, hidden=4096]
+Input2: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-15" color=lightyellow shape=parallelogram style=filled]
+		layernorm2_15 [label="GPU15_Layer15_LayerNorm2
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, hidden=4096]
+Device: GPU-15" color=lightblue shape=rectangle style=filled]
+	}
+	comm_0 [label="GPU0_to_GPU1
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_1 [label="GPU1_to_GPU2
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_2 [label="GPU2_to_GPU3
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_3 [label="GPU3_to_GPU4
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_4 [label="GPU4_to_GPU5
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_5 [label="GPU5_to_GPU6
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_6 [label="GPU6_to_GPU7
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_7 [label="GPU7_to_GPU8
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_8 [label="GPU8_to_GPU9
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_9 [label="GPU9_to_GPU10
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_10 [label="GPU10_to_GPU11
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_11 [label="GPU11_to_GPU12
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_12 [label="GPU12_to_GPU13
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_13 [label="GPU13_to_GPU14
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	comm_14 [label="GPU14_to_GPU15
+Transfer: [batch=128, seq=10000, hidden=4096]
+Bandwidth: NVLink 900GB/s" color=lightgreen shape=ellipse style=filled]
+	output [label="Final Output Projection
+Input: [batch=128, seq=10000, hidden=4096]
+Output: [batch=128, seq=10000, vocab_size=128256]
+Device: GPU-15" color=purple shape=parallelogram style=filled]
+	input -> mha_q_0
+	input -> mha_k_0
+	input -> mha_v_0
+	mha_q_0 -> attn_score_0
+	mha_k_0 -> attn_score_0
+	attn_score_0 -> attn_out_0
+	mha_v_0 -> attn_out_0
+	attn_out_0 -> attn_residual_0
+	input -> attn_residual_0
+	attn_residual_0 -> layernorm1_0
+	layernorm1_0 -> ffn_up_0
+	layernorm1_0 -> ffn_gate_0
+	ffn_up_0 -> ffn_act_0
+	ffn_gate_0 -> ffn_act_0
+	ffn_act_0 -> ffn_down_0
+	ffn_down_0 -> ffn_residual_0
+	layernorm1_0 -> ffn_residual_0
+	ffn_residual_0 -> layernorm2_0
+	layernorm2_0 -> comm_0
+	comm_0 -> mha_q_1
+	comm_0 -> mha_k_1
+	comm_0 -> mha_v_1
+	mha_q_1 -> attn_score_1
+	mha_k_1 -> attn_score_1
+	attn_score_1 -> attn_out_1
+	mha_v_1 -> attn_out_1
+	attn_out_1 -> attn_residual_1
+	comm_0 -> attn_residual_1
+	attn_residual_1 -> layernorm1_1
+	layernorm1_1 -> ffn_up_1
+	layernorm1_1 -> ffn_gate_1
+	ffn_up_1 -> ffn_act_1
+	ffn_gate_1 -> ffn_act_1
+	ffn_act_1 -> ffn_down_1
+	ffn_down_1 -> ffn_residual_1
+	layernorm1_1 -> ffn_residual_1
+	ffn_residual_1 -> layernorm2_1
+	layernorm2_1 -> comm_1
+	comm_1 -> mha_q_2
+	comm_1 -> mha_k_2
+	comm_1 -> mha_v_2
+	mha_q_2 -> attn_score_2
+	mha_k_2 -> attn_score_2
+	attn_score_2 -> attn_out_2
+	mha_v_2 -> attn_out_2
+	attn_out_2 -> attn_residual_2
+	comm_1 -> attn_residual_2
+	attn_residual_2 -> layernorm1_2
+	layernorm1_2 -> ffn_up_2
+	layernorm1_2 -> ffn_gate_2
+	ffn_up_2 -> ffn_act_2
+	ffn_gate_2 -> ffn_act_2
+	ffn_act_2 -> ffn_down_2
+	ffn_down_2 -> ffn_residual_2
+	layernorm1_2 -> ffn_residual_2
+	ffn_residual_2 -> layernorm2_2
+	layernorm2_2 -> comm_2
+	comm_2 -> mha_q_3
+	comm_2 -> mha_k_3
+	comm_2 -> mha_v_3
+	mha_q_3 -> attn_score_3
+	mha_k_3 -> attn_score_3
+	attn_score_3 -> attn_out_3
+	mha_v_3 -> attn_out_3
+	attn_out_3 -> attn_residual_3
+	comm_2 -> attn_residual_3
+	attn_residual_3 -> layernorm1_3
+	layernorm1_3 -> ffn_up_3
+	layernorm1_3 -> ffn_gate_3
+	ffn_up_3 -> ffn_act_3
+	ffn_gate_3 -> ffn_act_3
+	ffn_act_3 -> ffn_down_3
+	ffn_down_3 -> ffn_residual_3
+	layernorm1_3 -> ffn_residual_3
+	ffn_residual_3 -> layernorm2_3
+	layernorm2_3 -> comm_3
+	comm_3 -> mha_q_4
+	comm_3 -> mha_k_4
+	comm_3 -> mha_v_4
+	mha_q_4 -> attn_score_4
+	mha_k_4 -> attn_score_4
+	attn_score_4 -> attn_out_4
+	mha_v_4 -> attn_out_4
+	attn_out_4 -> attn_residual_4
+	comm_3 -> attn_residual_4
+	attn_residual_4 -> layernorm1_4
+	layernorm1_4 -> ffn_up_4
+	layernorm1_4 -> ffn_gate_4
+	ffn_up_4 -> ffn_act_4
+	ffn_gate_4 -> ffn_act_4
+	ffn_act_4 -> ffn_down_4
+	ffn_down_4 -> ffn_residual_4
+	layernorm1_4 -> ffn_residual_4
+	ffn_residual_4 -> layernorm2_4
+	layernorm2_4 -> comm_4
+	comm_4 -> mha_q_5
+	comm_4 -> mha_k_5
+	comm_4 -> mha_v_5
+	mha_q_5 -> attn_score_5
+	mha_k_5 -> attn_score_5
+	attn_score_5 -> attn_out_5
+	mha_v_5 -> attn_out_5
+	attn_out_5 -> attn_residual_5
+	comm_4 -> attn_residual_5
+	attn_residual_5 -> layernorm1_5
+	layernorm1_5 -> ffn_up_5
+	layernorm1_5 -> ffn_gate_5
+	ffn_up_5 -> ffn_act_5
+	ffn_gate_5 -> ffn_act_5
+	ffn_act_5 -> ffn_down_5
+	ffn_down_5 -> ffn_residual_5
+	layernorm1_5 -> ffn_residual_5
+	ffn_residual_5 -> layernorm2_5
+	layernorm2_5 -> comm_5
+	comm_5 -> mha_q_6
+	comm_5 -> mha_k_6
+	comm_5 -> mha_v_6
+	mha_q_6 -> attn_score_6
+	mha_k_6 -> attn_score_6
+	attn_score_6 -> attn_out_6
+	mha_v_6 -> attn_out_6
+	attn_out_6 -> attn_residual_6
+	comm_5 -> attn_residual_6
+	attn_residual_6 -> layernorm1_6
+	layernorm1_6 -> ffn_up_6
+	layernorm1_6 -> ffn_gate_6
+	ffn_up_6 -> ffn_act_6
+	ffn_gate_6 -> ffn_act_6
+	ffn_act_6 -> ffn_down_6
+	ffn_down_6 -> ffn_residual_6
+	layernorm1_6 -> ffn_residual_6
+	ffn_residual_6 -> layernorm2_6
+	layernorm2_6 -> comm_6
+	comm_6 -> mha_q_7
+	comm_6 -> mha_k_7
+	comm_6 -> mha_v_7
+	mha_q_7 -> attn_score_7
+	mha_k_7 -> attn_score_7
+	attn_score_7 -> attn_out_7
+	mha_v_7 -> attn_out_7
+	attn_out_7 -> attn_residual_7
+	comm_6 -> attn_residual_7
+	attn_residual_7 -> layernorm1_7
+	layernorm1_7 -> ffn_up_7
+	layernorm1_7 -> ffn_gate_7
+	ffn_up_7 -> ffn_act_7
+	ffn_gate_7 -> ffn_act_7
+	ffn_act_7 -> ffn_down_7
+	ffn_down_7 -> ffn_residual_7
+	layernorm1_7 -> ffn_residual_7
+	ffn_residual_7 -> layernorm2_7
+	layernorm2_7 -> comm_7
+	comm_7 -> mha_q_8
+	comm_7 -> mha_k_8
+	comm_7 -> mha_v_8
+	mha_q_8 -> attn_score_8
+	mha_k_8 -> attn_score_8
+	attn_score_8 -> attn_out_8
+	mha_v_8 -> attn_out_8
+	attn_out_8 -> attn_residual_8
+	comm_7 -> attn_residual_8
+	attn_residual_8 -> layernorm1_8
+	layernorm1_8 -> ffn_up_8
+	layernorm1_8 -> ffn_gate_8
+	ffn_up_8 -> ffn_act_8
+	ffn_gate_8 -> ffn_act_8
+	ffn_act_8 -> ffn_down_8
+	ffn_down_8 -> ffn_residual_8
+	layernorm1_8 -> ffn_residual_8
+	ffn_residual_8 -> layernorm2_8
+	layernorm2_8 -> comm_8
+	comm_8 -> mha_q_9
+	comm_8 -> mha_k_9
+	comm_8 -> mha_v_9
+	mha_q_9 -> attn_score_9
+	mha_k_9 -> attn_score_9
+	attn_score_9 -> attn_out_9
+	mha_v_9 -> attn_out_9
+	attn_out_9 -> attn_residual_9
+	comm_8 -> attn_residual_9
+	attn_residual_9 -> layernorm1_9
+	layernorm1_9 -> ffn_up_9
+	layernorm1_9 -> ffn_gate_9
+	ffn_up_9 -> ffn_act_9
+	ffn_gate_9 -> ffn_act_9
+	ffn_act_9 -> ffn_down_9
+	ffn_down_9 -> ffn_residual_9
+	layernorm1_9 -> ffn_residual_9
+	ffn_residual_9 -> layernorm2_9
+	layernorm2_9 -> comm_9
+	comm_9 -> mha_q_10
+	comm_9 -> mha_k_10
+	comm_9 -> mha_v_10
+	mha_q_10 -> attn_score_10
+	mha_k_10 -> attn_score_10
+	attn_score_10 -> attn_out_10
+	mha_v_10 -> attn_out_10
+	attn_out_10 -> attn_residual_10
+	comm_9 -> attn_residual_10
+	attn_residual_10 -> layernorm1_10
+	layernorm1_10 -> ffn_up_10
+	layernorm1_10 -> ffn_gate_10
+	ffn_up_10 -> ffn_act_10
+	ffn_gate_10 -> ffn_act_10
+	ffn_act_10 -> ffn_down_10
+	ffn_down_10 -> ffn_residual_10
+	layernorm1_10 -> ffn_residual_10
+	ffn_residual_10 -> layernorm2_10
+	layernorm2_10 -> comm_10
+	comm_10 -> mha_q_11
+	comm_10 -> mha_k_11
+	comm_10 -> mha_v_11
+	mha_q_11 -> attn_score_11
+	mha_k_11 -> attn_score_11
+	attn_score_11 -> attn_out_11
+	mha_v_11 -> attn_out_11
+	attn_out_11 -> attn_residual_11
+	comm_10 -> attn_residual_11
+	attn_residual_11 -> layernorm1_11
+	layernorm1_11 -> ffn_up_11
+	layernorm1_11 -> ffn_gate_11
+	ffn_up_11 -> ffn_act_11
+	ffn_gate_11 -> ffn_act_11
+	ffn_act_11 -> ffn_down_11
+	ffn_down_11 -> ffn_residual_11
+	layernorm1_11 -> ffn_residual_11
+	ffn_residual_11 -> layernorm2_11
+	layernorm2_11 -> comm_11
+	comm_11 -> mha_q_12
+	comm_11 -> mha_k_12
+	comm_11 -> mha_v_12
+	mha_q_12 -> attn_score_12
+	mha_k_12 -> attn_score_12
+	attn_score_12 -> attn_out_12
+	mha_v_12 -> attn_out_12
+	attn_out_12 -> attn_residual_12
+	comm_11 -> attn_residual_12
+	attn_residual_12 -> layernorm1_12
+	layernorm1_12 -> ffn_up_12
+	layernorm1_12 -> ffn_gate_12
+	ffn_up_12 -> ffn_act_12
+	ffn_gate_12 -> ffn_act_12
+	ffn_act_12 -> ffn_down_12
+	ffn_down_12 -> ffn_residual_12
+	layernorm1_12 -> ffn_residual_12
+	ffn_residual_12 -> layernorm2_12
+	layernorm2_12 -> comm_12
+	comm_12 -> mha_q_13
+	comm_12 -> mha_k_13
+	comm_12 -> mha_v_13
+	mha_q_13 -> attn_score_13
+	mha_k_13 -> attn_score_13
+	attn_score_13 -> attn_out_13
+	mha_v_13 -> attn_out_13
+	attn_out_13 -> attn_residual_13
+	comm_12 -> attn_residual_13
+	attn_residual_13 -> layernorm1_13
+	layernorm1_13 -> ffn_up_13
+	layernorm1_13 -> ffn_gate_13
+	ffn_up_13 -> ffn_act_13
+	ffn_gate_13 -> ffn_act_13
+	ffn_act_13 -> ffn_down_13
+	ffn_down_13 -> ffn_residual_13
+	layernorm1_13 -> ffn_residual_13
+	ffn_residual_13 -> layernorm2_13
+	layernorm2_13 -> comm_13
+	comm_13 -> mha_q_14
+	comm_13 -> mha_k_14
+	comm_13 -> mha_v_14
+	mha_q_14 -> attn_score_14
+	mha_k_14 -> attn_score_14
+	attn_score_14 -> attn_out_14
+	mha_v_14 -> attn_out_14
+	attn_out_14 -> attn_residual_14
+	comm_13 -> attn_residual_14
+	attn_residual_14 -> layernorm1_14
+	layernorm1_14 -> ffn_up_14
+	layernorm1_14 -> ffn_gate_14
+	ffn_up_14 -> ffn_act_14
+	ffn_gate_14 -> ffn_act_14
+	ffn_act_14 -> ffn_down_14
+	ffn_down_14 -> ffn_residual_14
+	layernorm1_14 -> ffn_residual_14
+	ffn_residual_14 -> layernorm2_14
+	layernorm2_14 -> comm_14
+	comm_14 -> mha_q_15
+	comm_14 -> mha_k_15
+	comm_14 -> mha_v_15
+	mha_q_15 -> attn_score_15
+	mha_k_15 -> attn_score_15
+	attn_score_15 -> attn_out_15
+	mha_v_15 -> attn_out_15
+	attn_out_15 -> attn_residual_15
+	comm_14 -> attn_residual_15
+	attn_residual_15 -> layernorm1_15
+	layernorm1_15 -> ffn_up_15
+	layernorm1_15 -> ffn_gate_15
+	ffn_up_15 -> ffn_act_15
+	ffn_gate_15 -> ffn_act_15
+	ffn_act_15 -> ffn_down_15
+	ffn_down_15 -> ffn_residual_15
+	layernorm1_15 -> ffn_residual_15
+	ffn_residual_15 -> layernorm2_15
+	layernorm2_15 -> output
+}
