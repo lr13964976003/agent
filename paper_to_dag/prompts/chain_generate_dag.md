@@ -36,7 +36,7 @@ The aggregation and split of data need to be represented by nodes. <<<显示数�
 
 Ensure no loss of dimensional information, modules structure, and the model's input and output. Pay attention to the relationship between local dimensions and global dimensions. <<<保障维度正确>>>
 
-Omit repeated modules in the DAG graph and indicate the number of repetitions. <<<省略DAG图中重复的模块，并标明重复次数>>>
+Omit the repeated layers in the DAG diagram, retaining only the representative ones, and the number of repetitions needs to be labeled. <<<省略DAG图中重复的层，只保留具有代表性的层，重复次数需要标定>>>
 
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
@@ -119,6 +119,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
