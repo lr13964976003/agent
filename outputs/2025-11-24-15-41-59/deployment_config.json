@@ -1,0 +1,456 @@
+{
+  "deployment_configuration": {
+    "models": {
+      "baseline_model": {
+        "name": "Dense Transformer Baseline",
+        "architecture": "Dense Transformer",
+        "layers": 16,
+        "parallel_strategy": {
+          "type": "Tensor_Parallelism_Pipeline_Parallelism",
+          "tensor_parallelism_degree": 8,
+          "pipeline_parallelism_degree": 2,
+          "total_devices": 16
+        },
+        "parameters": {
+          "batch_size": 128,
+          "sequence_length": 100000,
+          "hidden_size": 4096,
+          "attention_heads": 32,
+          "head_dimension": 128,
+          "mlp_hidden_size": 16384,
+          "precision": "bf16"
+        },
+        "device_mapping": {
+          "pipeline_stage_0": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_parallel_group": "0-7",
+            "layers": [0, 1, 2, 3, 4, 5, 6, 7]
+          },
+          "pipeline_stage_1": {
+            "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_parallel_group": "8-15",
+            "layers": [8, 9, 10, 11, 12, 13, 14, 15]
+          }
+        }
+      },
+      "experimental_model": {
+        "name": "Dense Transformer RA+SP",
+        "architecture": "Dense Transformer",
+        "layers": 16,
+        "parallel_strategy": {
+          "type": "Ring_Attention_Sequence_Parallelism",
+          "sequence_parallelism_degree": 16,
+          "ring_attention_devices": 16,
+          "total_devices": 16
+        },
+        "parameters": {
+          "batch_size": 128,
+          "sequence_length": 100000,
+          "sequence_per_device": 6250,
+          "hidden_size": 4096,
+          "attention_heads": 32,
+          "head_dimension": 128,
+          "mlp_hidden_size": 16384,
+          "precision": "bf16",
+          "memory_reduction_factor": 16
+        },
+        "modules": {
+          "attention_module": {
+            "input_projection": {
+              "type": "ColumnParallelLinear",
+              "input_size": 4096,
+              "output_size": 12288,
+              "devices": "all_16"
+            },
+            "multi_head_attention": {
+              "type": "RingAttention",
+              "sequence_parallel": true,
+              "local_sequence_length": 6250,
+              "global_sequence_length": 100000,
+              "num_heads": 32,
+              "head_dim": 128,
+              "communication_topology": "ring"
+            },
+            "output_projection": {
+              "type": "RowParallelLinear",
+              "input_size": 4096,
+              "output_size": 4096,
+              "devices": "all_16"
+            }
+          },
+          "mlp_module": {
+            "first_linear": {
+              "type": "ColumnParallelLinear",
+              "input_size": 4096,
+              "output_size": 16384,
+              "devices": "all_16"
+            },
+            "activation": {
+              "type": "GELU"
+            },
+            "second_linear": {
+              "type": "RowParallelLinear",
+              "input_size": 16384,
+              "output_size": 4096,
+              "devices": "all_16"
+            }
+          },
+          "layer_norm": {
+            "type": "LayerNorm",
+            "normalized_shape": 4096,
+            "devices": "all_16"
+          }
+        },
+        "device_mapping": {
+          "device_0": {
+            "device_id": 0,
+            "sequence_range": [0, 6249],
+            "modules": {
+              "attention": {
+                "local_q": "Q_0[0:6249]",
+                "local_k": "K_0[0:6249]",
+                "local_v": "V_0[0:6249]",
+                "ring_communication": {
+                  "send_to": 1,
+                  "recv_from": 15,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "0-2048 of 16384",
+                "row_parallel_slice": "0-2048 of 16384"
+              }
+            }
+          },
+          "device_1": {
+            "device_id": 1,
+            "sequence_range": [6250, 12499],
+            "modules": {
+              "attention": {
+                "local_q": "Q_1[6250:12499]",
+                "local_k": "K_1[6250:12499]",
+                "local_v": "V_1[6250:12499]",
+                "ring_communication": {
+                  "send_to": 2,
+                  "recv_from": 0,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "2048-4096 of 16384",
+                "row_parallel_slice": "2048-4096 of 16384"
+              }
+            }
+          },
+          "device_2": {
+            "device_id": 2,
+            "sequence_range": [12500, 18749],
+            "modules": {
+              "attention": {
+                "local_q": "Q_2[12500:18749]",
+                "local_k": "K_2[12500:18749]",
+                "local_v": "V_2[12500:18749]",
+                "ring_communication": {
+                  "send_to": 3,
+                  "recv_from": 1,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "4096-6144 of 16384",
+                "row_parallel_slice": "4096-6144 of 16384"
+              }
+            }
+          },
+          "device_3": {
+            "device_id": 3,
+            "sequence_range": [18750, 24999],
+            "modules": {
+              "attention": {
+                "local_q": "Q_3[18750:24999]",
+                "local_k": "K_3[18750:24999]",
+                "local_v": "V_3[18750:24999]",
+                "ring_communication": {
+                  "send_to": 4,
+                  "recv_from": 2,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "6144-8192 of 16384",
+                "row_parallel_slice": "6144-8192 of 16384"
+              }
+            }
+          },
+          "device_4": {
+            "device_id": 4,
+            "sequence_range": [25000, 31249],
+            "modules": {
+              "attention": {
+                "local_q": "Q_4[25000:31249]",
+                "local_k": "K_4[25000:31249]",
+                "local_v": "V_4[25000:31249]",
+                "ring_communication": {
+                  "send_to": 5,
+                  "recv_from": 3,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "8192-10240 of 16384",
+                "row_parallel_slice": "8192-10240 of 16384"
+              }
+            }
+          },
+          "device_5": {
+            "device_id": 5,
+            "sequence_range": [31250, 37499],
+            "modules": {
+              "attention": {
+                "local_q": "Q_5[31250:37499]",
+                "local_k": "K_5[31250:37499]",
+                "local_v": "V_5[31250:37499]",
+                "ring_communication": {
+                  "send_to": 6,
+                  "recv_from": 4,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "10240-12288 of 16384",
+                "row_parallel_slice": "10240-12288 of 16384"
+              }
+            }
+          },
+          "device_6": {
+            "device_id": 6,
+            "sequence_range": [37500, 43749],
+            "modules": {
+              "attention": {
+                "local_q": "Q_6[37500:43749]",
+                "local_k": "K_6[37500:43749]",
+                "local_v": "V_6[37500:43749]",
+                "ring_communication": {
+                  "send_to": 7,
+                  "recv_from": 5,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "12288-14336 of 16384",
+                "row_parallel_slice": "12288-14336 of 16384"
+              }
+            }
+          },
+          "device_7": {
+            "device_id": 7,
+            "sequence_range": [43750, 49999],
+            "modules": {
+              "attention": {
+                "local_q": "Q_7[43750:49999]",
+                "local_k": "K_7[43750:49999]",
+                "local_v": "V_7[43750:49999]",
+                "ring_communication": {
+                  "send_to": 8,
+                  "recv_from": 6,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "14336-16384 of 16384",
+                "row_parallel_slice": "14336-16384 of 16384"
+              }
+            }
+          },
+          "device_8": {
+            "device_id": 8,
+            "sequence_range": [50000, 56249],
+            "modules": {
+              "attention": {
+                "local_q": "Q_8[50000:56249]",
+                "local_k": "K_8[50000:56249]",
+                "local_v": "V_8[50000:56249]",
+                "ring_communication": {
+                  "send_to": 9,
+                  "recv_from": 7,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "0-2048 of 16384",
+                "row_parallel_slice": "0-2048 of 16384"
+              }
+            }
+          },
+          "device_9": {
+            "device_id": 9,
+            "sequence_range": [56250, 62499],
+            "modules": {
+              "attention": {
+                "local_q": "Q_9[56250:62499]",
+                "local_k": "K_9[56250:62499]",
+                "local_v": "V_9[56250:62499]",
+                "ring_communication": {
+                  "send_to": 10,
+                  "recv_from": 8,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "2048-4096 of 16384",
+                "row_parallel_slice": "2048-4096 of 16384"
+              }
+            }
+          },
+          "device_10": {
+            "device_id": 10,
+            "sequence_range": [62500, 68749],
+            "modules": {
+              "attention": {
+                "local_q": "Q_10[62500:68749]",
+                "local_k": "K_10[62500:68749]",
+                "local_v": "V_10[62500:68749]",
+                "ring_communication": {
+                  "send_to": 11,
+                  "recv_from": 9,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "4096-6144 of 16384",
+                "row_parallel_slice": "4096-6144 of 16384"
+              }
+            }
+          },
+          "device_11": {
+            "device_id": 11,
+            "sequence_range": [68750, 74999],
+            "modules": {
+              "attention": {
+                "local_q": "Q_11[68750:74999]",
+                "local_k": "K_11[68750:74999]",
+                "local_v": "V_11[68750:74999]",
+                "ring_communication": {
+                  "send_to": 12,
+                  "recv_from": 10,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "6144-8192 of 16384",
+                "row_parallel_slice": "6144-8192 of 16384"
+              }
+            }
+          },
+          "device_12": {
+            "device_id": 12,
+            "sequence_range": [75000, 81249],
+            "modules": {
+              "attention": {
+                "local_q": "Q_12[75000:81249]",
+                "local_k": "K_12[75000:81249]",
+                "local_v": "V_12[75000:81249]",
+                "ring_communication": {
+                  "send_to": 13,
+                  "recv_from": 11,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "8192-10240 of 16384",
+                "row_parallel_slice": "8192-10240 of 16384"
+              }
+            }
+          },
+          "device_13": {
+            "device_id": 13,
+            "sequence_range": [81250, 87499],
+            "modules": {
+              "attention": {
+                "local_q": "Q_13[81250:87499]",
+                "local_k": "K_13[81250:87499]",
+                "local_v": "V_13[81250:87499]",
+                "ring_communication": {
+                  "send_to": 14,
+                  "recv_from": 12,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "10240-12288 of 16384",
+                "row_parallel_slice": "10240-12288 of 16384"
+              }
+            }
+          },
+          "device_14": {
+            "device_id": 14,
+            "sequence_range": [87500, 93749],
+            "modules": {
+              "attention": {
+                "local_q": "Q_14[87500:93749]",
+                "local_k": "K_14[87500:93749]",
+                "local_v": "V_14[87500:93749]",
+                "ring_communication": {
+                  "send_to": 15,
+                  "recv_from": 13,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "12288-14336 of 16384",
+                "row_parallel_slice": "12288-14336 of 16384"
+              }
+            }
+          },
+          "device_15": {
+            "device_id": 15,
+            "sequence_range": [93750, 99999],
+            "modules": {
+              "attention": {
+                "local_q": "Q_15[93750:99999]",
+                "local_k": "K_15[93750:99999]",
+                "local_v": "V_15[93750:99999]",
+                "ring_communication": {
+                  "send_to": 0,
+                  "recv_from": 14,
+                  "buffer_size": "6250×128×4 bytes"
+                }
+              },
+              "mlp": {
+                "column_parallel_slice": "14336-16384 of 16384",
+                "row_parallel_slice": "14336-16384 of 16384"
+              }
+            }
+          }
+        }
+      }
+    },
+    "communication_details": {
+      "nccl_primitives": {
+        "send_recv": true,
+        "point_to_point": true,
+        "asynchronous": true
+      },
+      "buffer_sizes": {
+        "attention_kv_buffer": "6250×128×4 bytes = 3.2MB",
+        "activation_buffer": "6250×4096×2 bytes = 51.2MB"
+      },
+      "compute_overlap": true,
+      "precision": "bf16"
+    },
+    "performance_metrics": {
+      "baseline": {
+        "tps": "1.20M tokens/s",
+        "tpot": "0.85ms"
+      },
+      "experimental": {
+        "tps": "1.45M tokens/s",
+        "tpot": "0.70ms",
+        "improvement": {
+          "tps_increase": "20.8%",
+          "tpot_decrease": "17.6%"
+        }
+      }
+    }
+  }
+}
