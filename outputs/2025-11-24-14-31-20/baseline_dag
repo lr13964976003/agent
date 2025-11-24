@@ -1,0 +1,440 @@
+// Baseline Method - TP=8, PP=2, 8 Experts/GPU
+digraph {
+	rankdir=TB splines=ortho
+	input [label="Model Input\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightblue shape=box style=filled]
+	mha0 [label="MHA Layer 0\nTP=8 across 8 GPUs\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightcyan shape=rectangle style=filled]
+	input -> mha0
+	add1_0 [label="MHA Residual Add 0\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=yellow shape=rectangle style=filled]
+	mha0 -> add1_0
+	gate0 [label="Gate Layer 0\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, num_experts=16]" fillcolor=lightgreen shape=parallelogram style=filled]
+	add1_0 -> gate0
+	route0_gpu0 [label="Route to GPU 0\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate0 -> route0_gpu0
+	experts_gpu0_layer0 [label="8 Experts GPU 0\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route0_gpu0 -> experts_gpu0_layer0
+	agg0_gpu0 [label="Aggregate GPU 0\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu0_layer0 -> agg0_gpu0
+	subgraph cluster_gpu0 {
+		label="GPU 0 (8 experts)"
+		style=dashed
+	}
+	route0_gpu1 [label="Route to GPU 1\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate0 -> route0_gpu1
+	experts_gpu1_layer0 [label="8 Experts GPU 1\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route0_gpu1 -> experts_gpu1_layer0
+	agg0_gpu1 [label="Aggregate GPU 1\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu1_layer0 -> agg0_gpu1
+	subgraph cluster_gpu1 {
+		label="GPU 1 (8 experts)"
+		style=dashed
+	}
+	route0_gpu2 [label="Route to GPU 2\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate0 -> route0_gpu2
+	experts_gpu2_layer0 [label="8 Experts GPU 2\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route0_gpu2 -> experts_gpu2_layer0
+	agg0_gpu2 [label="Aggregate GPU 2\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu2_layer0 -> agg0_gpu2
+	subgraph cluster_gpu2 {
+		label="GPU 2 (8 experts)"
+		style=dashed
+	}
+	route0_gpu3 [label="Route to GPU 3\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate0 -> route0_gpu3
+	experts_gpu3_layer0 [label="8 Experts GPU 3\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route0_gpu3 -> experts_gpu3_layer0
+	agg0_gpu3 [label="Aggregate GPU 3\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu3_layer0 -> agg0_gpu3
+	subgraph cluster_gpu3 {
+		label="GPU 3 (8 experts)"
+		style=dashed
+	}
+	route0_gpu4 [label="Route to GPU 4\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate0 -> route0_gpu4
+	experts_gpu4_layer0 [label="8 Experts GPU 4\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route0_gpu4 -> experts_gpu4_layer0
+	agg0_gpu4 [label="Aggregate GPU 4\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu4_layer0 -> agg0_gpu4
+	subgraph cluster_gpu4 {
+		label="GPU 4 (8 experts)"
+		style=dashed
+	}
+	route0_gpu5 [label="Route to GPU 5\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate0 -> route0_gpu5
+	experts_gpu5_layer0 [label="8 Experts GPU 5\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route0_gpu5 -> experts_gpu5_layer0
+	agg0_gpu5 [label="Aggregate GPU 5\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu5_layer0 -> agg0_gpu5
+	subgraph cluster_gpu5 {
+		label="GPU 5 (8 experts)"
+		style=dashed
+	}
+	route0_gpu6 [label="Route to GPU 6\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate0 -> route0_gpu6
+	experts_gpu6_layer0 [label="8 Experts GPU 6\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route0_gpu6 -> experts_gpu6_layer0
+	agg0_gpu6 [label="Aggregate GPU 6\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu6_layer0 -> agg0_gpu6
+	subgraph cluster_gpu6 {
+		label="GPU 6 (8 experts)"
+		style=dashed
+	}
+	route0_gpu7 [label="Route to GPU 7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate0 -> route0_gpu7
+	experts_gpu7_layer0 [label="8 Experts GPU 7\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route0_gpu7 -> experts_gpu7_layer0
+	agg0_gpu7 [label="Aggregate GPU 7\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu7_layer0 -> agg0_gpu7
+	subgraph cluster_gpu7 {
+		label="GPU 7 (8 experts)"
+		style=dashed
+	}
+	moe_agg0 [label="MoE Final Aggregation 0\nInput: 16×[batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=gold shape=ellipse style=filled]
+	agg0_gpu0 -> moe_agg0
+	agg0_gpu1 -> moe_agg0
+	agg0_gpu2 -> moe_agg0
+	agg0_gpu3 -> moe_agg0
+	agg0_gpu4 -> moe_agg0
+	agg0_gpu5 -> moe_agg0
+	agg0_gpu6 -> moe_agg0
+	agg0_gpu7 -> moe_agg0
+	agg0_gpu8 -> moe_agg0
+	agg0_gpu9 -> moe_agg0
+	agg0_gpu10 -> moe_agg0
+	agg0_gpu11 -> moe_agg0
+	agg0_gpu12 -> moe_agg0
+	agg0_gpu13 -> moe_agg0
+	agg0_gpu14 -> moe_agg0
+	agg0_gpu15 -> moe_agg0
+	moe0 [label="MoE Residual Add 0\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=yellow shape=rectangle style=filled]
+	moe_agg0 -> moe0
+	add1_0 -> moe0
+	mha7 [label="MHA Layer 7\nTP=8 across 8 GPUs\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightcyan shape=rectangle style=filled]
+	moe6 -> mha7
+	add1_7 [label="MHA Residual Add 7\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=yellow shape=rectangle style=filled]
+	mha7 -> add1_7
+	gate7 [label="Gate Layer 7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, num_experts=16]" fillcolor=lightgreen shape=parallelogram style=filled]
+	add1_7 -> gate7
+	route7_gpu0 [label="Route to GPU 0\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate7 -> route7_gpu0
+	experts_gpu0_layer7 [label="8 Experts GPU 0\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route7_gpu0 -> experts_gpu0_layer7
+	agg7_gpu0 [label="Aggregate GPU 0\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu0_layer7 -> agg7_gpu0
+	subgraph cluster_gpu0 {
+		label="GPU 0 (8 experts)"
+		style=dashed
+	}
+	route7_gpu1 [label="Route to GPU 1\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate7 -> route7_gpu1
+	experts_gpu1_layer7 [label="8 Experts GPU 1\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route7_gpu1 -> experts_gpu1_layer7
+	agg7_gpu1 [label="Aggregate GPU 1\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu1_layer7 -> agg7_gpu1
+	subgraph cluster_gpu1 {
+		label="GPU 1 (8 experts)"
+		style=dashed
+	}
+	route7_gpu2 [label="Route to GPU 2\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate7 -> route7_gpu2
+	experts_gpu2_layer7 [label="8 Experts GPU 2\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route7_gpu2 -> experts_gpu2_layer7
+	agg7_gpu2 [label="Aggregate GPU 2\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu2_layer7 -> agg7_gpu2
+	subgraph cluster_gpu2 {
+		label="GPU 2 (8 experts)"
+		style=dashed
+	}
+	route7_gpu3 [label="Route to GPU 3\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate7 -> route7_gpu3
+	experts_gpu3_layer7 [label="8 Experts GPU 3\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route7_gpu3 -> experts_gpu3_layer7
+	agg7_gpu3 [label="Aggregate GPU 3\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu3_layer7 -> agg7_gpu3
+	subgraph cluster_gpu3 {
+		label="GPU 3 (8 experts)"
+		style=dashed
+	}
+	route7_gpu4 [label="Route to GPU 4\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate7 -> route7_gpu4
+	experts_gpu4_layer7 [label="8 Experts GPU 4\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route7_gpu4 -> experts_gpu4_layer7
+	agg7_gpu4 [label="Aggregate GPU 4\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu4_layer7 -> agg7_gpu4
+	subgraph cluster_gpu4 {
+		label="GPU 4 (8 experts)"
+		style=dashed
+	}
+	route7_gpu5 [label="Route to GPU 5\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate7 -> route7_gpu5
+	experts_gpu5_layer7 [label="8 Experts GPU 5\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route7_gpu5 -> experts_gpu5_layer7
+	agg7_gpu5 [label="Aggregate GPU 5\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu5_layer7 -> agg7_gpu5
+	subgraph cluster_gpu5 {
+		label="GPU 5 (8 experts)"
+		style=dashed
+	}
+	route7_gpu6 [label="Route to GPU 6\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate7 -> route7_gpu6
+	experts_gpu6_layer7 [label="8 Experts GPU 6\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route7_gpu6 -> experts_gpu6_layer7
+	agg7_gpu6 [label="Aggregate GPU 6\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu6_layer7 -> agg7_gpu6
+	subgraph cluster_gpu6 {
+		label="GPU 6 (8 experts)"
+		style=dashed
+	}
+	route7_gpu7 [label="Route to GPU 7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate7 -> route7_gpu7
+	experts_gpu7_layer7 [label="8 Experts GPU 7\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route7_gpu7 -> experts_gpu7_layer7
+	agg7_gpu7 [label="Aggregate GPU 7\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu7_layer7 -> agg7_gpu7
+	subgraph cluster_gpu7 {
+		label="GPU 7 (8 experts)"
+		style=dashed
+	}
+	moe_agg7 [label="MoE Final Aggregation 7\nInput: 16×[batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=gold shape=ellipse style=filled]
+	agg7_gpu0 -> moe_agg7
+	agg7_gpu1 -> moe_agg7
+	agg7_gpu2 -> moe_agg7
+	agg7_gpu3 -> moe_agg7
+	agg7_gpu4 -> moe_agg7
+	agg7_gpu5 -> moe_agg7
+	agg7_gpu6 -> moe_agg7
+	agg7_gpu7 -> moe_agg7
+	agg7_gpu8 -> moe_agg7
+	agg7_gpu9 -> moe_agg7
+	agg7_gpu10 -> moe_agg7
+	agg7_gpu11 -> moe_agg7
+	agg7_gpu12 -> moe_agg7
+	agg7_gpu13 -> moe_agg7
+	agg7_gpu14 -> moe_agg7
+	agg7_gpu15 -> moe_agg7
+	moe7 [label="MoE Residual Add 7\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=yellow shape=rectangle style=filled]
+	moe_agg7 -> moe7
+	add1_7 -> moe7
+	subgraph cluster_stage0 {
+		label="Pipeline Stage 0 (Layers 0-7)"
+		style=dotted
+	}
+	mha8 [label="MHA Layer 8\nTP=8 across 8 GPUs\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightcyan shape=rectangle style=filled]
+	moe7 -> mha8
+	add1_8 [label="MHA Residual Add 8\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=yellow shape=rectangle style=filled]
+	mha8 -> add1_8
+	gate8 [label="Gate Layer 8\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, num_experts=16]" fillcolor=lightgreen shape=parallelogram style=filled]
+	add1_8 -> gate8
+	route8_gpu8 [label="Route to GPU 8\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate8 -> route8_gpu8
+	experts_gpu8_layer8 [label="8 Experts GPU 8\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route8_gpu8 -> experts_gpu8_layer8
+	agg8_gpu8 [label="Aggregate GPU 8\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu8_layer8 -> agg8_gpu8
+	subgraph cluster_gpu8 {
+		label="GPU 8 (8 experts)"
+		style=dashed
+	}
+	route8_gpu9 [label="Route to GPU 9\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate8 -> route8_gpu9
+	experts_gpu9_layer8 [label="8 Experts GPU 9\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route8_gpu9 -> experts_gpu9_layer8
+	agg8_gpu9 [label="Aggregate GPU 9\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu9_layer8 -> agg8_gpu9
+	subgraph cluster_gpu9 {
+		label="GPU 9 (8 experts)"
+		style=dashed
+	}
+	route8_gpu10 [label="Route to GPU 10\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate8 -> route8_gpu10
+	experts_gpu10_layer8 [label="8 Experts GPU 10\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route8_gpu10 -> experts_gpu10_layer8
+	agg8_gpu10 [label="Aggregate GPU 10\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu10_layer8 -> agg8_gpu10
+	subgraph cluster_gpu10 {
+		label="GPU 10 (8 experts)"
+		style=dashed
+	}
+	route8_gpu11 [label="Route to GPU 11\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate8 -> route8_gpu11
+	experts_gpu11_layer8 [label="8 Experts GPU 11\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route8_gpu11 -> experts_gpu11_layer8
+	agg8_gpu11 [label="Aggregate GPU 11\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu11_layer8 -> agg8_gpu11
+	subgraph cluster_gpu11 {
+		label="GPU 11 (8 experts)"
+		style=dashed
+	}
+	route8_gpu12 [label="Route to GPU 12\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate8 -> route8_gpu12
+	experts_gpu12_layer8 [label="8 Experts GPU 12\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route8_gpu12 -> experts_gpu12_layer8
+	agg8_gpu12 [label="Aggregate GPU 12\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu12_layer8 -> agg8_gpu12
+	subgraph cluster_gpu12 {
+		label="GPU 12 (8 experts)"
+		style=dashed
+	}
+	route8_gpu13 [label="Route to GPU 13\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate8 -> route8_gpu13
+	experts_gpu13_layer8 [label="8 Experts GPU 13\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route8_gpu13 -> experts_gpu13_layer8
+	agg8_gpu13 [label="Aggregate GPU 13\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu13_layer8 -> agg8_gpu13
+	subgraph cluster_gpu13 {
+		label="GPU 13 (8 experts)"
+		style=dashed
+	}
+	route8_gpu14 [label="Route to GPU 14\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate8 -> route8_gpu14
+	experts_gpu14_layer8 [label="8 Experts GPU 14\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route8_gpu14 -> experts_gpu14_layer8
+	agg8_gpu14 [label="Aggregate GPU 14\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu14_layer8 -> agg8_gpu14
+	subgraph cluster_gpu14 {
+		label="GPU 14 (8 experts)"
+		style=dashed
+	}
+	route8_gpu15 [label="Route to GPU 15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate8 -> route8_gpu15
+	experts_gpu15_layer8 [label="8 Experts GPU 15\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route8_gpu15 -> experts_gpu15_layer8
+	agg8_gpu15 [label="Aggregate GPU 15\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu15_layer8 -> agg8_gpu15
+	subgraph cluster_gpu15 {
+		label="GPU 15 (8 experts)"
+		style=dashed
+	}
+	moe_agg8 [label="MoE Final Aggregation 8\nInput: 16×[batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=gold shape=ellipse style=filled]
+	agg8_gpu0 -> moe_agg8
+	agg8_gpu1 -> moe_agg8
+	agg8_gpu2 -> moe_agg8
+	agg8_gpu3 -> moe_agg8
+	agg8_gpu4 -> moe_agg8
+	agg8_gpu5 -> moe_agg8
+	agg8_gpu6 -> moe_agg8
+	agg8_gpu7 -> moe_agg8
+	agg8_gpu8 -> moe_agg8
+	agg8_gpu9 -> moe_agg8
+	agg8_gpu10 -> moe_agg8
+	agg8_gpu11 -> moe_agg8
+	agg8_gpu12 -> moe_agg8
+	agg8_gpu13 -> moe_agg8
+	agg8_gpu14 -> moe_agg8
+	agg8_gpu15 -> moe_agg8
+	moe8 [label="MoE Residual Add 8\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=yellow shape=rectangle style=filled]
+	moe_agg8 -> moe8
+	add1_8 -> moe8
+	mha15 [label="MHA Layer 15\nTP=8 across 8 GPUs\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightcyan shape=rectangle style=filled]
+	moe14 -> mha15
+	add1_15 [label="MHA Residual Add 15\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=yellow shape=rectangle style=filled]
+	mha15 -> add1_15
+	gate15 [label="Gate Layer 15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, num_experts=16]" fillcolor=lightgreen shape=parallelogram style=filled]
+	add1_15 -> gate15
+	route15_gpu8 [label="Route to GPU 8\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate15 -> route15_gpu8
+	experts_gpu8_layer15 [label="8 Experts GPU 8\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route15_gpu8 -> experts_gpu8_layer15
+	agg15_gpu8 [label="Aggregate GPU 8\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu8_layer15 -> agg15_gpu8
+	subgraph cluster_gpu8 {
+		label="GPU 8 (8 experts)"
+		style=dashed
+	}
+	route15_gpu9 [label="Route to GPU 9\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate15 -> route15_gpu9
+	experts_gpu9_layer15 [label="8 Experts GPU 9\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route15_gpu9 -> experts_gpu9_layer15
+	agg15_gpu9 [label="Aggregate GPU 9\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu9_layer15 -> agg15_gpu9
+	subgraph cluster_gpu9 {
+		label="GPU 9 (8 experts)"
+		style=dashed
+	}
+	route15_gpu10 [label="Route to GPU 10\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate15 -> route15_gpu10
+	experts_gpu10_layer15 [label="8 Experts GPU 10\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route15_gpu10 -> experts_gpu10_layer15
+	agg15_gpu10 [label="Aggregate GPU 10\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu10_layer15 -> agg15_gpu10
+	subgraph cluster_gpu10 {
+		label="GPU 10 (8 experts)"
+		style=dashed
+	}
+	route15_gpu11 [label="Route to GPU 11\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate15 -> route15_gpu11
+	experts_gpu11_layer15 [label="8 Experts GPU 11\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route15_gpu11 -> experts_gpu11_layer15
+	agg15_gpu11 [label="Aggregate GPU 11\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu11_layer15 -> agg15_gpu11
+	subgraph cluster_gpu11 {
+		label="GPU 11 (8 experts)"
+		style=dashed
+	}
+	route15_gpu12 [label="Route to GPU 12\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate15 -> route15_gpu12
+	experts_gpu12_layer15 [label="8 Experts GPU 12\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route15_gpu12 -> experts_gpu12_layer15
+	agg15_gpu12 [label="Aggregate GPU 12\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu12_layer15 -> agg15_gpu12
+	subgraph cluster_gpu12 {
+		label="GPU 12 (8 experts)"
+		style=dashed
+	}
+	route15_gpu13 [label="Route to GPU 13\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate15 -> route15_gpu13
+	experts_gpu13_layer15 [label="8 Experts GPU 13\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route15_gpu13 -> experts_gpu13_layer15
+	agg15_gpu13 [label="Aggregate GPU 13\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu13_layer15 -> agg15_gpu13
+	subgraph cluster_gpu13 {
+		label="GPU 13 (8 experts)"
+		style=dashed
+	}
+	route15_gpu14 [label="Route to GPU 14\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate15 -> route15_gpu14
+	experts_gpu14_layer15 [label="8 Experts GPU 14\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route15_gpu14 -> experts_gpu14_layer15
+	agg15_gpu14 [label="Aggregate GPU 14\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu14_layer15 -> agg15_gpu14
+	subgraph cluster_gpu14 {
+		label="GPU 14 (8 experts)"
+		style=dashed
+	}
+	route15_gpu15 [label="Route to GPU 15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]" fillcolor=orange shape=ellipse style=dashed]
+	gate15 -> route15_gpu15
+	experts_gpu15_layer15 [label="8 Experts GPU 15\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(Sequential processing)" fillcolor=lightcoral shape=rectangle style=filled]
+	route15_gpu15 -> experts_gpu15_layer15
+	agg15_gpu15 [label="Aggregate GPU 15\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightpink shape=ellipse style=filled]
+	experts_gpu15_layer15 -> agg15_gpu15
+	subgraph cluster_gpu15 {
+		label="GPU 15 (8 experts)"
+		style=dashed
+	}
+	moe_agg15 [label="MoE Final Aggregation 15\nInput: 16×[batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=gold shape=ellipse style=filled]
+	agg15_gpu0 -> moe_agg15
+	agg15_gpu1 -> moe_agg15
+	agg15_gpu2 -> moe_agg15
+	agg15_gpu3 -> moe_agg15
+	agg15_gpu4 -> moe_agg15
+	agg15_gpu5 -> moe_agg15
+	agg15_gpu6 -> moe_agg15
+	agg15_gpu7 -> moe_agg15
+	agg15_gpu8 -> moe_agg15
+	agg15_gpu9 -> moe_agg15
+	agg15_gpu10 -> moe_agg15
+	agg15_gpu11 -> moe_agg15
+	agg15_gpu12 -> moe_agg15
+	agg15_gpu13 -> moe_agg15
+	agg15_gpu14 -> moe_agg15
+	agg15_gpu15 -> moe_agg15
+	moe15 [label="MoE Residual Add 15\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=yellow shape=rectangle style=filled]
+	moe_agg15 -> moe15
+	add1_15 -> moe15
+	subgraph cluster_stage1 {
+		label="Pipeline Stage 1 (Layers 8-15)"
+		style=dotted
+	}
+	moe7 -> mha8 [label="Pipeline Communication\nStage 0 → Stage 1"]
+	output [label="Model Output\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]" fillcolor=lightblue shape=box style=filled]
+	moe15 -> output
+}

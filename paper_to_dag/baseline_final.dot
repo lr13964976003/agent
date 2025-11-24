@@ -1,0 +1,197 @@
+digraph Baseline_Final {
+    rankdir=TB;
+    splines=ortho;
+    node [fontname="Arial", fontsize=10];
+    
+    // Model Input
+    input [label="Model Input\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+           shape=box, style=filled, fillcolor=lightblue];
+    
+    // Stage 0: Layers 0-7 (8 layers) with TP=8 across GPUs 0-7
+    // Layer 0 - Stage 0
+    stage0_layer0_mha [label="MHA Layer 0\nTP=8 across GPUs 0-7\nStage 0\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                       shape=rectangle, style=filled, fillcolor=lightcyan];
+    stage0_layer0_ln1 [label="LayerNorm MHA 0\nTP=8 across GPUs 0-7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                       shape=rectangle];
+    stage0_layer0_add1 [label="MHA Residual Add 0\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                        shape=rectangle, style=filled, fillcolor=yellow];
+    
+    stage0_layer0_gate [label="Gate Layer 0\nTP=8 across GPUs 0-7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, num_experts=16]", 
+                        shape=parallelogram, style=filled, fillcolor=lightgreen];
+    
+    // GPU Cluster 0-7 (8 GPUs, 2 experts per GPU = 16 experts)
+    stage0_layer0_route_gpu0 [label="Route to GPU 0\nGPU 0\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]", 
+                              shape=ellipse, style=dashed, fillcolor=orange];
+    stage0_layer0_experts_gpu0 [label="8 Experts GPU 0\nGPU 0\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(8 experts processed sequentially)", 
+                                shape=rectangle, style=filled, fillcolor=lightcoral];
+    stage0_layer0_agg_gpu0 [label="Aggregate GPU 0\nGPU 0\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                            shape=ellipse, style=filled, fillcolor=lightpink];
+    
+    stage0_layer0_route_gpu7 [label="Route to GPU 7\nGPU 7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]", 
+                              shape=ellipse, style=dashed, fillcolor=orange];
+    stage0_layer0_experts_gpu7 [label="8 Experts GPU 7\nGPU 7\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(8 experts processed sequentially)", 
+                                shape=rectangle, style=filled, fillcolor=lightcoral];
+    stage0_layer0_agg_gpu7 [label="Aggregate GPU 7\nGPU 7\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                            shape=ellipse, style=filled, fillcolor=lightpink];
+    
+    stage0_layer0_moe_agg [label="MoE Final Aggregation 0\nTP=8 across GPUs 0-7\nInput: 16×[batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                           shape=ellipse, style=filled, fillcolor=gold];
+    stage0_layer0_ln2 [label="LayerNorm MoE 0\nTP=8 across GPUs 0-7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                       shape=rectangle];
+    stage0_layer0_output [label="MoE Residual Add 0\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                          shape=rectangle, style=filled, fillcolor=yellow];
+    
+    // Layer 7 - Stage 0 (final layer in stage 0)
+    stage0_layer7_mha [label="MHA Layer 7\nTP=8 across GPUs 0-7\nStage 0\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                       shape=rectangle, style=filled, fillcolor=lightcyan];
+    stage0_layer7_ln1 [label="LayerNorm MHA 7\nTP=8 across GPUs 0-7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                       shape=rectangle];
+    stage0_layer7_add1 [label="MHA Residual Add 7\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                        shape=rectangle, style=filled, fillcolor=yellow];
+    stage0_layer7_gate [label="Gate Layer 7\nTP=8 across GPUs 0-7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, num_experts=16]", 
+                        shape=parallelogram, style=filled, fillcolor=lightgreen];
+    stage0_layer7_moe_agg [label="MoE Final Aggregation 7\nTP=8 across GPUs 0-7\nInput: 16×[batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                           shape=ellipse, style=filled, fillcolor=gold];
+    stage0_layer7_ln2 [label="LayerNorm MoE 7\nTP=8 across GPUs 0-7\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                       shape=rectangle];
+    stage0_layer7_output [label="MoE Residual Add 7\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                          shape=rectangle, style=filled, fillcolor=yellow];
+    
+    // Stage 1: Layers 8-15 (8 layers) with TP=8 across GPUs 8-15
+    // Layer 8 - Stage 1
+    stage1_layer8_mha [label="MHA Layer 8\nTP=8 across GPUs 8-15\nStage 1\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                       shape=rectangle, style=filled, fillcolor=lightcyan];
+    stage1_layer8_ln1 [label="LayerNorm MHA 8\nTP=8 across GPUs 8-15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                       shape=rectangle];
+    stage1_layer8_add1 [label="MHA Residual Add 8\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                        shape=rectangle, style=filled, fillcolor=yellow];
+    stage1_layer8_gate [label="Gate Layer 8\nTP=8 across GPUs 8-15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, num_experts=16]", 
+                        shape=parallelogram, style=filled, fillcolor=lightgreen];
+    
+    stage1_layer8_route_gpu8 [label="Route to GPU 8\nGPU 8\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]", 
+                              shape=ellipse, style=dashed, fillcolor=orange];
+    stage1_layer8_experts_gpu8 [label="8 Experts GPU 8\nGPU 8\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(8 experts processed sequentially)", 
+                                shape=rectangle, style=filled, fillcolor=lightcoral];
+    stage1_layer8_agg_gpu8 [label="Aggregate GPU 8\nGPU 8\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                            shape=ellipse, style=filled, fillcolor=lightpink];
+    
+    stage1_layer8_route_gpu15 [label="Route to GPU 15\nGPU 15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]", 
+                               shape=ellipse, style=dashed, fillcolor=orange];
+    stage1_layer8_experts_gpu15 [label="8 Experts GPU 15\nGPU 15\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [tokens_per_gpu, hidden_dim=4096]\n(8 experts processed sequentially)", 
+                                 shape=rectangle, style=filled, fillcolor=lightcoral];
+    stage1_layer8_agg_gpu15 [label="Aggregate GPU 15\nGPU 15\nInput: [tokens_per_gpu, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                             shape=ellipse, style=filled, fillcolor=lightpink];
+    
+    stage1_layer8_moe_agg [label="MoE Final Aggregation 8\nTP=8 across GPUs 8-15\nInput: 16×[batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                           shape=ellipse, style=filled, fillcolor=gold];
+    stage1_layer8_ln2 [label="LayerNorm MoE 8\nTP=8 across GPUs 8-15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                       shape=rectangle];
+    stage1_layer8_output [label="MoE Residual Add 8\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                          shape=rectangle, style=filled, fillcolor=yellow];
+    
+    // Layer 15 - Stage 1 (final layer)
+    stage1_layer15_mha [label="MHA Layer 15\nTP=8 across GPUs 8-15\nStage 1\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                        shape=rectangle, style=filled, fillcolor=lightcyan];
+    stage1_layer15_ln1 [label="LayerNorm MHA 15\nTP=8 across GPUs 8-15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                        shape=rectangle];
+    stage1_layer15_add1 [label="MHA Residual Add 15\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                         shape=rectangle, style=filled, fillcolor=yellow];
+    stage1_layer15_gate [label="Gate Layer 15\nTP=8 across GPUs 8-15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, num_experts=16]", 
+                         shape=parallelogram, style=filled, fillcolor=lightgreen];
+    stage1_layer15_moe_agg [label="MoE Final Aggregation 15\nTP=8 across GPUs 8-15\nInput: 16×[batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                            shape=ellipse, style=filled, fillcolor=gold];
+    stage1_layer15_ln2 [label="LayerNorm MoE 15\nTP=8 across GPUs 8-15\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                        shape=rectangle];
+    stage1_layer15_output [label="MoE Residual Add 15\nInput1: [batch_size=128, seq_len=10000, hidden_dim=4096]\nInput2: [batch_size=128, seq_len=10000, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+                           shape=rectangle, style=filled, fillcolor=yellow];
+    
+    // Hidden intermediate layers
+    hidden_stage0 [label="Layers 1-6 in Stage 0\n[7 layers with TP=8]\n[8 experts/GPU across 8 GPUs]", 
+                   shape=rectangle, style=dashed, fillcolor=lightgray];
+    hidden_stage1 [label="Layers 9-14 in Stage 1\n[6 layers with TP=8]\n[8 experts/GPU across 8 GPUs]", 
+                   shape=rectangle, style=dashed, fillcolor=lightgray];
+    
+    // Connections - Stage 0
+    input -> stage0_layer0_mha;
+    stage0_layer0_mha -> stage0_layer0_ln1;
+    stage0_layer0_ln1 -> stage0_layer0_add1;
+    input -> stage0_layer0_add1;
+    stage0_layer0_add1 -> stage0_layer0_gate;
+    stage0_layer0_gate -> stage0_layer0_route_gpu0;
+    stage0_layer0_gate -> stage0_layer0_route_gpu7;
+    stage0_layer0_route_gpu0 -> stage0_layer0_experts_gpu0;
+    stage0_layer0_route_gpu7 -> stage0_layer0_experts_gpu7;
+    stage0_layer0_experts_gpu0 -> stage0_layer0_agg_gpu0;
+    stage0_layer0_experts_gpu7 -> stage0_layer0_agg_gpu7;
+    stage0_layer0_agg_gpu0 -> stage0_layer0_moe_agg;
+    stage0_layer0_agg_gpu7 -> stage0_layer0_moe_agg;
+    stage0_layer0_moe_agg -> stage0_layer0_ln2;
+    stage0_layer0_ln2 -> stage0_layer0_output;
+    stage0_layer0_add1 -> stage0_layer0_output;
+    
+    stage0_layer0_output -> hidden_stage0;
+    hidden_stage0 -> stage0_layer7_mha;
+    
+    stage0_layer7_mha -> stage0_layer7_ln1;
+    stage0_layer7_ln1 -> stage0_layer7_add1;
+    stage0_layer6_output -> stage0_layer7_add1;
+    stage0_layer7_add1 -> stage0_layer7_gate;
+    stage0_layer7_gate -> stage0_layer7_route_gpu0;
+    stage0_layer7_gate -> stage0_layer7_route_gpu7;
+    stage0_layer7_route_gpu0 -> stage0_layer7_experts_gpu0;
+    stage0_layer7_route_gpu7 -> stage0_layer7_experts_gpu7;
+    stage0_layer7_experts_gpu0 -> stage0_layer7_agg_gpu0;
+    stage0_layer7_experts_gpu7 -> stage0_layer7_agg_gpu7;
+    stage0_layer7_agg_gpu0 -> stage0_layer7_moe_agg;
+    stage0_layer7_agg_gpu7 -> stage0_layer7_moe_agg;
+    stage0_layer7_moe_agg -> stage0_layer7_ln2;
+    stage0_layer7_ln2 -> stage0_layer7_output;
+    stage0_layer7_add1 -> stage0_layer7_output;
+    
+    // Pipeline Communication between stages
+    pipeline_comm [label="Pipeline Communication\nStage 0 → Stage 1\n[All 128 sequences, 10000 tokens]", 
+                   shape=ellipse, style=dashed, fillcolor=lightgreen];
+    stage0_layer7_output -> pipeline_comm;
+    pipeline_comm -> stage1_layer8_mha;
+    
+    // Connections - Stage 1
+    stage1_layer8_mha -> stage1_layer8_ln1;
+    stage1_layer8_ln1 -> stage1_layer8_add1;
+    stage0_layer7_output -> stage1_layer8_add1;
+    stage1_layer8_add1 -> stage1_layer8_gate;
+    stage1_layer8_gate -> stage1_layer8_route_gpu8;
+    stage1_layer8_gate -> stage1_layer8_route_gpu15;
+    stage1_layer8_route_gpu8 -> stage1_layer8_experts_gpu8;
+    stage1_layer8_route_gpu15 -> stage1_layer8_experts_gpu15;
+    stage1_layer8_experts_gpu8 -> stage1_layer8_agg_gpu8;
+    stage1_layer8_experts_gpu15 -> stage1_layer8_agg_gpu15;
+    stage1_layer8_agg_gpu8 -> stage1_layer8_moe_agg;
+    stage1_layer8_agg_gpu15 -> stage1_layer8_moe_agg;
+    stage1_layer8_moe_agg -> stage1_layer8_ln2;
+    stage1_layer8_ln2 -> stage1_layer8_output;
+    stage1_layer8_add1 -> stage1_layer8_output;
+    
+    stage1_layer8_output -> hidden_stage1;
+    hidden_stage1 -> stage1_layer15_mha;
+    
+    stage1_layer15_mha -> stage1_layer15_ln1;
+    stage1_layer15_ln1 -> stage1_layer15_add1;
+    stage1_layer14_output -> stage1_layer15_add1;
+    stage1_layer15_add1 -> stage1_layer15_gate;
+    stage1_layer15_gate -> stage1_layer15_route_gpu8;
+    stage1_layer15_gate -> stage1_layer15_route_gpu15;
+    stage1_layer15_route_gpu8 -> stage1_layer15_experts_gpu8;
+    stage1_layer15_route_gpu15 -> stage1_layer15_experts_gpu15;
+    stage1_layer15_experts_gpu8 -> stage1_layer15_agg_gpu8;
+    stage1_layer15_experts_gpu15 -> stage1_layer15_agg_gpu15;
+    stage1_layer15_agg_gpu8 -> stage1_layer15_moe_agg;
+    stage1_layer15_agg_gpu15 -> stage1_layer15_moe_agg;
+    stage1_layer15_moe_agg -> stage1_layer15_ln2;
+    stage1_layer15_ln2 -> stage1_layer15_output;
+    stage1_layer15_add1 -> stage1_layer15_output;
+    
+    // Final output
+    output [label="Model Output\nInput: [batch_size=128, seq_len=10000, hidden_dim=4096]", 
+            shape=box, style=filled, fillcolor=lightblue];
+    stage1_layer15_output -> output;
+}
