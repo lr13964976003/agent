@@ -1,0 +1,169 @@
+{
+  "deployment_configurations": {
+    "baseline_dense_transformer": {
+      "model_name": "Dense Transformer Baseline",
+      "architecture": {
+        "layers": 16,
+        "hidden_size": 4096,
+        "attention_heads": 32,
+        "head_dimension": 128,
+        "mlp_hidden_size": 16384,
+        "sequence_length": 100000,
+        "batch_size": 128,
+        "precision": "bf16"
+      },
+      "parallel_strategy": {
+        "type": "tensor_pipeline_parallel",
+        "tensor_parallel_size": 8,
+        "pipeline_parallel_size": 2,
+        "total_devices": 16
+      },
+      "device_mapping": {
+        "device_0_to_7": {
+          "stage_id": 0,
+          "layers": [0, 1, 2, 3, 4, 5, 6, 7],
+          "tensor_parallel_group": [0, 1, 2, 3, 4, 5, 6, 7],
+          "memory_allocation": "~78GB"
+        },
+        "device_8_to_15": {
+          "stage_id": 1,
+          "layers": [8, 9, 10, 11, 12, 13, 14, 15],
+          "tensor_parallel_group": [8, 9, 10, 11, 12, 13, 14, 15],
+          "memory_allocation": "~78GB"
+        }
+      },
+      "module_parameters": {
+        "attention_layers": {
+          "per_device": 2,
+          "parameters_per_layer": {
+            "qkv_projection": [512, 4096],
+            "output_projection": [4096, 4096],
+            "attention_weights": [32, 6250, 6250]
+          }
+        },
+        "mlp_layers": {
+          "per_device": 2,
+          "parameters_per_layer": {
+            "gate_projection": [16384, 4096],
+            "up_projection": [16384, 4096],
+            "down_projection": [4096, 16384]
+          }
+        }
+      },
+      "communication_patterns": {
+        "tensor_parallel": {
+          "type": "all_reduce",
+          "protocol": "nccl",
+          "bandwidth": "900GB/s NVLink"
+        },
+        "pipeline_parallel": {
+          "type": "send_recv",
+          "protocol": "nccl",
+          "buffer_size": "100000 * 4096 * 128 * 2 bytes"
+        }
+      }
+    },
+    "ring_attention_sequence_parallel": {
+      "model_name": "Dense Transformer RA+SP",
+      "architecture": {
+        "layers": 16,
+        "hidden_size": 4096,
+        "attention_heads": 32,
+        "head_dimension": 128,
+        "mlp_hidden_size": 16384,
+        "sequence_length": 100000,
+        "batch_size": 128,
+        "precision": "bf16",
+        "sequence_parallel_size": 16
+      },
+      "parallel_strategy": {
+        "type": "ring_attention_sequence_parallel",
+        "ring_size": 16,
+        "sequence_parallel_size": 16,
+        "total_devices": 16
+      },
+      "device_mapping": {
+        "ring_topology": [
+          {"device_id": 0, "sequence_slice": [0, 6250], "ring_position": 0},
+          {"device_id": 1, "sequence_slice": [6250, 12500], "ring_position": 1},
+          {"device_id": 2, "sequence_slice": [12500, 18750], "ring_position": 2},
+          {"device_id": 3, "sequence_slice": [18750, 25000], "ring_position": 3},
+          {"device_id": 4, "sequence_slice": [25000, 31250], "ring_position": 4},
+          {"device_id": 5, "sequence_slice": [31250, 37500], "ring_position": 5},
+          {"device_id": 6, "sequence_slice": [37500, 43750], "ring_position": 6},
+          {"device_id": 7, "sequence_slice": [43750, 50000], "ring_position": 7},
+          {"device_id": 8, "sequence_slice": [50000, 56250], "ring_position": 8},
+          {"device_id": 9, "sequence_slice": [56250, 62500], "ring_position": 9},
+          {"device_id": 10, "sequence_slice": [62500, 68750], "ring_position": 10},
+          {"device_id": 11, "sequence_slice": [68750, 75000], "ring_position": 11},
+          {"device_id": 12, "sequence_slice": [75000, 81250], "ring_position": 12},
+          {"device_id": 13, "sequence_slice": [81250, 87500], "ring_position": 13},
+          {"device_id": 14, "sequence_slice": [87500, 93750], "ring_position": 14},
+          {"device_id": 15, "sequence_slice": [93750, 100000], "ring_position": 15}
+        ]
+      },
+      "module_parameters": {
+        "attention_layers": {
+          "per_device": 16,
+          "local_sequence_length": 6250,
+          "parameters_per_layer": {
+            "qkv_projection": [512, 4096],
+            "output_projection": [4096, 4096],
+            "attention_weights": [32, 6250, 6250],
+            "kv_buffer_size": "6250 * 4096 * 2 bytes"
+          }
+        },
+        "mlp_layers": {
+          "per_device": 16,
+          "parameters_per_layer": {
+            "gate_projection": [16384, 4096],
+            "up_projection": [16384, 4096],
+            "down_projection": [4096, 16384]
+          }
+        }
+      },
+      "communication_patterns": {
+        "ring_attention": {
+          "type": "ring_send_recv",
+          "protocol": "nccl",
+          "stages": 16,
+          "buffer_size": "6250 * 4096 * 2 bytes",
+          "bandwidth": "900GB/s NVLink",
+          "overlap": true
+        },
+        "sequence_parallel": {
+          "type": "ring_all_reduce",
+          "protocol": "nccl",
+          "for": "output_projection_gradients"
+        }
+      },
+      "memory_specifications": {
+        "activation_memory": "~5GB per device",
+        "weight_memory": "~0.8GB per device",
+        "kv_buffer": "~49MB per stage",
+        "total_memory": "~5.85GB per device"
+      }
+    }
+  },
+  "deployment_infrastructure": {
+    "gpu_specifications": {
+      "model": "NVIDIA H100",
+      "memory": "80GB HBM3",
+      "interconnect": "NVLink 4.0 + NVSwitch",
+      "bandwidth": "900GB/s bidirectional"
+    },
+    "software_stack": {
+      "cuda": "12.1",
+      "cudnn": "8.9",
+      "nccl": "2.18",
+      "precision": "BF16",
+      "synchronization": "CUDA events"
+    },
+    "runtime_parameters": {
+      "warmup_iterations": 10,
+      "measurement_iterations": 100,
+      "batch_size": 128,
+      "sequence_length": 100000
+    }
+  }
+}

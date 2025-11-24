@@ -1,0 +1,154 @@
+digraph ring_attention_sequence_parallel {
+    rankdir=TB;
+    bgcolor="#f8f9fa";
+    
+    // Graph attributes
+    node [shape=rectangle, style="rounded,filled", fontname="Helvetica"];
+    edge [fontname="Helvetica", fontsize=10];
+    
+    // Input node
+    Input [label="Input\nSequence\nGPU: Host\nB=128, L=100000, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+    
+    // Global sequence split across 16 GPUs
+    subgraph cluster_split {
+        label="Sequence Parallel Split (16 GPUs)";
+        style="rounded,dashed";
+        fillcolor="#fff3e0";
+        
+        Split [label="Split Sequence\nGPU: Host\nInput: [128,100000,4096]\nOutput: [128,6250,4096]×16", shape=parallelogram, fillcolor="#ffecb3"];
+    }
+    
+    // Device 0 detailed processing (all 16 layers)
+    subgraph cluster_device0 {
+        label="Device 0 (Ring Position 0)\nSequence Slice [0:6250]\nAll 16 Layers";
+        style="rounded,dashed";
+        fillcolor="#e8f5e9";
+        
+        // Layer 0 on Device 0
+        D0_L0_QKV [label="QKV Projection\nGPU: 0\nInput: [128,6250,4096]\nOutput: [128,6250,4096]\nWeights: [512,4096]", fillcolor="#c8e6c9"];
+        
+        // Ring attention for Device 0
+        D0_L0_Q [label="Q Tensor\nGPU: 0\n[128,6250,4096]\nLocal Q", fillcolor="#fff9c4"];
+        D0_L0_K_local [label="K Local\nGPU: 0\n[128,6250,4096]\nLocal K", fillcolor="#fff9c4"];
+        D0_L0_V_local [label="V Local\nGPU: 0\n[128,6250,4096]\nLocal V", fillcolor="#fff9c4"];
+        
+        // Ring stages for Device 0
+        D0_L0_recv15_kv [label="Recv KV from 15\nGPU: 0\nInput: K[128,6250,4096], V[128,6250,4096]\nProtocol: NCCL Recv", shape=ellipse, fillcolor="#ff8a65"];
+        D0_L0_send1_kv [label="Send KV to 1\nGPU: 0\nOutput: K[128,6250,4096], V[128,6250,4096]\nProtocol: NCCL Send", shape=ellipse, fillcolor="#ff8a65"];
+        
+        // 16 attention stages for Device 0
+        D0_L0_attn0 [label="Attention Stage 0\nGPU: 0\nQ×Local KV\nInput: [128,6250,4096]×3\nOutput: [128,6250,4096]", fillcolor="#c8e6c9"];
+        D0_L0_attn1 [label="Attention Stage 1\nGPU: 0\nQ×Device 1 KV\nInput: [128,6250,4096]×3\nOutput: [128,6250,4096]", fillcolor="#c8e6c9"];
+        D0_L0_attn15 [label="Attention Stage 15\nGPU: 0\nQ×Device 15 KV\nInput: [128,6250,4096]×3\nOutput: [128,6250,4096]", fillcolor="#c8e6c9"];
+        
+        D0_L0_accumulate [label="Accumulate\nSum 16 partial results\nGPU: 0\nInput: [128,6250,4096]×16\nOutput: [128,6250,4096]", shape=diamond, fillcolor="#ffccbc"];
+        D0_L0_output [label="Output Projection\nGPU: 0\nInput: [128,6250,4096]\nOutput: [128,6250,4096]\nWeights: [4096,4096]", fillcolor="#c8e6c9"];
+        D0_L0_residual1 [label="Add\nResidual\nGPU: 0\nInput: [128,6250,4096]×2\nOutput: [128,6250,4096]", shape=diamond, fillcolor="#ffccbc"];
+        
+        // MLP on Device 0
+        D0_L0_MLP_gate [label="MLP Gate\nGPU: 0\nInput: [128,6250,4096]\nOutput: [128,6250,16384]\nWeights: [16384,4096]", fillcolor="#c8e6c9"];
+        D0_L0_MLP_up [label="MLP Up\nGPU: 0\nInput: [128,6250,4096]\nOutput: [128,6250,16384]\nWeights: [16384,4096]", fillcolor="#c8e6c9"];
+        D0_L0_MLP_down [label="MLP Down\nGPU: 0\nInput: [128,6250,16384]\nOutput: [128,6250,4096]\nWeights: [4096,16384]", fillcolor="#c8e6c9"];
+        D0_L0_MLP_residual [label="Add\nResidual\nGPU: 0\nInput: [128,6250,4096]×2\nOutput: [128,6250,4096]", shape=diamond, fillcolor="#ffccbc"];
+        
+        // Layers 1-15 on Device 0
+        D0_L1_L15 [label="Layers 1-15\nGPU: 0\nAll 16 layers\nSame structure\n[128,6250,4096] each", shape=note, fillcolor="#f5f5f5"];
+    }
+    
+    // Device 1 detailed processing
+    subgraph cluster_device1 {
+        label="Device 1 (Ring Position 1)\nSequence Slice [6250:12500]\nAll 16 Layers";
+        style="rounded,dashed";
+        fillcolor="#e0f7fa";
+        
+        D1_pipeline [label="Device 1 Pipeline\nGPU: 1\nSequence: [6250:12500]\nAll 16 layers\n[128,6250,4096]", shape=note, fillcolor="#f5f5f5"];
+    }
+    
+    // Device 2-14 (abbreviated for clarity)
+    subgraph cluster_devices_2_14 {
+        label="Devices 2-14\nRing Positions 2-14\nIdentical Structure";
+        style="rounded,dashed";
+        fillcolor="#f3e5f5";
+        
+        D2_14 [label="Devices 2-14\nGPUs: 2-14\nEach processes 6250 tokens\nAll 16 layers\nRing communication", shape=note, fillcolor="#f5f5f5"];
+    }
+    
+    // Device 15 detailed processing
+    subgraph cluster_device15 {
+        label="Device 15 (Ring Position 15)\nSequence Slice [93750:100000]\nAll 16 Layers";
+        style="rounded,dashed";
+        fillcolor="#fce4ec";
+        
+        D15_pipeline [label="Device 15 Pipeline\nGPU: 15\nSequence: [93750:100000]\nAll 16 layers\n[128,6250,4096]", shape=note, fillcolor="#f5f5f5"];
+    }
+    
+    // Ring communication network
+    subgraph cluster_ring_comm {
+        label="Ring Network Communication (16 GPUs)";
+        style="rounded,dashed";
+        fillcolor="#fff8e1";
+        
+        Ring0 [label="Ring Step 0\nGPU: 0\nLocal KV compute", shape=ellipse, fillcolor="#ffecb3"];
+        Ring1 [label="Ring Step 1\nGPU: 1\nSend to 2", shape=ellipse, fillcolor="#ffecb3"];
+        Ring15 [label="Ring Step 15\nGPU: 15\nSend to 0", shape=ellipse, fillcolor="#ffecb3"];
+    }
+    
+    // Global output aggregation
+    subgraph cluster_output {
+        label="Global Output Aggregation";
+        style="rounded,dashed";
+        fillcolor="#e8f5e9";
+        
+        Gather [label="Gather All Devices\nGPU: Host\nInput: [128,6250,4096]×16\nOutput: [128,100000,4096]", shape=parallelogram, fillcolor="#ffecb3"];
+        Output [label="Output\nSequence\nGPU: Host\nB=128, L=100000, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+    }
+    
+    // Detailed connections for Device 0
+    Input -> Split;
+    Split -> D0_L0_QKV;
+    D0_L0_QKV -> D0_L0_Q;
+    D0_L0_QKV -> D0_L0_K_local;
+    D0_L0_QKV -> D0_L0_V_local;
+    
+    // Ring communication flow
+    D0_L0_K_local -> D0_L0_attn0;
+    D0_L0_V_local -> D0_L0_attn0;
+    D0_L0_Q -> D0_L0_attn0;
+    D0_L0_attn0 -> D0_L0_accumulate;
+    
+    D0_L0_K_local -> Ring0;
+    D0_L0_V_local -> Ring0;
+    Ring0 -> D0_L0_send1_kv;
+    
+    // Ring connections between devices
+    D0_L0_send1_kv -> Ring1 [style=dashed];
+    Ring15 -> D0_L0_recv15_kv [style=dashed];
+    D0_L0_recv15_kv -> D0_L0_attn15;
+    D0_L0_Q -> D0_L0_attn15;
+    D0_L0_attn15 -> D0_L0_accumulate;
+    
+    // Device 0 processing chain
+    D0_L0_accumulate -> D0_L0_output;
+    D0_L0_output -> D0_L0_residual1;
+    D0_L0_residual1 -> D0_L0_MLP_gate;
+    D0_L0_MLP_gate -> D0_L0_MLP_up;
+    D0_L0_MLP_up -> D0_L0_MLP_down;
+    D0_L0_MLP_down -> D0_L0_MLP_residual;
+    D0_L0_MLP_residual -> D0_L1_L15;
+    
+    // Other devices
+    Split -> D1_pipeline;
+    Split -> D2_14;
+    Split -> D15_pipeline;
+    
+    // Final connections
+    D0_L1_L15 -> Gather;
+    D1_pipeline -> Gather;
+    D15_pipeline -> Gather;
+    D2_14 -> Gather;
+    Gather -> Output;
+    
+    // Residual connections
+    Split -> D0_L0_residual1 [style=dashed, label="Residual"];
+    D0_L0_residual1 -> D0_L0_MLP_residual [style=dashed, label="Residual"];
+}

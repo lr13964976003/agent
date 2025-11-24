@@ -1,0 +1,74 @@
+{
+  "dag_files": {
+    "baseline_tensor_pipeline_parallel": {
+      "dot_file": "../outputs/2025-11-24-16-10-27/baseline_dense_transformer.dot",
+      "svg_file": "../outputs/2025-11-24-16-10-27/baseline_dense_transformer.svg",
+      "description": "Baseline dense transformer with tensor parallelism (8-way) and pipeline parallelism (2-way) across 16 H100 GPUs",
+      "parallel_strategy": "TP=8, PP=2, 16 GPUs total",
+      "key_features": [
+        "Shows 2 pipeline stages",
+        "8-way tensor parallel per stage",
+        "All-reduce communication for tensor parallelism",
+        "Send/recv communication for pipeline parallelism",
+        "Layer distribution: 8 layers per stage"
+      ]
+    },
+    "ring_attention_sequence_parallel": {
+      "dot_file": "../outputs/2025-11-24-16-10-27/ring_attention_sequence_parallel.dot",
+      "svg_file": "../outputs/2025-11-24-16-10-27/ring_attention_sequence_parallel.svg",
+      "description": "Ring Attention with Sequence Parallelism across 16 H100 GPUs",
+      "parallel_strategy": "16-way sequence parallelism with ring attention",
+      "key_features": [
+        "Sequence split 100K/16 = 6250 tokens per GPU",
+        "16-ring communication stages",
+        "KV buffer exchange between devices",
+        "Each device processes all 16 layers",
+        "Memory reduction from 78GB to 5GB per GPU"
+      ]
+    },
+    "detailed_ring_attention": {
+      "dot_file" (optional): "../outputs/2025-11-24-16-10-27/detailed_ring_attention.dot",
+      "svg_file" (optional): "../outputs/2025-11-24-16-10-27/detailed_ring_attention.svg",
+      "description": "Detailed view of ring attention communication pattern",
+      "purpose": "Shows individual device interactions and ring topology"
+    }
+  },
+  "deployment_specifications": {
+    "baseline": {
+      "model": "16-layer dense transformer",
+      "sequence_length": 100000,
+      "batch_size": 128,
+      "hidden_size": 4096,
+      "attention_heads": 32,
+      "precision": "bf16",
+      "memory_per_gpu": "~78GB"
+    },
+    "ring_attention": {
+      "model": "16-layer dense transformer",
+      "sequence_length": 100000,
+      "batch_size": 128,
+      "hidden_size": 4096,
+      "attention_heads": 32,
+      "precision": "bf16",
+      "memory_per_gpu": "~5GB",
+      "sequence_split": "6250 tokens per GPU"
+    }
+  },
+  "verification": {
+    "dag_validation": {
+      "baseline": {
+        "has_cycle": false,
+        "connected": true,
+        "input_output_complete": true
+      },
+      "ring_attention": {
+        "has_cycle": false,
+        "connected": true,
+        "input_output_complete": true
+      }
+    },
+    "dimensional_consistency": "All tensor dimensions properly aligned",
+    "gpu_load_balancing": "Even distribution across 16 GPUs",
+    "communication_patterns": "Clearly represented with appropriate shapes"
+  }
+}

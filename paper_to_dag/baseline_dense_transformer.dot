@@ -1,0 +1,90 @@
+digraph baseline_dense_transformer {
+    rankdir=TB;
+    bgcolor="#f8f9fa";
+    
+    // Graph attributes
+    node [shape=rectangle, style="rounded,filled", fontname="Helvetica"];
+    edge [fontname="Helvetica", fontsize=10];
+    
+    // Input node
+    Input [label="Input\nSequence\nGPU: Host\nB=128, L=100000, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+    
+    // Stage 0: Devices 0-7 with Tensor Parallelism and 8 layers
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0\nDevices 0-7 (Tensor Parallel)\nLayers 0-7";
+        style="rounded,dashed";
+        fillcolor="#fff3e0";
+        
+        // Input split across tensor parallel group
+        Split0 [label="Split\nAcross GPUs 0-7\nGPU: All 0-7\nInput: [128,100000,4096]\nOutput: [128,12500,4096] per GPU", shape=parallelogram, fillcolor="#ffecb3"];
+        
+        // Layer 0 on devices 0-7
+        L0_QKV_proj [label="QKV Projection\nGPU: All 0-7\nInput: [128,12500,4096]\nOutput: [128,12500,4096]\nWeights: [512,4096] split across 8 GPUs", fillcolor="#c8e6c9"];
+        L0_QKV_allgather [label="All-Gather\nTensor Parallel\nGPU: All 0-7\nSize: [128,12500,4096]", shape=ellipse, fillcolor="#ffe082"];
+        L0_Attention [label="Multi-Head Attention\nGPU: All 0-7\nInput: [128,12500,4096]\nOutput: [128,12500,4096]\n32 heads, 128 dim per head", fillcolor="#c8e6c9"];
+        L0_Output_proj [label="Output Projection\nGPU: All 0-7\nInput: [128,12500,4096]\nOutput: [128,12500,512]\nWeights: [4096,4096] split across 8 GPUs", fillcolor="#c8e6c9"];
+        L0_Output_allreduce [label="All-Reduce Sum\nTensor Parallel\nGPU: All 0-7\nSize: [128,12500,4096]", shape=ellipse, fillcolor="#ffe082"];
+        L0_Residual1 [label="Add\nResidual\nGPU: All 0-7\nInput: [128,12500,4096]×2\nOutput: [128,12500,4096]", shape=diamond, fillcolor="#ffccbc"];
+        
+        L0_MLP_gate [label="MLP Gate\nGPU: All 0-7\nInput: [128,12500,4096]\nOutput: [128,12500,2048]\nWeights: [16384,4096] column-parallel", fillcolor="#c8e6c9"];
+        L0_MLP_up [label="MLP Up\nGPU: All 0-7\nInput: [128,12500,4096]\nOutput: [128,12500,2048]\nWeights: [16384,4096] column-parallel", fillcolor="#c8e6c9"];
+        L0_MLP_concat [label="Concat\nMLP Intermediate\nGPU: All 0-7\nInput: [128,12500,2048]×2\nOutput: [128,12500,16384]", shape=parallelogram, fillcolor="#ffecb3"];
+        L0_MLP_down [label="MLP Down\nGPU: All 0-7\nInput: [128,12500,16384]\nOutput: [128,12500,512]\nWeights: [4096,16384] row-parallel", fillcolor="#c8e6c9"];
+        L0_MLP_allreduce [label="All-Reduce Sum\nTensor Parallel\nGPU: All 0-7\nSize: [128,12500,4096]", shape=ellipse, fillcolor="#ffe082"];
+        L0_Residual2 [label="Add\nResidual\nGPU: All 0-7\nInput: [128,12500,4096]×2\nOutput: [128,12500,4096]", shape=diamond, fillcolor="#ffccbc"];
+        
+        // Layer 1-7 (explicit representation)
+        L1 [label="Layer 1\nGPU: All 0-7\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L2 [label="Layer 2\nGPU: All 0-7\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L3 [label="Layer 3\nGPU: All 0-7\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L4 [label="Layer 4\nGPU: All 0-7\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L5 [label="Layer 5\nGPU: All 0-7\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L6 [label="Layer 6\nGPU: All 0-7\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L7 [label="Layer 7\nGPU: All 0-7\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+    }
+    
+    // Pipeline communication
+    SendStage0 [label="Send to Stage 1\nGPU: All 0-7→8-15\nSize: [128,12500,4096] per GPU\nProtocol: NCCL Send/Recv", shape=ellipse, fillcolor="#ff8a65"];
+    
+    // Stage 1: Devices 8-15 with Tensor Parallelism and 8 layers
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1\nDevices 8-15 (Tensor Parallel)\nLayers 8-15";
+        style="rounded,dashed";
+        fillcolor="#e8f5e9";
+        
+        RecvStage1 [label="Receive from Stage 0\nGPU: All 8-15\nFrom GPUs 0-7\nSize: [128,12500,4096] per GPU\nProtocol: NCCL Send/Recv", shape=ellipse, fillcolor="#ff8a65"];
+        
+        // Layer 8-15 on devices 8-15
+        L8 [label="Layer 8\nGPU: All 8-15\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L9 [label="Layer 9\nGPU: All 8-15\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L10 [label="Layer 10\nGPU: All 8-15\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L11 [label="Layer 11\nGPU: All 8-15\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L12 [label="Layer 12\nGPU: All 8-15\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L13 [label="Layer 13\nGPU: All 8-15\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L14 [label="Layer 14\nGPU: All 8-15\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        L15 [label="Layer 15\nGPU: All 8-15\nSame as Layer 0\n[128,12500,4096]", fillcolor="#c8e6c9"];
+        
+        Merge1 [label="Merge & Gather\nGPU: All 8-15\nInput: [128,12500,4096]×8\nOutput: [128,100000,4096]\nGather across tensor and pipeline", shape=parallelogram, fillcolor="#ffecb3"];
+    }
+    
+    // Output
+    Output [label="Output\nSequence\nGPU: Host\nB=128, L=100000, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+    
+    // Connections
+    Input -> Split0;
+    Split0 -> L0_QKV_proj;
+    L0_QKV_proj -> L0_QKV_allgather -> L0_Attention -> L0_Output_proj -> L0_Output_allreduce -> L0_Residual1;
+    L0_Residual1 -> L0_MLP_gate -> L0_MLP_up -> L0_MLP_concat -> L0_MLP_down -> L0_MLP_allreduce -> L0_Residual2;
+    L0_Residual2 -> L1;
+    L1 -> L2 -> L3 -> L4 -> L5 -> L6 -> L7;
+    L7 -> SendStage0;
+    SendStage0 -> RecvStage1;
+    RecvStage1 -> L8;
+    L8 -> L9 -> L10 -> L11 -> L12 -> L13 -> L14 -> L15;
+    L15 -> Merge1;
+    Merge1 -> Output;
+    
+    // Residual connections
+    Split0 -> L0_Residual1 [style=dashed, label="Residual"];
+    L0_Residual1 -> L0_Residual2 [style=dashed, label="Residual"];
+}

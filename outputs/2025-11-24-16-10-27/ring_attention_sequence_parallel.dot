@@ -1,0 +1,193 @@
+digraph ring_attention_sequence_parallel {
+    rankdir=TB;
+    bgcolor="#f8f9fa";
+    
+    // Graph attributes
+    node [shape=rectangle, style="rounded,filled", fontname="Helvetica"];
+    edge [fontname="Helvetica", fontsize=10];
+    
+    // Input nodes
+    Input [label="Input
+Sequence
+B=128, L=100K, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+    
+    // Sequence split across 16 devices
+    subgraph cluster_sequence_split {
+        label="Sequence Parallel Split (16 GPUs)";
+        style="rounded,dashed";
+        fillcolor="#fff3e0";
+        
+        Split0 [label="Split
+Device 0: [0:6250]
+B=128, L=6250, D=4096", shape=parallelogram, fillcolor="#ffecb3"];
+        Split1 [label="Split
+Device 1: [6250:12500]
+B=128, L=6250, D=4096", shape=parallelogram, fillcolor="#ffecb3"];
+        Split15 [label="Split
+...
+Device 15: [93750:100000]
+B=128, L=6250, D=4096", shape=parallelogram, fillcolor="#ffecb3"];
+    }
+    
+    // Representative layer (layer 0) on Device 0
+    subgraph cluster_device0_layer0 {
+        label="Layer 0 - Device 0 (Ring Position 0)";
+        style="rounded,dashed";
+        fillcolor="#e8f5e9";
+        
+        // QKV Projection
+        D0_L0_QKV_proj [label="QKV Projection
+Input: [128, 6250, 4096]
+Output: [128, 6250, 4096]
+Weights: [512, 4096]", fillcolor="#c8e6c9"];
+        
+        // Ring Attention components
+        D0_L0_KV_buffer [label="KV Buffer
+Size: [128, 6250, 4096]
+Local K,V", fillcolor="#fff9c4"];
+        D0_L0_Q [label="Q Tensor
+Size: [128, 6250, 4096]
+Local Q", fillcolor="#fff9c4"];
+        
+        // Ring communication nodes
+        D0_L0_recv_prev [label="Receive
+From Device 15
+KV: [128, 6250, 4096]", shape=ellipse, fillcolor="#ff8a65"];
+        D0_L0_send_next [label="Send
+To Device 1
+KV: [128, 6250, 4096]", shape=ellipse, fillcolor="#ff8a65"];
+        
+        // Attention computation for each stage
+        D0_L0_attention_stage0 [label="Attention Stage 0
+Q×Local KV
+Input: Q[128,6250,4096], KV[128,6250,4096]
+Output: [128,6250,4096]", fillcolor="#c8e6c9"];
+        D0_L0_attention_stage1 [label="Attention Stage 1
+Q×Recv KV
+Input: Q[128,6250,4096], KV[128,6250,4096]
+Output: [128,6250,4096]", fillcolor="#c8e6c9"];
+        D0_L0_attention_stage15 [label="Attention Stage 15
+Q×Device 1 KV
+Input: Q[128,6250,4096], KV[128,6250,4096]
+Output: [128,6250,4096]", fillcolor="#c8e6c9"];
+        
+        D0_L0_accumulate [label="Accumulate
+Attention Outputs
+Sum 16 partial results", shape=diamond, fillcolor="#ffccbc"];
+        D0_L0_output_proj [label="Output Projection
+Input: [128, 6250, 4096]
+Output: [128, 6250, 4096]", fillcolor="#c8e6c9"];
+        D0_L0_residual1 [label="Add
+Residual", shape=diamond, fillcolor="#ffccbc"];
+        
+        // MLP components
+        D0_L0_MLP_gate [label="MLP Gate
+Input: [128, 6250, 4096]
+Output: [128, 6250, 16384]", fillcolor="#c8e6c9"];
+        D0_L0_MLP_up [label="MLP Up
+Input: [128, 6250, 4096]
+Output: [128, 6250, 16384]", fillcolor="#c8e6c9"];
+        D0_L0_MLP_down [label="MLP Down
+Input: [128, 6250, 16384]
+Output: [128, 6250, 4096]", fillcolor="#c8e6c9"];
+        D0_L0_residual2 [label="Add
+Residual", shape=diamond, fillcolor="#ffccbc"];
+    }
+    
+    // Ring communication flow
+    subgraph cluster_ring_communication {
+        label="Ring Communication Pattern";
+        style="rounded,dashed";
+        fillcolor="#fce4ec";
+        
+        Ring0 [label="Ring Step 0
+Local compute", shape=ellipse, fillcolor="#f8bbd0"];
+        Ring1 [label="Ring Step 1
+Send/Recv", shape=ellipse, fillcolor="#f8bbd0"];
+        Ring15 [label="Ring Step 15
+Final compute", shape=ellipse, fillcolor="#f8bbd0"];
+        
+        // Ring flow indicators
+        Ring0 -> Ring1 [label="KV transfer"];
+        Ring1 -> Ring15 [label="..."];
+    }
+    
+    // Other devices (abbreviated)
+    subgraph cluster_other_devices {
+        label="Other Devices (1-15)";
+        style="rounded,dashed";
+        fillcolor="#f3e5f5";
+        
+        Device1 [label="Device 1
+Same as Device 0
+Ring Position 1", shape=note, fillcolor="#f5f5f5"];
+        Device15 [label="Device 15
+Same as Device 0
+Ring Position 15", shape=note, fillcolor="#f5f5f5"];
+    }
+    
+    // All layers (abbreviated)
+    subgraph cluster_all_layers {
+        label="All 16 Layers";
+        style="rounded,dashed";
+        fillcolor="#e0f2f1";
+        
+        NoteLayers [label="Layers 1-15
+(Same structure as Layer 0)
+Each device processes all 16 layers", shape=note, fillcolor="#f5f5f5"];
+    }
+    
+    // Output aggregation
+    subgraph cluster_output {
+        label="Output Aggregation";
+        style="rounded,dashed";
+        fillcolor="#fff8e1";
+        
+        MergeAll [label="Merge
+16 Device Outputs
+Sequence: [0:100000]", shape=parallelogram, fillcolor="#ffecb3"];
+        Output [label="Output
+Sequence
+B=128, L=100K, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+    }
+    
+    // Detailed connections for Device 0
+    Input -> Split0;
+    Split0 -> D0_L0_QKV_proj;
+    D0_L0_QKV_proj -> D0_L0_KV_buffer;
+    D0_L0_QKV_proj -> D0_L0_Q;
+    
+    D0_L0_KV_buffer -> D0_L0_attention_stage0;
+    D0_L0_Q -> D0_L0_attention_stage0;
+    D0_L0_attention_stage0 -> D0_L0_accumulate;
+    
+    D0_L0_KV_buffer -> D0_L0_send_next;
+    D0_L0_recv_prev -> D0_L0_attention_stage15;
+    D0_L0_Q -> D0_L0_attention_stage15;
+    D0_L0_attention_stage15 -> D0_L0_accumulate;
+    
+    D0_L0_accumulate -> D0_L0_output_proj;
+    D0_L0_output_proj -> D0_L0_residual1;
+    D0_L0_residual1 -> D0_L0_MLP_gate;
+    D0_L0_MLP_gate -> D0_L0_MLP_up;
+    D0_L0_MLP_up -> D0_L0_MLP_down;
+    D0_L0_MLP_down -> D0_L0_residual2;
+    D0_L0_residual2 -> NoteLayers;
+    
+    // Ring communication connections
+    D0_L0_send_next -> Device1 [style=dashed, label="KV"];
+    Device15 -> D0_L0_recv_prev [style=dashed, label="KV"];
+    
+    // Final output
+    NoteLayers -> MergeAll;
+    MergeAll -> Output;
+    
+    // Residual connections
+    Split0 -> D0_L0_residual1 [style=dashed, label="Residual"];
+    D0_L0_residual1 -> D0_L0_residual2 [style=dashed, label="Residual"];
+    
+    // Ring flow visualization
+    D0_L0_KV_buffer -> Ring0;
+    Ring0 -> D0_L0_send_next;
+    D0_L0_recv_prev -> Ring15;
+}

@@ -1,0 +1,111 @@
+digraph baseline_dense_transformer {
+    rankdir=TB;
+    bgcolor="#f8f9fa";
+    
+    // Graph attributes
+    node [shape=rectangle, style="rounded,filled", fontname="Helvetica"];
+    edge [fontname="Helvetica", fontsize=10];
+    
+    // Input node
+    Input [label="Input
+Sequence
+B=128, L=100K, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+    
+    // Pipeline Stage 0 (devices 0-7)
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0 (Devices 0-7)";
+        style="rounded,dashed";
+        fillcolor="#fff3e0";
+        
+        // Layer 0
+        Split0 [label="Split
+Across 8 GPUs", shape=parallelogram, fillcolor="#ffecb3"];
+        
+        L0_QKV_proj [label="QKV Projection
+Input: [128, 6250, 4096]
+Output: [128, 6250, 4096]
+TP=8", fillcolor="#c8e6c9"];
+        L0_QKV_allgather [label="All-Gather
+QKV across TP
+Size: 6250*4096*2", shape=ellipse, fillcolor="#ffe082"];
+        L0_Attention [label="Multi-Head Attention
+Input: [128, 6250, 4096]
+Output: [128, 6250, 4096]
+32 heads, 128 dim", fillcolor="#c8e6c9"];
+        L0_Output_proj [label="Output Projection
+Input: [128, 6250, 4096]
+Output: [128, 6250, 4096]
+TP=8", fillcolor="#c8e6c9"];
+        L0_Residual1 [label="Add
+Residual", shape=diamond, fillcolor="#ffccbc"];
+        
+        L0_MLP_gate [label="MLP Gate
+Input: [128, 6250, 4096]
+Output: [128, 6250, 16384]
+TP=8", fillcolor="#c8e6c9"];
+        L0_MLP_up [label="MLP Up
+Input: [128, 6250, 4096]
+Output: [128, 6250, 16384]
+TP=8", fillcolor="#c8e6c9"];
+        L0_MLP_down [label="MLP Down
+Input: [128, 6250, 16384]
+Output: [128, 6250, 4096]
+TP=8", fillcolor="#c8e6c9"];
+        L0_Residual2 [label="Add
+Residual", shape=diamond, fillcolor="#ffccbc"];
+        
+        // Layer 1-7 (abbreviated)
+        Note1 [label="Layers 1-7
+(Repeated 7 times)
+16 layers total", shape=note, fillcolor="#f5f5f5"];
+    }
+    
+    // Pipeline communication
+    SendStage0 [label="Send to
+Stage 1", shape=ellipse, fillcolor="#ff8a65"];
+    
+    // Pipeline Stage 1 (devices 8-15)
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1 (Devices 8-15)";
+        style="rounded,dashed";
+        fillcolor="#e8f5e9";
+        
+        RecvStage1 [label="Receive from
+Stage 0", shape=ellipse, fillcolor="#ff8a65"];
+        
+        // Layer 8-15
+        Note2 [label="Layers 8-15
+(Same as Layer 0)
+8 layers per stage", shape=note, fillcolor="#f5f5f5"];
+        
+        Merge1 [label="Merge
+From 8 GPUs", shape=parallelogram, fillcolor="#ffecb3"];
+    }
+    
+    // Output
+    Output [label="Output
+Sequence
+B=128, L=100K, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+    
+    // Connections
+    Input -> Split0;
+    Split0 -> L0_QKV_proj;
+    L0_QKV_proj -> L0_QKV_allgather;
+    L0_QKV_allgather -> L0_Attention;
+    L0_Attention -> L0_Output_proj;
+    L0_Output_proj -> L0_Residual1;
+    L0_Residual1 -> L0_MLP_gate;
+    L0_MLP_gate -> L0_MLP_up;
+    L0_MLP_up -> L0_MLP_down;
+    L0_MLP_down -> L0_Residual2;
+    L0_Residual2 -> Note1;
+    Note1 -> SendStage0;
+    SendStage0 -> RecvStage1;
+    RecvStage1 -> Note2;
+    Note2 -> Merge1;
+    Merge1 -> Output;
+    
+    // Residual connections
+    Split0 -> L0_Residual1 [style=dashed, label="Residual"];
+    L0_Residual1 -> L0_Residual2 [style=dashed, label="Residual"];
+}

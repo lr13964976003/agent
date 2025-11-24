@@ -1,0 +1,116 @@
+digraph detailed_ring_attention {
+    rankdir=LR;
+    bgcolor="#f8f9fa";
+    
+    // Graph attributes
+    node [shape=rectangle, style="rounded,filled", fontname="Helvetica"];
+    edge [fontname="Helvetica", fontsize=9];
+    
+    // Input
+    Input [label="Input
+B=128, L=100K, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+    
+    // Layer 0 across all 16 devices
+    subgraph cluster_layer0_ring {
+        label="Layer 0 Ring Attention - 16 Devices";
+        style="rounded,dashed";
+        fillcolor="#e8f5e9";
+        
+        // Device 0
+        subgraph cluster_d0 {
+            label="Device 0 (Seq 0-6250)";
+            style="rounded";
+            fillcolor="#fff3e0";
+            
+            D0_QKV [label="QKV Proj
+[128,6250,4096]", fillcolor="#c8e6c9"];
+            D0_Q [label="Q
+[128,6250,4096]", fillcolor="#fff9c4"];
+            D0_KV0 [label="KV-0
+Local", fillcolor="#fff9c4"];
+            D0_Compute0 [label="Attn-0
+Q×KV0", fillcolor="#c8e6c9"];
+            D0_KV1 [label="KV-1
+From D15", fillcolor="#ffecb3"];
+            D0_Compute1 [label="Attn-1
+Q×KV1", fillcolor="#c8e6c9"];
+            D0_KV15 [label="KV-15
+From D1", fillcolor="#ffecb3"];
+            D0_Compute15 [label="Attn-15
+Q×KV15", fillcolor="#c8e6c9"];
+            D0_Accum [label="Sum
+16 partials", shape=diamond, fillcolor="#ffccbc"];
+            D0_Out [label="Output Proj
+[128,6250,4096]", fillcolor="#c8e6c9"];
+        }
+        
+        // Device 1
+        subgraph cluster_d1 {
+            label="Device 1 (Seq 6250-12500)";
+            style="rounded";
+            fillcolor="#fff3e0";
+            
+            D1_QKV [label="QKV Proj
+[128,6250,4096]", fillcolor="#c8e6c9"];
+            D1_Q [label="Q
+[128,6250,4096]", fillcolor="#fff9c4"];
+            // Similar compute stages...
+            D1_Accum [label="Sum
+16 partials", shape=diamond, fillcolor="#ffccbc"];
+            D1_Out [label="Output Proj
+[128,6250,4096]", fillcolor="#c8e6c9"];
+        }
+        
+        // Device 15
+        subgraph cluster_d15 {
+            label="Device 15 (Seq 93750-100K)";
+            style="rounded";
+            fillcolor="#fff3e0";
+            
+            D15_QKV [label="QKV Proj
+[128,6250,4096]", fillcolor="#c8e6c9"];
+            D15_Q [label="Q
+[128,6250,4096]", fillcolor="#fff9c4"];
+            D15_Accum [label="Sum
+16 partials", shape=diamond, fillcolor="#ffccbc"];
+            D15_Out [label="Output Proj
+[128,6250,4096]", fillcolor="#c8e6c9"];
+        }
+    }
+    
+    // Ring communication edges
+    subgraph cluster_ring_comm {
+        label="Ring Communication";
+        style="rounded,dashed";
+        fillcolor="#fce4ec";
+        
+        edge [color="#e91e63", style=dashed];
+        // KV ring transfers
+        D0_KV0 -> D1_Compute0 [constraint=false];
+        D1_KV0 -> D2 [constraint=false];
+        D15_KV0 -> D0_Compute15 [constraint=false];
+    }
+    
+    // Input split
+    Input -> D0_QKV;
+    Input -> D1_QKV;
+    Input -> D15_QKV;
+    
+    // Device 0 connections
+    D0_QKV -> D0_Q;
+    D0_QKV -> D0_KV0;
+    D0_Q -> D0_Compute0;
+    D0_KV0 -> D0_Compute0;
+    D0_Compute0 -> D0_Accum;
+    D0_Accum -> D0_Out;
+    
+    // Similar connections for all devices...
+    
+    // Output merge
+    D0_Out -> Output;
+    D1_Out -> Output;
+    D15_Out -> Output;
+    
+    Output [label="Output
+B=128, L=100K, D=4096", shape=ellipse, fillcolor="#e3f2fd"];
+}
