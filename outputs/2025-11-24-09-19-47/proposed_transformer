@@ -1,0 +1,1584 @@
+// Dense Transformer - Ring Attention + Sequence Parallel
+digraph proposed_transformer {
+	nodesep=0.6 rankdir=TB ranksep=1.0 splines=ortho
+	node [fontname=Arial fontsize=10]
+	input [label="Input
+[batch_size=128, seq_len=100000, d_model=4096]" fillcolor=lightyellow shape=parallelogram style=filled]
+	sequence_split [label="Sequence Split
+Into 16 parts
+[128, 6250, 4096] each" fillcolor=white shape=ellipse style=filled]
+	subgraph cluster_device_0 {
+		color=black fillcolor=lightcoral label="Device 0 (6250 tokens)" style=filled
+		d0_input [label="Local Input
+[128, 6250, 4096]
+Device 0" fillcolor=white shape=ellipse style=filled]
+		d0_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 0" fillcolor=white shape=rectangle style=filled]
+		d0_q [label="Q Projection
+[128, 6250, 4096]
+Device 0" fillcolor=lightcoral shape=rectangle style=filled]
+		d0_k [label="K Projection
+[128, 6250, 4096]
+Device 0" fillcolor=lightcoral shape=rectangle style=filled]
+		d0_v [label="V Projection
+[128, 6250, 4096]
+Device 0" fillcolor=lightcoral shape=rectangle style=filled]
+		d0_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 0" fillcolor=white shape=ellipse style=filled]
+		d0_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 0" fillcolor=white shape=ellipse style=filled]
+		d0_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 0" fillcolor=white shape=ellipse style=filled]
+		d0_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 0" fillcolor=lightblue shape=rectangle style=filled]
+		d0_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 0" fillcolor=white shape=ellipse style=dashed]
+		d0_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 0" fillcolor=white shape=ellipse style=dashed]
+		d0_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 0" fillcolor=lightcoral shape=rectangle style=filled]
+		d0_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 0" fillcolor=white shape=parallelogram style=filled]
+		d0_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 0" fillcolor=white shape=rectangle style=filled]
+		d0_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 0" fillcolor=lightgreen shape=rectangle style=filled]
+		d0_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 0" fillcolor=lightgreen shape=rectangle style=filled]
+		d0_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 0" fillcolor=lightgreen shape=rectangle style=filled]
+		d0_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 0" fillcolor=white shape=parallelogram style=filled]
+		d0_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 0" fillcolor=lightgray shape=rectangle style=filled]
+		d0_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 0" fillcolor=lightgray shape=rectangle style=filled]
+		d0_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 0" fillcolor=lightgray shape=rectangle style=filled]
+		d0_output [label="Local Output
+[128, 6250, 4096]
+Device 0" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_1 {
+		color=black fillcolor=lightblue label="Device 1 (6250 tokens)" style=filled
+		d1_input [label="Local Input
+[128, 6250, 4096]
+Device 1" fillcolor=white shape=ellipse style=filled]
+		d1_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 1" fillcolor=white shape=rectangle style=filled]
+		d1_q [label="Q Projection
+[128, 6250, 4096]
+Device 1" fillcolor=lightcoral shape=rectangle style=filled]
+		d1_k [label="K Projection
+[128, 6250, 4096]
+Device 1" fillcolor=lightcoral shape=rectangle style=filled]
+		d1_v [label="V Projection
+[128, 6250, 4096]
+Device 1" fillcolor=lightcoral shape=rectangle style=filled]
+		d1_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 1" fillcolor=white shape=ellipse style=filled]
+		d1_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 1" fillcolor=white shape=ellipse style=filled]
+		d1_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 1" fillcolor=white shape=ellipse style=filled]
+		d1_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 1" fillcolor=lightblue shape=rectangle style=filled]
+		d1_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 1" fillcolor=white shape=ellipse style=dashed]
+		d1_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 1" fillcolor=white shape=ellipse style=dashed]
+		d1_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 1" fillcolor=lightcoral shape=rectangle style=filled]
+		d1_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 1" fillcolor=white shape=parallelogram style=filled]
+		d1_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 1" fillcolor=white shape=rectangle style=filled]
+		d1_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 1" fillcolor=lightgreen shape=rectangle style=filled]
+		d1_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 1" fillcolor=lightgreen shape=rectangle style=filled]
+		d1_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 1" fillcolor=lightgreen shape=rectangle style=filled]
+		d1_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 1" fillcolor=white shape=parallelogram style=filled]
+		d1_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 1" fillcolor=lightgray shape=rectangle style=filled]
+		d1_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 1" fillcolor=lightgray shape=rectangle style=filled]
+		d1_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 1" fillcolor=lightgray shape=rectangle style=filled]
+		d1_output [label="Local Output
+[128, 6250, 4096]
+Device 1" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_2 {
+		color=black fillcolor=lightgreen label="Device 2 (6250 tokens)" style=filled
+		d2_input [label="Local Input
+[128, 6250, 4096]
+Device 2" fillcolor=white shape=ellipse style=filled]
+		d2_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 2" fillcolor=white shape=rectangle style=filled]
+		d2_q [label="Q Projection
+[128, 6250, 4096]
+Device 2" fillcolor=lightcoral shape=rectangle style=filled]
+		d2_k [label="K Projection
+[128, 6250, 4096]
+Device 2" fillcolor=lightcoral shape=rectangle style=filled]
+		d2_v [label="V Projection
+[128, 6250, 4096]
+Device 2" fillcolor=lightcoral shape=rectangle style=filled]
+		d2_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 2" fillcolor=white shape=ellipse style=filled]
+		d2_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 2" fillcolor=white shape=ellipse style=filled]
+		d2_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 2" fillcolor=white shape=ellipse style=filled]
+		d2_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 2" fillcolor=lightblue shape=rectangle style=filled]
+		d2_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 2" fillcolor=white shape=ellipse style=dashed]
+		d2_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 2" fillcolor=white shape=ellipse style=dashed]
+		d2_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 2" fillcolor=lightcoral shape=rectangle style=filled]
+		d2_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 2" fillcolor=white shape=parallelogram style=filled]
+		d2_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 2" fillcolor=white shape=rectangle style=filled]
+		d2_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 2" fillcolor=lightgreen shape=rectangle style=filled]
+		d2_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 2" fillcolor=lightgreen shape=rectangle style=filled]
+		d2_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 2" fillcolor=lightgreen shape=rectangle style=filled]
+		d2_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 2" fillcolor=white shape=parallelogram style=filled]
+		d2_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 2" fillcolor=lightgray shape=rectangle style=filled]
+		d2_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 2" fillcolor=lightgray shape=rectangle style=filled]
+		d2_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 2" fillcolor=lightgray shape=rectangle style=filled]
+		d2_output [label="Local Output
+[128, 6250, 4096]
+Device 2" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_3 {
+		color=black fillcolor=lightyellow label="Device 3 (6250 tokens)" style=filled
+		d3_input [label="Local Input
+[128, 6250, 4096]
+Device 3" fillcolor=white shape=ellipse style=filled]
+		d3_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 3" fillcolor=white shape=rectangle style=filled]
+		d3_q [label="Q Projection
+[128, 6250, 4096]
+Device 3" fillcolor=lightcoral shape=rectangle style=filled]
+		d3_k [label="K Projection
+[128, 6250, 4096]
+Device 3" fillcolor=lightcoral shape=rectangle style=filled]
+		d3_v [label="V Projection
+[128, 6250, 4096]
+Device 3" fillcolor=lightcoral shape=rectangle style=filled]
+		d3_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 3" fillcolor=white shape=ellipse style=filled]
+		d3_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 3" fillcolor=white shape=ellipse style=filled]
+		d3_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 3" fillcolor=white shape=ellipse style=filled]
+		d3_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 3" fillcolor=lightblue shape=rectangle style=filled]
+		d3_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 3" fillcolor=white shape=ellipse style=dashed]
+		d3_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 3" fillcolor=white shape=ellipse style=dashed]
+		d3_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 3" fillcolor=lightcoral shape=rectangle style=filled]
+		d3_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 3" fillcolor=white shape=parallelogram style=filled]
+		d3_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 3" fillcolor=white shape=rectangle style=filled]
+		d3_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 3" fillcolor=lightgreen shape=rectangle style=filled]
+		d3_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 3" fillcolor=lightgreen shape=rectangle style=filled]
+		d3_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 3" fillcolor=lightgreen shape=rectangle style=filled]
+		d3_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 3" fillcolor=white shape=parallelogram style=filled]
+		d3_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 3" fillcolor=lightgray shape=rectangle style=filled]
+		d3_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 3" fillcolor=lightgray shape=rectangle style=filled]
+		d3_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 3" fillcolor=lightgray shape=rectangle style=filled]
+		d3_output [label="Local Output
+[128, 6250, 4096]
+Device 3" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_4 {
+		color=black fillcolor=lightpink label="Device 4 (6250 tokens)" style=filled
+		d4_input [label="Local Input
+[128, 6250, 4096]
+Device 4" fillcolor=white shape=ellipse style=filled]
+		d4_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 4" fillcolor=white shape=rectangle style=filled]
+		d4_q [label="Q Projection
+[128, 6250, 4096]
+Device 4" fillcolor=lightcoral shape=rectangle style=filled]
+		d4_k [label="K Projection
+[128, 6250, 4096]
+Device 4" fillcolor=lightcoral shape=rectangle style=filled]
+		d4_v [label="V Projection
+[128, 6250, 4096]
+Device 4" fillcolor=lightcoral shape=rectangle style=filled]
+		d4_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 4" fillcolor=white shape=ellipse style=filled]
+		d4_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 4" fillcolor=white shape=ellipse style=filled]
+		d4_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 4" fillcolor=white shape=ellipse style=filled]
+		d4_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 4" fillcolor=lightblue shape=rectangle style=filled]
+		d4_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 4" fillcolor=white shape=ellipse style=dashed]
+		d4_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 4" fillcolor=white shape=ellipse style=dashed]
+		d4_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 4" fillcolor=lightcoral shape=rectangle style=filled]
+		d4_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 4" fillcolor=white shape=parallelogram style=filled]
+		d4_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 4" fillcolor=white shape=rectangle style=filled]
+		d4_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 4" fillcolor=lightgreen shape=rectangle style=filled]
+		d4_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 4" fillcolor=lightgreen shape=rectangle style=filled]
+		d4_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 4" fillcolor=lightgreen shape=rectangle style=filled]
+		d4_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 4" fillcolor=white shape=parallelogram style=filled]
+		d4_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 4" fillcolor=lightgray shape=rectangle style=filled]
+		d4_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 4" fillcolor=lightgray shape=rectangle style=filled]
+		d4_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 4" fillcolor=lightgray shape=rectangle style=filled]
+		d4_output [label="Local Output
+[128, 6250, 4096]
+Device 4" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_5 {
+		color=black fillcolor=lightcyan label="Device 5 (6250 tokens)" style=filled
+		d5_input [label="Local Input
+[128, 6250, 4096]
+Device 5" fillcolor=white shape=ellipse style=filled]
+		d5_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 5" fillcolor=white shape=rectangle style=filled]
+		d5_q [label="Q Projection
+[128, 6250, 4096]
+Device 5" fillcolor=lightcoral shape=rectangle style=filled]
+		d5_k [label="K Projection
+[128, 6250, 4096]
+Device 5" fillcolor=lightcoral shape=rectangle style=filled]
+		d5_v [label="V Projection
+[128, 6250, 4096]
+Device 5" fillcolor=lightcoral shape=rectangle style=filled]
+		d5_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 5" fillcolor=white shape=ellipse style=filled]
+		d5_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 5" fillcolor=white shape=ellipse style=filled]
+		d5_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 5" fillcolor=white shape=ellipse style=filled]
+		d5_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 5" fillcolor=lightblue shape=rectangle style=filled]
+		d5_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 5" fillcolor=white shape=ellipse style=dashed]
+		d5_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 5" fillcolor=white shape=ellipse style=dashed]
+		d5_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 5" fillcolor=lightcoral shape=rectangle style=filled]
+		d5_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 5" fillcolor=white shape=parallelogram style=filled]
+		d5_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 5" fillcolor=white shape=rectangle style=filled]
+		d5_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 5" fillcolor=lightgreen shape=rectangle style=filled]
+		d5_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 5" fillcolor=lightgreen shape=rectangle style=filled]
+		d5_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 5" fillcolor=lightgreen shape=rectangle style=filled]
+		d5_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 5" fillcolor=white shape=parallelogram style=filled]
+		d5_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 5" fillcolor=lightgray shape=rectangle style=filled]
+		d5_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 5" fillcolor=lightgray shape=rectangle style=filled]
+		d5_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 5" fillcolor=lightgray shape=rectangle style=filled]
+		d5_output [label="Local Output
+[128, 6250, 4096]
+Device 5" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_6 {
+		color=black fillcolor=lightgray label="Device 6 (6250 tokens)" style=filled
+		d6_input [label="Local Input
+[128, 6250, 4096]
+Device 6" fillcolor=white shape=ellipse style=filled]
+		d6_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 6" fillcolor=white shape=rectangle style=filled]
+		d6_q [label="Q Projection
+[128, 6250, 4096]
+Device 6" fillcolor=lightcoral shape=rectangle style=filled]
+		d6_k [label="K Projection
+[128, 6250, 4096]
+Device 6" fillcolor=lightcoral shape=rectangle style=filled]
+		d6_v [label="V Projection
+[128, 6250, 4096]
+Device 6" fillcolor=lightcoral shape=rectangle style=filled]
+		d6_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 6" fillcolor=white shape=ellipse style=filled]
+		d6_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 6" fillcolor=white shape=ellipse style=filled]
+		d6_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 6" fillcolor=white shape=ellipse style=filled]
+		d6_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 6" fillcolor=lightblue shape=rectangle style=filled]
+		d6_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 6" fillcolor=white shape=ellipse style=dashed]
+		d6_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 6" fillcolor=white shape=ellipse style=dashed]
+		d6_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 6" fillcolor=lightcoral shape=rectangle style=filled]
+		d6_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 6" fillcolor=white shape=parallelogram style=filled]
+		d6_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 6" fillcolor=white shape=rectangle style=filled]
+		d6_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 6" fillcolor=lightgreen shape=rectangle style=filled]
+		d6_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 6" fillcolor=lightgreen shape=rectangle style=filled]
+		d6_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 6" fillcolor=lightgreen shape=rectangle style=filled]
+		d6_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 6" fillcolor=white shape=parallelogram style=filled]
+		d6_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 6" fillcolor=lightgray shape=rectangle style=filled]
+		d6_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 6" fillcolor=lightgray shape=rectangle style=filled]
+		d6_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 6" fillcolor=lightgray shape=rectangle style=filled]
+		d6_output [label="Local Output
+[128, 6250, 4096]
+Device 6" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_7 {
+		color=black fillcolor=lightorange label="Device 7 (6250 tokens)" style=filled
+		d7_input [label="Local Input
+[128, 6250, 4096]
+Device 7" fillcolor=white shape=ellipse style=filled]
+		d7_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 7" fillcolor=white shape=rectangle style=filled]
+		d7_q [label="Q Projection
+[128, 6250, 4096]
+Device 7" fillcolor=lightcoral shape=rectangle style=filled]
+		d7_k [label="K Projection
+[128, 6250, 4096]
+Device 7" fillcolor=lightcoral shape=rectangle style=filled]
+		d7_v [label="V Projection
+[128, 6250, 4096]
+Device 7" fillcolor=lightcoral shape=rectangle style=filled]
+		d7_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 7" fillcolor=white shape=ellipse style=filled]
+		d7_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 7" fillcolor=white shape=ellipse style=filled]
+		d7_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 7" fillcolor=white shape=ellipse style=filled]
+		d7_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 7" fillcolor=lightblue shape=rectangle style=filled]
+		d7_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 7" fillcolor=white shape=ellipse style=dashed]
+		d7_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 7" fillcolor=white shape=ellipse style=dashed]
+		d7_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 7" fillcolor=lightcoral shape=rectangle style=filled]
+		d7_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 7" fillcolor=white shape=parallelogram style=filled]
+		d7_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 7" fillcolor=white shape=rectangle style=filled]
+		d7_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 7" fillcolor=lightgreen shape=rectangle style=filled]
+		d7_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 7" fillcolor=lightgreen shape=rectangle style=filled]
+		d7_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 7" fillcolor=lightgreen shape=rectangle style=filled]
+		d7_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 7" fillcolor=white shape=parallelogram style=filled]
+		d7_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 7" fillcolor=lightgray shape=rectangle style=filled]
+		d7_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 7" fillcolor=lightgray shape=rectangle style=filled]
+		d7_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 7" fillcolor=lightgray shape=rectangle style=filled]
+		d7_output [label="Local Output
+[128, 6250, 4096]
+Device 7" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_8 {
+		color=black fillcolor=lightsteelblue label="Device 8 (6250 tokens)" style=filled
+		d8_input [label="Local Input
+[128, 6250, 4096]
+Device 8" fillcolor=white shape=ellipse style=filled]
+		d8_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 8" fillcolor=white shape=rectangle style=filled]
+		d8_q [label="Q Projection
+[128, 6250, 4096]
+Device 8" fillcolor=lightcoral shape=rectangle style=filled]
+		d8_k [label="K Projection
+[128, 6250, 4096]
+Device 8" fillcolor=lightcoral shape=rectangle style=filled]
+		d8_v [label="V Projection
+[128, 6250, 4096]
+Device 8" fillcolor=lightcoral shape=rectangle style=filled]
+		d8_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 8" fillcolor=white shape=ellipse style=filled]
+		d8_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 8" fillcolor=white shape=ellipse style=filled]
+		d8_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 8" fillcolor=white shape=ellipse style=filled]
+		d8_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 8" fillcolor=lightblue shape=rectangle style=filled]
+		d8_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 8" fillcolor=white shape=ellipse style=dashed]
+		d8_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 8" fillcolor=white shape=ellipse style=dashed]
+		d8_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 8" fillcolor=lightcoral shape=rectangle style=filled]
+		d8_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 8" fillcolor=white shape=parallelogram style=filled]
+		d8_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 8" fillcolor=white shape=rectangle style=filled]
+		d8_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 8" fillcolor=lightgreen shape=rectangle style=filled]
+		d8_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 8" fillcolor=lightgreen shape=rectangle style=filled]
+		d8_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 8" fillcolor=lightgreen shape=rectangle style=filled]
+		d8_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 8" fillcolor=white shape=parallelogram style=filled]
+		d8_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 8" fillcolor=lightgray shape=rectangle style=filled]
+		d8_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 8" fillcolor=lightgray shape=rectangle style=filled]
+		d8_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 8" fillcolor=lightgray shape=rectangle style=filled]
+		d8_output [label="Local Output
+[128, 6250, 4096]
+Device 8" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_9 {
+		color=black fillcolor=lightseagreen label="Device 9 (6250 tokens)" style=filled
+		d9_input [label="Local Input
+[128, 6250, 4096]
+Device 9" fillcolor=white shape=ellipse style=filled]
+		d9_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 9" fillcolor=white shape=rectangle style=filled]
+		d9_q [label="Q Projection
+[128, 6250, 4096]
+Device 9" fillcolor=lightcoral shape=rectangle style=filled]
+		d9_k [label="K Projection
+[128, 6250, 4096]
+Device 9" fillcolor=lightcoral shape=rectangle style=filled]
+		d9_v [label="V Projection
+[128, 6250, 4096]
+Device 9" fillcolor=lightcoral shape=rectangle style=filled]
+		d9_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 9" fillcolor=white shape=ellipse style=filled]
+		d9_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 9" fillcolor=white shape=ellipse style=filled]
+		d9_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 9" fillcolor=white shape=ellipse style=filled]
+		d9_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 9" fillcolor=lightblue shape=rectangle style=filled]
+		d9_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 9" fillcolor=white shape=ellipse style=dashed]
+		d9_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 9" fillcolor=white shape=ellipse style=dashed]
+		d9_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 9" fillcolor=lightcoral shape=rectangle style=filled]
+		d9_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 9" fillcolor=white shape=parallelogram style=filled]
+		d9_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 9" fillcolor=white shape=rectangle style=filled]
+		d9_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 9" fillcolor=lightgreen shape=rectangle style=filled]
+		d9_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 9" fillcolor=lightgreen shape=rectangle style=filled]
+		d9_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 9" fillcolor=lightgreen shape=rectangle style=filled]
+		d9_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 9" fillcolor=white shape=parallelogram style=filled]
+		d9_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 9" fillcolor=lightgray shape=rectangle style=filled]
+		d9_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 9" fillcolor=lightgray shape=rectangle style=filled]
+		d9_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 9" fillcolor=lightgray shape=rectangle style=filled]
+		d9_output [label="Local Output
+[128, 6250, 4096]
+Device 9" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_10 {
+		color=black fillcolor=lightsalmon label="Device 10 (6250 tokens)" style=filled
+		d10_input [label="Local Input
+[128, 6250, 4096]
+Device 10" fillcolor=white shape=ellipse style=filled]
+		d10_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 10" fillcolor=white shape=rectangle style=filled]
+		d10_q [label="Q Projection
+[128, 6250, 4096]
+Device 10" fillcolor=lightcoral shape=rectangle style=filled]
+		d10_k [label="K Projection
+[128, 6250, 4096]
+Device 10" fillcolor=lightcoral shape=rectangle style=filled]
+		d10_v [label="V Projection
+[128, 6250, 4096]
+Device 10" fillcolor=lightcoral shape=rectangle style=filled]
+		d10_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 10" fillcolor=white shape=ellipse style=filled]
+		d10_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 10" fillcolor=white shape=ellipse style=filled]
+		d10_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 10" fillcolor=white shape=ellipse style=filled]
+		d10_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 10" fillcolor=lightblue shape=rectangle style=filled]
+		d10_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 10" fillcolor=white shape=ellipse style=dashed]
+		d10_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 10" fillcolor=white shape=ellipse style=dashed]
+		d10_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 10" fillcolor=lightcoral shape=rectangle style=filled]
+		d10_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 10" fillcolor=white shape=parallelogram style=filled]
+		d10_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 10" fillcolor=white shape=rectangle style=filled]
+		d10_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 10" fillcolor=lightgreen shape=rectangle style=filled]
+		d10_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 10" fillcolor=lightgreen shape=rectangle style=filled]
+		d10_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 10" fillcolor=lightgreen shape=rectangle style=filled]
+		d10_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 10" fillcolor=white shape=parallelogram style=filled]
+		d10_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 10" fillcolor=lightgray shape=rectangle style=filled]
+		d10_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 10" fillcolor=lightgray shape=rectangle style=filled]
+		d10_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 10" fillcolor=lightgray shape=rectangle style=filled]
+		d10_output [label="Local Output
+[128, 6250, 4096]
+Device 10" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_11 {
+		color=black fillcolor=lightseagreen label="Device 11 (6250 tokens)" style=filled
+		d11_input [label="Local Input
+[128, 6250, 4096]
+Device 11" fillcolor=white shape=ellipse style=filled]
+		d11_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 11" fillcolor=white shape=rectangle style=filled]
+		d11_q [label="Q Projection
+[128, 6250, 4096]
+Device 11" fillcolor=lightcoral shape=rectangle style=filled]
+		d11_k [label="K Projection
+[128, 6250, 4096]
+Device 11" fillcolor=lightcoral shape=rectangle style=filled]
+		d11_v [label="V Projection
+[128, 6250, 4096]
+Device 11" fillcolor=lightcoral shape=rectangle style=filled]
+		d11_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 11" fillcolor=white shape=ellipse style=filled]
+		d11_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 11" fillcolor=white shape=ellipse style=filled]
+		d11_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 11" fillcolor=white shape=ellipse style=filled]
+		d11_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 11" fillcolor=lightblue shape=rectangle style=filled]
+		d11_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 11" fillcolor=white shape=ellipse style=dashed]
+		d11_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 11" fillcolor=white shape=ellipse style=dashed]
+		d11_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 11" fillcolor=lightcoral shape=rectangle style=filled]
+		d11_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 11" fillcolor=white shape=parallelogram style=filled]
+		d11_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 11" fillcolor=white shape=rectangle style=filled]
+		d11_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 11" fillcolor=lightgreen shape=rectangle style=filled]
+		d11_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 11" fillcolor=lightgreen shape=rectangle style=filled]
+		d11_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 11" fillcolor=lightgreen shape=rectangle style=filled]
+		d11_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 11" fillcolor=white shape=parallelogram style=filled]
+		d11_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 11" fillcolor=lightgray shape=rectangle style=filled]
+		d11_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 11" fillcolor=lightgray shape=rectangle style=filled]
+		d11_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 11" fillcolor=lightgray shape=rectangle style=filled]
+		d11_output [label="Local Output
+[128, 6250, 4096]
+Device 11" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_12 {
+		color=black fillcolor=lightsteelblue label="Device 12 (6250 tokens)" style=filled
+		d12_input [label="Local Input
+[128, 6250, 4096]
+Device 12" fillcolor=white shape=ellipse style=filled]
+		d12_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 12" fillcolor=white shape=rectangle style=filled]
+		d12_q [label="Q Projection
+[128, 6250, 4096]
+Device 12" fillcolor=lightcoral shape=rectangle style=filled]
+		d12_k [label="K Projection
+[128, 6250, 4096]
+Device 12" fillcolor=lightcoral shape=rectangle style=filled]
+		d12_v [label="V Projection
+[128, 6250, 4096]
+Device 12" fillcolor=lightcoral shape=rectangle style=filled]
+		d12_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 12" fillcolor=white shape=ellipse style=filled]
+		d12_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 12" fillcolor=white shape=ellipse style=filled]
+		d12_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 12" fillcolor=white shape=ellipse style=filled]
+		d12_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 12" fillcolor=lightblue shape=rectangle style=filled]
+		d12_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 12" fillcolor=white shape=ellipse style=dashed]
+		d12_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 12" fillcolor=white shape=ellipse style=dashed]
+		d12_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 12" fillcolor=lightcoral shape=rectangle style=filled]
+		d12_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 12" fillcolor=white shape=parallelogram style=filled]
+		d12_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 12" fillcolor=white shape=rectangle style=filled]
+		d12_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 12" fillcolor=lightgreen shape=rectangle style=filled]
+		d12_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 12" fillcolor=lightgreen shape=rectangle style=filled]
+		d12_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 12" fillcolor=lightgreen shape=rectangle style=filled]
+		d12_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 12" fillcolor=white shape=parallelogram style=filled]
+		d12_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 12" fillcolor=lightgray shape=rectangle style=filled]
+		d12_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 12" fillcolor=lightgray shape=rectangle style=filled]
+		d12_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 12" fillcolor=lightgray shape=rectangle style=filled]
+		d12_output [label="Local Output
+[128, 6250, 4096]
+Device 12" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_13 {
+		color=black fillcolor=lightskyblue label="Device 13 (6250 tokens)" style=filled
+		d13_input [label="Local Input
+[128, 6250, 4096]
+Device 13" fillcolor=white shape=ellipse style=filled]
+		d13_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 13" fillcolor=white shape=rectangle style=filled]
+		d13_q [label="Q Projection
+[128, 6250, 4096]
+Device 13" fillcolor=lightcoral shape=rectangle style=filled]
+		d13_k [label="K Projection
+[128, 6250, 4096]
+Device 13" fillcolor=lightcoral shape=rectangle style=filled]
+		d13_v [label="V Projection
+[128, 6250, 4096]
+Device 13" fillcolor=lightcoral shape=rectangle style=filled]
+		d13_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 13" fillcolor=white shape=ellipse style=filled]
+		d13_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 13" fillcolor=white shape=ellipse style=filled]
+		d13_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 13" fillcolor=white shape=ellipse style=filled]
+		d13_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 13" fillcolor=lightblue shape=rectangle style=filled]
+		d13_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 13" fillcolor=white shape=ellipse style=dashed]
+		d13_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 13" fillcolor=white shape=ellipse style=dashed]
+		d13_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 13" fillcolor=lightcoral shape=rectangle style=filled]
+		d13_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 13" fillcolor=white shape=parallelogram style=filled]
+		d13_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 13" fillcolor=white shape=rectangle style=filled]
+		d13_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 13" fillcolor=lightgreen shape=rectangle style=filled]
+		d13_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 13" fillcolor=lightgreen shape=rectangle style=filled]
+		d13_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 13" fillcolor=lightgreen shape=rectangle style=filled]
+		d13_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 13" fillcolor=white shape=parallelogram style=filled]
+		d13_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 13" fillcolor=lightgray shape=rectangle style=filled]
+		d13_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 13" fillcolor=lightgray shape=rectangle style=filled]
+		d13_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 13" fillcolor=lightgray shape=rectangle style=filled]
+		d13_output [label="Local Output
+[128, 6250, 4096]
+Device 13" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_14 {
+		color=black fillcolor=lightgoldenrod label="Device 14 (6250 tokens)" style=filled
+		d14_input [label="Local Input
+[128, 6250, 4096]
+Device 14" fillcolor=white shape=ellipse style=filled]
+		d14_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 14" fillcolor=white shape=rectangle style=filled]
+		d14_q [label="Q Projection
+[128, 6250, 4096]
+Device 14" fillcolor=lightcoral shape=rectangle style=filled]
+		d14_k [label="K Projection
+[128, 6250, 4096]
+Device 14" fillcolor=lightcoral shape=rectangle style=filled]
+		d14_v [label="V Projection
+[128, 6250, 4096]
+Device 14" fillcolor=lightcoral shape=rectangle style=filled]
+		d14_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 14" fillcolor=white shape=ellipse style=filled]
+		d14_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 14" fillcolor=white shape=ellipse style=filled]
+		d14_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 14" fillcolor=white shape=ellipse style=filled]
+		d14_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 14" fillcolor=lightblue shape=rectangle style=filled]
+		d14_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 14" fillcolor=white shape=ellipse style=dashed]
+		d14_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 14" fillcolor=white shape=ellipse style=dashed]
+		d14_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 14" fillcolor=lightcoral shape=rectangle style=filled]
+		d14_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 14" fillcolor=white shape=parallelogram style=filled]
+		d14_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 14" fillcolor=white shape=rectangle style=filled]
+		d14_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 14" fillcolor=lightgreen shape=rectangle style=filled]
+		d14_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 14" fillcolor=lightgreen shape=rectangle style=filled]
+		d14_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 14" fillcolor=lightgreen shape=rectangle style=filled]
+		d14_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 14" fillcolor=white shape=parallelogram style=filled]
+		d14_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 14" fillcolor=lightgray shape=rectangle style=filled]
+		d14_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 14" fillcolor=lightgray shape=rectangle style=filled]
+		d14_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 14" fillcolor=lightgray shape=rectangle style=filled]
+		d14_output [label="Local Output
+[128, 6250, 4096]
+Device 14" fillcolor=white shape=parallelogram style=filled]
+	}
+	subgraph cluster_device_15 {
+		color=black fillcolor=lightcoral label="Device 15 (6250 tokens)" style=filled
+		d15_input [label="Local Input
+[128, 6250, 4096]
+Device 15" fillcolor=white shape=ellipse style=filled]
+		d15_ln1 [label="LayerNorm
+[128, 6250, 4096]
+Device 15" fillcolor=white shape=rectangle style=filled]
+		d15_q [label="Q Projection
+[128, 6250, 4096]
+Device 15" fillcolor=lightcoral shape=rectangle style=filled]
+		d15_k [label="K Projection
+[128, 6250, 4096]
+Device 15" fillcolor=lightcoral shape=rectangle style=filled]
+		d15_v [label="V Projection
+[128, 6250, 4096]
+Device 15" fillcolor=lightcoral shape=rectangle style=filled]
+		d15_q_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 15" fillcolor=white shape=ellipse style=filled]
+		d15_k_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 15" fillcolor=white shape=ellipse style=filled]
+		d15_v_heads [label="Split to Heads
+[128, 6250, 32, 128]
+Device 15" fillcolor=white shape=ellipse style=filled]
+		d15_ring_attn [label="Ring Attention
+[128, 6250, 4096]
+Device 15" fillcolor=lightblue shape=rectangle style=filled]
+		d15_send_kv [label="Send KV Block
+[128, 6250, 4096]
+Device 15" fillcolor=white shape=ellipse style=dashed]
+		d15_recv_kv [label="Receive KV Block
+[128, 6250, 4096]
+Device 15" fillcolor=white shape=ellipse style=dashed]
+		d15_out_proj [label="Output Projection
+[128, 6250, 4096]
+Device 15" fillcolor=lightcoral shape=rectangle style=filled]
+		d15_res1 [label="Residual Add
+[128, 6250, 4096]
+Device 15" fillcolor=white shape=parallelogram style=filled]
+		d15_ln2 [label="LayerNorm
+[128, 6250, 4096]
+Device 15" fillcolor=white shape=rectangle style=filled]
+		d15_mlp_gate [label="MLP Gate
+[128, 6250, 16384]
+Device 15" fillcolor=lightgreen shape=rectangle style=filled]
+		d15_mlp_up [label="MLP Up
+[128, 6250, 16384]
+Device 15" fillcolor=lightgreen shape=rectangle style=filled]
+		d15_mlp_down [label="MLP Down
+[128, 6250, 4096]
+Device 15" fillcolor=lightgreen shape=rectangle style=filled]
+		d15_res2 [label="Residual Add
+[128, 6250, 4096]
+Device 15" fillcolor=white shape=parallelogram style=filled]
+		d15_layer1 [label="Layer 1
+[128, 6250, 4096]
+Device 15" fillcolor=lightgray shape=rectangle style=filled]
+		d15_layer2 [label="Layer 2
+[128, 6250, 4096]
+Device 15" fillcolor=lightgray shape=rectangle style=filled]
+		d15_layer3 [label="Layer 3
+[128, 6250, 4096]
+Device 15" fillcolor=lightgray shape=rectangle style=filled]
+		d15_output [label="Local Output
+[128, 6250, 4096]
+Device 15" fillcolor=white shape=parallelogram style=filled]
+	}
+	sequence_agg [label="Sequence Aggregation
+[128, 100000, 4096]" fillcolor=white shape=ellipse style=filled]
+	output [label="Output
+[batch_size=128, seq_len=100000, d_model=4096]" fillcolor=lightyellow shape=parallelogram style=filled]
+	input -> sequence_split
+	sequence_split -> d0_input
+	d0_input -> d0_ln1
+	d0_ln1 -> d0_q
+	d0_ln1 -> d0_k
+	d0_ln1 -> d0_v
+	d0_q -> d0_q_heads
+	d0_k -> d0_k_heads
+	d0_v -> d0_v_heads
+	d0_q_heads -> d0_ring_attn
+	d0_k_heads -> d0_ring_attn
+	d0_v_heads -> d0_ring_attn
+	d0_ring_attn -> d0_send_kv
+	d0_send_kv -> d1_recv_kv [constraint=false style=dashed]
+	d15_send_kv -> d0_recv_kv [constraint=false style=dashed]
+	d0_ring_attn -> d0_out_proj
+	d0_input -> d0_res1
+	d0_out_proj -> d0_res1
+	d0_res1 -> d0_ln2
+	d0_ln2 -> d0_mlp_gate
+	d0_ln2 -> d0_mlp_up
+	d0_mlp_gate -> d0_mlp_down
+	d0_mlp_up -> d0_mlp_down
+	d0_mlp_down -> d0_res2
+	d0_res1 -> d0_res2
+	d0_res2 -> d0_layer1
+	d0_layer1 -> d0_layer2
+	d0_layer2 -> d0_layer3
+	d0_layer3 -> d0_output
+	d0_output -> sequence_agg
+	sequence_split -> d1_input
+	d1_input -> d1_ln1
+	d1_ln1 -> d1_q
+	d1_ln1 -> d1_k
+	d1_ln1 -> d1_v
+	d1_q -> d1_q_heads
+	d1_k -> d1_k_heads
+	d1_v -> d1_v_heads
+	d1_q_heads -> d1_ring_attn
+	d1_k_heads -> d1_ring_attn
+	d1_v_heads -> d1_ring_attn
+	d1_ring_attn -> d1_send_kv
+	d1_send_kv -> d2_recv_kv [constraint=false style=dashed]
+	d0_send_kv -> d1_recv_kv [constraint=false style=dashed]
+	d1_ring_attn -> d1_out_proj
+	d1_input -> d1_res1
+	d1_out_proj -> d1_res1
+	d1_res1 -> d1_ln2
+	d1_ln2 -> d1_mlp_gate
+	d1_ln2 -> d1_mlp_up
+	d1_mlp_gate -> d1_mlp_down
+	d1_mlp_up -> d1_mlp_down
+	d1_mlp_down -> d1_res2
+	d1_res1 -> d1_res2
+	d1_res2 -> d1_layer1
+	d1_layer1 -> d1_layer2
+	d1_layer2 -> d1_layer3
+	d1_layer3 -> d1_output
+	d1_output -> sequence_agg
+	sequence_split -> d2_input
+	d2_input -> d2_ln1
+	d2_ln1 -> d2_q
+	d2_ln1 -> d2_k
+	d2_ln1 -> d2_v
+	d2_q -> d2_q_heads
+	d2_k -> d2_k_heads
+	d2_v -> d2_v_heads
+	d2_q_heads -> d2_ring_attn
+	d2_k_heads -> d2_ring_attn
+	d2_v_heads -> d2_ring_attn
+	d2_ring_attn -> d2_send_kv
+	d2_send_kv -> d3_recv_kv [constraint=false style=dashed]
+	d1_send_kv -> d2_recv_kv [constraint=false style=dashed]
+	d2_ring_attn -> d2_out_proj
+	d2_input -> d2_res1
+	d2_out_proj -> d2_res1
+	d2_res1 -> d2_ln2
+	d2_ln2 -> d2_mlp_gate
+	d2_ln2 -> d2_mlp_up
+	d2_mlp_gate -> d2_mlp_down
+	d2_mlp_up -> d2_mlp_down
+	d2_mlp_down -> d2_res2
+	d2_res1 -> d2_res2
+	d2_res2 -> d2_layer1
+	d2_layer1 -> d2_layer2
+	d2_layer2 -> d2_layer3
+	d2_layer3 -> d2_output
+	d2_output -> sequence_agg
+	sequence_split -> d3_input
+	d3_input -> d3_ln1
+	d3_ln1 -> d3_q
+	d3_ln1 -> d3_k
+	d3_ln1 -> d3_v
+	d3_q -> d3_q_heads
+	d3_k -> d3_k_heads
+	d3_v -> d3_v_heads
+	d3_q_heads -> d3_ring_attn
+	d3_k_heads -> d3_ring_attn
+	d3_v_heads -> d3_ring_attn
+	d3_ring_attn -> d3_send_kv
+	d3_send_kv -> d4_recv_kv [constraint=false style=dashed]
+	d2_send_kv -> d3_recv_kv [constraint=false style=dashed]
+	d3_ring_attn -> d3_out_proj
+	d3_input -> d3_res1
+	d3_out_proj -> d3_res1
+	d3_res1 -> d3_ln2
+	d3_ln2 -> d3_mlp_gate
+	d3_ln2 -> d3_mlp_up
+	d3_mlp_gate -> d3_mlp_down
+	d3_mlp_up -> d3_mlp_down
+	d3_mlp_down -> d3_res2
+	d3_res1 -> d3_res2
+	d3_res2 -> d3_layer1
+	d3_layer1 -> d3_layer2
+	d3_layer2 -> d3_layer3
+	d3_layer3 -> d3_output
+	d3_output -> sequence_agg
+	sequence_split -> d4_input
+	d4_input -> d4_ln1
+	d4_ln1 -> d4_q
+	d4_ln1 -> d4_k
+	d4_ln1 -> d4_v
+	d4_q -> d4_q_heads
+	d4_k -> d4_k_heads
+	d4_v -> d4_v_heads
+	d4_q_heads -> d4_ring_attn
+	d4_k_heads -> d4_ring_attn
+	d4_v_heads -> d4_ring_attn
+	d4_ring_attn -> d4_send_kv
+	d4_send_kv -> d5_recv_kv [constraint=false style=dashed]
+	d3_send_kv -> d4_recv_kv [constraint=false style=dashed]
+	d4_ring_attn -> d4_out_proj
+	d4_input -> d4_res1
+	d4_out_proj -> d4_res1
+	d4_res1 -> d4_ln2
+	d4_ln2 -> d4_mlp_gate
+	d4_ln2 -> d4_mlp_up
+	d4_mlp_gate -> d4_mlp_down
+	d4_mlp_up -> d4_mlp_down
+	d4_mlp_down -> d4_res2
+	d4_res1 -> d4_res2
+	d4_res2 -> d4_layer1
+	d4_layer1 -> d4_layer2
+	d4_layer2 -> d4_layer3
+	d4_layer3 -> d4_output
+	d4_output -> sequence_agg
+	sequence_split -> d5_input
+	d5_input -> d5_ln1
+	d5_ln1 -> d5_q
+	d5_ln1 -> d5_k
+	d5_ln1 -> d5_v
+	d5_q -> d5_q_heads
+	d5_k -> d5_k_heads
+	d5_v -> d5_v_heads
+	d5_q_heads -> d5_ring_attn
+	d5_k_heads -> d5_ring_attn
+	d5_v_heads -> d5_ring_attn
+	d5_ring_attn -> d5_send_kv
+	d5_send_kv -> d6_recv_kv [constraint=false style=dashed]
+	d4_send_kv -> d5_recv_kv [constraint=false style=dashed]
+	d5_ring_attn -> d5_out_proj
+	d5_input -> d5_res1
+	d5_out_proj -> d5_res1
+	d5_res1 -> d5_ln2
+	d5_ln2 -> d5_mlp_gate
+	d5_ln2 -> d5_mlp_up
+	d5_mlp_gate -> d5_mlp_down
+	d5_mlp_up -> d5_mlp_down
+	d5_mlp_down -> d5_res2
+	d5_res1 -> d5_res2
+	d5_res2 -> d5_layer1
+	d5_layer1 -> d5_layer2
+	d5_layer2 -> d5_layer3
+	d5_layer3 -> d5_output
+	d5_output -> sequence_agg
+	sequence_split -> d6_input
+	d6_input -> d6_ln1
+	d6_ln1 -> d6_q
+	d6_ln1 -> d6_k
+	d6_ln1 -> d6_v
+	d6_q -> d6_q_heads
+	d6_k -> d6_k_heads
+	d6_v -> d6_v_heads
+	d6_q_heads -> d6_ring_attn
+	d6_k_heads -> d6_ring_attn
+	d6_v_heads -> d6_ring_attn
+	d6_ring_attn -> d6_send_kv
+	d6_send_kv -> d7_recv_kv [constraint=false style=dashed]
+	d5_send_kv -> d6_recv_kv [constraint=false style=dashed]
+	d6_ring_attn -> d6_out_proj
+	d6_input -> d6_res1
+	d6_out_proj -> d6_res1
+	d6_res1 -> d6_ln2
+	d6_ln2 -> d6_mlp_gate
+	d6_ln2 -> d6_mlp_up
+	d6_mlp_gate -> d6_mlp_down
+	d6_mlp_up -> d6_mlp_down
+	d6_mlp_down -> d6_res2
+	d6_res1 -> d6_res2
+	d6_res2 -> d6_layer1
+	d6_layer1 -> d6_layer2
+	d6_layer2 -> d6_layer3
+	d6_layer3 -> d6_output
+	d6_output -> sequence_agg
+	sequence_split -> d7_input
+	d7_input -> d7_ln1
+	d7_ln1 -> d7_q
+	d7_ln1 -> d7_k
+	d7_ln1 -> d7_v
+	d7_q -> d7_q_heads
+	d7_k -> d7_k_heads
+	d7_v -> d7_v_heads
+	d7_q_heads -> d7_ring_attn
+	d7_k_heads -> d7_ring_attn
+	d7_v_heads -> d7_ring_attn
+	d7_ring_attn -> d7_send_kv
+	d7_send_kv -> d8_recv_kv [constraint=false style=dashed]
+	d6_send_kv -> d7_recv_kv [constraint=false style=dashed]
+	d7_ring_attn -> d7_out_proj
+	d7_input -> d7_res1
+	d7_out_proj -> d7_res1
+	d7_res1 -> d7_ln2
+	d7_ln2 -> d7_mlp_gate
+	d7_ln2 -> d7_mlp_up
+	d7_mlp_gate -> d7_mlp_down
+	d7_mlp_up -> d7_mlp_down
+	d7_mlp_down -> d7_res2
+	d7_res1 -> d7_res2
+	d7_res2 -> d7_layer1
+	d7_layer1 -> d7_layer2
+	d7_layer2 -> d7_layer3
+	d7_layer3 -> d7_output
+	d7_output -> sequence_agg
+	sequence_split -> d8_input
+	d8_input -> d8_ln1
+	d8_ln1 -> d8_q
+	d8_ln1 -> d8_k
+	d8_ln1 -> d8_v
+	d8_q -> d8_q_heads
+	d8_k -> d8_k_heads
+	d8_v -> d8_v_heads
+	d8_q_heads -> d8_ring_attn
+	d8_k_heads -> d8_ring_attn
+	d8_v_heads -> d8_ring_attn
+	d8_ring_attn -> d8_send_kv
+	d8_send_kv -> d9_recv_kv [constraint=false style=dashed]
+	d7_send_kv -> d8_recv_kv [constraint=false style=dashed]
+	d8_ring_attn -> d8_out_proj
+	d8_input -> d8_res1
+	d8_out_proj -> d8_res1
+	d8_res1 -> d8_ln2
+	d8_ln2 -> d8_mlp_gate
+	d8_ln2 -> d8_mlp_up
+	d8_mlp_gate -> d8_mlp_down
+	d8_mlp_up -> d8_mlp_down
+	d8_mlp_down -> d8_res2
+	d8_res1 -> d8_res2
+	d8_res2 -> d8_layer1
+	d8_layer1 -> d8_layer2
+	d8_layer2 -> d8_layer3
+	d8_layer3 -> d8_output
+	d8_output -> sequence_agg
+	sequence_split -> d9_input
+	d9_input -> d9_ln1
+	d9_ln1 -> d9_q
+	d9_ln1 -> d9_k
+	d9_ln1 -> d9_v
+	d9_q -> d9_q_heads
+	d9_k -> d9_k_heads
+	d9_v -> d9_v_heads
+	d9_q_heads -> d9_ring_attn
+	d9_k_heads -> d9_ring_attn
+	d9_v_heads -> d9_ring_attn
+	d9_ring_attn -> d9_send_kv
+	d9_send_kv -> d10_recv_kv [constraint=false style=dashed]
+	d8_send_kv -> d9_recv_kv [constraint=false style=dashed]
+	d9_ring_attn -> d9_out_proj
+	d9_input -> d9_res1
+	d9_out_proj -> d9_res1
+	d9_res1 -> d9_ln2
+	d9_ln2 -> d9_mlp_gate
+	d9_ln2 -> d9_mlp_up
+	d9_mlp_gate -> d9_mlp_down
+	d9_mlp_up -> d9_mlp_down
+	d9_mlp_down -> d9_res2
+	d9_res1 -> d9_res2
+	d9_res2 -> d9_layer1
+	d9_layer1 -> d9_layer2
+	d9_layer2 -> d9_layer3
+	d9_layer3 -> d9_output
+	d9_output -> sequence_agg
+	sequence_split -> d10_input
+	d10_input -> d10_ln1
+	d10_ln1 -> d10_q
+	d10_ln1 -> d10_k
+	d10_ln1 -> d10_v
+	d10_q -> d10_q_heads
+	d10_k -> d10_k_heads
+	d10_v -> d10_v_heads
+	d10_q_heads -> d10_ring_attn
+	d10_k_heads -> d10_ring_attn
+	d10_v_heads -> d10_ring_attn
+	d10_ring_attn -> d10_send_kv
+	d10_send_kv -> d11_recv_kv [constraint=false style=dashed]
+	d9_send_kv -> d10_recv_kv [constraint=false style=dashed]
+	d10_ring_attn -> d10_out_proj
+	d10_input -> d10_res1
+	d10_out_proj -> d10_res1
+	d10_res1 -> d10_ln2
+	d10_ln2 -> d10_mlp_gate
+	d10_ln2 -> d10_mlp_up
+	d10_mlp_gate -> d10_mlp_down
+	d10_mlp_up -> d10_mlp_down
+	d10_mlp_down -> d10_res2
+	d10_res1 -> d10_res2
+	d10_res2 -> d10_layer1
+	d10_layer1 -> d10_layer2
+	d10_layer2 -> d10_layer3
+	d10_layer3 -> d10_output
+	d10_output -> sequence_agg
+	sequence_split -> d11_input
+	d11_input -> d11_ln1
+	d11_ln1 -> d11_q
+	d11_ln1 -> d11_k
+	d11_ln1 -> d11_v
+	d11_q -> d11_q_heads
+	d11_k -> d11_k_heads
+	d11_v -> d11_v_heads
+	d11_q_heads -> d11_ring_attn
+	d11_k_heads -> d11_ring_attn
+	d11_v_heads -> d11_ring_attn
+	d11_ring_attn -> d11_send_kv
+	d11_send_kv -> d12_recv_kv [constraint=false style=dashed]
+	d10_send_kv -> d11_recv_kv [constraint=false style=dashed]
+	d11_ring_attn -> d11_out_proj
+	d11_input -> d11_res1
+	d11_out_proj -> d11_res1
+	d11_res1 -> d11_ln2
+	d11_ln2 -> d11_mlp_gate
+	d11_ln2 -> d11_mlp_up
+	d11_mlp_gate -> d11_mlp_down
+	d11_mlp_up -> d11_mlp_down
+	d11_mlp_down -> d11_res2
+	d11_res1 -> d11_res2
+	d11_res2 -> d11_layer1
+	d11_layer1 -> d11_layer2
+	d11_layer2 -> d11_layer3
+	d11_layer3 -> d11_output
+	d11_output -> sequence_agg
+	sequence_split -> d12_input
+	d12_input -> d12_ln1
+	d12_ln1 -> d12_q
+	d12_ln1 -> d12_k
+	d12_ln1 -> d12_v
+	d12_q -> d12_q_heads
+	d12_k -> d12_k_heads
+	d12_v -> d12_v_heads
+	d12_q_heads -> d12_ring_attn
+	d12_k_heads -> d12_ring_attn
+	d12_v_heads -> d12_ring_attn
+	d12_ring_attn -> d12_send_kv
+	d12_send_kv -> d13_recv_kv [constraint=false style=dashed]
+	d11_send_kv -> d12_recv_kv [constraint=false style=dashed]
+	d12_ring_attn -> d12_out_proj
+	d12_input -> d12_res1
+	d12_out_proj -> d12_res1
+	d12_res1 -> d12_ln2
+	d12_ln2 -> d12_mlp_gate
+	d12_ln2 -> d12_mlp_up
+	d12_mlp_gate -> d12_mlp_down
+	d12_mlp_up -> d12_mlp_down
+	d12_mlp_down -> d12_res2
+	d12_res1 -> d12_res2
+	d12_res2 -> d12_layer1
+	d12_layer1 -> d12_layer2
+	d12_layer2 -> d12_layer3
+	d12_layer3 -> d12_output
+	d12_output -> sequence_agg
+	sequence_split -> d13_input
+	d13_input -> d13_ln1
+	d13_ln1 -> d13_q
+	d13_ln1 -> d13_k
+	d13_ln1 -> d13_v
+	d13_q -> d13_q_heads
+	d13_k -> d13_k_heads
+	d13_v -> d13_v_heads
+	d13_q_heads -> d13_ring_attn
+	d13_k_heads -> d13_ring_attn
+	d13_v_heads -> d13_ring_attn
+	d13_ring_attn -> d13_send_kv
+	d13_send_kv -> d14_recv_kv [constraint=false style=dashed]
+	d12_send_kv -> d13_recv_kv [constraint=false style=dashed]
+	d13_ring_attn -> d13_out_proj
+	d13_input -> d13_res1
+	d13_out_proj -> d13_res1
+	d13_res1 -> d13_ln2
+	d13_ln2 -> d13_mlp_gate
+	d13_ln2 -> d13_mlp_up
+	d13_mlp_gate -> d13_mlp_down
+	d13_mlp_up -> d13_mlp_down
+	d13_mlp_down -> d13_res2
+	d13_res1 -> d13_res2
+	d13_res2 -> d13_layer1
+	d13_layer1 -> d13_layer2
+	d13_layer2 -> d13_layer3
+	d13_layer3 -> d13_output
+	d13_output -> sequence_agg
+	sequence_split -> d14_input
+	d14_input -> d14_ln1
+	d14_ln1 -> d14_q
+	d14_ln1 -> d14_k
+	d14_ln1 -> d14_v
+	d14_q -> d14_q_heads
+	d14_k -> d14_k_heads
+	d14_v -> d14_v_heads
+	d14_q_heads -> d14_ring_attn
+	d14_k_heads -> d14_ring_attn
+	d14_v_heads -> d14_ring_attn
+	d14_ring_attn -> d14_send_kv
+	d14_send_kv -> d15_recv_kv [constraint=false style=dashed]
+	d13_send_kv -> d14_recv_kv [constraint=false style=dashed]
+	d14_ring_attn -> d14_out_proj
+	d14_input -> d14_res1
+	d14_out_proj -> d14_res1
+	d14_res1 -> d14_ln2
+	d14_ln2 -> d14_mlp_gate
+	d14_ln2 -> d14_mlp_up
+	d14_mlp_gate -> d14_mlp_down
+	d14_mlp_up -> d14_mlp_down
+	d14_mlp_down -> d14_res2
+	d14_res1 -> d14_res2
+	d14_res2 -> d14_layer1
+	d14_layer1 -> d14_layer2
+	d14_layer2 -> d14_layer3
+	d14_layer3 -> d14_output
+	d14_output -> sequence_agg
+	sequence_split -> d15_input
+	d15_input -> d15_ln1
+	d15_ln1 -> d15_q
+	d15_ln1 -> d15_k
+	d15_ln1 -> d15_v
+	d15_q -> d15_q_heads
+	d15_k -> d15_k_heads
+	d15_v -> d15_v_heads
+	d15_q_heads -> d15_ring_attn
+	d15_k_heads -> d15_ring_attn
+	d15_v_heads -> d15_ring_attn
+	d15_ring_attn -> d15_send_kv
+	d15_send_kv -> d0_recv_kv [constraint=false style=dashed]
+	d14_send_kv -> d15_recv_kv [constraint=false style=dashed]
+	d15_ring_attn -> d15_out_proj
+	d15_input -> d15_res1
+	d15_out_proj -> d15_res1
+	d15_res1 -> d15_ln2
+	d15_ln2 -> d15_mlp_gate
+	d15_ln2 -> d15_mlp_up
+	d15_mlp_gate -> d15_mlp_down
+	d15_mlp_up -> d15_mlp_down
+	d15_mlp_down -> d15_res2
+	d15_res1 -> d15_res2
+	d15_res2 -> d15_layer1
+	d15_layer1 -> d15_layer2
+	d15_layer2 -> d15_layer3
+	d15_layer3 -> d15_output
+	d15_output -> sequence_agg
+	sequence_agg -> output
+}

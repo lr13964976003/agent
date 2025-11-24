@@ -1,0 +1,92 @@
+// Dense Transformer - Ring Attention + Sequence Parallel (16 devices) - Concise and Correct
+// 16 devices: each handles 6250 tokens with ring communication
+// 4 layers total, each device processes independently with KV rotation
+
+digraph proposed_concise_corrected {
+    nodesep=0.6 rankdir=TB ranksep=1.0 splines=ortho
+    node [fontname=Arial fontsize=10]
+    
+    // Global input
+    input [label="Input\n[batch=128, seq=100000, d_model=4096]" fillcolor=lightyellow shape=parallelogram style=filled]
+    
+    // Sequence partitioning across 16 devices
+    sequence_split [label="Sequence Split\n[128, 100000, 4096] → 16×[128, 6250, 4096]" fillcolor=white shape=ellipse style=filled]
+    
+    // Representative device (all 16 follow this pattern)
+    subgraph cluster_device_pattern {
+        color=black fillcolor=lightcoral label="Each Device i (0-15): Handles 6250 tokens" style=filled
+        
+        // Layer 0 with ring attention
+        l0_input [label="Local Input\n[128, 6250, 4096]" fillcolor=white shape=ellipse style=filled]
+        l0_attention [label="Ring Attention Layer 0\n[128, 6250, 4096]\nDevice i" fillcolor=lightblue shape=rectangle style=filled]
+        l0_mlp [label="MLP Layer 0\n[128, 6250, 4096]\nDevice i" fillcolor=lightgreen shape=rectangle style=filled]
+        
+        // Layer 1 with ring attention
+        l1_attention [label="Ring Attention Layer 1\n[128, 6250, 4096]\nDevice i" fillcolor=lightblue shape=rectangle style=filled]
+        l1_mlp [label="MLP Layer 1\n[128, 6250, 4096]\nDevice i" fillcolor=lightgreen shape=rectangle style=filled]
+        
+        // Layer 2 with ring attention
+        l2_attention [label="Ring Attention Layer 2\n[128, 6250, 4096]\nDevice i" fillcolor=lightblue shape=rectangle style=filled]
+        l2_mlp [label="MLP Layer 2\n[128, 6250, 4096]\nDevice i" fillcolor=lightgreen shape=rectangle style=filled]
+        
+        // Layer 3 with ring attention
+        l3_attention [label="Ring Attention Layer 3\n[128, 6250, 4096]\nDevice i" fillcolor=lightblue shape=rectangle style=filled]
+        l3_mlp [label="MLP Layer 3\n[128, 6250, 4096]\nDevice i" fillcolor=lightgreen shape=rectangle style=filled]
+        
+        local_output [label="Local Output\n[128, 6250, 4096]" fillcolor=white shape=parallelogram style=filled]
+    }
+    
+    // Ring communication pattern
+    subgraph cluster_ring_comm {
+        color=blue label="Ring Communication Pattern" style=dotted
+        send_kv [label="Send KV Block\n[128, 6250, 4096]\nDevice i→(i+1) mod 16" fillcolor=white shape=ellipse style=dashed]
+        recv_kv [label="Receive KV Block\n[128, 6250, 4096]\nDevice (i-1) mod 16→i" fillcolor=white shape=ellipse style=dashed]
+        ring_stage [label="16 Ring Stages\nComplete attention\nacross all tokens" fillcolor=lightblue shape=ellipse style=filled]
+    }
+    
+    // Sequence aggregation
+    sequence_agg [label="Sequence Aggregation\n[128, 100000, 4096]\nAll 16 Devices" fillcolor=white shape=ellipse style=filled]
+    
+    // Final output
+    output [label="Output\n[batch=128, seq=100000, d_model=4096]" fillcolor=lightyellow shape=parallelogram style=filled]
+    
+    // Connections
+    input -> sequence_split
+    sequence_split -> l0_input [label="Token distribution\nacross 16 devices" style=dashed]
+    
+    // Per-device processing flow
+    l0_input -> l0_attention [label="Local Q + Ring K/V"]
+    l0_attention -> l0_mlp
+    l0_mlp -> l1_attention
+    l1_attention -> l1_mlp
+    l1_mlp -> l2_attention
+    l2_attention -> l2_mlp
+    l2_mlp -> l3_attention
+    l3_attention -> l3_mlp
+    l3_mlp -> local_output
+    
+    // Ring communication connections
+    l0_attention -> send_kv [style=dashed]
+    recv_kv -> l0_attention [style=dashed]
+    
+    l1_attention -> send_kv [style=dashed]
+    recv_kv -> l1_attention [style=dashed]
+    
+    l2_attention -> send_kv [style=dashed]
+    recv_kv -> l2_attention [style=dashed]
+    
+    l3_attention -> send_kv [style=dashed]
+    recv_kv -> l3_attention [style=dashed]
+    
+    // Final aggregation
+    local_output -> sequence_agg [label="All Gather\nAll 16 devices" style=dashed]
+    sequence_agg -> output
+    
+    // Legend
+    subgraph cluster_legend {
+        color=gray label="Legend" style=dotted
+        legend1 [label="Sequence Parallel: 16×6250 tokens" shape=plaintext]
+        legend2 [label="Ring Attention: KV blocks rotate around ring" shape=plaintext]
+        legend3 [label="Each layer: 32-head attention + 32K MLP" shape=plaintext]
+    }
+}

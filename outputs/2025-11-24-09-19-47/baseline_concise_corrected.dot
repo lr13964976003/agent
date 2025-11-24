@@ -1,0 +1,51 @@
+// Dense Transformer - Baseline (TP=8, PP=2) - Concise and Correct
+// 16 GPUs: TP=8 per stage, PP=2 stages
+// 4 layers total: 2 layers per pipeline stage
+
+digraph baseline_concise_corrected {
+    nodesep=0.8 rankdir=TB ranksep=1.2 splines=ortho
+    node [fontname=Arial fontsize=10]
+    
+    // Input
+    input [label="Input\n[batch=128, seq=100000, d_model=4096]" fillcolor=lightyellow shape=parallelogram style=filled]
+    
+    // Pipeline Stage 0: Devices 0-7 (TP=8)
+    subgraph cluster_stage0 {
+        color=black fillcolor=lightblue label="Pipeline Stage 0\nDevices 0-7 (TP=8)" style=filled
+        
+        // Layer 0
+        l0 [label="Transformer Layer 0\n[128, 100000, 4096]\nDevices 0-7" fillcolor=lightblue shape=rectangle style=filled]
+        
+        // Layer 1  
+        l1 [label="Transformer Layer 1\n[128, 100000, 4096]\nDevices 0-7" fillcolor=lightblue shape=rectangle style=filled]
+    }
+    
+    // Pipeline Stage 1: Devices 8-15 (TP=8)
+    subgraph cluster_stage1 {
+        color=black fillcolor=lightgreen label="Pipeline Stage 1\nDevices 8-15 (TP=8)" style=filled
+        
+        // Layer 2
+        l2 [label="Transformer Layer 2\n[128, 100000, 4096]\nDevices 8-15" fillcolor=lightblue shape=rectangle style=filled]
+        
+        // Layer 3
+        l3 [label="Transformer Layer 3\n[128, 100000, 4096]\nDevices 8-15" fillcolor=lightblue shape=rectangle style=filled]
+    }
+    
+    // Output
+    output [label="Output\n[batch=128, seq=100000, d_model=4096]" fillcolor=lightyellow shape=parallelogram style=filled]
+    
+    // Connections
+    input -> l0
+    l0 -> l1
+    l1 -> l2 [label="Pipeline Send\nDevice 7→8" style=dashed]
+    l2 -> l3
+    l3 -> output
+    
+    // Legend
+    subgraph cluster_legend {
+        color=gray label="Legend" style=dotted
+        legend1 [label="TP=8: Tensor parallelism across 8 devices" shape=plaintext]
+        legend2 [label="PP=2: Pipeline parallelism across stages" shape=plaintext]
+        legend3 [label="Each layer contains:\n- Multi-Head Attention (32 heads)\n- Feed-Forward Network (32K hidden)\n- LayerNorm & Residual connections" shape=plaintext]
+    }
+}

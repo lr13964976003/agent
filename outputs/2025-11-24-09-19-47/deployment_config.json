@@ -1,0 +1,174 @@
+{
+  "models": {
+    "baseline": {
+      "name": "Dense Transformer (Baseline)",
+      "architecture": {
+        "layers": 4,
+        "hidden_size": 4096,
+        "attention_heads": 32,
+        "head_dimension": 128,
+        "mlp_hidden": 32768,
+        "precision": "bf16"
+      },
+      "parallel_strategy": {
+        "type": "tensor_pipeline_parallel",
+        "tensor_parallel_size": 8,
+        "pipeline_parallel_size": 2,
+        "total_devices": 16,
+        "cross_device_communication": "all_reduce"
+      },
+      "modules": {
+        "attention": {
+          "type": "multi_head_attention",
+          "parameters": {
+            "heads": 32,
+            "head_dim": 128,
+            "hidden_size": 4096
+          },
+          "device_mapping": {
+            "tensor_parallel_split": {
+              "q_proj": ["device_0", "device_1", "device_2", "device_3", "device_4", "device_5", "device_6", "device_7"],
+              "k_proj": ["device_0", "device_1", "device_2", "device_3", "device_4", "device_5", "device_6", "device_7"],
+              "v_proj": ["device_0", "device_1", "device_2", "device_3", "device_4", "device_5", "device_6", "device_7"],
+              "out_proj": ["device_0", "device_1", "device_2", "device_3", "device_4", "device_5", "device_6", "device_7"]
+            }
+          }
+        },
+        "mlp": {
+          "type": "feed_forward",
+          "parameters": {
+            "hidden_size": 4096,
+            "ffn_hidden": 32768
+          },
+          "device_mapping": {
+            "tensor_parallel_split": {
+              "gate_proj": ["device_0", "device_1", "device_2", "device_3", "device_4", "device_5", "device_6", "device_7"],
+              "up_proj": ["device_0", "device_1", "device_2", "device_3", "device_4", "device_5", "device_6", "device_7"],
+              "down_proj": ["device_0", "device_1", "device_2", "device_3", "device_4", "device_5", "device_6", "device_7"]
+            }
+          }
+        },
+        "pipeline_stages": {
+          "stage_0": ["layer_0", "layer_1"],
+          "stage_1": ["layer_2", "layer_3"]
+        }
+      },
+      "device_mapping": {
+        "pipeline_stage_0": ["device_0", "device_1", "device_2", "device_3", "device_4", "device_5", "device_6", "device_7"],
+        "pipeline_stage_1": ["device_8", "device_9", "device_10", "device_11", "device_12", "device_13", "device_14", "device_15"]
+      }
+    },
+    "proposed": {
+      "name": "Dense Transformer (Ring Attention + Sequence Parallel)",
+      "architecture": {
+        "layers": 4,
+        "hidden_size": 4096,
+        "attention_heads": 32,
+        "head_dimension": 128,
+        "mlp_hidden": 32768,
+        "precision": "bf16",
+        "sequence_length": 100000
+      },
+      "parallel_strategy": {
+        "type": "ring_attention_sequence_parallel",
+        "sequence_parallel_size": 16,
+        "ring_devices": 16,
+        "communication_pattern": "ring_send_recv",
+        "stages": 16
+      },
+      "modules": {
+        "attention": {
+          "type": "ring_multi_head_attention",
+          "parameters": {
+            "heads": 32,
+            "head_dim": 128,
+            "hidden_size": 4096,
+            "local_sequence_length": 6250
+          },
+          "device_mapping": {
+            "sequence_split": {
+              "device_0": {"sequence_range": [0, 6249], "tokens": 6250},
+              "device_1": {"sequence_range": [6250, 12499], "tokens": 6250},
+              "device_2": {"sequence_range": [12500, 18749], "tokens": 6250},
+              "device_3": {"sequence_range": [18750, 24999], "tokens": 6250},
+              "device_4": {"sequence_range": [25000, 31249], "tokens": 6250},
+              "device_5": {"sequence_range": [31250, 37499], "tokens": 6250},
+              "device_6": {"sequence_range": [37500, 43749], "tokens": 6250},
+              "device_7": {"sequence_range": [43750, 49999], "tokens": 6250},
+              "device_8": {"sequence_range": [50000, 56249], "tokens": 6250},
+              "device_9": {"sequence_range": [56250, 62499], "tokens": 6250},
+              "device_10": {"sequence_range": [62500, 68749], "tokens": 6250},
+              "device_11": {"sequence_range": [68750, 74999], "tokens": 6250},
+              "device_12": {"sequence_range": [75000, 81249], "tokens": 6250},
+              "device_13": {"sequence_range": [81250, 87499], "tokens": 6250},
+              "device_14": {"sequence_range": [87500, 93749], "tokens": 6250},
+              "device_15": {"sequence_range": [93750, 99999], "tokens": 6250}
+            }
+          }
+        },
+        "mlp": {
+          "type": "feed_forward",
+          "parameters": {
+            "hidden_size": 4096,
+            "ffn_hidden": 32768
+          },
+          "device_mapping": {
+            "replicated_across_devices": true,
+            "devices": ["device_0", "device_1", "device_2", "device_3", "device_4", "device_5", "device_6", "device_7", "device_8", "device_9", "device_10", "device_11", "device_12", "device_13", "device_14", "device_15"]
+          }
+        },
+        "ring_communication": {
+          "type": "kv_block_exchange",
+          "parameters": {
+            "block_size": "6250_tokens",
+            "communication_primitive": "nccl_send_recv",
+            "overlap": true
+          },
+          "device_mapping": {
+            "ring_topology": {
+              "device_0": {"send_to": "device_1", "recv_from": "device_15"},
+              "device_1": {"send_to": "device_2", "recv_from": "device_0"},
+              "device_2": {"send_to": "device_3", "recv_from": "device_1"},
+              "device_3": {"send_to": "device_4", "recv_from": "device_2"},
+              "device_4": {"send_to": "device_5", "recv_from": "device_3"},
+              "device_5": {"send_to": "device_6", "recv_from": "device_4"},
+              "device_6": {"send_to": "device_7", "recv_from": "device_5"},
+              "device_7": {"send_to": "device_8", "recv_from": "device_6"},
+              "device_8": {"send_to": "device_9", "recv_from": "device_7"},
+              "device_9": {"send_to": "device_10", "recv_from": "device_8"},
+              "device_10": {"send_to": "device_11", "recv_from": "device_9"},
+              "device_11": {"send_to": "device_12", "recv_from": "device_10"},
+              "device_12": {"send_to": "device_13", "recv_from": "device_11"},
+              "device_13": {"send_to": "device_14", "recv_from": "device_12"},
+              "device_14": {"send_to": "device_15", "recv_from": "device_13"},
+              "device_15": {"send_to": "device_0", "recv_from": "device_14"}
+            }
+          }
+        }
+      }
+    }
+  },
+  "deployment_parameters": {
+    "batch_size": 128,
+    "sequence_length": 100000,
+    "precision": "bf16",
+    "inference_only": true,
+    "communication_backend": "nccl",
+    "memory_optimization": {
+      "activation_checkpointing": false,
+      "sequence_parallel_memory_reduction": 16
+    },
+    "performance_targets": {
+      "baseline_tps": "1.20M_tokens_per_second",
+      "proposed_tps": "1.45M_tokens_per_second",
+      "baseline_tpot": "0.85ms_per_token",
+      "proposed_tpot": "0.70ms_per_token"
+    }
+  },
+  "device_specifications": {
+    "gpu_type": "h100",
+    "count": 16,
+    "interconnect": "nvlink_nvsw",
+    "memory_per_device": "80gb"
+  }
+}

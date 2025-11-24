@@ -1,0 +1,191 @@
+{
+  "deployment_config": {
+    "models": {
+      "dense_4layer_baseline": {
+        "model_type": "dense_transformer",
+        "layers": 4,
+        "parallel_strategy": {
+          "type": "tensor_pipeline_parallel",
+          "tensor_parallel_degree": 8,
+          "pipeline_parallel_degree": 2,
+          "sequence_parallel_degree": 1,
+          "ring_attention": false
+        },
+        "parameters": {
+          "precision": "bf16",
+          "batch_size": 128,
+          "sequence_length": 100000,
+          "num_attention_heads": 32,
+          "head_dimension": 128,
+          "hidden_size": 4096,
+          "mlp_hidden_size": 32768,
+          "vocab_size": 32000
+        },
+        "device_mapping": {
+          "pipeline_stage_0": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+            "layers": [0, 1],
+            "tensor_parallel_devices": {
+              "device_0": [0],
+              "device_1": [1],
+              "device_2": [2],
+              "device_3": [3],
+              "device_4": [4],
+              "device_5": [5],
+              "device_6": [6],
+              "device_7": [7]
+            }
+          },
+          "pipeline_stage_1": {
+            "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+            "layers": [2, 3],
+            "tensor_parallel_devices": {
+              "device_0": [8],
+              "device_1": [9],
+              "device_2": [10],
+              "device_3": [11],
+              "device_4": [12],
+              "device_5": [13],
+              "device_6": [14],
+              "device_7": [15]
+            }
+          }
+        },
+        "communication": {
+          "tensor_parallel_comm": "all_reduce",
+          "pipeline_parallel_comm": "send_recv",
+          "sequence_parallel_comm": null
+        }
+      },
+      "dense_4layer_ra_sp": {
+        "model_type": "dense_transformer",
+        "layers": 4,
+        "parallel_strategy": {
+          "type": "ring_attention_sequence_parallel",
+          "tensor_parallel_degree": 1,
+          "pipeline_parallel_degree": 1,
+          "sequence_parallel_degree": 16,
+          "ring_attention": true,
+          "ring_size": 16
+        },
+        "parameters": {
+          "precision": "bf16",
+          "batch_size": 128,
+          "sequence_length": 100000,
+          "local_sequence_length": 6250,
+          "num_attention_heads": 32,
+          "head_dimension": 128,
+          "hidden_size": 4096,
+          "mlp_hidden_size": 32768,
+          "vocab_size": 32000
+        },
+        "device_mapping": {
+          "ring_devices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+          "sequence_partitioning": {
+            "device_0": {"sequence_range": [0, 6249], "local_tokens": 6250},
+            "device_1": {"sequence_range": [6250, 12499], "local_tokens": 6250},
+            "device_2": {"sequence_range": [12500, 18749], "local_tokens": 6250},
+            "device_3": {"sequence_range": [18750, 24999], "local_tokens": 6250},
+            "device_4": {"sequence_range": [25000, 31249], "local_tokens": 6250},
+            "device_5": {"sequence_range": [31250, 37499], "local_tokens": 6250},
+            "device_6": {"sequence_range": [37500, 43749], "local_tokens": 6250},
+            "device_7": {"sequence_range": [43750, 49999], "local_tokens": 6250},
+            "device_8": {"sequence_range": [50000, 56249], "local_tokens": 6250},
+            "device_9": {"sequence_range": [56250, 62499], "local_tokens": 6250},
+            "device_10": {"sequence_range": [62500, 68749], "local_tokens": 6250},
+            "device_11": {"sequence_range": [68750, 74999], "local_tokens": 6250},
+            "device_12": {"sequence_range": [75000, 81249], "local_tokens": 6250},
+            "device_13": {"sequence_range": [81250, 87499], "local_tokens": 6250},
+            "device_14": {"sequence_range": [87500, 93749], "local_tokens": 6250},
+            "device_15": {"sequence_range": [93750, 99999], "local_tokens": 6250}
+          },
+          "layer_modules": {
+            "attention_layer": {
+              "module_type": "multi_head_attention",
+              "parameters": {
+                "num_heads": 32,
+                "head_dim": 128,
+                "hidden_size": 4096,
+                "attention_dropout": 0.0
+              },
+              "parallel_strategy": {
+                "type": "ring_attention",
+                "ring_communication": "send_recv",
+                "stages": 16
+              }
+            },
+            "mlp_layer": {
+              "module_type": "feed_forward",
+              "parameters": {
+                "hidden_size": 4096,
+                "mlp_hidden_size": 32768,
+                "activation": "gelu"
+              },
+              "parallel_strategy": {
+                "type": "data_parallel",
+                "replication": 16
+              }
+            },
+            "layer_norm": {
+              "module_type": "layer_normalization",
+              "parameters": {
+                "normalized_shape": 4096,
+                "eps": 1e-5
+              },
+              "parallel_strategy": {
+                "type": "sequence_parallel",
+                "partition_dim": 1
+              }
+            }
+          }
+        },
+        "communication": {
+          "ring_attention": {
+            "type": "send_recv",
+            "buffer_size": "6250 * 4096 * 2 bytes = 51.2 MB",
+            "stages": 16,
+            "overlap": true
+          },
+          "sequence_parallel": {
+            "type": "split_gather",
+            "partition_dim": 1,
+            "buffer_size": "6250 * 4096 * 2 bytes = 51.2 MB"
+          },
+          "collective_operations": {
+            "all_reduce": null,
+            "all_gather": null,
+            "reduce_scatter": null
+          }
+        }
+      }
+    },
+    "system_configuration": {
+      "hardware": {
+        "gpus": 16,
+        "type": "H100",
+        "interconnect": "NVLink + NVSwitch",
+        "memory_per_gpu": "80GB HBM3"
+      },
+      "software": {
+        "communication_library": "NCCL",
+        "precision": "BF16",
+        "kernels": {
+          "fused_projection": true,
+          "fused_softmax": true,
+          "asynchronous_communication": true
+        }
+      },
+      "performance_targets": {
+        "dense_ra_sp": {
+          "tps": 1450000,
+          "tpot": 0.7,
+          "memory_efficiency": "activation_memory / 16"
+        },
+        "dense_baseline": {
+          "tps": 1200000,
+          "tpot": 0.85
+        }
+      }
+    }
+  }
+}
