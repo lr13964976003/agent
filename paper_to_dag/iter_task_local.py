@@ -35,7 +35,7 @@ def main():
                 "slug": "check_topic",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "../papers/SP/paper.md",
+                    "paper_path": "../papers/helix/paper.md",
                     "score_path": "../knowledges/llm_parallelism_classification_schema.json"
                 },
                 "tools": [
@@ -46,7 +46,7 @@ def main():
                 "slug": "chain_read_paper",
                 "version": 10,
                 "inputs": {
-                    "paper_path": "../papers/SP/paper.md",
+                    "paper_path": "../papers/helix/paper.md",
                     "knowledge_path": "../knowledges/llm_parallel_strategies.md",
                     "save_path": f"../outputs/{submission_dir}"
                     },
@@ -61,7 +61,7 @@ def main():
                 "slug" : "chain_check_paper",
                 "version" : 8,
                 "inputs": {
-                    "origin_paper_path" : "../papers/SP/paper.md"
+                    "origin_paper_path" : "../papers/helix/paper.md"
                     },
                 "tools": [
                     FileReadTool(),
