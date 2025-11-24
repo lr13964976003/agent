@@ -1,0 +1,517 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "model_name": "MoE_Baseline_TP8_PP2",
+      "model_architecture": {
+        "num_layers": 16,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "token_dimension": 4096,
+        "mlp_hidden_size": 16384,
+        "mha_heads": 32,
+        "mha_head_dimension": 128,
+        "precision": "BF16"
+      },
+      "parallel_strategy": {
+        "tensor_parallelism": {
+          "enabled": true,
+          "degree": 8,
+          "partitioning": {
+            "attention_weights": "column_row_split",
+            "mlp_weights": "column_row_split"
+          }
+        },
+        "pipeline_parallelism": {
+          "enabled": true,
+          "degree": 2,
+          "stages": 2,
+          "layers_per_stage": [8, 8]
+        },
+        "expert_parallelism": {
+          "enabled": false,
+          "experts_per_gpu": 8
+        },
+        "data_parallelism": {
+          "enabled": false,
+          "degree": 1
+        }
+      },
+      "device_mapping": {
+        "total_gpus": 16,
+        "gpu_assignments": {
+          "stage_0": {
+            "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+            "layers": [0, 1, 2, 3, 4, 5, 6, 7],
+            "experts_per_gpu": 8,
+            "tensor_parallel_group": [0, 1, 2, 3, 4, 5, 6, 7]
+          },
+          "stage_1": {
+            "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+            "layers": [8, 9, 10, 11, 12, 13, 14, 15],
+            "experts_per_gpu": 8,
+            "tensor_parallel_group": [8, 9, 10, 11, 12, 13, 14, 15]
+          }
+        }
+      },
+      "memory_requirements": {
+        "parameters_per_gpu": "1/8 of total model parameters",
+        "experts_per_gpu": 128,
+        "total_expert_parameters_per_gpu": 128 * 134000000,
+        "activation_memory": "shared among tensor parallel group"
+      },
+      "communication": {
+        "tensor_parallel": {
+          "type": "all_reduce",
+          "frequency": "per_layer",
+          "bandwidth": "NVLink"
+        },
+        "pipeline_parallel": {
+          "type": "send_recv",
+          "frequency": "per_layer",
+          "bandwidth": "NVLink"
+        }
+      },
+      "batch_configuration": {
+        "batch_size": 128,
+        "sequence_length": 10000,
+        "total_tokens": 1280000
+      }
+    },
+    "proposed": {
+      "model_name": "MoE_Large_EP16_CrossNode",
+      "model_architecture": {
+        "num_layers": 16,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "token_dimension": 4096,
+        "mlp_hidden_size": 16384,
+        "mha_heads": 32,
+        "mha_head_dimension": 128,
+        "precision": "BF16"
+      },
+      "parallel_strategy": {
+        "expert_parallelism": {
+          "enabled": true,
+          "degree": 16,
+          "experts_per_gpu": 1,
+          "large_ep_threshold": 16,
+          "placement_strategy": "single_expert_per_gpu"
+        },
+        "tensor_parallelism": {
+          "enabled": false,
+          "degree": 1
+        },
+        "pipeline_parallelism": {
+          "enabled": false,
+          "degree": 1
+        },
+        "data_parallelism": {
+          "enabled": false,
+          "degree": 1
+        }
+      },
+      "device_mapping": {
+        "total_gpus": 16,
+        "gpu_assignments": {
+          "GPU_0": {
+            "device_id": 0,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 0},
+              {"layer": 1, "expert_id": 0},
+              {"layer": 2, "expert_id": 0},
+              {"layer": 3, "expert_id": 0},
+              {"layer": 4, "expert_id": 0},
+              {"layer": 5, "expert_id": 0},
+              {"layer": 6, "expert_id": 0},
+              {"layer": 7, "expert_id": 0},
+              {"layer": 8, "expert_id": 0},
+              {"layer": 9, "expert_id": 0},
+              {"layer": 10, "expert_id": 0},
+              {"layer": 11, "expert_id": 0},
+              {"layer": 12, "expert_id": 0},
+              {"layer": 13, "expert_id": 0},
+              {"layer": 14, "expert_id": 0},
+              {"layer": 15, "expert_id": 0}
+            ]
+          },
+          "GPU_1": {
+            "device_id": 1,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 1},
+              {"layer": 1, "expert_id": 1},
+              {"layer": 2, "expert_id": 1},
+              {"layer": 3, "expert_id": 1},
+              {"layer": 4, "expert_id": 1},
+              {"layer": 5, "expert_id": 1},
+              {"layer": 6, "expert_id": 1},
+              {"layer": 7, "expert_id": 1},
+              {"layer": 8, "expert_id": 1},
+              {"layer": 9, "expert_id": 1},
+              {"layer": 10, "expert_id": 1},
+              {"layer": 11, "expert_id": 1},
+              {"layer": 12, "expert_id": 1},
+              {"layer": 13, "expert_id": 1},
+              {"layer": 14, "expert_id": 1},
+              {"layer": 15, "expert_id": 1}
+            ]
+          },
+          "GPU_2": {
+            "device_id": 2,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 2},
+              {"layer": 1, "expert_id": 2},
+              {"layer": 2, "expert_id": 2},
+              {"layer": 3, "expert_id": 2},
+              {"layer": 4, "expert_id": 2},
+              {"layer": 5, "expert_id": 2},
+              {"layer": 6, "expert_id": 2},
+              {"layer": 7, "expert_id": 2},
+              {"layer": 8, "expert_id": 2},
+              {"layer": 9, "expert_id": 2},
+              {"layer": 10, "expert_id": 2},
+              {"layer": 11, "expert_id": 2},
+              {"layer": 12, "expert_id": 2},
+              {"layer": 13, "expert_id": 2},
+              {"layer": 14, "expert_id": 2},
+              {"layer": 15, "expert_id": 2}
+            ]
+          },
+          "GPU_3": {
+            "device_id": 3,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 3},
+              {"layer": 1, "expert_id": 3},
+              {"layer": 2, "expert_id": 3},
+              {"layer": 3, "expert_id": 3},
+              {"layer": 4, "expert_id": 3},
+              {"layer": 5, "expert_id": 3},
+              {"layer": 6, "expert_id": 3},
+              {"layer": 7, "expert_id": 3},
+              {"layer": 8, "expert_id": 3},
+              {"layer": 9, "expert_id": 3},
+              {"layer": 10, "expert_id": 3},
+              {"layer": 11, "expert_id": 3},
+              {"layer": 12, "expert_id": 3},
+              {"layer": 13, "expert_id": 3},
+              {"layer": 14, "expert_id": 3},
+              {"layer": 15, "expert_id": 3}
+            ]
+          },
+          "GPU_4": {
+            "device_id": 4,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 4},
+              {"layer": 1, "expert_id": 4},
+              {"layer": 2, "expert_id": 4},
+              {"layer": 3, "expert_id": 4},
+              {"layer": 4, "expert_id": 4},
+              {"layer": 5, "expert_id": 4},
+              {"layer": 6, "expert_id": 4},
+              {"layer": 7, "expert_id": 4},
+              {"layer": 8, "expert_id": 4},
+              {"layer": 9, "expert_id": 4},
+              {"layer": 10, "expert_id": 4},
+              {"layer": 11, "expert_id": 4},
+              {"layer": 12, "expert_id": 4},
+              {"layer": 13, "expert_id": 4},
+              {"layer": 14, "expert_id": 4},
+              {"layer": 15, "expert_id": 4}
+            ]
+          },
+          "GPU_5": {
+            "device_id": 5,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 5},
+              {"layer": 1, "expert_id": 5},
+              {"layer": 2, "expert_id": 5},
+              {"layer": 3, "expert_id": 5},
+              {"layer": 4, "expert_id": 5},
+              {"layer": 5, "expert_id": 5},
+              {"layer": 6, "expert_id": 5},
+              {"layer": 7, "expert_id": 5},
+              {"layer": 8, "expert_id": 5},
+              {"layer": 9, "expert_id": 5},
+              {"layer": 10, "expert_id": 5},
+              {"layer": 11, "expert_id": 5},
+              {"layer": 12, "expert_id": 5},
+              {"layer": 13, "expert_id": 5},
+              {"layer": 14, "expert_id": 5},
+              {"layer": 15, "expert_id": 5}
+            ]
+          },
+          "GPU_6": {
+            "device_id": 6,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 6},
+              {"layer": 1, "expert_id": 6},
+              {"layer": 2, "expert_id": 6},
+              {"layer": 3, "expert_id": 6},
+              {"layer": 4, "expert_id": 6},
+              {"layer": 5, "expert_id": 6},
+              {"layer": 6, "expert_id": 6},
+              {"layer": 7, "expert_id": 6},
+              {"layer": 8, "expert_id": 6},
+              {"layer": 9, "expert_id": 6},
+              {"layer": 10, "expert_id": 6},
+              {"layer": 11, "expert_id": 6},
+              {"layer": 12, "expert_id": 6},
+              {"layer": 13, "expert_id": 6},
+              {"layer": 14, "expert_id": 6},
+              {"layer": 15, "expert_id": 6}
+            ]
+          },
+          "GPU_7": {
+            "device_id": 7,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 7},
+              {"layer": 1, "expert_id": 7},
+              {"layer": 2, "expert_id": 7},
+              {"layer": 3, "expert_id": 7},
+              {"layer": 4, "expert_id": 7},
+              {"layer": 5, "expert_id": 7},
+              {"layer": 6, "expert_id": 7},
+              {"layer": 7, "expert_id": 7},
+              {"layer": 8, "expert_id": 7},
+              {"layer": 9, "expert_id": 7},
+              {"layer": 10, "expert_id": 7},
+              {"layer": 11, "expert_id": 7},
+              {"layer": 12, "expert_id": 7},
+              {"layer": 13, "expert_id": 7},
+              {"layer": 14, "expert_id": 7},
+              {"layer": 15, "expert_id": 7}
+            ]
+          },
+          "GPU_8": {
+            "device_id": 8,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 8},
+              {"layer": 1, "expert_id": 8},
+              {"layer": 2, "expert_id": 8},
+              {"layer": 3, "expert_id": 8},
+              {"layer": 4, "expert_id": 8},
+              {"layer": 5, "expert_id": 8},
+              {"layer": 6, "expert_id": 8},
+              {"layer": 7, "expert_id": 8},
+              {"layer": 8, "expert_id": 8},
+              {"layer": 9, "expert_id": 8},
+              {"layer": 10, "expert_id": 8},
+              {"layer": 11, "expert_id": 8},
+              {"layer": 12, "expert_id": 8},
+              {"layer": 13, "expert_id": 8},
+              {"layer": 14, "expert_id": 8},
+              {"layer": 15, "expert_id": 8}
+            ]
+          },
+          "GPU_9": {
+            "device_id": 9,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 9},
+              {"layer": 1, "expert_id": 9},
+              {"layer": 2, "expert_id": 9},
+              {"layer": 3, "expert_id": 9},
+              {"layer": 4, "expert_id": 9},
+              {"layer": 5, "expert_id": 9},
+              {"layer": 6, "expert_id": 9},
+              {"layer": 7, "expert_id": 9},
+              {"layer": 8, "expert_id": 9},
+              {"layer": 9, "expert_id": 9},
+              {"layer": 10, "expert_id": 9},
+              {"layer": 11, "expert_id": 9},
+              {"layer": 12, "expert_id": 9},
+              {"layer": 13, "expert_id": 9},
+              {"layer": 14, "expert_id": 9},
+              {"layer": 15, "expert_id": 9}
+            ]
+          },
+          "GPU_10": {
+            "device_id": 10,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 10},
+              {"layer": 1, "expert_id": 10},
+              {"layer": 2, "expert_id": 10},
+              {"layer": 3, "expert_id": 10},
+              {"layer": 4, "expert_id": 10},
+              {"layer": 5, "expert_id": 10},
+              {"layer": 6, "expert_id": 10},
+              {"layer": 7, "expert_id": 10},
+              {"layer": 8, "expert_id": 10},
+              {"layer": 9, "expert_id": 10},
+              {"layer": 10, "expert_id": 10},
+              {"layer": 11, "expert_id": 10},
+              {"layer": 12, "expert_id": 10},
+              {"layer": 13, "expert_id": 10},
+              {"layer": 14, "expert_id": 10},
+              {"layer": 15, "expert_id": 10}
+            ]
+          },
+          "GPU_11": {
+            "device_id": 11,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 11},
+              {"layer": 1, "expert_id": 11},
+              {"layer": 2, "expert_id": 11},
+              {"layer": 3, "expert_id": 11},
+              {"layer": 4, "expert_id": 11},
+              {"layer": 5, "expert_id": 11},
+              {"layer": 6, "expert_id": 11},
+              {"layer": 7, "expert_id": 11},
+              {"layer": 8, "expert_id": 11},
+              {"layer": 9, "expert_id": 11},
+              {"layer": 10, "expert_id": 11},
+              {"layer": 11, "expert_id": 11},
+              {"layer": 12, "expert_id": 11},
+              {"layer": 13, "expert_id": 11},
+              {"layer": 14, "expert_id": 11},
+              {"layer": 15, "expert_id": 11}
+            ]
+          },
+          "GPU_12": {
+            "device_id": 12,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 12},
+              {"layer": 1, "expert_id": 12},
+              {"layer": 2, "expert_id": 12},
+              {"layer": 3, "expert_id": 12},
+              {"layer": 4, "expert_id": 12},
+              {"layer": 5, "expert_id": 12},
+              {"layer": 6, "expert_id": 12},
+              {"layer": 7, "expert_id": 12},
+              {"layer": 8, "expert_id": 12},
+              {"layer": 9, "expert_id": 12},
+              {"layer": 10, "expert_id": 12},
+              {"layer": 11, "expert_id": 12},
+              {"layer": 12, "expert_id": 12},
+              {"layer": 13, "expert_id": 12},
+              {"layer": 14, "expert_id": 12},
+              {"layer": 15, "expert_id": 12}
+            ]
+          },
+          "GPU_13": {
+            "device_id": 13,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 13},
+              {"layer": 1, "expert_id": 13},
+              {"layer": 2, "expert_id": 13},
+              {"layer": 3, "expert_id": 13},
+              {"layer": 4, "expert_id": 13},
+              {"layer": 5, "expert_id": 13},
+              {"layer": 6, "expert_id": 13},
+              {"layer": 7, "expert_id": 13},
+              {"layer": 8, "expert_id": 13},
+              {"layer": 9, "expert_id": 13},
+              {"layer": 10, "expert_id": 13},
+              {"layer": 11, "expert_id": 13},
+              {"layer": 12, "expert_id": 13},
+              {"layer": 13, "expert_id": 13},
+              {"layer": 14, "expert_id": 13},
+              {"layer": 15, "expert_id": 13}
+            ]
+          },
+          "GPU_14": {
+            "device_id": 14,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 14},
+              {"layer": 1, "expert_id": 14},
+              {"layer": 2, "expert_id": 14},
+              {"layer": 3, "expert_id": 14},
+              {"layer": 4, "expert_id": 14},
+              {"layer": 5, "expert_id": 14},
+              {"layer": 6, "expert_id": 14},
+              {"layer": 7, "expert_id": 14},
+              {"layer": 8, "expert_id": 14},
+              {"layer": 9, "expert_id": 14},
+              {"layer": 10, "expert_id": 14},
+              {"layer": 11, "expert_id": 14},
+              {"layer": 12, "expert_id": 14},
+              {"layer": 13, "expert_id": 14},
+              {"layer": 14, "expert_id": 14},
+              {"layer": 15, "expert_id": 14}
+            ]
+          },
+          "GPU_15": {
+            "device_id": 15,
+            "assigned_experts": [
+              {"layer": 0, "expert_id": 15},
+              {"layer": 1, "expert_id": 15},
+              {"layer": 2, "expert_id": 15},
+              {"layer": 3, "expert_id": 15},
+              {"layer": 4, "expert_id": 15},
+              {"layer": 5, "expert_id": 15},
+              {"layer": 6, "expert_id": 15},
+              {"layer": 7, "expert_id": 15},
+              {"layer": 8, "expert_id": 15},
+              {"layer": 9, "expert_id": 15},
+              {"layer": 10, "expert_id": 15},
+              {"layer": 11, "expert_id": 15},
+              {"layer": 12, "expert_id": 15},
+              {"layer": 13, "expert_id": 15},
+              {"layer": 14, "expert_id": 15},
+              {"layer": 15, "expert_id": 15}
+            ]
+          }
+        }
+      },
+      "memory_requirements": {
+        "parameters_per_expert": 134000000,
+        "parameters_per_gpu": 2144000000,
+        "memory_per_expert": {
+          "parameters": 268000000,
+          "activations": 50000000,
+          "total": 318000000
+        },
+        "memory_per_gpu": {
+          "experts": 5088000000,
+          "token_buffers": 2000000000,
+          "communication_buffers": 1000000000,
+          "total": 8088000000
+        }
+      },
+      "communication": {
+        "routing_strategy": "all_to_all_async",
+        "protocol": "NCCL_MPI",
+        "bandwidth_type": "NVLink_InfiniBand",
+        "token_batching": {
+          "enabled": true,
+          "strategy": "destination_expert_grouping"
+        },
+        "overlapping": {
+          "compute_communication": true,
+          "cuda_streams": ["compute", "communication"],
+          "double_buffering": true
+        }
+      },
+      "load_balancing": {
+        "type": "dynamic_gating",
+        "monitoring": "real_time_token_distribution",
+        "rebalancing_threshold": "load_imbalance_tolerance",
+        "adjustment_frequency": "continuous"
+      },
+      "batch_configuration": {
+        "batch_size": 128,
+        "sequence_length": 10000,
+        "total_tokens": 1280000,
+        "token_embedding_size": 4096
+      },
+      "performance_metrics": {
+        "tps": 450000,
+        "tpot_ms": 2.2,
+        "improvement_over_baseline": {
+          "throughput": 3.75,
+          "latency": 3.77
+        }
+      }
+    }
+  },
+  "network_requirements": {
+    "topology": "fully_connected_16_gpus",
+    "bandwidth": "NVLink_or_InfiniBand",
+    "latency": "low_latency_required",
+    "collective_operations": ["all_to_all", "all_gather", "reduce_scatter"]
+  },
+  "software_stack": {
+    "communication_library": "NCCL",
+    "framework": "PyTorch_or_JAX",
+    "memory_management": "unified_memory",
+    "scheduling": "cuda_streams_async"
+  }
+}
