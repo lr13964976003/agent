@@ -172,7 +172,7 @@ After partitioning, each group $P_i$ is deployed on a separate accelerator card 
 We evaluate our proposed layer-wise deployment method for large models in the inference stage. The hardware platform consists of 16 NVIDIA H100 GPUs. We use two model types:
 
 
-* **Dense model:** A 4-layer fully connected dense network.
+* **Dense model:** A 16-layer fully connected dense network.
 
 Both models use BF16 precision and the model's weight size is 30B. Calculate the memory usage for weights, activations, and buffers for each layer, and determine the number of layers allocated to each card according to the allocation method.
 
@@ -217,7 +217,7 @@ We measure performance with two key metrics:
 In this paper, we proposed a novel layer-wise deployment strategy for large neural network models that explicitly partitions the model layers across multiple accelerator cards with the constraint that each partition fits entirely within the SRAM or L2 cache of the target hardware. This approach significantly reduces off-chip memory accesses and improves inference efficiency.
 
 
-Experimental results on both a dense 4-layer model demonstrate that our method achieves substantial performance gains over the baseline tensor and pipeline parallelism setup. Specifically, we observed up to 31% improvement in throughput (TPS) and a corresponding reduction in latency (TPOT).
+Experimental results on both a dense 16-layer model demonstrate that our method achieves substantial performance gains over the baseline tensor and pipeline parallelism setup. Specifically, we observed up to 31% improvement in throughput (TPS) and a corresponding reduction in latency (TPOT).
 
 
 Future work includes extending this method to training workloads, exploring adaptive partitioning strategies under varying batch sizes, and applying the approach to even larger, more complex models to further validate its scalability and effectiveness.
