@@ -1,0 +1,367 @@
+// Baseline: Tensor Parallel + Pipeline Parallel
+digraph baseline_tp_pp {
+	nodesep=0.8 rankdir=TB ranksep=1.5
+	node [shape=rectangle style=filled]
+	input [label="Input Embedding" fillcolor=lightblue shape=ellipse xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+	subgraph cluster_pipeline_0 {
+		color=blue label="Pipeline Stage 0 (Devices 0-7)" style=dashed
+		subgraph cluster_mha_0 {
+			color=green label="Layer 0 - MHA Block" style="rounded,dashed"
+			layer_0_qkv [label="Layer 0\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_0_attn [label="Layer 0\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 0-7"]
+			layer_0_attn_out [label="Layer 0\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_0_residual [label="Layer 0\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_0 {
+			color=red label="Layer 0 - MLP Block" style="rounded,dashed"
+			layer_0_gate [label="Layer 0\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_0_up [label="Layer 0\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_0_down [label="Layer 0\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_0_mlp_residual [label="Layer 0\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_1 {
+			color=green label="Layer 1 - MHA Block" style="rounded,dashed"
+			layer_1_qkv [label="Layer 1\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_1_attn [label="Layer 1\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 0-7"]
+			layer_1_attn_out [label="Layer 1\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_1_residual [label="Layer 1\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_1 {
+			color=red label="Layer 1 - MLP Block" style="rounded,dashed"
+			layer_1_gate [label="Layer 1\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_1_up [label="Layer 1\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_1_down [label="Layer 1\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_1_mlp_residual [label="Layer 1\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_2 {
+			color=green label="Layer 2 - MHA Block" style="rounded,dashed"
+			layer_2_qkv [label="Layer 2\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_2_attn [label="Layer 2\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 0-7"]
+			layer_2_attn_out [label="Layer 2\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_2_residual [label="Layer 2\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_2 {
+			color=red label="Layer 2 - MLP Block" style="rounded,dashed"
+			layer_2_gate [label="Layer 2\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_2_up [label="Layer 2\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_2_down [label="Layer 2\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_2_mlp_residual [label="Layer 2\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_3 {
+			color=green label="Layer 3 - MHA Block" style="rounded,dashed"
+			layer_3_qkv [label="Layer 3\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_3_attn [label="Layer 3\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 0-7"]
+			layer_3_attn_out [label="Layer 3\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_3_residual [label="Layer 3\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_3 {
+			color=red label="Layer 3 - MLP Block" style="rounded,dashed"
+			layer_3_gate [label="Layer 3\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_3_up [label="Layer 3\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_3_down [label="Layer 3\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_3_mlp_residual [label="Layer 3\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_4 {
+			color=green label="Layer 4 - MHA Block" style="rounded,dashed"
+			layer_4_qkv [label="Layer 4\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_4_attn [label="Layer 4\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 0-7"]
+			layer_4_attn_out [label="Layer 4\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_4_residual [label="Layer 4\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_4 {
+			color=red label="Layer 4 - MLP Block" style="rounded,dashed"
+			layer_4_gate [label="Layer 4\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_4_up [label="Layer 4\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_4_down [label="Layer 4\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_4_mlp_residual [label="Layer 4\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_5 {
+			color=green label="Layer 5 - MHA Block" style="rounded,dashed"
+			layer_5_qkv [label="Layer 5\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_5_attn [label="Layer 5\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 0-7"]
+			layer_5_attn_out [label="Layer 5\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_5_residual [label="Layer 5\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_5 {
+			color=red label="Layer 5 - MLP Block" style="rounded,dashed"
+			layer_5_gate [label="Layer 5\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_5_up [label="Layer 5\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_5_down [label="Layer 5\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_5_mlp_residual [label="Layer 5\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_6 {
+			color=green label="Layer 6 - MHA Block" style="rounded,dashed"
+			layer_6_qkv [label="Layer 6\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_6_attn [label="Layer 6\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 0-7"]
+			layer_6_attn_out [label="Layer 6\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_6_residual [label="Layer 6\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_6 {
+			color=red label="Layer 6 - MLP Block" style="rounded,dashed"
+			layer_6_gate [label="Layer 6\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_6_up [label="Layer 6\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_6_down [label="Layer 6\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_6_mlp_residual [label="Layer 6\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_7 {
+			color=green label="Layer 7 - MHA Block" style="rounded,dashed"
+			layer_7_qkv [label="Layer 7\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_7_attn [label="Layer 7\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 0-7"]
+			layer_7_attn_out [label="Layer 7\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_7_residual [label="Layer 7\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_7 {
+			color=red label="Layer 7 - MLP Block" style="rounded,dashed"
+			layer_7_gate [label="Layer 7\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_7_up [label="Layer 7\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_7_down [label="Layer 7\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [0,1,2,3] vs [4,5,6,7]"]
+			layer_7_mlp_residual [label="Layer 7\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+	}
+	subgraph cluster_pipeline_1 {
+		color=purple label="Pipeline Stage 1 (Devices 8-15)" style=dashed
+		subgraph cluster_mha_8 {
+			color=green label="Layer 8 - MHA Block" style="rounded,dashed"
+			layer_8_qkv [label="Layer 8\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_8_attn [label="Layer 8\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 8-15"]
+			layer_8_attn_out [label="Layer 8\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_8_residual [label="Layer 8\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_8 {
+			color=red label="Layer 8 - MLP Block" style="rounded,dashed"
+			layer_8_gate [label="Layer 8\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_8_up [label="Layer 8\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_8_down [label="Layer 8\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_8_mlp_residual [label="Layer 8\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_9 {
+			color=green label="Layer 9 - MHA Block" style="rounded,dashed"
+			layer_9_qkv [label="Layer 9\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_9_attn [label="Layer 9\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 8-15"]
+			layer_9_attn_out [label="Layer 9\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_9_residual [label="Layer 9\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_9 {
+			color=red label="Layer 9 - MLP Block" style="rounded,dashed"
+			layer_9_gate [label="Layer 9\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_9_up [label="Layer 9\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_9_down [label="Layer 9\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_9_mlp_residual [label="Layer 9\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_10 {
+			color=green label="Layer 10 - MHA Block" style="rounded,dashed"
+			layer_10_qkv [label="Layer 10\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_10_attn [label="Layer 10\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 8-15"]
+			layer_10_attn_out [label="Layer 10\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_10_residual [label="Layer 10\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_10 {
+			color=red label="Layer 10 - MLP Block" style="rounded,dashed"
+			layer_10_gate [label="Layer 10\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_10_up [label="Layer 10\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_10_down [label="Layer 10\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_10_mlp_residual [label="Layer 10\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_11 {
+			color=green label="Layer 11 - MHA Block" style="rounded,dashed"
+			layer_11_qkv [label="Layer 11\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_11_attn [label="Layer 11\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 8-15"]
+			layer_11_attn_out [label="Layer 11\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_11_residual [label="Layer 11\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_11 {
+			color=red label="Layer 11 - MLP Block" style="rounded,dashed"
+			layer_11_gate [label="Layer 11\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_11_up [label="Layer 11\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_11_down [label="Layer 11\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_11_mlp_residual [label="Layer 11\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_12 {
+			color=green label="Layer 12 - MHA Block" style="rounded,dashed"
+			layer_12_qkv [label="Layer 12\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_12_attn [label="Layer 12\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 8-15"]
+			layer_12_attn_out [label="Layer 12\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_12_residual [label="Layer 12\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_12 {
+			color=red label="Layer 12 - MLP Block" style="rounded,dashed"
+			layer_12_gate [label="Layer 12\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_12_up [label="Layer 12\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_12_down [label="Layer 12\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_12_mlp_residual [label="Layer 12\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_13 {
+			color=green label="Layer 13 - MHA Block" style="rounded,dashed"
+			layer_13_qkv [label="Layer 13\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_13_attn [label="Layer 13\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 8-15"]
+			layer_13_attn_out [label="Layer 13\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_13_residual [label="Layer 13\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_13 {
+			color=red label="Layer 13 - MLP Block" style="rounded,dashed"
+			layer_13_gate [label="Layer 13\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_13_up [label="Layer 13\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_13_down [label="Layer 13\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_13_mlp_residual [label="Layer 13\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_14 {
+			color=green label="Layer 14 - MHA Block" style="rounded,dashed"
+			layer_14_qkv [label="Layer 14\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_14_attn [label="Layer 14\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 8-15"]
+			layer_14_attn_out [label="Layer 14\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_14_residual [label="Layer 14\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_14 {
+			color=red label="Layer 14 - MLP Block" style="rounded,dashed"
+			layer_14_gate [label="Layer 14\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_14_up [label="Layer 14\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_14_down [label="Layer 14\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_14_mlp_residual [label="Layer 14\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mha_15 {
+			color=green label="Layer 15 - MHA Block" style="rounded,dashed"
+			layer_15_qkv [label="Layer 15\nQKV Projection\n(Column Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_15_attn [label="Layer 15\nMulti-Head Attention\n(All Devices)" fillcolor=yellow xlabel="Input: [batch_size=128, seq_len=100000, heads=32, qkv_dim=128]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nAll GPUs: 8-15"]
+			layer_15_attn_out [label="Layer 15\nAttention Output\n(Row Parallel)" fillcolor=lightgreen xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_15_residual [label="Layer 15\nResidual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+		subgraph cluster_mlp_15 {
+			color=red label="Layer 15 - MLP Block" style="rounded,dashed"
+			layer_15_gate [label="Layer 15\nMLP Gate\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_15_up [label="Layer 15\nMLP Up\n(Column Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_15_down [label="Layer 15\nMLP Down\n(Row Parallel)" fillcolor=lightcoral xlabel="Input: [batch_size=128, seq_len=100000, mlp_hidden=8192]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]\nDevices: [8,9,10,11] vs [12,13,14,15]"]
+			layer_15_mlp_residual [label="Layer 15\nMLP Residual Add" fillcolor=lightgray shape=parallelogram xlabel="Input1: [batch_size=128, seq_len=100000, d_model=4096]\nInput2: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, d_model=4096]"]
+		}
+	}
+	pipeline_communication [label="Pipeline Communication\n(Micro-batch Transfer)" fillcolor=orange shape=ellipse xlabel="Transfer micro-batches\nFrom Stage 0 to Stage 1\nDevices: 0-7 → 8-15"]
+	output [label="Output Layer" fillcolor=lightblue shape=ellipse xlabel="Input: [batch_size=128, seq_len=100000, d_model=4096]\nOutput: [batch_size=128, seq_len=100000, vocab_size]"]
+	input -> layer_0_qkv
+	layer_0_qkv -> layer_0_attn
+	layer_0_attn -> layer_0_attn_out
+	layer_0_attn_out -> layer_0_residual
+	layer_0_residual -> layer_0_gate
+	layer_0_gate -> layer_0_up
+	layer_0_up -> layer_0_down
+	layer_0_down -> layer_0_mlp_residual
+	layer_0_mlp_residual -> layer_1_qkv
+	layer_1_qkv -> layer_1_attn
+	layer_1_attn -> layer_1_attn_out
+	layer_1_attn_out -> layer_1_residual
+	layer_1_residual -> layer_1_gate
+	layer_1_gate -> layer_1_up
+	layer_1_up -> layer_1_down
+	layer_1_down -> layer_1_mlp_residual
+	layer_1_mlp_residual -> layer_2_qkv
+	layer_2_qkv -> layer_2_attn
+	layer_2_attn -> layer_2_attn_out
+	layer_2_attn_out -> layer_2_residual
+	layer_2_residual -> layer_2_gate
+	layer_2_gate -> layer_2_up
+	layer_2_up -> layer_2_down
+	layer_2_down -> layer_2_mlp_residual
+	layer_2_mlp_residual -> layer_3_qkv
+	layer_3_qkv -> layer_3_attn
+	layer_3_attn -> layer_3_attn_out
+	layer_3_attn_out -> layer_3_residual
+	layer_3_residual -> layer_3_gate
+	layer_3_gate -> layer_3_up
+	layer_3_up -> layer_3_down
+	layer_3_down -> layer_3_mlp_residual
+	layer_3_mlp_residual -> layer_4_qkv
+	layer_4_qkv -> layer_4_attn
+	layer_4_attn -> layer_4_attn_out
+	layer_4_attn_out -> layer_4_residual
+	layer_4_residual -> layer_4_gate
+	layer_4_gate -> layer_4_up
+	layer_4_up -> layer_4_down
+	layer_4_down -> layer_4_mlp_residual
+	layer_4_mlp_residual -> layer_5_qkv
+	layer_5_qkv -> layer_5_attn
+	layer_5_attn -> layer_5_attn_out
+	layer_5_attn_out -> layer_5_residual
+	layer_5_residual -> layer_5_gate
+	layer_5_gate -> layer_5_up
+	layer_5_up -> layer_5_down
+	layer_5_down -> layer_5_mlp_residual
+	layer_5_mlp_residual -> layer_6_qkv
+	layer_6_qkv -> layer_6_attn
+	layer_6_attn -> layer_6_attn_out
+	layer_6_attn_out -> layer_6_residual
+	layer_6_residual -> layer_6_gate
+	layer_6_gate -> layer_6_up
+	layer_6_up -> layer_6_down
+	layer_6_down -> layer_6_mlp_residual
+	layer_6_mlp_residual -> layer_7_qkv
+	layer_7_qkv -> layer_7_attn
+	layer_7_attn -> layer_7_attn_out
+	layer_7_attn_out -> layer_7_residual
+	layer_7_residual -> layer_7_gate
+	layer_7_gate -> layer_7_up
+	layer_7_up -> layer_7_down
+	layer_7_down -> layer_7_mlp_residual
+	layer_7_mlp_residual -> pipeline_commulation
+	layer_8_qkv -> layer_8_attn
+	layer_8_attn -> layer_8_attn_out
+	layer_8_attn_out -> layer_8_residual
+	layer_8_residual -> layer_8_gate
+	layer_8_gate -> layer_8_up
+	layer_8_up -> layer_8_down
+	layer_8_down -> layer_8_mlp_residual
+	pipeline_communication -> layer_8_qkv
+	layer_9_qkv -> layer_9_attn
+	layer_9_attn -> layer_9_attn_out
+	layer_9_attn_out -> layer_9_residual
+	layer_9_residual -> layer_9_gate
+	layer_9_gate -> layer_9_up
+	layer_9_up -> layer_9_down
+	layer_9_down -> layer_9_mlp_residual
+	layer_9_mlp_residual -> layer_10_qkv
+	layer_10_qkv -> layer_10_attn
+	layer_10_attn -> layer_10_attn_out
+	layer_10_attn_out -> layer_10_residual
+	layer_10_residual -> layer_10_gate
+	layer_10_gate -> layer_10_up
+	layer_10_up -> layer_10_down
+	layer_10_down -> layer_10_mlp_residual
+	layer_10_mlp_residual -> layer_11_qkv
+	layer_11_qkv -> layer_11_attn
+	layer_11_attn -> layer_11_attn_out
+	layer_11_attn_out -> layer_11_residual
+	layer_11_residual -> layer_11_gate
+	layer_11_gate -> layer_11_up
+	layer_11_up -> layer_11_down
+	layer_11_down -> layer_11_mlp_residual
+	layer_11_mlp_residual -> layer_12_qkv
+	layer_12_qkv -> layer_12_attn
+	layer_12_attn -> layer_12_attn_out
+	layer_12_attn_out -> layer_12_residual
+	layer_12_residual -> layer_12_gate
+	layer_12_gate -> layer_12_up
+	layer_12_up -> layer_12_down
+	layer_12_down -> layer_12_mlp_residual
+	layer_12_mlp_residual -> layer_13_qkv
+	layer_13_qkv -> layer_13_attn
+	layer_13_attn -> layer_13_attn_out
+	layer_13_attn_out -> layer_13_residual
+	layer_13_residual -> layer_13_gate
+	layer_13_gate -> layer_13_up
+	layer_13_up -> layer_13_down
+	layer_13_down -> layer_13_mlp_residual
+	layer_13_mlp_residual -> layer_14_qkv
+	layer_14_qkv -> layer_14_attn
+	layer_14_attn -> layer_14_attn_out
+	layer_14_attn_out -> layer_14_residual
+	layer_14_residual -> layer_14_gate
+	layer_14_gate -> layer_14_up
+	layer_14_up -> layer_14_down
+	layer_14_down -> layer_14_mlp_residual
+	layer_14_mlp_residual -> layer_15_qkv
+	layer_15_qkv -> layer_15_attn
+	layer_15_attn -> layer_15_attn_out
+	layer_15_attn_out -> layer_15_residual
+	layer_15_residual -> layer_15_gate
+	layer_15_gate -> layer_15_up
+	layer_15_up -> layer_15_down
+	layer_15_down -> layer_15_mlp_residual
+	layer_15_mlp_residual -> output
+}

@@ -1,0 +1,98 @@
+// Ring Attention + Sequence Parallelism (Simplified)
+digraph ring_attention_sp_simplified {
+	nodesep=1.0 rankdir=LR ranksep=1.0
+	node [shape=rectangle style=filled]
+	input_split [label="Input Sequence\nSplit (100k → 6.25k)" fillcolor=lightblue shape=ellipse xlabel="Input: [batch=128, seq=100k, d_model=4096]\nOutput: [batch=128, seq=6.25k, d_model=4096] per device"]
+	subgraph cluster_device_0 {
+		color=blue label="Device 0\nTokens: 0-6249" style=dashed
+		d0_l0_qkv [label="D0\nL0\nQKV Proj" fillcolor=lightgreen xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 32*128]"]
+		d0_l0_ring_stage_0 [label="D0\nL0\nStage 0\nKV from D0" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d0_l0_ring_stage_8 [label="D0\nL0\nStage 8\nKV from D8" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d0_l0_ring_stage_15 [label="D0\nL0\nStage 15\nKV from D1" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d0_l0_mlp [label="D0\nL0\nMLP Block" fillcolor=lightcoral xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 4096]"]
+		d0_l8_qkv [label="D0\nL8\nQKV Proj" fillcolor=lightgreen xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 32*128]"]
+		d0_l8_ring_stage_0 [label="D0\nL8\nStage 0\nKV from D0" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d0_l8_ring_stage_8 [label="D0\nL8\nStage 8\nKV from D8" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d0_l8_ring_stage_15 [label="D0\nL8\nStage 15\nKV from D1" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d0_l8_mlp [label="D0\nL8\nMLP Block" fillcolor=lightcoral xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 4096]"]
+		d0_l15_qkv [label="D0\nL15\nQKV Proj" fillcolor=lightgreen xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 32*128]"]
+		d0_l15_ring_stage_0 [label="D0\nL15\nStage 0\nKV from D0" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d0_l15_ring_stage_8 [label="D0\nL15\nStage 8\nKV from D8" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d0_l15_ring_stage_15 [label="D0\nL15\nStage 15\nKV from D1" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d0_l15_mlp [label="D0\nL15\nMLP Block" fillcolor=lightcoral xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 4096]"]
+	}
+	subgraph cluster_device_1 {
+		color=blue label="Device 1\nTokens: 6250-12499" style=dashed
+		d1_l0_qkv [label="D1\nL0\nQKV Proj" fillcolor=lightgreen xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 32*128]"]
+		d1_l0_ring_stage_0 [label="D1\nL0\nStage 0\nKV from D1" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d1_l0_ring_stage_8 [label="D1\nL0\nStage 8\nKV from D9" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d1_l0_ring_stage_15 [label="D1\nL0\nStage 15\nKV from D2" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d1_l0_mlp [label="D1\nL0\nMLP Block" fillcolor=lightcoral xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 4096]"]
+		d1_l8_qkv [label="D1\nL8\nQKV Proj" fillcolor=lightgreen xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 32*128]"]
+		d1_l8_ring_stage_0 [label="D1\nL8\nStage 0\nKV from D1" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d1_l8_ring_stage_8 [label="D1\nL8\nStage 8\nKV from D9" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d1_l8_ring_stage_15 [label="D1\nL8\nStage 15\nKV from D2" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d1_l8_mlp [label="D1\nL8\nMLP Block" fillcolor=lightcoral xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 4096]"]
+		d1_l15_qkv [label="D1\nL15\nQKV Proj" fillcolor=lightgreen xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 32*128]"]
+		d1_l15_ring_stage_0 [label="D1\nL15\nStage 0\nKV from D1" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d1_l15_ring_stage_8 [label="D1\nL15\nStage 8\nKV from D9" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d1_l15_ring_stage_15 [label="D1\nL15\nStage 15\nKV from D2" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d1_l15_mlp [label="D1\nL15\nMLP Block" fillcolor=lightcoral xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 4096]"]
+	}
+	subgraph cluster_device_2 {
+		color=blue label="Device 2\nTokens: 12500-18749" style=dashed
+		d2_l0_qkv [label="D2\nL0\nQKV Proj" fillcolor=lightgreen xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 32*128]"]
+		d2_l0_ring_stage_0 [label="D2\nL0\nStage 0\nKV from D2" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d2_l0_ring_stage_8 [label="D2\nL0\nStage 8\nKV from D10" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d2_l0_ring_stage_15 [label="D2\nL0\nStage 15\nKV from D3" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d2_l0_mlp [label="D2\nL0\nMLP Block" fillcolor=lightcoral xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 4096]"]
+		d2_l8_qkv [label="D2\nL8\nQKV Proj" fillcolor=lightgreen xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 32*128]"]
+		d2_l8_ring_stage_0 [label="D2\nL8\nStage 0\nKV from D2" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d2_l8_ring_stage_8 [label="D2\nL8\nStage 8\nKV from D10" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d2_l8_ring_stage_15 [label="D2\nL8\nStage 15\nKV from D3" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d2_l8_mlp [label="D2\nL8\nMLP Block" fillcolor=lightcoral xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 4096]"]
+		d2_l15_qkv [label="D2\nL15\nQKV Proj" fillcolor=lightgreen xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 32*128]"]
+		d2_l15_ring_stage_0 [label="D2\nL15\nStage 0\nKV from D2" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d2_l15_ring_stage_8 [label="D2\nL15\nStage 8\nKV from D10" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d2_l15_ring_stage_15 [label="D2\nL15\nStage 15\nKV from D3" fillcolor=yellow xlabel="Q: [128, 6250, 32, 128]\nK,V: [128, 6250, 32, 128]\nOutput: [128, 6250, 4096]"]
+		d2_l15_mlp [label="D2\nL15\nMLP Block" fillcolor=lightcoral xlabel="Input: [128, 6250, 4096]\nOutput: [128, 6250, 4096]"]
+	}
+	ring_comm [label="Ring Communication\nPattern" fillcolor=orange shape=ellipse xlabel="P2P Send/Recv\nKV blocks\nEach → next device"]
+	output_agg [label="Output Aggregation" fillcolor=lightgreen shape=ellipse xlabel="Concatenate 16×[128, 6250, 4096]\n→ [128, 100k, 4096]"]
+	input_split -> d0_l0_qkv
+	d0_l0_qkv -> d0_l0_ring_stage_0
+	d0_l0_ring_stage_0 -> d0_l0_mlp
+	d0_l0_ring_stage_0 -> d1_l0_ring_stage_1 [label="KV transfer" style=dashed]
+	d0_l0_mlp -> d0_l8_qkv
+	d0_l8_qkv -> d0_l8_ring_stage_8
+	d0_l8_ring_stage_8 -> d0_l8_mlp
+	d0_l8_mlp -> d0_l15_qkv
+	d0_l15_qkv -> d0_l15_ring_stage_15
+	d0_l15_ring_stage_15 -> d0_l15_mlp
+	d0_l15_mlp -> output_agg
+	input_split -> d1_l0_qkv
+	d1_l0_qkv -> d1_l0_ring_stage_0
+	d1_l0_ring_stage_0 -> d1_l0_mlp
+	d1_l0_ring_stage_0 -> d2_l0_ring_stage_1 [label="KV transfer" style=dashed]
+	d1_l0_mlp -> d1_l8_qkv
+	d1_l8_qkv -> d1_l8_ring_stage_8
+	d1_l8_ring_stage_8 -> d1_l8_mlp
+	d1_l8_mlp -> d1_l15_qkv
+	d1_l15_qkv -> d1_l15_ring_stage_15
+	d1_l15_ring_stage_15 -> d1_l15_mlp
+	d1_l15_mlp -> output_agg
+	input_split -> d2_l0_qkv
+	d2_l0_qkv -> d2_l0_ring_stage_0
+	d2_l0_ring_stage_0 -> d2_l0_mlp
+	d2_l0_mlp -> d2_l8_qkv
+	d2_l8_qkv -> d2_l8_ring_stage_8
+	d2_l8_ring_stage_8 -> d2_l8_mlp
+	d2_l8_mlp -> d2_l15_qkv
+	d2_l15_qkv -> d2_l15_ring_stage_15
+	d2_l15_ring_stage_15 -> d2_l15_mlp
+	d2_l15_mlp -> output_agg
+	input_split -> cluster_device_0 [style=invis]
+	cluster_device_0 -> cluster_device_1 [style=invis]
+	cluster_device_1 -> cluster_device_2 [style=invis]
+	cluster_device_2 -> output_agg [style=invis]
+}
