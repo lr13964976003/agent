@@ -28,10 +28,6 @@ Please analyze how the dimensions of the module will change. Engineering-level p
 
 Generate complete model deployment DAGs(directed acyclic graph) according to you deployment plan and the baseline in the paper by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
 
-Draw the DAG diagram as simply and intuitively as possible, including only the important parts. <<<尽可能简洁直观的画出DAG图，只包含重要的部分>>>
-
-Omit layers with high similarity or repetition in the DAG graph, retaining only representative layers. Repeated modules can be labeled with the number of repetitions. <<<省略DAG图中相似度很高或者重复的层，只保留具有代表性的层，重复的模块可以标定重复次数>>>
-
 Card Boundary Division (specify which GPU each node is on) <<<按不同GPU划分边界>>>
 
 Multi-Card Communication Path Simulation (show data flow across cards as nodes) <<<显示不同GPU间的通信>>>
@@ -59,6 +55,10 @@ Do not make any changes to the original file. <<<禁止修改原始文件>>>
 Not all knowledge in supplementary materials will be useful to you. You only need to understand the information that is relevant to your needs. <<<提醒不是所有知识都是有用的>>>
 
 Generally speaking, a layer in the model consists of a Multi-Head Attention along with an FFN or (Gate and Experts). <<<提供模型一层的组成信息>>>
+
+Draw the DAG diagram as simply and intuitively as possible, including only the important parts. <<<尽可能简洁直观的画出DAG图，只包含重要的部分>>>
+
+Omit layers with high similarity or repetition in the DAG graph, retaining only representative layers. Repeated modules can be labeled with the number of repetitions. <<<省略DAG图中相似度很高或者重复的层，只保留具有代表性的层，重复的模块可以标定重复次数>>>
 
 A complete DAG must include a total input and output.<<<提醒要包含完整输入输出>>>
 
@@ -119,6 +119,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
