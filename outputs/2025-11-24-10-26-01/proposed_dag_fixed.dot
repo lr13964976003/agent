@@ -1,0 +1,157 @@
+digraph proposed_layer_wise {
+    graph [rankdir=TB, splines=ortho, nodesep=0.5, ranksep=1.0];
+    node [shape=ellipse, style=filled, fillcolor=lightblue];
+    
+    // Input
+    input [label="Input\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]", 
+           shape=parallelogram, fillcolor=lightgreen];
+    
+    // Output
+    output [label="Output\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]", 
+            shape=parallelogram, fillcolor=lightgreen];
+    
+    // Layer 0 on GPU 0
+    subgraph cluster_layer0 {
+        label="Layer 0\nGPU 0 (Cache-optimized)";
+        style=dotted;
+        lay0_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU 0", 
+                      shape=rectangle, fillcolor=lightcoral];
+        lay0_attn [label="Multi-Head Attention\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU 0", 
+                  shape=rectangle, fillcolor=lightpink];
+        lay0_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU 0", 
+                      shape=rectangle, fillcolor=lightcoral];
+        lay0_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU 0", 
+                  shape=rectangle, fillcolor=lightgray];
+        lay0_mlp_gate [label="MLP Gate\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU 0", 
+                      shape=rectangle, fillcolor=lightseagreen];
+        lay0_mlp_up [label="MLP Up\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU 0", 
+                    shape=rectangle, fillcolor=lightseagreen];
+        lay0_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU 0", 
+                     shape=rectangle];
+        lay0_mlp_down [label="MLP Down\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU 0", 
+                      shape=rectangle, fillcolor=lightseagreen];
+        lay0_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU 0", 
+                  shape=rectangle, fillcolor=lightgray];
+        
+        lay0_qkv_proj -> lay0_attn;
+        lay0_attn -> lay0_attn_out;
+        lay0_attn_out -> lay0_res1;
+        lay0_res1 -> lay0_mlp_gate;
+        lay0_res1 -> lay0_mlp_up;
+        lay0_mlp_gate -> lay0_mlp_act;
+        lay0_mlp_up -> lay0_mlp_act;
+        lay0_mlp_act -> lay0_mlp_down;
+        lay0_mlp_down -> lay0_res2;
+    }
+    
+    // Layer 1 on GPU 1
+    lay1 [label="Layer 1\nSame structure as Layer 0\nGPU 1", shape=rectangle];
+    
+    // Layer 2 on GPU 2
+    lay2 [label="Layer 2\nSame structure as Layer 0\nGPU 2", shape=rectangle];
+    
+    // Layer 3 on GPU 3
+    lay3 [label="Layer 3\nSame structure as Layer 0\nGPU 3", shape=rectangle];
+    
+    // Layer 4 on GPU 4
+    lay4 [label="Layer 4\nSame structure as Layer 0\nGPU 4", shape=rectangle];
+    
+    // Layer 5 on GPU 5
+    lay5 [label="Layer 5\nSame structure as Layer 0\nGPU 5", shape=rectangle];
+    
+    // Layer 6 on GPU 6
+    lay6 [label="Layer 6\nSame structure as Layer 0\nGPU 6", shape=rectangle];
+    
+    // Layer 7 on GPU 7
+    lay7 [label="Layer 7\nSame structure as Layer 0\nGPU 7", shape=rectangle];
+    
+    // Layer 8 on GPU 8
+    lay8 [label="Layer 8\nSame structure as Layer 0\nGPU 8", shape=rectangle];
+    
+    // Layer 9 on GPU 9
+    lay9 [label="Layer 9\nSame structure as Layer 0\nGPU 9", shape=rectangle];
+    
+    // Layer 10 on GPU 10
+    lay10 [label="Layer 10\nSame structure as Layer 0\nGPU 10", shape=rectangle];
+    
+    // Layer 11 on GPU 11
+    lay11 [label="Layer 11\nSame structure as Layer 0\nGPU 11", shape=rectangle];
+    
+    // Layer 12 on GPU 12
+    lay12 [label="Layer 12\nSame structure as Layer 0\nGPU 12", shape=rectangle];
+    
+    // Layer 13 on GPU 13
+    lay13 [label="Layer 13\nSame structure as Layer 0\nGPU 13", shape=rectangle];
+    
+    // Layer 14 on GPU 14
+    lay14 [label="Layer 14\nSame structure as Layer 0\nGPU 14", shape=rectangle];
+    
+    // Layer 15 on GPU 15
+    lay15 [label="Layer 15\nSame structure as Layer 0\nGPU 15", shape=rectangle];
+    
+    // Communication nodes for inter-GPU transfers
+    transfer01 [label="Transfer\nGPU 0 -> GPU 1\nSize: 5.24GB", 
+                shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer12 [label="Transfer\nGPU 1 -> GPU 2\nSize: 5.24GB", 
+                shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer23 [label="Transfer\nGPU 2 -> GPU 3\nSize: 5.24GB", 
+                shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer34 [label="Transfer\nGPU 3 -> GPU 4\nSize: 5.24GB", 
+                shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer45 [label="Transfer\nGPU 4 -> GPU 5\nSize: 5.24GB", 
+                shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer56 [label="Transfer\nGPU 5 -> GPU 6\nSize: 5.24GB", 
+                shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer67 [label="Transfer\nGPU 6 -> GPU 7\nSize: 5.24GB", 
+                shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer78 [label="Transfer\nGPU 7 -> GPU 8\nSize: 5.24GB", 
+                shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer89 [label="Transfer\nGPU 8 -> GPU 9\nSize: 5.24GB", 
+                shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer910 [label="Transfer\nGPU 9 -> GPU 10\nSize: 5.24GB", 
+                 shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer1011 [label="Transfer\nGPU 10 -> GPU 11\nSize: 5.24GB", 
+                  shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer1112 [label="Transfer\nGPU 11 -> GPU 12\nSize: 5.24GB", 
+                  shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer1213 [label="Transfer\nGPU 12 -> GPU 13\nSize: 5.24GB", 
+                  shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer1314 [label="Transfer\nGPU 13 -> GPU 14\nSize: 5.24GB", 
+                  shape=ellipse, fillcolor=lightblue, style=dashed];
+    transfer1415 [label="Transfer\nGPU 14 -> GPU 15\nSize: 5.24GB", 
+                  shape=ellipse, fillcolor=lightblue, style=dashed];
+    
+    // Connections
+    input -> lay0_qkv_proj;
+    lay0_res2 -> transfer01;
+    transfer01 -> lay1;
+    lay1 -> transfer12;
+    transfer12 -> lay2;
+    lay2 -> transfer23;
+    transfer23 -> lay3;
+    lay3 -> transfer34;
+    transfer34 -> lay4;
+    lay4 -> transfer45;
+    transfer45 -> lay5;
+    lay5 -> transfer56;
+    transfer56 -> lay6;
+    lay6 -> transfer67;
+    transfer67 -> lay7;
+    lay7 -> transfer78;
+    transfer78 -> lay8;
+    lay8 -> transfer89;
+    transfer89 -> lay9;
+    lay9 -> transfer910;
+    transfer910 -> lay10;
+    lay10 -> transfer1011;
+    transfer1011 -> lay11;
+    lay11 -> transfer1112;
+    transfer1112 -> lay12;
+    lay12 -> transfer1213;
+    transfer1213 -> lay13;
+    lay13 -> transfer1314;
+    transfer1314 -> lay14;
+    lay14 -> transfer1415;
+    transfer1415 -> lay15;
+    lay15 -> output;
+}

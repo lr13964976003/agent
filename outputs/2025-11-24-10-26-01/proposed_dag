@@ -1,0 +1,584 @@
+// Dense 16-layer model with layer-wise partitioning (1 layer per GPU)
+digraph proposed_layer_wise {
+	nodesep=0.5 rankdir=TB ranksep=1.0 splines=ortho
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	input [label="Model Input\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]" fillcolor=lightgreen shape=parallelogram]
+	subgraph cluster_layer0_gpu0 {
+		color=green fillcolor=lightyellow label="Layer 0 on GPU 0\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer0_input [label="Input Transfer\nFrom: Input\nSize: 524MB\nGPU: 0" fillcolor=lightyellow shape=parallelogram]
+		lay0_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 0" fillcolor=lightcoral shape=rectangle]
+		lay0_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 0" fillcolor=lightpink shape=rectangle]
+		lay0_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 0" fillcolor=lightpink shape=rectangle]
+		lay0_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 0" fillcolor=lightcoral shape=rectangle]
+		lay0_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 0" fillcolor=lightgray shape=ellipse]
+		lay0_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 0" fillcolor=lightsteelblue shape=rectangle]
+		lay0_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 0" fillcolor=lightseagreen shape=rectangle]
+		lay0_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 0" fillcolor=lightseagreen shape=rectangle]
+		lay0_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 0" fillcolor=lightblue shape=rectangle]
+		lay0_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 0" fillcolor=lightblue shape=rectangle]
+		lay0_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 0" fillcolor=lightseagreen shape=rectangle]
+		lay0_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 0" fillcolor=lightgray shape=ellipse]
+		lay0_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 0" fillcolor=lightsteelblue shape=rectangle]
+		layer0_output [label="Output Transfer\nTo: GPU 1\nSize: 524MB\nGPU: 0" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer1_gpu1 {
+		color=green fillcolor=lightyellow label="Layer 1 on GPU 1\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer1_input [label="Input Transfer\nFrom: GPU 0\nSize: 524MB\nGPU: 1" fillcolor=lightyellow shape=parallelogram]
+		lay1_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 1" fillcolor=lightcoral shape=rectangle]
+		lay1_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 1" fillcolor=lightpink shape=rectangle]
+		lay1_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 1" fillcolor=lightpink shape=rectangle]
+		lay1_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 1" fillcolor=lightcoral shape=rectangle]
+		lay1_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 1" fillcolor=lightgray shape=ellipse]
+		lay1_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 1" fillcolor=lightsteelblue shape=rectangle]
+		lay1_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 1" fillcolor=lightseagreen shape=rectangle]
+		lay1_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 1" fillcolor=lightseagreen shape=rectangle]
+		lay1_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 1" fillcolor=lightblue shape=rectangle]
+		lay1_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 1" fillcolor=lightblue shape=rectangle]
+		lay1_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 1" fillcolor=lightseagreen shape=rectangle]
+		lay1_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 1" fillcolor=lightgray shape=ellipse]
+		lay1_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 1" fillcolor=lightsteelblue shape=rectangle]
+		layer1_output [label="Output Transfer\nTo: GPU 2\nSize: 524MB\nGPU: 1" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer2_gpu2 {
+		color=green fillcolor=lightyellow label="Layer 2 on GPU 2\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer2_input [label="Input Transfer\nFrom: GPU 1\nSize: 524MB\nGPU: 2" fillcolor=lightyellow shape=parallelogram]
+		lay2_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 2" fillcolor=lightcoral shape=rectangle]
+		lay2_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 2" fillcolor=lightpink shape=rectangle]
+		lay2_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 2" fillcolor=lightpink shape=rectangle]
+		lay2_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 2" fillcolor=lightcoral shape=rectangle]
+		lay2_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 2" fillcolor=lightgray shape=ellipse]
+		lay2_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 2" fillcolor=lightsteelblue shape=rectangle]
+		lay2_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 2" fillcolor=lightseagreen shape=rectangle]
+		lay2_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 2" fillcolor=lightseagreen shape=rectangle]
+		lay2_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 2" fillcolor=lightblue shape=rectangle]
+		lay2_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 2" fillcolor=lightblue shape=rectangle]
+		lay2_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 2" fillcolor=lightseagreen shape=rectangle]
+		lay2_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 2" fillcolor=lightgray shape=ellipse]
+		lay2_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 2" fillcolor=lightsteelblue shape=rectangle]
+		layer2_output [label="Output Transfer\nTo: GPU 3\nSize: 524MB\nGPU: 2" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer3_gpu3 {
+		color=green fillcolor=lightyellow label="Layer 3 on GPU 3\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer3_input [label="Input Transfer\nFrom: GPU 2\nSize: 524MB\nGPU: 3" fillcolor=lightyellow shape=parallelogram]
+		lay3_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 3" fillcolor=lightcoral shape=rectangle]
+		lay3_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 3" fillcolor=lightpink shape=rectangle]
+		lay3_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 3" fillcolor=lightpink shape=rectangle]
+		lay3_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 3" fillcolor=lightcoral shape=rectangle]
+		lay3_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 3" fillcolor=lightgray shape=ellipse]
+		lay3_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 3" fillcolor=lightsteelblue shape=rectangle]
+		lay3_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 3" fillcolor=lightseagreen shape=rectangle]
+		lay3_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 3" fillcolor=lightseagreen shape=rectangle]
+		lay3_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 3" fillcolor=lightblue shape=rectangle]
+		lay3_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 3" fillcolor=lightblue shape=rectangle]
+		lay3_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 3" fillcolor=lightseagreen shape=rectangle]
+		lay3_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 3" fillcolor=lightgray shape=ellipse]
+		lay3_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 3" fillcolor=lightsteelblue shape=rectangle]
+		layer3_output [label="Output Transfer\nTo: GPU 4\nSize: 524MB\nGPU: 3" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer4_gpu4 {
+		color=green fillcolor=lightyellow label="Layer 4 on GPU 4\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer4_input [label="Input Transfer\nFrom: GPU 3\nSize: 524MB\nGPU: 4" fillcolor=lightyellow shape=parallelogram]
+		lay4_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 4" fillcolor=lightcoral shape=rectangle]
+		lay4_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 4" fillcolor=lightpink shape=rectangle]
+		lay4_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 4" fillcolor=lightpink shape=rectangle]
+		lay4_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 4" fillcolor=lightcoral shape=rectangle]
+		lay4_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 4" fillcolor=lightgray shape=ellipse]
+		lay4_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 4" fillcolor=lightsteelblue shape=rectangle]
+		lay4_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 4" fillcolor=lightseagreen shape=rectangle]
+		lay4_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 4" fillcolor=lightseagreen shape=rectangle]
+		lay4_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 4" fillcolor=lightblue shape=rectangle]
+		lay4_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 4" fillcolor=lightblue shape=rectangle]
+		lay4_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 4" fillcolor=lightseagreen shape=rectangle]
+		lay4_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 4" fillcolor=lightgray shape=ellipse]
+		lay4_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 4" fillcolor=lightsteelblue shape=rectangle]
+		layer4_output [label="Output Transfer\nTo: GPU 5\nSize: 524MB\nGPU: 4" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer5_gpu5 {
+		color=green fillcolor=lightyellow label="Layer 5 on GPU 5\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer5_input [label="Input Transfer\nFrom: GPU 4\nSize: 524MB\nGPU: 5" fillcolor=lightyellow shape=parallelogram]
+		lay5_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 5" fillcolor=lightcoral shape=rectangle]
+		lay5_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 5" fillcolor=lightpink shape=rectangle]
+		lay5_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 5" fillcolor=lightpink shape=rectangle]
+		lay5_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 5" fillcolor=lightcoral shape=rectangle]
+		lay5_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 5" fillcolor=lightgray shape=ellipse]
+		lay5_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 5" fillcolor=lightsteelblue shape=rectangle]
+		lay5_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 5" fillcolor=lightseagreen shape=rectangle]
+		lay5_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 5" fillcolor=lightseagreen shape=rectangle]
+		lay5_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 5" fillcolor=lightblue shape=rectangle]
+		lay5_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 5" fillcolor=lightblue shape=rectangle]
+		lay5_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 5" fillcolor=lightseagreen shape=rectangle]
+		lay5_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 5" fillcolor=lightgray shape=ellipse]
+		lay5_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 5" fillcolor=lightsteelblue shape=rectangle]
+		layer5_output [label="Output Transfer\nTo: GPU 6\nSize: 524MB\nGPU: 5" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer6_gpu6 {
+		color=green fillcolor=lightyellow label="Layer 6 on GPU 6\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer6_input [label="Input Transfer\nFrom: GPU 5\nSize: 524MB\nGPU: 6" fillcolor=lightyellow shape=parallelogram]
+		lay6_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 6" fillcolor=lightcoral shape=rectangle]
+		lay6_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 6" fillcolor=lightpink shape=rectangle]
+		lay6_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 6" fillcolor=lightpink shape=rectangle]
+		lay6_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 6" fillcolor=lightcoral shape=rectangle]
+		lay6_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 6" fillcolor=lightgray shape=ellipse]
+		lay6_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 6" fillcolor=lightsteelblue shape=rectangle]
+		lay6_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 6" fillcolor=lightseagreen shape=rectangle]
+		lay6_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 6" fillcolor=lightseagreen shape=rectangle]
+		lay6_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 6" fillcolor=lightblue shape=rectangle]
+		lay6_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 6" fillcolor=lightblue shape=rectangle]
+		lay6_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 6" fillcolor=lightseagreen shape=rectangle]
+		lay6_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 6" fillcolor=lightgray shape=ellipse]
+		lay6_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 6" fillcolor=lightsteelblue shape=rectangle]
+		layer6_output [label="Output Transfer\nTo: GPU 7\nSize: 524MB\nGPU: 6" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer7_gpu7 {
+		color=green fillcolor=lightyellow label="Layer 7 on GPU 7\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer7_input [label="Input Transfer\nFrom: GPU 6\nSize: 524MB\nGPU: 7" fillcolor=lightyellow shape=parallelogram]
+		lay7_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 7" fillcolor=lightcoral shape=rectangle]
+		lay7_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 7" fillcolor=lightpink shape=rectangle]
+		lay7_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 7" fillcolor=lightpink shape=rectangle]
+		lay7_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 7" fillcolor=lightcoral shape=rectangle]
+		lay7_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 7" fillcolor=lightgray shape=ellipse]
+		lay7_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 7" fillcolor=lightsteelblue shape=rectangle]
+		lay7_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 7" fillcolor=lightseagreen shape=rectangle]
+		lay7_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 7" fillcolor=lightseagreen shape=rectangle]
+		lay7_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 7" fillcolor=lightblue shape=rectangle]
+		lay7_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 7" fillcolor=lightblue shape=rectangle]
+		lay7_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 7" fillcolor=lightseagreen shape=rectangle]
+		lay7_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 7" fillcolor=lightgray shape=ellipse]
+		lay7_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 7" fillcolor=lightsteelblue shape=rectangle]
+		layer7_output [label="Output Transfer\nTo: GPU 8\nSize: 524MB\nGPU: 7" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer8_gpu8 {
+		color=green fillcolor=lightyellow label="Layer 8 on GPU 8\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer8_input [label="Input Transfer\nFrom: GPU 7\nSize: 524MB\nGPU: 8" fillcolor=lightyellow shape=parallelogram]
+		lay8_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 8" fillcolor=lightcoral shape=rectangle]
+		lay8_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 8" fillcolor=lightpink shape=rectangle]
+		lay8_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 8" fillcolor=lightpink shape=rectangle]
+		lay8_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 8" fillcolor=lightcoral shape=rectangle]
+		lay8_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 8" fillcolor=lightgray shape=ellipse]
+		lay8_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 8" fillcolor=lightsteelblue shape=rectangle]
+		lay8_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 8" fillcolor=lightseagreen shape=rectangle]
+		lay8_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 8" fillcolor=lightseagreen shape=rectangle]
+		lay8_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 8" fillcolor=lightblue shape=rectangle]
+		lay8_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 8" fillcolor=lightblue shape=rectangle]
+		lay8_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 8" fillcolor=lightseagreen shape=rectangle]
+		lay8_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 8" fillcolor=lightgray shape=ellipse]
+		lay8_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 8" fillcolor=lightsteelblue shape=rectangle]
+		layer8_output [label="Output Transfer\nTo: GPU 9\nSize: 524MB\nGPU: 8" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer9_gpu9 {
+		color=green fillcolor=lightyellow label="Layer 9 on GPU 9\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer9_input [label="Input Transfer\nFrom: GPU 8\nSize: 524MB\nGPU: 9" fillcolor=lightyellow shape=parallelogram]
+		lay9_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 9" fillcolor=lightcoral shape=rectangle]
+		lay9_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 9" fillcolor=lightpink shape=rectangle]
+		lay9_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 9" fillcolor=lightpink shape=rectangle]
+		lay9_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 9" fillcolor=lightcoral shape=rectangle]
+		lay9_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 9" fillcolor=lightgray shape=ellipse]
+		lay9_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 9" fillcolor=lightsteelblue shape=rectangle]
+		lay9_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 9" fillcolor=lightseagreen shape=rectangle]
+		lay9_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 9" fillcolor=lightseagreen shape=rectangle]
+		lay9_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 9" fillcolor=lightblue shape=rectangle]
+		lay9_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 9" fillcolor=lightblue shape=rectangle]
+		lay9_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 9" fillcolor=lightseagreen shape=rectangle]
+		lay9_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 9" fillcolor=lightgray shape=ellipse]
+		lay9_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 9" fillcolor=lightsteelblue shape=rectangle]
+		layer9_output [label="Output Transfer\nTo: GPU 10\nSize: 524MB\nGPU: 9" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer10_gpu10 {
+		color=green fillcolor=lightyellow label="Layer 10 on GPU 10\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer10_input [label="Input Transfer\nFrom: GPU 9\nSize: 524MB\nGPU: 10" fillcolor=lightyellow shape=parallelogram]
+		lay10_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 10" fillcolor=lightcoral shape=rectangle]
+		lay10_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 10" fillcolor=lightpink shape=rectangle]
+		lay10_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 10" fillcolor=lightpink shape=rectangle]
+		lay10_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 10" fillcolor=lightcoral shape=rectangle]
+		lay10_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 10" fillcolor=lightgray shape=ellipse]
+		lay10_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 10" fillcolor=lightsteelblue shape=rectangle]
+		lay10_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 10" fillcolor=lightseagreen shape=rectangle]
+		lay10_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 10" fillcolor=lightseagreen shape=rectangle]
+		lay10_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 10" fillcolor=lightblue shape=rectangle]
+		lay10_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 10" fillcolor=lightblue shape=rectangle]
+		lay10_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 10" fillcolor=lightseagreen shape=rectangle]
+		lay10_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 10" fillcolor=lightgray shape=ellipse]
+		lay10_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 10" fillcolor=lightsteelblue shape=rectangle]
+		layer10_output [label="Output Transfer\nTo: GPU 11\nSize: 524MB\nGPU: 10" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer11_gpu11 {
+		color=green fillcolor=lightyellow label="Layer 11 on GPU 11\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer11_input [label="Input Transfer\nFrom: GPU 10\nSize: 524MB\nGPU: 11" fillcolor=lightyellow shape=parallelogram]
+		lay11_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 11" fillcolor=lightcoral shape=rectangle]
+		lay11_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 11" fillcolor=lightpink shape=rectangle]
+		lay11_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 11" fillcolor=lightpink shape=rectangle]
+		lay11_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 11" fillcolor=lightcoral shape=rectangle]
+		lay11_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 11" fillcolor=lightgray shape=ellipse]
+		lay11_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 11" fillcolor=lightsteelblue shape=rectangle]
+		lay11_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 11" fillcolor=lightseagreen shape=rectangle]
+		lay11_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 11" fillcolor=lightseagreen shape=rectangle]
+		lay11_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 11" fillcolor=lightblue shape=rectangle]
+		lay11_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 11" fillcolor=lightblue shape=rectangle]
+		lay11_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 11" fillcolor=lightseagreen shape=rectangle]
+		lay11_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 11" fillcolor=lightgray shape=ellipse]
+		lay11_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 11" fillcolor=lightsteelblue shape=rectangle]
+		layer11_output [label="Output Transfer\nTo: GPU 12\nSize: 524MB\nGPU: 11" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer12_gpu12 {
+		color=green fillcolor=lightyellow label="Layer 12 on GPU 12\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer12_input [label="Input Transfer\nFrom: GPU 11\nSize: 524MB\nGPU: 12" fillcolor=lightyellow shape=parallelogram]
+		lay12_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 12" fillcolor=lightcoral shape=rectangle]
+		lay12_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 12" fillcolor=lightpink shape=rectangle]
+		lay12_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 12" fillcolor=lightpink shape=rectangle]
+		lay12_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 12" fillcolor=lightcoral shape=rectangle]
+		lay12_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 12" fillcolor=lightgray shape=ellipse]
+		lay12_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 12" fillcolor=lightsteelblue shape=rectangle]
+		lay12_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 12" fillcolor=lightseagreen shape=rectangle]
+		lay12_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 12" fillcolor=lightseagreen shape=rectangle]
+		lay12_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 12" fillcolor=lightblue shape=rectangle]
+		lay12_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 12" fillcolor=lightblue shape=rectangle]
+		lay12_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 12" fillcolor=lightseagreen shape=rectangle]
+		lay12_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 12" fillcolor=lightgray shape=ellipse]
+		lay12_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 12" fillcolor=lightsteelblue shape=rectangle]
+		layer12_output [label="Output Transfer\nTo: GPU 13\nSize: 524MB\nGPU: 12" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer13_gpu13 {
+		color=green fillcolor=lightyellow label="Layer 13 on GPU 13\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer13_input [label="Input Transfer\nFrom: GPU 12\nSize: 524MB\nGPU: 13" fillcolor=lightyellow shape=parallelogram]
+		lay13_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 13" fillcolor=lightcoral shape=rectangle]
+		lay13_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 13" fillcolor=lightpink shape=rectangle]
+		lay13_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 13" fillcolor=lightpink shape=rectangle]
+		lay13_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 13" fillcolor=lightcoral shape=rectangle]
+		lay13_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 13" fillcolor=lightgray shape=ellipse]
+		lay13_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 13" fillcolor=lightsteelblue shape=rectangle]
+		lay13_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 13" fillcolor=lightseagreen shape=rectangle]
+		lay13_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 13" fillcolor=lightseagreen shape=rectangle]
+		lay13_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 13" fillcolor=lightblue shape=rectangle]
+		lay13_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 13" fillcolor=lightblue shape=rectangle]
+		lay13_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 13" fillcolor=lightseagreen shape=rectangle]
+		lay13_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 13" fillcolor=lightgray shape=ellipse]
+		lay13_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 13" fillcolor=lightsteelblue shape=rectangle]
+		layer13_output [label="Output Transfer\nTo: GPU 14\nSize: 524MB\nGPU: 13" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer14_gpu14 {
+		color=green fillcolor=lightyellow label="Layer 14 on GPU 14\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer14_input [label="Input Transfer\nFrom: GPU 13\nSize: 524MB\nGPU: 14" fillcolor=lightyellow shape=parallelogram]
+		lay14_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 14" fillcolor=lightcoral shape=rectangle]
+		lay14_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 14" fillcolor=lightpink shape=rectangle]
+		lay14_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 14" fillcolor=lightpink shape=rectangle]
+		lay14_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 14" fillcolor=lightcoral shape=rectangle]
+		lay14_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 14" fillcolor=lightgray shape=ellipse]
+		lay14_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 14" fillcolor=lightsteelblue shape=rectangle]
+		lay14_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 14" fillcolor=lightseagreen shape=rectangle]
+		lay14_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 14" fillcolor=lightseagreen shape=rectangle]
+		lay14_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 14" fillcolor=lightblue shape=rectangle]
+		lay14_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 14" fillcolor=lightblue shape=rectangle]
+		lay14_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 14" fillcolor=lightseagreen shape=rectangle]
+		lay14_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 14" fillcolor=lightgray shape=ellipse]
+		lay14_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 14" fillcolor=lightsteelblue shape=rectangle]
+		layer14_output [label="Output Transfer\nTo: GPU 15\nSize: 524MB\nGPU: 14" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_layer15_gpu15 {
+		color=green fillcolor=lightyellow label="Layer 15 on GPU 15\nCache-capacity: 11.8GB" style="rounded,dashed"
+		layer15_input [label="Input Transfer\nFrom: GPU 14\nSize: 524MB\nGPU: 15" fillcolor=lightyellow shape=parallelogram]
+		lay15_qkv_proj [label="QKV Projection\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPU: 15" fillcolor=lightcoral shape=rectangle]
+		lay15_attn_score [label="Scaled Dot-Product Attention\nInput: [128,10000,32,128], [128,10000,32,128]\nOutput: [128,10000,32,128]\nGPU: 15" fillcolor=lightpink shape=rectangle]
+		lay15_attn_concat [label="Concat Heads\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPU: 15" fillcolor=lightpink shape=rectangle]
+		lay15_attn_out [label="Attention Output Projection\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 15" fillcolor=lightcoral shape=rectangle]
+		lay15_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 15" fillcolor=lightgray shape=ellipse]
+		lay15_ln1 [label="LayerNorm 1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 15" fillcolor=lightsteelblue shape=rectangle]
+		lay15_mlp_gate [label="MLP Gate Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 15" fillcolor=lightseagreen shape=rectangle]
+		lay15_mlp_up [label="MLP Up Projection\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPU: 15" fillcolor=lightseagreen shape=rectangle]
+		lay15_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 15" fillcolor=lightblue shape=rectangle]
+		lay15_mlp_mul [label="Element-wise Mul\nInput: [128,10000,16384], [128,10000,16384]\nOutput: [128,10000,16384]\nGPU: 15" fillcolor=lightblue shape=rectangle]
+		lay15_mlp_down [label="MLP Down Projection\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPU: 15" fillcolor=lightseagreen shape=rectangle]
+		lay15_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 15" fillcolor=lightgray shape=ellipse]
+		lay15_ln2 [label="LayerNorm 2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPU: 15" fillcolor=lightsteelblue shape=rectangle]
+		layer15_output [label="Model Output\nTo: Final Output\nSize: 524MB\nGPU: 15" fillcolor=lightgreen shape=parallelogram]
+	}
+	final_output [label="Final Model Output\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=parallelogram]
+	input -> layer0_input
+	layer0_input -> lay0_qkv_proj
+	lay0_qkv_proj -> lay0_attn_score
+	lay0_attn_score -> lay0_attn_concat
+	lay0_attn_concat -> lay0_attn_out
+	lay0_attn_out -> lay0_res1
+	layer0_input -> lay0_res1
+	lay0_res1 -> lay0_ln1
+	lay0_ln1 -> lay0_mlp_gate
+	lay0_ln1 -> lay0_mlp_up
+	lay0_mlp_gate -> lay0_mlp_act
+	lay0_mlp_up -> lay0_mlp_mul
+	lay0_mlp_act -> lay0_mlp_mul
+	lay0_mlp_mul -> lay0_mlp_down
+	lay0_mlp_down -> lay0_res2
+	lay0_ln1 -> lay0_res2
+	lay0_res2 -> lay0_ln2
+	lay0_ln2 -> layer0_output
+	layer0_output -> layer1_input
+	layer1_input -> lay1_qkv_proj
+	lay1_qkv_proj -> lay1_attn_score
+	lay1_attn_score -> lay1_attn_concat
+	lay1_attn_concat -> lay1_attn_out
+	lay1_attn_out -> lay1_res1
+	layer1_input -> lay1_res1
+	lay1_res1 -> lay1_ln1
+	lay1_ln1 -> lay1_mlp_gate
+	lay1_ln1 -> lay1_mlp_up
+	lay1_mlp_gate -> lay1_mlp_act
+	lay1_mlp_up -> lay1_mlp_mul
+	lay1_mlp_act -> lay1_mlp_mul
+	lay1_mlp_mul -> lay1_mlp_down
+	lay1_mlp_down -> lay1_res2
+	lay1_ln1 -> lay1_res2
+	lay1_res2 -> lay1_ln2
+	lay1_ln2 -> layer1_output
+	layer1_output -> layer2_input
+	layer2_input -> lay2_qkv_proj
+	lay2_qkv_proj -> lay2_attn_score
+	lay2_attn_score -> lay2_attn_concat
+	lay2_attn_concat -> lay2_attn_out
+	lay2_attn_out -> lay2_res1
+	layer2_input -> lay2_res1
+	lay2_res1 -> lay2_ln1
+	lay2_ln1 -> lay2_mlp_gate
+	lay2_ln1 -> lay2_mlp_up
+	lay2_mlp_gate -> lay2_mlp_act
+	lay2_mlp_up -> lay2_mlp_mul
+	lay2_mlp_act -> lay2_mlp_mul
+	lay2_mlp_mul -> lay2_mlp_down
+	lay2_mlp_down -> lay2_res2
+	lay2_ln1 -> lay2_res2
+	lay2_res2 -> lay2_ln2
+	lay2_ln2 -> layer2_output
+	layer2_output -> layer3_input
+	layer3_input -> lay3_qkv_proj
+	lay3_qkv_proj -> lay3_attn_score
+	lay3_attn_score -> lay3_attn_concat
+	lay3_attn_concat -> lay3_attn_out
+	lay3_attn_out -> lay3_res1
+	layer3_input -> lay3_res1
+	lay3_res1 -> lay3_ln1
+	lay3_ln1 -> lay3_mlp_gate
+	lay3_ln1 -> lay3_mlp_up
+	lay3_mlp_gate -> lay3_mlp_act
+	lay3_mlp_up -> lay3_mlp_mul
+	lay3_mlp_act -> lay3_mlp_mul
+	lay3_mlp_mul -> lay3_mlp_down
+	lay3_mlp_down -> lay3_res2
+	lay3_ln1 -> lay3_res2
+	lay3_res2 -> lay3_ln2
+	lay3_ln2 -> layer3_output
+	layer3_output -> layer4_input
+	layer4_input -> lay4_qkv_proj
+	lay4_qkv_proj -> lay4_attn_score
+	lay4_attn_score -> lay4_attn_concat
+	lay4_attn_concat -> lay4_attn_out
+	lay4_attn_out -> lay4_res1
+	layer4_input -> lay4_res1
+	lay4_res1 -> lay4_ln1
+	lay4_ln1 -> lay4_mlp_gate
+	lay4_ln1 -> lay4_mlp_up
+	lay4_mlp_gate -> lay4_mlp_act
+	lay4_mlp_up -> lay4_mlp_mul
+	lay4_mlp_act -> lay4_mlp_mul
+	lay4_mlp_mul -> lay4_mlp_down
+	lay4_mlp_down -> lay4_res2
+	lay4_ln1 -> lay4_res2
+	lay4_res2 -> lay4_ln2
+	lay4_ln2 -> layer4_output
+	layer4_output -> layer5_input
+	layer5_input -> lay5_qkv_proj
+	lay5_qkv_proj -> lay5_attn_score
+	lay5_attn_score -> lay5_attn_concat
+	lay5_attn_concat -> lay5_attn_out
+	lay5_attn_out -> lay5_res1
+	layer5_input -> lay5_res1
+	lay5_res1 -> lay5_ln1
+	lay5_ln1 -> lay5_mlp_gate
+	lay5_ln1 -> lay5_mlp_up
+	lay5_mlp_gate -> lay5_mlp_act
+	lay5_mlp_up -> lay5_mlp_mul
+	lay5_mlp_act -> lay5_mlp_mul
+	lay5_mlp_mul -> lay5_mlp_down
+	lay5_mlp_down -> lay5_res2
+	lay5_ln1 -> lay5_res2
+	lay5_res2 -> lay5_ln2
+	lay5_ln2 -> layer5_output
+	layer5_output -> layer6_input
+	layer6_input -> lay6_qkv_proj
+	lay6_qkv_proj -> lay6_attn_score
+	lay6_attn_score -> lay6_attn_concat
+	lay6_attn_concat -> lay6_attn_out
+	lay6_attn_out -> lay6_res1
+	layer6_input -> lay6_res1
+	lay6_res1 -> lay6_ln1
+	lay6_ln1 -> lay6_mlp_gate
+	lay6_ln1 -> lay6_mlp_up
+	lay6_mlp_gate -> lay6_mlp_act
+	lay6_mlp_up -> lay6_mlp_mul
+	lay6_mlp_act -> lay6_mlp_mul
+	lay6_mlp_mul -> lay6_mlp_down
+	lay6_mlp_down -> lay6_res2
+	lay6_ln1 -> lay6_res2
+	lay6_res2 -> lay6_ln2
+	lay6_ln2 -> layer6_output
+	layer6_output -> layer7_input
+	layer7_input -> lay7_qkv_proj
+	lay7_qkv_proj -> lay7_attn_score
+	lay7_attn_score -> lay7_attn_concat
+	lay7_attn_concat -> lay7_attn_out
+	lay7_attn_out -> lay7_res1
+	layer7_input -> lay7_res1
+	lay7_res1 -> lay7_ln1
+	lay7_ln1 -> lay7_mlp_gate
+	lay7_ln1 -> lay7_mlp_up
+	lay7_mlp_gate -> lay7_mlp_act
+	lay7_mlp_up -> lay7_mlp_mul
+	lay7_mlp_act -> lay7_mlp_mul
+	lay7_mlp_mul -> lay7_mlp_down
+	lay7_mlp_down -> lay7_res2
+	lay7_ln1 -> lay7_res2
+	lay7_res2 -> lay7_ln2
+	lay7_ln2 -> layer7_output
+	layer7_output -> layer8_input
+	layer8_input -> lay8_qkv_proj
+	lay8_qkv_proj -> lay8_attn_score
+	lay8_attn_score -> lay8_attn_concat
+	lay8_attn_concat -> lay8_attn_out
+	lay8_attn_out -> lay8_res1
+	layer8_input -> lay8_res1
+	lay8_res1 -> lay8_ln1
+	lay8_ln1 -> lay8_mlp_gate
+	lay8_ln1 -> lay8_mlp_up
+	lay8_mlp_gate -> lay8_mlp_act
+	lay8_mlp_up -> lay8_mlp_mul
+	lay8_mlp_act -> lay8_mlp_mul
+	lay8_mlp_mul -> lay8_mlp_down
+	lay8_mlp_down -> lay8_res2
+	lay8_ln1 -> lay8_res2
+	lay8_res2 -> lay8_ln2
+	lay8_ln2 -> layer8_output
+	layer8_output -> layer9_input
+	layer9_input -> lay9_qkv_proj
+	lay9_qkv_proj -> lay9_attn_score
+	lay9_attn_score -> lay9_attn_concat
+	lay9_attn_concat -> lay9_attn_out
+	lay9_attn_out -> lay9_res1
+	layer9_input -> lay9_res1
+	lay9_res1 -> lay9_ln1
+	lay9_ln1 -> lay9_mlp_gate
+	lay9_ln1 -> lay9_mlp_up
+	lay9_mlp_gate -> lay9_mlp_act
+	lay9_mlp_up -> lay9_mlp_mul
+	lay9_mlp_act -> lay9_mlp_mul
+	lay9_mlp_mul -> lay9_mlp_down
+	lay9_mlp_down -> lay9_res2
+	lay9_ln1 -> lay9_res2
+	lay9_res2 -> lay9_ln2
+	lay9_ln2 -> layer9_output
+	layer9_output -> layer10_input
+	layer10_input -> lay10_qkv_proj
+	lay10_qkv_proj -> lay10_attn_score
+	lay10_attn_score -> lay10_attn_concat
+	lay10_attn_concat -> lay10_attn_out
+	lay10_attn_out -> lay10_res1
+	layer10_input -> lay10_res1
+	lay10_res1 -> lay10_ln1
+	lay10_ln1 -> lay10_mlp_gate
+	lay10_ln1 -> lay10_mlp_up
+	lay10_mlp_gate -> lay10_mlp_act
+	lay10_mlp_up -> lay10_mlp_mul
+	lay10_mlp_act -> lay10_mlp_mul
+	lay10_mlp_mul -> lay10_mlp_down
+	lay10_mlp_down -> lay10_res2
+	lay10_ln1 -> lay10_res2
+	lay10_res2 -> lay10_ln2
+	lay10_ln2 -> layer10_output
+	layer10_output -> layer11_input
+	layer11_input -> lay11_qkv_proj
+	lay11_qkv_proj -> lay11_attn_score
+	lay11_attn_score -> lay11_attn_concat
+	lay11_attn_concat -> lay11_attn_out
+	lay11_attn_out -> lay11_res1
+	layer11_input -> lay11_res1
+	lay11_res1 -> lay11_ln1
+	lay11_ln1 -> lay11_mlp_gate
+	lay11_ln1 -> lay11_mlp_up
+	lay11_mlp_gate -> lay11_mlp_act
+	lay11_mlp_up -> lay11_mlp_mul
+	lay11_mlp_act -> lay11_mlp_mul
+	lay11_mlp_mul -> lay11_mlp_down
+	lay11_mlp_down -> lay11_res2
+	lay11_ln1 -> lay11_res2
+	lay11_res2 -> lay11_ln2
+	lay11_ln2 -> layer11_output
+	layer11_output -> layer12_input
+	layer12_input -> lay12_qkv_proj
+	lay12_qkv_proj -> lay12_attn_score
+	lay12_attn_score -> lay12_attn_concat
+	lay12_attn_concat -> lay12_attn_out
+	lay12_attn_out -> lay12_res1
+	layer12_input -> lay12_res1
+	lay12_res1 -> lay12_ln1
+	lay12_ln1 -> lay12_mlp_gate
+	lay12_ln1 -> lay12_mlp_up
+	lay12_mlp_gate -> lay12_mlp_act
+	lay12_mlp_up -> lay12_mlp_mul
+	lay12_mlp_act -> lay12_mlp_mul
+	lay12_mlp_mul -> lay12_mlp_down
+	lay12_mlp_down -> lay12_res2
+	lay12_ln1 -> lay12_res2
+	lay12_res2 -> lay12_ln2
+	lay12_ln2 -> layer12_output
+	layer12_output -> layer13_input
+	layer13_input -> lay13_qkv_proj
+	lay13_qkv_proj -> lay13_attn_score
+	lay13_attn_score -> lay13_attn_concat
+	lay13_attn_concat -> lay13_attn_out
+	lay13_attn_out -> lay13_res1
+	layer13_input -> lay13_res1
+	lay13_res1 -> lay13_ln1
+	lay13_ln1 -> lay13_mlp_gate
+	lay13_ln1 -> lay13_mlp_up
+	lay13_mlp_gate -> lay13_mlp_act
+	lay13_mlp_up -> lay13_mlp_mul
+	lay13_mlp_act -> lay13_mlp_mul
+	lay13_mlp_mul -> lay13_mlp_down
+	lay13_mlp_down -> lay13_res2
+	lay13_ln1 -> lay13_res2
+	lay13_res2 -> lay13_ln2
+	lay13_ln2 -> layer13_output
+	layer13_output -> layer14_input
+	layer14_input -> lay14_qkv_proj
+	lay14_qkv_proj -> lay14_attn_score
+	lay14_attn_score -> lay14_attn_concat
+	lay14_attn_concat -> lay14_attn_out
+	lay14_attn_out -> lay14_res1
+	layer14_input -> lay14_res1
+	lay14_res1 -> lay14_ln1
+	lay14_ln1 -> lay14_mlp_gate
+	lay14_ln1 -> lay14_mlp_up
+	lay14_mlp_gate -> lay14_mlp_act
+	lay14_mlp_up -> lay14_mlp_mul
+	lay14_mlp_act -> lay14_mlp_mul
+	lay14_mlp_mul -> lay14_mlp_down
+	lay14_mlp_down -> lay14_res2
+	lay14_ln1 -> lay14_res2
+	lay14_res2 -> lay14_ln2
+	lay14_ln2 -> layer14_output
+	layer14_output -> layer15_input
+	layer15_input -> lay15_qkv_proj
+	lay15_qkv_proj -> lay15_attn_score
+	lay15_attn_score -> lay15_attn_concat
+	lay15_attn_concat -> lay15_attn_out
+	lay15_attn_out -> lay15_res1
+	layer15_input -> lay15_res1
+	lay15_res1 -> lay15_ln1
+	lay15_ln1 -> lay15_mlp_gate
+	lay15_ln1 -> lay15_mlp_up
+	lay15_mlp_gate -> lay15_mlp_act
+	lay15_mlp_up -> lay15_mlp_mul
+	lay15_mlp_act -> lay15_mlp_mul
+	lay15_mlp_mul -> lay15_mlp_down
+	lay15_mlp_down -> lay15_res2
+	lay15_ln1 -> lay15_res2
+	lay15_res2 -> lay15_ln2
+	lay15_ln2 -> layer15_output
+	layer15_output -> final_output
+}

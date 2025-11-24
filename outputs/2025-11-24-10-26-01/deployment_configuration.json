@@ -1,0 +1,456 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "Tensor Parallelism + Pipeline Parallelism Baseline",
+      "parallel_strategy": {
+        "type": "hybrid",
+        "tensor_parallelism": {
+          "degree": 8,
+          "strategy": "column_and_row_parallel",
+          "parameters": {
+            "attention": {
+              "qkv_projection": "column_parallel",
+              "output_projection": "row_parallel"
+            },
+            "mlp": {
+              "gate_up_projection": "column_parallel",
+              "down_projection": "row_parallel"
+            }
+          }
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "strategy": "layer_wise",
+          "parameters": {
+            "layers_per_stage": 8,
+            "micro_batch_size": 128
+          }
+        }
+      },
+      "model_specification": {
+        "model_type": "dense_16_layer",
+        "total_parameters": 30000000000,
+        "precision": "BF16",
+        "layers": 16,
+        "parameters_per_layer": 1875000000,
+        "dimensions": {
+          "batch_size": 128,
+          "sequence_length": 10000,
+          "hidden_size": 4096,
+          "num_heads": 32,
+          "head_dim": 128,
+          "mlp_hidden_size": 16384
+        }
+      },
+      "device_mapping": {
+        "stage_0": {
+          "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": [0, 1, 2, 3, 4, 5, 6, 7],
+          "memory_per_layer": 11811160064,
+          "tensor_parallel_ranking": {
+            "device_0": {"rank": 0, "slices": [0, 512]},
+            "device_1": {"rank": 1, "slices": [512, 1024]},
+            "device_2": {"rank": 2, "slices": [1024, 1536]},
+            "device_3": {"rank": 3, "slices": [1536, 2048]},
+            "device_4": {"rank": 4, "slices": [2048, 2560]},
+            "device_5": {"rank": 5, "slices": [2560, 3072]},
+            "device_6": {"rank": 6, "slices": [3072, 3584]},
+            "device_7": {"rank": 7, "slices": [3584, 4096]}
+          }
+        },
+        "stage_1": {
+          "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": [8, 9, 10, 11, 12, 13, 14, 15],
+          "memory_per_layer": 11811160064,
+          "tensor_parallel_ranking": {
+            "device_8": {"rank": 0, "slices": [0, 512]},
+            "device_9": {"rank": 1, "slices": [512, 1024]},
+            "device_10": {"rank": 2, "slices": [1024, 1536]},
+            "device_11": {"rank": 3, "slices": [1536, 2048]},
+            "device_12": {"rank": 4, "slices": [2048, 2560]},
+            "device_13": {"rank": 5, "slices": [2560, 3072]},
+            "device_14": {"rank": 6, "slices": [3072, 3584]},
+            "device_15": {"rank": 7, "slices": [3584, 4096]}
+          }
+        }
+      },
+      "memory_requirements": {
+        "weight_memory_per_layer": 3750000000,
+        "activation_memory_per_layer": 10485760000,
+        "buffer_memory_per_layer": 536870912,
+        "total_per_layer": 11811160064,
+        "total_per_device": 94489320512
+      },
+      "communication_overhead": {
+        "tensor_parallel_allreduce": "NVLink",
+        "pipeline_parallel_send_recv": "NVLink",
+        "activation_transfer_size": 10485760000
+      }
+    },
+    "proposed": {
+      "name": "Layer-wise Cache-aware Partitioning",
+      "parallel_strategy": {
+        "type": "layer_wise_parallelism",
+        "strategy": "cache_aware_partitioning",
+        "parameters": {
+          "partitioning_algorithm": "greedy",
+          "cache_capacity_per_device": 11811160064,
+          "max_partitions": 16,
+          "minimize_partitions": true,
+          "contiguous_assignment": true
+        }
+      },
+      "model_specification": {
+        "model_type": "dense_16_layer",
+        "total_parameters": 30000000000,
+        "precision": "BF16",
+        "layers": 16,
+        "parameters_per_layer": 1875000000,
+        "dimensions": {
+          "batch_size": 128,
+          "sequence_length": 10000,
+          "hidden_size": 4096,
+          "num_heads": 32,
+          "head_dim": 128,
+          "mlp_hidden_size": 16384
+        }
+      },
+      "device_mapping": {
+        "layer_0": {
+          "device": 0,
+          "layer_id": 0,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": null,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 1,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_1": {
+          "device": 1,
+          "layer_id": 1,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 0,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 2,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_2": {
+          "device": 2,
+          "layer_id": 2,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 1,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 3,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_3": {
+          "device": 3,
+          "layer_id": 3,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 2,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 4,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_4": {
+          "device": 4,
+          "layer_id": 4,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 3,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 5,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_5": {
+          "device": 5,
+          "layer_id": 5,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 4,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 6,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_6": {
+          "device": 6,
+          "layer_id": 6,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 5,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 7,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_7": {
+          "device": 7,
+          "layer_id": 7,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 6,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 8,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_8": {
+          "device": 8,
+          "layer_id": 8,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 7,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 9,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_9": {
+          "device": 9,
+          "layer_id": 9,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 8,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 10,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_10": {
+          "device": 10,
+          "layer_id": 10,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 9,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 11,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_11": {
+          "device": 11,
+          "layer_id": 11,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 10,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 12,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_12": {
+          "device": 12,
+          "layer_id": 12,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 11,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 13,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_13": {
+          "device": 13,
+          "layer_id": 13,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 12,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 14,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_14": {
+          "device": 14,
+          "layer_id": 14,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 13,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": 15,
+            "transfer_size": 524288000
+          }
+        },
+        "layer_15": {
+          "device": 15,
+          "layer_id": 15,
+          "memory_allocation": {
+            "weight_memory": 3750000000,
+            "activation_memory": 10485760000,
+            "buffer_memory": 536870912,
+            "total_memory": 11811160064,
+            "location": "SRAM_L2_cache"
+          },
+          "input_transfer": {
+            "from_device": 14,
+            "transfer_size": 524288000
+          },
+          "output_transfer": {
+            "to_device": null,
+            "transfer_size": 524288000
+          }
+        }
+      },
+      "communication_overhead": {
+        "inter_layer_transfer": "NVLink",
+        "transfer_size_per_transition": 524288000,
+        "total_transfers": 15,
+        "total_transfer_volume": 7864320000
+      },
+      "performance_metrics": {
+        "expected_tps": 15360,
+        "expected_tpot_ms": 0.065,
+        "memory_efficiency": "cache_optimal",
+        "scalability": "linear_1_layer_per_gpu"
+      }
+    }
+  },
+  "hardware_specifications": {
+    "device_type": "NVIDIA_H100",
+    "num_devices": 16,
+    "cache_capacity_per_device": 11811160064,
+    "interconnect": "NVLink",
+    "precision": "BF16",
+    "memory_hierarchy": {
+      "l2_cache": "SRAM",
+      "hbm3": "high_bandwidth_memory"
+    }
+  },
+  "deployment_constraints": {
+    "max_memory_per_partition": 11811160064,
+    "contiguous_layer_assignment": true,
+    "minimize_partition_count": true,
+    "preserve_execution_order": true,
+    "cache_fitting_required": true
+  }
+}

@@ -1,0 +1,134 @@
+digraph baseline_tp8_pp2_fixed {
+    graph [rankdir=TB, splines=ortho, nodesep=0.5, ranksep=1.0];
+    node [shape=ellipse, style=filled, fillcolor=lightblue];
+    
+    // Input
+    input [label="Input\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]", 
+           shape=parallelogram, fillcolor=lightgreen];
+
+    // Stage 0 cluster
+    subgraph cluster_stage0 {
+        label="Stage 0 (Layers 0-7)\nGPUs 0-7 (TP=8)";
+        style="rounded,dashed";
+        color=red;
+        
+        // Layer 0
+        subgraph cluster_layer0 {
+            label="Layer 0\nGPUs 0-7";
+            style=dotted;
+            lay0_qkv_proj [label="QKV Projection (TP=8)\nInput: [128,10000,4096]\nOutput: [128,10000,32,128]\nGPUs 0-7", 
+                          shape=rectangle, fillcolor=lightcoral];
+            lay0_attn [label="Multi-Head Attention (TP=8)\nInput: [128,10000,32,128]\nOutput: [128,10000,4096]\nGPUs 0-7", 
+                      shape=rectangle, fillcolor=lightpink];
+            lay0_attn_out [label="Attention Output Projection (TP=8)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]\nGPUs 0-7", 
+                          shape=rectangle, fillcolor=lightcoral];
+            lay0_res1 [label="Residual Add 1\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPUs 0-7", 
+                      shape=rectangle, fillcolor=lightgray];
+            lay0_mlp_gate [label="MLP Gate (TP=8)\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPUs 0-7", 
+                          shape=rectangle, fillcolor=lightseagreen];
+            lay0_mlp_up [label="MLP Up (TP=8)\nInput: [128,10000,4096]\nOutput: [128,10000,16384]\nGPUs 0-7", 
+                        shape=rectangle, fillcolor=lightseagreen];
+            lay0_mlp_act [label="GELU Activation\nInput: [128,10000,16384]\nOutput: [128,10000,16384]\nGPUs 0-7", 
+                         shape=rectangle];
+            lay0_mlp_down [label="MLP Down (TP=8)\nInput: [128,10000,16384]\nOutput: [128,10000,4096]\nGPUs 0-7", 
+                          shape=rectangle, fillcolor=lightseagreen];
+            lay0_res2 [label="Residual Add 2\nInput: [128,10000,4096], [128,10000,4096]\nOutput: [128,10000,4096]\nGPUs 0-7", 
+                      shape=rectangle, fillcolor=lightgray];
+            
+            lay0_qkv_proj -> lay0_attn;
+            lay0_attn -> lay0_attn_out;
+            lay0_attn_out -> lay0_res1;
+            lay0_res1 -> lay0_mlp_gate;
+            lay0_res1 -> lay0_mlp_up;
+            lay0_mlp_gate -> lay0_mlp_act;
+            lay0_mlp_up -> lay0_mlp_act;
+            lay0_mlp_act -> lay0_mlp_down;
+            lay0_mlp_down -> lay0_res2;
+        }
+        
+        // Layer 1 (represented by single node)
+        lay1 [label="Layer 1\nSame structure as Layer 0\nGPUs 0-7", shape=rectangle];
+        
+        // Layer 2 (represented by single node)
+        lay2 [label="Layer 2\nSame structure as Layer 0\nGPUs 0-7", shape=rectangle];
+        
+        // Layer 3 (represented by single node)
+        lay3 [label="Layer 3\nSame structure as Layer 0\nGPUs 0-7", shape=rectangle];
+        
+        // Layer 4 (represented by single node)
+        lay4 [label="Layer 4\nSame structure as Layer 0\nGPUs 0-7", shape=rectangle];
+        
+        // Layer 5 (represented by single node)
+        lay5 [label="Layer 5\nSame structure as Layer 0\nGPUs 0-7", shape=rectangle];
+        
+        // Layer 6 (represented by single node)
+        lay6 [label="Layer 6\nSame structure as Layer 0\nGPUs 0-7", shape=rectangle];
+        
+        // Layer 7 (represented by single node)
+        lay7 [label="Layer 7\nSame structure as Layer 0\nGPUs 0-7", shape=rectangle];
+        
+        lay0_res2 -> lay1;
+        lay1 -> lay2;
+        lay2 -> lay3;
+        lay3 -> lay4;
+        lay4 -> lay5;
+        lay5 -> lay6;
+        lay6 -> lay7;
+    }
+    
+    // Stage 1 cluster
+    subgraph cluster_stage1 {
+        label="Stage 1 (Layers 8-15)\nGPUs 8-15 (TP=8)";
+        style="rounded,dashed";
+        color=blue;
+        
+        // Layer 8 (represented by single node)
+        lay8 [label="Layer 8\nSame structure as Layer 0\nGPUs 8-15", shape=rectangle];
+        
+        // Layer 9 (represented by single node)
+        lay9 [label="Layer 9\nSame structure as Layer 0\nGPUs 8-15", shape=rectangle];
+        
+        // Layer 10 (represented by single node)
+        lay10 [label="Layer 10\nSame structure as Layer 0\nGPUs 8-15", shape=rectangle];
+        
+        // Layer 11 (represented by single node)
+        lay11 [label="Layer 11\nSame structure as Layer 0\nGPUs 8-15", shape=rectangle];
+        
+        // Layer 12 (represented by single node)
+        lay12 [label="Layer 12\nSame structure as Layer 0\nGPUs 8-15", shape=rectangle];
+        
+        // Layer 13 (represented by single node)
+        lay13 [label="Layer 13\nSame structure as Layer 0\nGPUs 8-15", shape=rectangle];
+        
+        // Layer 14 (represented by single node)
+        lay14 [label="Layer 14\nSame structure as Layer 0\nGPUs 8-15", shape=rectangle];
+        
+        // Layer 15 (represented by single node)
+        lay15 [label="Layer 15\nSame structure as Layer 0\nGPUs 8-15", shape=rectangle];
+        
+        lay8 -> lay9;
+        lay9 -> lay10;
+        lay10 -> lay11;
+        lay11 -> lay12;
+        lay12 -> lay13;
+        lay13 -> lay14;
+        lay14 -> lay15;
+    }
+    
+    // Communication nodes
+    stage0_input [label="Stage 0 Input\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]", 
+                  shape=parallelogram, fillcolor=lightyellow];
+    stage1_input [label="Stage 1 Input\nInput: [batch_size=128, seq_len=10000, hidden_size=4096]\nOutput: [batch_size=128, seq_len=10000, hidden_size=4096]", 
+                  shape=parallelogram, fillcolor=lightyellow];
+    
+    pipeline_transfer [label="Pipeline Transfer\nBetween stages\nSize: 5.24GB", 
+                      shape=ellipse, fillcolor=lightblue, style=dashed];
+    
+    // Connections
+    input -> stage0_input;
+    stage0_input -> lay0_qkv_proj;
+    lay7 -> pipeline_transfer;
+    pipeline_transfer -> stage1_input;
+    stage1_input -> lay8;
+    lay15 -> output;
+}
