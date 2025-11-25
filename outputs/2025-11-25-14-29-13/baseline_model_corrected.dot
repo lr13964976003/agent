@@ -1,0 +1,120 @@
+digraph MoE_Baseline_TP8_PP2 {
+    rankdir=TB;
+    node [shape=rectangle, style="rounded,filled"];
+    
+    // Global graph attributes
+    label="MoE Baseline Model DAG (TP=8, PP=2): 16 Layers, Shared Experts";
+    labelloc="t";
+    fontsize=20;
+    
+    // Input node
+    input [label="Input\nShape: [batch_size=128, seq_len=10000, d_model=4096]\nGPU: All GPUs", 
+           shape=ellipse, fillcolor=lightblue];
+    
+    // Stage 0: Layers 0-7 (GPUs 0-7)
+    subgraph cluster_stage0 {
+        label="Stage 0\nLayers 0-7\nGPUs: 0-7";
+        style="dashed";
+        
+        // Layer template for Stage 0
+        subgraph cluster_layer_template_s0 {
+            label="Layer Template (All Layers 0-7)";
+            style="dotted";
+            
+            ln1_s0 [label="LayerNorm\nShape: [128, 10000, 4096]\nGPU: All GPUs 0-7", 
+                   fillcolor=lightyellow];
+            
+            attn_s0 [label="Multi-Head Attention\nHeads: 32, d_k: 128\nShape: [128, 10000, 4096]\nGPU: All GPUs 0-7", 
+                    fillcolor=lightcoral];
+            
+            residual1_s0 [label="Residual Add\nShape: [128, 10000, 4096]\nGPU: All GPUs 0-7", 
+                          shape=parallelogram, fillcolor=lightgray];
+            
+            ln2_s0 [label="LayerNorm\nShape: [128, 10000, 4096]\nGPU: All GPUs 0-7", 
+                   fillcolor=lightyellow];
+            
+            // Expert processing (shared across GPUs)
+            gate_s0 [label="Expert Gate\nShape: [128, 10000, 4096]\nGPU: All GPUs 0-7", 
+                     shape=parallelogram, fillcolor=lightgreen];
+            
+            experts_s0 [label="16 Shared Experts\nShape: [128, 10000, 16384]→[128, 10000, 4096]\nGPU: All GPUs 0-7\nMemory: 256MB/expert", 
+                        fillcolor=lightpink];
+            
+            residual2_s0 [label="Residual Add\nShape: [128, 10000, 4096]\nGPU: All GPUs 0-7", 
+                          shape=parallelogram, fillcolor=lightgray];
+            
+            // Connections within layer
+            ln1_s0 -> attn_s0;
+            attn_s0 -> residual1_s0;
+            residual1_s0 -> ln2_s0;
+            ln2_s0 -> gate_s0;
+            gate_s0 -> experts_s0;
+            experts_s0 -> residual2_s0;
+        }
+        
+        note_s0 [label="16 Layers (0-7)\nEach Layer: Same Structure\nTensor Parallelism: 8-way", 
+                shape=note, style="dotted"];
+    }
+    
+    // Stage 1: Layers 8-15 (GPUs 8-15)
+    subgraph cluster_stage1 {
+        label="Stage 1\nLayers 8-15\nGPUs: 8-15";
+        style="dashed";
+        
+        // Layer template for Stage 1
+        subgraph cluster_layer_template_s1 {
+            label="Layer Template (All Layers 8-15)";
+            style="dotted";
+            
+            ln1_s1 [label="LayerNorm\nShape: [128, 10000, 4096]\nGPU: All GPUs 8-15", 
+                   fillcolor=lightyellow];
+            
+            attn_s1 [label="Multi-Head Attention\nHeads: 32, d_k: 128\nShape: [128, 10000, 4096]\nGPU: All GPUs 8-15", 
+                    fillcolor=lightcoral];
+            
+            residual1_s1 [label="Residual Add\nShape: [128, 10000, 4096]\nGPU: All GPUs 8-15", 
+                          shape=parallelogram, fillcolor=lightgray];
+            
+            ln2_s1 [label="LayerNorm\nShape: [128, 10000, 4096]\nGPU: All GPUs 8-15", 
+                   fillcolor=lightyellow];
+            
+            // Expert processing (shared across GPUs)
+            gate_s1 [label="Expert Gate\nShape: [128, 10000, 4096]\nGPU: All GPUs 8-15", 
+                     shape=parallelogram, fillcolor=lightgreen];
+            
+            experts_s1 [label="16 Shared Experts\nShape: [128, 10000, 16384]→[128, 10000, 4096]\nGPU: All GPUs 8-15\nMemory: 256MB/expert", 
+                        fillcolor=lightpink];
+            
+            residual2_s1 [label="Residual Add\nShape: [128, 10000, 4096]\nGPU: All GPUs 8-15", 
+                          shape=parallelogram, fillcolor=lightgray];
+            
+            // Connections within layer
+            ln1_s1 -> attn_s1;
+            attn_s1 -> residual1_s1;
+            residual1_s1 -> ln2_s1;
+            ln2_s1 -> gate_s1;
+            gate_s1 -> experts_s1;
+            experts_s1 -> residual2_s1;
+        }
+        
+        note_s1 [label="16 Layers (8-15)\nEach Layer: Same Structure\nTensor Parallelism: 8-way", 
+                shape=note, style="dotted"];
+    }
+    
+    // Pipeline connections
+    pipeline_comm [label="Pipeline Communication\nShape: [128, 10000, 4096]\nBetween Stage 0 & 1", 
+                  shape=ellipse, fillcolor=orange];
+    
+    // Output node
+    output [label="Output\nShape: [batch_size=128, seq_len=10000, d_model=4096]\nGPU: All GPUs", 
+            shape=ellipse, fillcolor=lightblue];
+    
+    // High-level connections
+    input -> ln1_s0;
+    residual2_s0 -> pipeline_comm [label="After 8 layers"];
+    pipeline_comm -> ln1_s1;
+    residual2_s1 -> output [label="After 16 layers"];
+    
+    // Constraint for rank
+    {rank=same; input; output;}
+}

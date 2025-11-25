@@ -1,0 +1,642 @@
+{
+  "models": {
+    "baseline": {
+      "name": "MoE_Baseline_TP8_PP2",
+      "architecture": {
+        "layers": 16,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "token_dimension": 4096,
+        "mlp_hidden_size": 16384,
+        "attention_heads": 32,
+        "head_dimension": 128,
+        "precision": "BF16"
+      },
+      "parallel_strategy": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "dimension": "column_and_row",
+          "implementation": "Megatron_style"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "stages": 2,
+          "layers_per_stage": 8
+        },
+        "expert_parallelism": {
+          "degree": 1,
+          "experts_per_device": 16
+        }
+      },
+      "module_division": {
+        "stage_0": {
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": "0-7",
+          "tensor_shards_per_layer": 8,
+          "experts_per_gpu": 16,
+          "memory_per_expert": "256MB"
+        },
+        "stage_1": {
+          "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": "8-15",
+          "tensor_shards_per_layer": 8,
+          "experts_per_gpu": 16,
+          "memory_per_expert": "256MB"
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "stage": 0,
+          "tensor_shard": 0,
+          "layers": "0-7",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_0"
+        },
+        "gpu_1": {
+          "stage": 0,
+          "tensor_shard": 1,
+          "layers": "0-7",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_1"
+        },
+        "gpu_2": {
+          "stage": 0,
+          "tensor_shard": 2,
+          "layers": "0-7",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_2"
+        },
+        "gpu_3": {
+          "stage": 0,
+          "tensor_shard": 3,
+          "layers": "0-7",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_3"
+        },
+        "gpu_4": {
+          "stage": 0,
+          "tensor_shard": 4,
+          "layers": "0-7",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_4"
+        },
+        "gpu_5": {
+          "stage": 0,
+          "tensor_shard": 5,
+          "layers": "0-7",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_5"
+        },
+        "gpu_6": {
+          "stage": 0,
+          "tensor_shard": 6,
+          "layers": "0-7",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_6"
+        },
+        "gpu_7": {
+          "stage": 0,
+          "tensor_shard": 7,
+          "layers": "0-7",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_7"
+        },
+        "gpu_8": {
+          "stage": 1,
+          "tensor_shard": 0,
+          "layers": "8-15",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_0"
+        },
+        "gpu_9": {
+          "stage": 1,
+          "tensor_shard": 1,
+          "layers": "8-15",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_1"
+        },
+        "gpu_10": {
+          "stage": 1,
+          "tensor_shard": 2,
+          "layers": "8-15",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_2"
+        },
+        "gpu_11": {
+          "stage": 1,
+          "tensor_shard": 3,
+          "layers": "8-15",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_3"
+        },
+        "gpu_12": {
+          "stage": 1,
+          "tensor_shard": 4,
+          "layers": "8-15",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_4"
+        },
+        "gpu_13": {
+          "stage": 1,
+          "tensor_shard": 5,
+          "layers": "8-15",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_5"
+        },
+        "gpu_14": {
+          "stage": 1,
+          "tensor_shard": 6,
+          "layers": "8-15",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_6"
+        },
+        "gpu_15": {
+          "stage": 1,
+          "tensor_shard": 7,
+          "layers": "8-15",
+          "experts": "all_16_experts_per_layer",
+          "role": "tensor_parallel_shard_7"
+        }
+      }
+    },
+    "proposed": {
+      "name": "MoE_Proposed_EP16",
+      "architecture": {
+        "layers": 16,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "token_dimension": 4096,
+        "mlp_hidden_size": 16384,
+        "attention_heads": 32,
+        "head_dimension": 128,
+        "precision": "BF16"
+      },
+      "parallel_strategy": {
+        "expert_parallelism": {
+          "degree": 16,
+          "experts_per_device": 1,
+          "placement_strategy": "topology_aware",
+          "cross_node_distribution": true
+        },
+        "communication_overlap": {
+          "async_routing": true,
+          "token_batching": true,
+          "compute_communication_overlap": true,
+          "pipeline_scheduling": "fine_grained"
+        },
+        "load_balancing": {
+          "dynamic_gating": true,
+          "expert_load_monitoring": true,
+          "load_aware_routing": true
+        }
+      },
+      "module_division": {
+        "expert_distribution": {
+          "total_experts": 256,
+          "experts_per_layer": 16,
+          "layers": 16,
+          "gpu_allocation": "one_expert_per_gpu_per_layer"
+        },
+        "layer_0": {
+          "expert_0": {"gpu": 0, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_1": {"gpu": 1, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_2": {"gpu": 2, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_3": {"gpu": 3, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_4": {"gpu": 4, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_5": {"gpu": 5, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_6": {"gpu": 6, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_7": {"gpu": 7, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_8": {"gpu": 8, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_9": {"gpu": 9, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_10": {"gpu": 10, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_11": {"gpu": 11, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_12": {"gpu": 12, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_13": {"gpu": 13, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_14": {"gpu": 14, "memory_allocation": "4GB", "compute_allocation": "100%"},
+          "expert_15": {"gpu": 15, "memory_allocation": "4GB", "compute_allocation": "100%"}
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "layer_experts": {
+            "layer_0": "expert_0",
+            "layer_1": "expert_0", 
+            "layer_2": "expert_0",
+            "layer_3": "expert_0",
+            "layer_4": "expert_0",
+            "layer_5": "expert_0",
+            "layer_6": "expert_0",
+            "layer_7": "expert_0",
+            "layer_8": "expert_0",
+            "layer_9": "expert_0",
+            "layer_10": "expert_0",
+            "layer_11": "expert_0",
+            "layer_12": "expert_0",
+            "layer_13": "expert_0",
+            "layer_14": "expert_0",
+            "layer_15": "expert_0"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 0,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_1": {
+          "layer_experts": {
+            "layer_0": "expert_1",
+            "layer_1": "expert_1",
+            "layer_2": "expert_1", 
+            "layer_3": "expert_1",
+            "layer_4": "expert_1",
+            "layer_5": "expert_1",
+            "layer_6": "expert_1",
+            "layer_7": "expert_1",
+            "layer_8": "expert_1",
+            "layer_9": "expert_1",
+            "layer_10": "expert_1",
+            "layer_11": "expert_1",
+            "layer_12": "expert_1",
+            "layer_13": "expert_1",
+            "layer_14": "expert_1",
+            "layer_15": "expert_1"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 1,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_2": {
+          "layer_experts": {
+            "layer_0": "expert_2",
+            "layer_1": "expert_2",
+            "layer_2": "expert_2",
+            "layer_3": "expert_2",
+            "layer_4": "expert_2",
+            "layer_5": "expert_2",
+            "layer_6": "expert_2",
+            "layer_7": "expert_2",
+            "layer_8": "expert_2",
+            "layer_9": "expert_2",
+            "layer_10": "expert_2",
+            "layer_11": "expert_2",
+            "layer_12": "expert_2",
+            "layer_13": "expert_2",
+            "layer_14": "expert_2",
+            "layer_15": "expert_2"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 2,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_3": {
+          "layer_experts": {
+            "layer_0": "expert_3",
+            "layer_1": "expert_3",
+            "layer_2": "expert_3",
+            "layer_3": "expert_3",
+            "layer_4": "expert_3",
+            "layer_5": "expert_3",
+            "layer_6": "expert_3",
+            "layer_7": "expert_3",
+            "layer_8": "expert_3",
+            "layer_9": "expert_3",
+            "layer_10": "expert_3",
+            "layer_11": "expert_3",
+            "layer_12": "expert_3",
+            "layer_13": "expert_3",
+            "layer_14": "expert_3",
+            "layer_15": "expert_3"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 3,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_4": {
+          "layer_experts": {
+            "layer_0": "expert_4",
+            "layer_1": "expert_4",
+            "layer_2": "expert_4",
+            "layer_3": "expert_4",
+            "layer_4": "expert_4",
+            "layer_5": "expert_4",
+            "layer_6": "expert_4",
+            "layer_7": "expert_4",
+            "layer_8": "expert_4",
+            "layer_9": "expert_4",
+            "layer_10": "expert_4",
+            "layer_11": "expert_4",
+            "layer_12": "expert_4",
+            "layer_13": "expert_4",
+            "layer_14": "expert_4",
+            "layer_15": "expert_4"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 4,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_5": {
+          "layer_experts": {
+            "layer_0": "expert_5",
+            "layer_1": "expert_5",
+            "layer_2": "expert_5",
+            "layer_3": "expert_5",
+            "layer_4": "expert_5",
+            "layer_5": "expert_5",
+            "layer_6": "expert_5",
+            "layer_7": "expert_5",
+            "layer_8": "expert_5",
+            "layer_9": "expert_5",
+            "layer_10": "expert_5",
+            "layer_11": "expert_5",
+            "layer_12": "expert_5",
+            "layer_13": "expert_5",
+            "layer_14": "expert_5",
+            "layer_15": "expert_5"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 5,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_6": {
+          "layer_experts": {
+            "layer_0": "expert_6",
+            "layer_1": "expert_6",
+            "layer_2": "expert_6",
+            "layer_3": "expert_6",
+            "layer_4": "expert_6",
+            "layer_5": "expert_6",
+            "layer_6": "expert_6",
+            "layer_7": "expert_6",
+            "layer_8": "expert_6",
+            "layer_9": "expert_6",
+            "layer_10": "expert_6",
+            "layer_11": "expert_6",
+            "layer_12": "expert_6",
+            "layer_13": "expert_6",
+            "layer_14": "expert_6",
+            "layer_15": "expert_6"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 6,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_7": {
+          "layer_experts": {
+            "layer_0": "expert_7",
+            "layer_1": "expert_7",
+            "layer_2": "expert_7",
+            "layer_3": "expert_7",
+            "layer_4": "expert_7",
+            "layer_5": "expert_7",
+            "layer_6": "expert_7",
+            "layer_7": "expert_7",
+            "layer_8": "expert_7",
+            "layer_9": "expert_7",
+            "layer_10": "expert_7",
+            "layer_11": "expert_7",
+            "layer_12": "expert_7",
+            "layer_13": "expert_7",
+            "layer_14": "expert_7",
+            "layer_15": "expert_7"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 7,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_8": {
+          "layer_experts": {
+            "layer_0": "expert_8",
+            "layer_1": "expert_8",
+            "layer_2": "expert_8",
+            "layer_3": "expert_8",
+            "layer_4": "expert_8",
+            "layer_5": "expert_8",
+            "layer_6": "expert_8",
+            "layer_7": "expert_8",
+            "layer_8": "expert_8",
+            "layer_9": "expert_8",
+            "layer_10": "expert_8",
+            "layer_11": "expert_8",
+            "layer_12": "expert_8",
+            "layer_13": "expert_8",
+            "layer_14": "expert_8",
+            "layer_15": "expert_8"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 8,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_9": {
+          "layer_experts": {
+            "layer_0": "expert_9",
+            "layer_1": "expert_9",
+            "layer_2": "expert_9",
+            "layer_3": "expert_9",
+            "layer_4": "expert_9",
+            "layer_5": "expert_9",
+            "layer_6": "expert_9",
+            "layer_7": "expert_9",
+            "layer_8": "expert_9",
+            "layer_9": "expert_9",
+            "layer_10": "expert_9",
+            "layer_11": "expert_9",
+            "layer_12": "expert_9",
+            "layer_13": "expert_9",
+            "layer_14": "expert_9",
+            "layer_15": "expert_9"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 9,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_10": {
+          "layer_experts": {
+            "layer_0": "expert_10",
+            "layer_1": "expert_10",
+            "layer_2": "expert_10",
+            "layer_3": "expert_10",
+            "layer_4": "expert_10",
+            "layer_5": "expert_10",
+            "layer_6": "expert_10",
+            "layer_7": "expert_10",
+            "layer_8": "expert_10",
+            "layer_9": "expert_10",
+            "layer_10": "expert_10",
+            "layer_11": "expert_10",
+            "layer_12": "expert_10",
+            "layer_13": "expert_10",
+            "layer_14": "expert_10",
+            "layer_15": "expert_10"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 10,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_11": {
+          "layer_experts": {
+            "layer_0": "expert_11",
+            "layer_1": "expert_11",
+            "layer_2": "expert_11",
+            "layer_3": "expert_11",
+            "layer_4": "expert_11",
+            "layer_5": "expert_11",
+            "layer_6": "expert_11",
+            "layer_7": "expert_11",
+            "layer_8": "expert_11",
+            "layer_9": "expert_11",
+            "layer_10": "expert_11",
+            "layer_11": "expert_11",
+            "layer_12": "expert_11",
+            "layer_13": "expert_11",
+            "layer_14": "expert_11",
+            "layer_15": "expert_11"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 11,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_12": {
+          "layer_experts": {
+            "layer_0": "expert_12",
+            "layer_1": "expert_12",
+            "layer_2": "expert_12",
+            "layer_3": "expert_12",
+            "layer_4": "expert_12",
+            "layer_5": "expert_12",
+            "layer_6": "expert_12",
+            "layer_7": "expert_12",
+            "layer_8": "expert_12",
+            "layer_9": "expert_12",
+            "layer_10": "expert_12",
+            "layer_11": "expert_12",
+            "layer_12": "expert_12",
+            "layer_13": "expert_12",
+            "layer_14": "expert_12",
+            "layer_15": "expert_12"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 12,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_13": {
+          "layer_experts": {
+            "layer_0": "expert_13",
+            "layer_1": "expert_13",
+            "layer_2": "expert_13",
+            "layer_3": "expert_13",
+            "layer_4": "expert_13",
+            "layer_5": "expert_13",
+            "layer_6": "expert_13",
+            "layer_7": "expert_13",
+            "layer_8": "expert_13",
+            "layer_9": "expert_13",
+            "layer_10": "expert_13",
+            "layer_11": "expert_13",
+            "layer_12": "expert_13",
+            "layer_13": "expert_13",
+            "layer_14": "expert_13",
+            "layer_15": "expert_13"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 13,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_14": {
+          "layer_experts": {
+            "layer_0": "expert_14",
+            "layer_1": "expert_14",
+            "layer_2": "expert_14",
+            "layer_3": "expert_14",
+            "layer_4": "expert_14",
+            "layer_5": "expert_14",
+            "layer_6": "expert_14",
+            "layer_7": "expert_14",
+            "layer_8": "expert_14",
+            "layer_9": "expert_14",
+            "layer_10": "expert_14",
+            "layer_11": "expert_14",
+            "layer_12": "expert_14",
+            "layer_13": "expert_14",
+            "layer_14": "expert_14",
+            "layer_15": "expert_14"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 14,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        },
+        "gpu_15": {
+          "layer_experts": {
+            "layer_0": "expert_15",
+            "layer_1": "expert_15",
+            "layer_2": "expert_15",
+            "layer_3": "expert_15",
+            "layer_4": "expert_15",
+            "layer_5": "expert_15",
+            "layer_6": "expert_15",
+            "layer_7": "expert_15",
+            "layer_8": "expert_15",
+            "layer_9": "expert_15",
+            "layer_10": "expert_15",
+            "layer_11": "expert_15",
+            "layer_12": "expert_15",
+            "layer_13": "expert_15",
+            "layer_14": "expert_15",
+            "layer_15": "expert_15"
+          },
+          "role": "dedicated_expert_device",
+          "expert_id": 15,
+          "memory_usage": "4GB_expert + 2GB_overhead",
+          "compute_utilization": "100%_dedicated"
+        }
+      }
+    }
+  },
+  "performance_metrics": {
+    "baseline": {
+      "throughput_tps": 120000,
+      "latency_tpot_ms": 8.3,
+      "gpu_utilization": "shared_contention",
+      "bottleneck": "intra_gpu_expert_contention"
+    },
+    "proposed": {
+      "throughput_tps": 450000,
+      "latency_tpot_ms": 2.2,
+      "improvement": {
+        "throughput_multiplier": 3.75,
+        "latency_reduction_multiplier": 3.77
+      },
+      "gpu_utilization": "100%_dedicated_per_expert",
+      "bottleneck": "network_bandwidth_large_ep"
+    }
+  },
+  "communication_configuration": {
+    "baseline": {
+      "intra_node_bandwidth": "NVLink_600GB/s",
+      "inter_node_bandwidth": "InfiniBand_200GB/s",
+      "communication_pattern": "tensor_parallel_allreduce",
+      "message_size": "4096_dimensions_per_shard"
+    },
+    "proposed": {
+      "intra_node_bandwidth": "NVLink_600GB/s",
+      "inter_node_bandwidth": "InfiniBand_200GB/s",
+      "communication_pattern": "expert_parallel_token_routing",
+      "token_batching": "enabled",
+      "async_routing": "enabled",
+      "message_size": "4096_dimensions_per_token",
+      "batch_optimization": "group_by_destination_expert"
+    }
+  }
+}

@@ -1,0 +1,496 @@
+// MoE Baseline Model DAG (TP=8, PP=2)
+digraph {
+	rankdir=TB splines=ortho
+	node [fontname=Arial fontsize=10]
+	edge [fontname=Arial fontsize=9]
+	input [label="Input\nInput: [batch_size=128, seq_len=10000, d_model=4096]\nOutput: [batch_size=128, seq_len=10000, d_model=4096]" fillcolor=yellow shape=ellipse style=filled]
+	ln1_s0_gpu0 [label="LayerNorm1\nGPU:0\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_s0_gpu0 [label="MHA-Shard0\nGPU:0\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_proj_s0_gpu0 [label="AttnProj-Shard0\nGPU:0\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual1_s0_gpu0 [label="ResidualAdd1\nGPU:0\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce1_s0_gpu0 [label="AllReduce-Attn\nGPU:0\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s0_gpu0 [label="LayerNorm2\nGPU:0\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp1_s0_gpu0 [label="MLP1-Shard0\nGPU:0\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	gelu_s0_gpu0 [label="GELU\nGPU:0\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp2_s0_gpu0 [label="MLP2-Shard0\nGPU:0\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual2_s0_gpu0 [label="ResidualAdd2\nGPU:0\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce2_s0_gpu0 [label="AllReduce-MLP\nGPU:0\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s0_gpu0 [label="All-16-Experts\nGPU:0\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s0_gpu0 [label="ExpertGate\nGPU:0\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s0_gpu1 [label="LayerNorm1\nGPU:1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_s0_gpu1 [label="MHA-Shard1\nGPU:1\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_proj_s0_gpu1 [label="AttnProj-Shard1\nGPU:1\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual1_s0_gpu1 [label="ResidualAdd1\nGPU:1\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce1_s0_gpu1 [label="AllReduce-Attn\nGPU:1\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s0_gpu1 [label="LayerNorm2\nGPU:1\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp1_s0_gpu1 [label="MLP1-Shard1\nGPU:1\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	gelu_s0_gpu1 [label="GELU\nGPU:1\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp2_s0_gpu1 [label="MLP2-Shard1\nGPU:1\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual2_s0_gpu1 [label="ResidualAdd2\nGPU:1\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce2_s0_gpu1 [label="AllReduce-MLP\nGPU:1\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s0_gpu1 [label="All-16-Experts\nGPU:1\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s0_gpu1 [label="ExpertGate\nGPU:1\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s0_gpu2 [label="LayerNorm1\nGPU:2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_s0_gpu2 [label="MHA-Shard2\nGPU:2\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_proj_s0_gpu2 [label="AttnProj-Shard2\nGPU:2\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual1_s0_gpu2 [label="ResidualAdd1\nGPU:2\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce1_s0_gpu2 [label="AllReduce-Attn\nGPU:2\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s0_gpu2 [label="LayerNorm2\nGPU:2\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp1_s0_gpu2 [label="MLP1-Shard2\nGPU:2\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	gelu_s0_gpu2 [label="GELU\nGPU:2\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp2_s0_gpu2 [label="MLP2-Shard2\nGPU:2\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual2_s0_gpu2 [label="ResidualAdd2\nGPU:2\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce2_s0_gpu2 [label="AllReduce-MLP\nGPU:2\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s0_gpu2 [label="All-16-Experts\nGPU:2\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s0_gpu2 [label="ExpertGate\nGPU:2\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s0_gpu3 [label="LayerNorm1\nGPU:3\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_s0_gpu3 [label="MHA-Shard3\nGPU:3\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_proj_s0_gpu3 [label="AttnProj-Shard3\nGPU:3\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual1_s0_gpu3 [label="ResidualAdd1\nGPU:3\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce1_s0_gpu3 [label="AllReduce-Attn\nGPU:3\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s0_gpu3 [label="LayerNorm2\nGPU:3\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp1_s0_gpu3 [label="MLP1-Shard3\nGPU:3\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	gelu_s0_gpu3 [label="GELU\nGPU:3\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp2_s0_gpu3 [label="MLP2-Shard3\nGPU:3\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual2_s0_gpu3 [label="ResidualAdd2\nGPU:3\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce2_s0_gpu3 [label="AllReduce-MLP\nGPU:3\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s0_gpu3 [label="All-16-Experts\nGPU:3\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s0_gpu3 [label="ExpertGate\nGPU:3\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s0_gpu4 [label="LayerNorm1\nGPU:4\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_s0_gpu4 [label="MHA-Shard4\nGPU:4\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_proj_s0_gpu4 [label="AttnProj-Shard4\nGPU:4\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual1_s0_gpu4 [label="ResidualAdd1\nGPU:4\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce1_s0_gpu4 [label="AllReduce-Attn\nGPU:4\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s0_gpu4 [label="LayerNorm2\nGPU:4\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp1_s0_gpu4 [label="MLP1-Shard4\nGPU:4\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	gelu_s0_gpu4 [label="GELU\nGPU:4\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp2_s0_gpu4 [label="MLP2-Shard4\nGPU:4\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual2_s0_gpu4 [label="ResidualAdd2\nGPU:4\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce2_s0_gpu4 [label="AllReduce-MLP\nGPU:4\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s0_gpu4 [label="All-16-Experts\nGPU:4\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s0_gpu4 [label="ExpertGate\nGPU:4\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s0_gpu5 [label="LayerNorm1\nGPU:5\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_s0_gpu5 [label="MHA-Shard5\nGPU:5\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_proj_s0_gpu5 [label="AttnProj-Shard5\nGPU:5\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual1_s0_gpu5 [label="ResidualAdd1\nGPU:5\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce1_s0_gpu5 [label="AllReduce-Attn\nGPU:5\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s0_gpu5 [label="LayerNorm2\nGPU:5\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp1_s0_gpu5 [label="MLP1-Shard5\nGPU:5\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	gelu_s0_gpu5 [label="GELU\nGPU:5\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp2_s0_gpu5 [label="MLP2-Shard5\nGPU:5\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual2_s0_gpu5 [label="ResidualAdd2\nGPU:5\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce2_s0_gpu5 [label="AllReduce-MLP\nGPU:5\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s0_gpu5 [label="All-16-Experts\nGPU:5\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s0_gpu5 [label="ExpertGate\nGPU:5\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s0_gpu6 [label="LayerNorm1\nGPU:6\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_s0_gpu6 [label="MHA-Shard6\nGPU:6\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_proj_s0_gpu6 [label="AttnProj-Shard6\nGPU:6\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual1_s0_gpu6 [label="ResidualAdd1\nGPU:6\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce1_s0_gpu6 [label="AllReduce-Attn\nGPU:6\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s0_gpu6 [label="LayerNorm2\nGPU:6\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp1_s0_gpu6 [label="MLP1-Shard6\nGPU:6\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	gelu_s0_gpu6 [label="GELU\nGPU:6\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp2_s0_gpu6 [label="MLP2-Shard6\nGPU:6\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual2_s0_gpu6 [label="ResidualAdd2\nGPU:6\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce2_s0_gpu6 [label="AllReduce-MLP\nGPU:6\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s0_gpu6 [label="All-16-Experts\nGPU:6\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s0_gpu6 [label="ExpertGate\nGPU:6\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s0_gpu7 [label="LayerNorm1\nGPU:7\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_s0_gpu7 [label="MHA-Shard7\nGPU:7\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_proj_s0_gpu7 [label="AttnProj-Shard7\nGPU:7\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual1_s0_gpu7 [label="ResidualAdd1\nGPU:7\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce1_s0_gpu7 [label="AllReduce-Attn\nGPU:7\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s0_gpu7 [label="LayerNorm2\nGPU:7\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp1_s0_gpu7 [label="MLP1-Shard7\nGPU:7\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	gelu_s0_gpu7 [label="GELU\nGPU:7\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp2_s0_gpu7 [label="MLP2-Shard7\nGPU:7\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	residual2_s0_gpu7 [label="ResidualAdd2\nGPU:7\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightblue shape=rectangle style=filled]
+	allreduce2_s0_gpu7 [label="AllReduce-MLP\nGPU:7\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s0_gpu7 [label="All-16-Experts\nGPU:7\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s0_gpu7 [label="ExpertGate\nGPU:7\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s1_gpu8 [label="LayerNorm1\nGPU:8\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_s1_gpu8 [label="MHA-Shard0\nGPU:8\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_proj_s1_gpu8 [label="AttnProj-Shard0\nGPU:8\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual1_s1_gpu8 [label="ResidualAdd1\nGPU:8\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce1_s1_gpu8 [label="AllReduce-Attn\nGPU:8\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s1_gpu8 [label="LayerNorm2\nGPU:8\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp1_s1_gpu8 [label="MLP1-Shard0\nGPU:8\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	gelu_s1_gpu8 [label="GELU\nGPU:8\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp2_s1_gpu8 [label="MLP2-Shard0\nGPU:8\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual2_s1_gpu8 [label="ResidualAdd2\nGPU:8\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce2_s1_gpu8 [label="AllReduce-MLP\nGPU:8\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s1_gpu8 [label="All-16-Experts\nGPU:8\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s1_gpu8 [label="ExpertGate\nGPU:8\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s1_gpu9 [label="LayerNorm1\nGPU:9\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_s1_gpu9 [label="MHA-Shard1\nGPU:9\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_proj_s1_gpu9 [label="AttnProj-Shard1\nGPU:9\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual1_s1_gpu9 [label="ResidualAdd1\nGPU:9\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce1_s1_gpu9 [label="AllReduce-Attn\nGPU:9\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s1_gpu9 [label="LayerNorm2\nGPU:9\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp1_s1_gpu9 [label="MLP1-Shard1\nGPU:9\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	gelu_s1_gpu9 [label="GELU\nGPU:9\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp2_s1_gpu9 [label="MLP2-Shard1\nGPU:9\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual2_s1_gpu9 [label="ResidualAdd2\nGPU:9\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce2_s1_gpu9 [label="AllReduce-MLP\nGPU:9\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s1_gpu9 [label="All-16-Experts\nGPU:9\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s1_gpu9 [label="ExpertGate\nGPU:9\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s1_gpu10 [label="LayerNorm1\nGPU:10\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_s1_gpu10 [label="MHA-Shard2\nGPU:10\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_proj_s1_gpu10 [label="AttnProj-Shard2\nGPU:10\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual1_s1_gpu10 [label="ResidualAdd1\nGPU:10\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce1_s1_gpu10 [label="AllReduce-Attn\nGPU:10\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s1_gpu10 [label="LayerNorm2\nGPU:10\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp1_s1_gpu10 [label="MLP1-Shard2\nGPU:10\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	gelu_s1_gpu10 [label="GELU\nGPU:10\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp2_s1_gpu10 [label="MLP2-Shard2\nGPU:10\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual2_s1_gpu10 [label="ResidualAdd2\nGPU:10\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce2_s1_gpu10 [label="AllReduce-MLP\nGPU:10\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s1_gpu10 [label="All-16-Experts\nGPU:10\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s1_gpu10 [label="ExpertGate\nGPU:10\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s1_gpu11 [label="LayerNorm1\nGPU:11\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_s1_gpu11 [label="MHA-Shard3\nGPU:11\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_proj_s1_gpu11 [label="AttnProj-Shard3\nGPU:11\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual1_s1_gpu11 [label="ResidualAdd1\nGPU:11\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce1_s1_gpu11 [label="AllReduce-Attn\nGPU:11\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s1_gpu11 [label="LayerNorm2\nGPU:11\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp1_s1_gpu11 [label="MLP1-Shard3\nGPU:11\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	gelu_s1_gpu11 [label="GELU\nGPU:11\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp2_s1_gpu11 [label="MLP2-Shard3\nGPU:11\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual2_s1_gpu11 [label="ResidualAdd2\nGPU:11\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce2_s1_gpu11 [label="AllReduce-MLP\nGPU:11\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s1_gpu11 [label="All-16-Experts\nGPU:11\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s1_gpu11 [label="ExpertGate\nGPU:11\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s1_gpu12 [label="LayerNorm1\nGPU:12\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_s1_gpu12 [label="MHA-Shard4\nGPU:12\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_proj_s1_gpu12 [label="AttnProj-Shard4\nGPU:12\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual1_s1_gpu12 [label="ResidualAdd1\nGPU:12\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce1_s1_gpu12 [label="AllReduce-Attn\nGPU:12\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s1_gpu12 [label="LayerNorm2\nGPU:12\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp1_s1_gpu12 [label="MLP1-Shard4\nGPU:12\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	gelu_s1_gpu12 [label="GELU\nGPU:12\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp2_s1_gpu12 [label="MLP2-Shard4\nGPU:12\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual2_s1_gpu12 [label="ResidualAdd2\nGPU:12\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce2_s1_gpu12 [label="AllReduce-MLP\nGPU:12\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s1_gpu12 [label="All-16-Experts\nGPU:12\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s1_gpu12 [label="ExpertGate\nGPU:12\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s1_gpu13 [label="LayerNorm1\nGPU:13\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_s1_gpu13 [label="MHA-Shard5\nGPU:13\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_proj_s1_gpu13 [label="AttnProj-Shard5\nGPU:13\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual1_s1_gpu13 [label="ResidualAdd1\nGPU:13\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce1_s1_gpu13 [label="AllReduce-Attn\nGPU:13\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s1_gpu13 [label="LayerNorm2\nGPU:13\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp1_s1_gpu13 [label="MLP1-Shard5\nGPU:13\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	gelu_s1_gpu13 [label="GELU\nGPU:13\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp2_s1_gpu13 [label="MLP2-Shard5\nGPU:13\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual2_s1_gpu13 [label="ResidualAdd2\nGPU:13\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce2_s1_gpu13 [label="AllReduce-MLP\nGPU:13\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s1_gpu13 [label="All-16-Experts\nGPU:13\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s1_gpu13 [label="ExpertGate\nGPU:13\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s1_gpu14 [label="LayerNorm1\nGPU:14\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_s1_gpu14 [label="MHA-Shard6\nGPU:14\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_proj_s1_gpu14 [label="AttnProj-Shard6\nGPU:14\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual1_s1_gpu14 [label="ResidualAdd1\nGPU:14\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce1_s1_gpu14 [label="AllReduce-Attn\nGPU:14\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s1_gpu14 [label="LayerNorm2\nGPU:14\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp1_s1_gpu14 [label="MLP1-Shard6\nGPU:14\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	gelu_s1_gpu14 [label="GELU\nGPU:14\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp2_s1_gpu14 [label="MLP2-Shard6\nGPU:14\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual2_s1_gpu14 [label="ResidualAdd2\nGPU:14\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce2_s1_gpu14 [label="AllReduce-MLP\nGPU:14\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s1_gpu14 [label="All-16-Experts\nGPU:14\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s1_gpu14 [label="ExpertGate\nGPU:14\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	ln1_s1_gpu15 [label="LayerNorm1\nGPU:15\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_s1_gpu15 [label="MHA-Shard7\nGPU:15\nHeads: 4/32\nInput: [128,10000,4096]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_proj_s1_gpu15 [label="AttnProj-Shard7\nGPU:15\nInput: [128,10000,512]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual1_s1_gpu15 [label="ResidualAdd1\nGPU:15\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce1_s1_gpu15 [label="AllReduce-Attn\nGPU:15\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	ln2_s1_gpu15 [label="LayerNorm2\nGPU:15\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp1_s1_gpu15 [label="MLP1-Shard7\nGPU:15\nInput: [128,10000,4096]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	gelu_s1_gpu15 [label="GELU\nGPU:15\nInput: [128,10000,2048]\nOutput: [128,10000,2048]" fillcolor=lightgreen shape=rectangle style=filled]
+	mlp2_s1_gpu15 [label="MLP2-Shard7\nGPU:15\nInput: [128,10000,2048]\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual2_s1_gpu15 [label="ResidualAdd2\nGPU:15\nInput: [128,10000,512]x2\nOutput: [128,10000,512]" fillcolor=lightgreen shape=rectangle style=filled]
+	allreduce2_s1_gpu15 [label="AllReduce-MLP\nGPU:15\nInput: [128,10000,512]\nOutput: [128,10000,4096]" fillcolor=orange shape=parallelogram style=filled]
+	experts_s1_gpu15 [label="All-16-Experts\nGPU:15\n16 MLP Experts (shared)\nInput: [128,10000,4096]\nOutput: [128,10000,4096]" fillcolor=lightcoral shape=rectangle style="filled,rounded"]
+	gate_s1_gpu15 [label="ExpertGate\nGPU:15\nTop-K=2 routing\nInput: [128,10000,4096]\nOutput: [128,10000,16]" fillcolor=gold shape=parallelogram style=filled]
+	output [label="Output\nInput: [batch_size=128, seq_len=10000, d_model=4096]\nOutput: [batch_size=128, seq_len=10000, d_model=4096]" fillcolor=yellow shape=ellipse style=filled]
+	input -> ln1_s0_gpu0
+	ln1_s0_gpu0 -> attn_s0_gpu0
+	attn_s0_gpu0 -> attn_proj_s0_gpu0
+	attn_proj_s0_gpu0 -> residual1_s0_gpu0
+	residual1_s0_gpu0 -> allreduce1_s0_gpu0
+	allreduce1_s0_gpu0 -> ln2_s0_gpu0
+	ln2_s0_gpu0 -> mlp1_s0_gpu0
+	mlp1_s0_gpu0 -> gelu_s0_gpu0
+	gelu_s0_gpu0 -> mlp2_s0_gpu0
+	mlp2_s0_gpu0 -> residual2_s0_gpu0
+	residual2_s0_gpu0 -> allreduce2_s0_gpu0
+	allreduce2_s0_gpu0 -> gate_s0_gpu0 [style=dashed]
+	gate_s0_gpu0 -> experts_s0_gpu0 [style=dashed]
+	experts_s0_gpu0 -> ln1_s0_gpu0
+	input -> ln1_s0_gpu1
+	ln1_s0_gpu1 -> attn_s0_gpu1
+	attn_s0_gpu1 -> attn_proj_s0_gpu1
+	attn_proj_s0_gpu1 -> residual1_s0_gpu1
+	residual1_s0_gpu1 -> allreduce1_s0_gpu1
+	allreduce1_s0_gpu1 -> ln2_s0_gpu1
+	ln2_s0_gpu1 -> mlp1_s0_gpu1
+	mlp1_s0_gpu1 -> gelu_s0_gpu1
+	gelu_s0_gpu1 -> mlp2_s0_gpu1
+	mlp2_s0_gpu1 -> residual2_s0_gpu1
+	residual2_s0_gpu1 -> allreduce2_s0_gpu1
+	allreduce2_s0_gpu1 -> gate_s0_gpu1 [style=dashed]
+	gate_s0_gpu1 -> experts_s0_gpu1 [style=dashed]
+	experts_s0_gpu1 -> ln1_s0_gpu1
+	input -> ln1_s0_gpu2
+	ln1_s0_gpu2 -> attn_s0_gpu2
+	attn_s0_gpu2 -> attn_proj_s0_gpu2
+	attn_proj_s0_gpu2 -> residual1_s0_gpu2
+	residual1_s0_gpu2 -> allreduce1_s0_gpu2
+	allreduce1_s0_gpu2 -> ln2_s0_gpu2
+	ln2_s0_gpu2 -> mlp1_s0_gpu2
+	mlp1_s0_gpu2 -> gelu_s0_gpu2
+	gelu_s0_gpu2 -> mlp2_s0_gpu2
+	mlp2_s0_gpu2 -> residual2_s0_gpu2
+	residual2_s0_gpu2 -> allreduce2_s0_gpu2
+	allreduce2_s0_gpu2 -> gate_s0_gpu2 [style=dashed]
+	gate_s0_gpu2 -> experts_s0_gpu2 [style=dashed]
+	experts_s0_gpu2 -> ln1_s0_gpu2
+	input -> ln1_s0_gpu3
+	ln1_s0_gpu3 -> attn_s0_gpu3
+	attn_s0_gpu3 -> attn_proj_s0_gpu3
+	attn_proj_s0_gpu3 -> residual1_s0_gpu3
+	residual1_s0_gpu3 -> allreduce1_s0_gpu3
+	allreduce1_s0_gpu3 -> ln2_s0_gpu3
+	ln2_s0_gpu3 -> mlp1_s0_gpu3
+	mlp1_s0_gpu3 -> gelu_s0_gpu3
+	gelu_s0_gpu3 -> mlp2_s0_gpu3
+	mlp2_s0_gpu3 -> residual2_s0_gpu3
+	residual2_s0_gpu3 -> allreduce2_s0_gpu3
+	allreduce2_s0_gpu3 -> gate_s0_gpu3 [style=dashed]
+	gate_s0_gpu3 -> experts_s0_gpu3 [style=dashed]
+	experts_s0_gpu3 -> ln1_s0_gpu3
+	input -> ln1_s0_gpu4
+	ln1_s0_gpu4 -> attn_s0_gpu4
+	attn_s0_gpu4 -> attn_proj_s0_gpu4
+	attn_proj_s0_gpu4 -> residual1_s0_gpu4
+	residual1_s0_gpu4 -> allreduce1_s0_gpu4
+	allreduce1_s0_gpu4 -> ln2_s0_gpu4
+	ln2_s0_gpu4 -> mlp1_s0_gpu4
+	mlp1_s0_gpu4 -> gelu_s0_gpu4
+	gelu_s0_gpu4 -> mlp2_s0_gpu4
+	mlp2_s0_gpu4 -> residual2_s0_gpu4
+	residual2_s0_gpu4 -> allreduce2_s0_gpu4
+	allreduce2_s0_gpu4 -> gate_s0_gpu4 [style=dashed]
+	gate_s0_gpu4 -> experts_s0_gpu4 [style=dashed]
+	experts_s0_gpu4 -> ln1_s0_gpu4
+	input -> ln1_s0_gpu5
+	ln1_s0_gpu5 -> attn_s0_gpu5
+	attn_s0_gpu5 -> attn_proj_s0_gpu5
+	attn_proj_s0_gpu5 -> residual1_s0_gpu5
+	residual1_s0_gpu5 -> allreduce1_s0_gpu5
+	allreduce1_s0_gpu5 -> ln2_s0_gpu5
+	ln2_s0_gpu5 -> mlp1_s0_gpu5
+	mlp1_s0_gpu5 -> gelu_s0_gpu5
+	gelu_s0_gpu5 -> mlp2_s0_gpu5
+	mlp2_s0_gpu5 -> residual2_s0_gpu5
+	residual2_s0_gpu5 -> allreduce2_s0_gpu5
+	allreduce2_s0_gpu5 -> gate_s0_gpu5 [style=dashed]
+	gate_s0_gpu5 -> experts_s0_gpu5 [style=dashed]
+	experts_s0_gpu5 -> ln1_s0_gpu5
+	input -> ln1_s0_gpu6
+	ln1_s0_gpu6 -> attn_s0_gpu6
+	attn_s0_gpu6 -> attn_proj_s0_gpu6
+	attn_proj_s0_gpu6 -> residual1_s0_gpu6
+	residual1_s0_gpu6 -> allreduce1_s0_gpu6
+	allreduce1_s0_gpu6 -> ln2_s0_gpu6
+	ln2_s0_gpu6 -> mlp1_s0_gpu6
+	mlp1_s0_gpu6 -> gelu_s0_gpu6
+	gelu_s0_gpu6 -> mlp2_s0_gpu6
+	mlp2_s0_gpu6 -> residual2_s0_gpu6
+	residual2_s0_gpu6 -> allreduce2_s0_gpu6
+	allreduce2_s0_gpu6 -> gate_s0_gpu6 [style=dashed]
+	gate_s0_gpu6 -> experts_s0_gpu6 [style=dashed]
+	experts_s0_gpu6 -> ln1_s0_gpu6
+	input -> ln1_s0_gpu7
+	ln1_s0_gpu7 -> attn_s0_gpu7
+	attn_s0_gpu7 -> attn_proj_s0_gpu7
+	attn_proj_s0_gpu7 -> residual1_s0_gpu7
+	residual1_s0_gpu7 -> allreduce1_s0_gpu7
+	allreduce1_s0_gpu7 -> ln2_s0_gpu7
+	ln2_s0_gpu7 -> mlp1_s0_gpu7
+	mlp1_s0_gpu7 -> gelu_s0_gpu7
+	gelu_s0_gpu7 -> mlp2_s0_gpu7
+	mlp2_s0_gpu7 -> residual2_s0_gpu7
+	residual2_s0_gpu7 -> allreduce2_s0_gpu7
+	allreduce2_s0_gpu7 -> gate_s0_gpu7 [style=dashed]
+	gate_s0_gpu7 -> experts_s0_gpu7 [style=dashed]
+	experts_s0_gpu7 -> ln1_s0_gpu7
+	allreduce2_s0_gpu0 -> ln1_s1_gpu8 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu0 -> ln1_s1_gpu9 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu0 -> ln1_s1_gpu10 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu0 -> ln1_s1_gpu11 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu0 -> ln1_s1_gpu12 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu0 -> ln1_s1_gpu13 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu0 -> ln1_s1_gpu14 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu0 -> ln1_s1_gpu15 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu1 -> ln1_s1_gpu8 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu1 -> ln1_s1_gpu9 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu1 -> ln1_s1_gpu10 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu1 -> ln1_s1_gpu11 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu1 -> ln1_s1_gpu12 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu1 -> ln1_s1_gpu13 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu1 -> ln1_s1_gpu14 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu1 -> ln1_s1_gpu15 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu2 -> ln1_s1_gpu8 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu2 -> ln1_s1_gpu9 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu2 -> ln1_s1_gpu10 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu2 -> ln1_s1_gpu11 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu2 -> ln1_s1_gpu12 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu2 -> ln1_s1_gpu13 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu2 -> ln1_s1_gpu14 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu2 -> ln1_s1_gpu15 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu3 -> ln1_s1_gpu8 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu3 -> ln1_s1_gpu9 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu3 -> ln1_s1_gpu10 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu3 -> ln1_s1_gpu11 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu3 -> ln1_s1_gpu12 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu3 -> ln1_s1_gpu13 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu3 -> ln1_s1_gpu14 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu3 -> ln1_s1_gpu15 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu4 -> ln1_s1_gpu8 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu4 -> ln1_s1_gpu9 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu4 -> ln1_s1_gpu10 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu4 -> ln1_s1_gpu11 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu4 -> ln1_s1_gpu12 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu4 -> ln1_s1_gpu13 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu4 -> ln1_s1_gpu14 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu4 -> ln1_s1_gpu15 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu5 -> ln1_s1_gpu8 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu5 -> ln1_s1_gpu9 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu5 -> ln1_s1_gpu10 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu5 -> ln1_s1_gpu11 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu5 -> ln1_s1_gpu12 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu5 -> ln1_s1_gpu13 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu5 -> ln1_s1_gpu14 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu5 -> ln1_s1_gpu15 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu6 -> ln1_s1_gpu8 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu6 -> ln1_s1_gpu9 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu6 -> ln1_s1_gpu10 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu6 -> ln1_s1_gpu11 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu6 -> ln1_s1_gpu12 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu6 -> ln1_s1_gpu13 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu6 -> ln1_s1_gpu14 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu6 -> ln1_s1_gpu15 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu7 -> ln1_s1_gpu8 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu7 -> ln1_s1_gpu9 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu7 -> ln1_s1_gpu10 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu7 -> ln1_s1_gpu11 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu7 -> ln1_s1_gpu12 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu7 -> ln1_s1_gpu13 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu7 -> ln1_s1_gpu14 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	allreduce2_s0_gpu7 -> ln1_s1_gpu15 [label="Pipeline Transfer\n[128,10000,4096]" style=dotted]
+	ln1_s1_gpu8 -> attn_s1_gpu8
+	attn_s1_gpu8 -> attn_proj_s1_gpu8
+	attn_proj_s1_gpu8 -> residual1_s1_gpu8
+	residual1_s1_gpu8 -> allreduce1_s1_gpu8
+	allreduce1_s1_gpu8 -> ln2_s1_gpu8
+	ln2_s1_gpu8 -> mlp1_s1_gpu8
+	mlp1_s1_gpu8 -> gelu_s1_gpu8
+	gelu_s1_gpu8 -> mlp2_s1_gpu8
+	mlp2_s1_gpu8 -> residual2_s1_gpu8
+	residual2_s1_gpu8 -> allreduce2_s1_gpu8
+	allreduce2_s1_gpu8 -> gate_s1_gpu8 [style=dashed]
+	gate_s1_gpu8 -> experts_s1_gpu8 [style=dashed]
+	allreduce2_s1_gpu8 -> output
+	ln1_s1_gpu9 -> attn_s1_gpu9
+	attn_s1_gpu9 -> attn_proj_s1_gpu9
+	attn_proj_s1_gpu9 -> residual1_s1_gpu9
+	residual1_s1_gpu9 -> allreduce1_s1_gpu9
+	allreduce1_s1_gpu9 -> ln2_s1_gpu9
+	ln2_s1_gpu9 -> mlp1_s1_gpu9
+	mlp1_s1_gpu9 -> gelu_s1_gpu9
+	gelu_s1_gpu9 -> mlp2_s1_gpu9
+	mlp2_s1_gpu9 -> residual2_s1_gpu9
+	residual2_s1_gpu9 -> allreduce2_s1_gpu9
+	allreduce2_s1_gpu9 -> gate_s1_gpu9 [style=dashed]
+	gate_s1_gpu9 -> experts_s1_gpu9 [style=dashed]
+	allreduce2_s1_gpu9 -> output
+	ln1_s1_gpu10 -> attn_s1_gpu10
+	attn_s1_gpu10 -> attn_proj_s1_gpu10
+	attn_proj_s1_gpu10 -> residual1_s1_gpu10
+	residual1_s1_gpu10 -> allreduce1_s1_gpu10
+	allreduce1_s1_gpu10 -> ln2_s1_gpu10
+	ln2_s1_gpu10 -> mlp1_s1_gpu10
+	mlp1_s1_gpu10 -> gelu_s1_gpu10
+	gelu_s1_gpu10 -> mlp2_s1_gpu10
+	mlp2_s1_gpu10 -> residual2_s1_gpu10
+	residual2_s1_gpu10 -> allreduce2_s1_gpu10
+	allreduce2_s1_gpu10 -> gate_s1_gpu10 [style=dashed]
+	gate_s1_gpu10 -> experts_s1_gpu10 [style=dashed]
+	allreduce2_s1_gpu10 -> output
+	ln1_s1_gpu11 -> attn_s1_gpu11
+	attn_s1_gpu11 -> attn_proj_s1_gpu11
+	attn_proj_s1_gpu11 -> residual1_s1_gpu11
+	residual1_s1_gpu11 -> allreduce1_s1_gpu11
+	allreduce1_s1_gpu11 -> ln2_s1_gpu11
+	ln2_s1_gpu11 -> mlp1_s1_gpu11
+	mlp1_s1_gpu11 -> gelu_s1_gpu11
+	gelu_s1_gpu11 -> mlp2_s1_gpu11
+	mlp2_s1_gpu11 -> residual2_s1_gpu11
+	residual2_s1_gpu11 -> allreduce2_s1_gpu11
+	allreduce2_s1_gpu11 -> gate_s1_gpu11 [style=dashed]
+	gate_s1_gpu11 -> experts_s1_gpu11 [style=dashed]
+	allreduce2_s1_gpu11 -> output
+	ln1_s1_gpu12 -> attn_s1_gpu12
+	attn_s1_gpu12 -> attn_proj_s1_gpu12
+	attn_proj_s1_gpu12 -> residual1_s1_gpu12
+	residual1_s1_gpu12 -> allreduce1_s1_gpu12
+	allreduce1_s1_gpu12 -> ln2_s1_gpu12
+	ln2_s1_gpu12 -> mlp1_s1_gpu12
+	mlp1_s1_gpu12 -> gelu_s1_gpu12
+	gelu_s1_gpu12 -> mlp2_s1_gpu12
+	mlp2_s1_gpu12 -> residual2_s1_gpu12
+	residual2_s1_gpu12 -> allreduce2_s1_gpu12
+	allreduce2_s1_gpu12 -> gate_s1_gpu12 [style=dashed]
+	gate_s1_gpu12 -> experts_s1_gpu12 [style=dashed]
+	allreduce2_s1_gpu12 -> output
+	ln1_s1_gpu13 -> attn_s1_gpu13
+	attn_s1_gpu13 -> attn_proj_s1_gpu13
+	attn_proj_s1_gpu13 -> residual1_s1_gpu13
+	residual1_s1_gpu13 -> allreduce1_s1_gpu13
+	allreduce1_s1_gpu13 -> ln2_s1_gpu13
+	ln2_s1_gpu13 -> mlp1_s1_gpu13
+	mlp1_s1_gpu13 -> gelu_s1_gpu13
+	gelu_s1_gpu13 -> mlp2_s1_gpu13
+	mlp2_s1_gpu13 -> residual2_s1_gpu13
+	residual2_s1_gpu13 -> allreduce2_s1_gpu13
+	allreduce2_s1_gpu13 -> gate_s1_gpu13 [style=dashed]
+	gate_s1_gpu13 -> experts_s1_gpu13 [style=dashed]
+	allreduce2_s1_gpu13 -> output
+	ln1_s1_gpu14 -> attn_s1_gpu14
+	attn_s1_gpu14 -> attn_proj_s1_gpu14
+	attn_proj_s1_gpu14 -> residual1_s1_gpu14
+	residual1_s1_gpu14 -> allreduce1_s1_gpu14
+	allreduce1_s1_gpu14 -> ln2_s1_gpu14
+	ln2_s1_gpu14 -> mlp1_s1_gpu14
+	mlp1_s1_gpu14 -> gelu_s1_gpu14
+	gelu_s1_gpu14 -> mlp2_s1_gpu14
+	mlp2_s1_gpu14 -> residual2_s1_gpu14
+	residual2_s1_gpu14 -> allreduce2_s1_gpu14
+	allreduce2_s1_gpu14 -> gate_s1_gpu14 [style=dashed]
+	gate_s1_gpu14 -> experts_s1_gpu14 [style=dashed]
+	allreduce2_s1_gpu14 -> output
+	ln1_s1_gpu15 -> attn_s1_gpu15
+	attn_s1_gpu15 -> attn_proj_s1_gpu15
+	attn_proj_s1_gpu15 -> residual1_s1_gpu15
+	residual1_s1_gpu15 -> allreduce1_s1_gpu15
+	allreduce1_s1_gpu15 -> ln2_s1_gpu15
+	ln2_s1_gpu15 -> mlp1_s1_gpu15
+	mlp1_s1_gpu15 -> gelu_s1_gpu15
+	gelu_s1_gpu15 -> mlp2_s1_gpu15
+	mlp2_s1_gpu15 -> residual2_s1_gpu15
+	residual2_s1_gpu15 -> allreduce2_s1_gpu15
+	allreduce2_s1_gpu15 -> gate_s1_gpu15 [style=dashed]
+	gate_s1_gpu15 -> experts_s1_gpu15 [style=dashed]
+	allreduce2_s1_gpu15 -> output
+}
