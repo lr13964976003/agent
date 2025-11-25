@@ -213,16 +213,24 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 * **Batch size**: Each batch consists of 128 sequences.
 * **Sequence Length**: 10000 tokens per sequence.
 * **Token Dimension**: The dimension of each token is 4096.
-* **Dimension of MHA**: The number of heads is 32 and the dimension of each heads is 128
-* **Hidden size of MLP**: The hidden is of MLP is 16384
+* **Dimension of MHA**: The number of heads is 32 and the dimension of each heads is 128.
+* **Hidden size of MLP**: The hidden is of MLP is 16384.
+
+We evaluated the hardware environment for the baseline and the new parallel strategy proposed in this paper as follows:
+
+
+* **GPUs**:  Ample GPU resources, no limits.
+* **Single-card computing power**: 400TFlops.
+* **MFU utilization**: 60%.
+* **VRAM Bandwidth**: 1.8TBps.
+* **bandwidth utilization**: 80%.
+* **Single-card video memory capacity**: 64GB.
 
 
 **Metrics:**
 
-
 * **TPS (Tokens per Second)**: Measures throughput
 * **TPOT (Time per Output Token)**: Measures latency per token
-
 
 ---
 
@@ -236,8 +244,7 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 * **GPUs Used**: adequate H100 GPUs
 * **Per-GPU Allocation**:
 
-
-  * Each GPU holds  tensor-parallel shard for all layers.
+  * Each GPU holds tensor-parallel shard for all layers.
   * Experts are colocated on GPUs.
 * **Processing**: Tokens flow sequentially through the pipeline stages, and multiple experts per GPU share compute resources.
 
@@ -245,19 +252,16 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 #### **2.2 Proposed Cross-Node Expert Parallelism**
 
 
-* **GPUs Used**: adequate H100 GPUs (one GPU per expert per layer)
+* **GPUs Used**: adequate GPUs (one GPU per expert per layer)
 * **Per-GPU Allocation**:
-
-
   * Each GPU hosts **exactly one expert per layer**.
 * **Routing**:
-
 
   * Input tokens are dynamically routed to the GPU holding the corresponding expert.
   * Token batches are asynchronously sent, ensuring minimal idle time.
 
 
-This deployment ensures **all 16 experts per layer compute in parallel**, maximizing throughput and minimizing token latency.
+This deployment ensures **all experts per layer compute in parallel**, maximizing throughput and minimizing token latency.
 
 
 ---
