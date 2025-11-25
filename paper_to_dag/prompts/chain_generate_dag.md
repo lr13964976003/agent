@@ -22,7 +22,7 @@ Gain a deep understanding of the methods proposed in the paper. <<<要求理解�
 
 Determine how to deploy the model onto GPUs by according to the paper, The provided GPU resources are sufficient. <<<要求按论文提出方法提出部署方案且提供的GPU的资源是充足的>>>
 
-After you complete the division of one module, calculate how many parts the module has been divided into and whether it matches the number of GPUs.  <<<要求反思部署方案是否符合实际>>>
+Require reflection on whether the deployment plan is practical.  <<<要求反思部署方案是否符合实际>>>
 
 Please analyze how the dimensions of the module will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析维度变化是否正确>>>
 
@@ -123,6 +123,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
