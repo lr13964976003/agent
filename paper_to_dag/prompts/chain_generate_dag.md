@@ -34,7 +34,7 @@ Card Boundary Division (specify which GPU each node is on) <<<按不同GPU划分
 
 Each node can only contain one GPU. If a node contains multiple GPUs, it should be split. <<<每个节点的只能包含一个GPU，如果有节点包含多个GPU，则把它拆分>>>
 
-Label the communication between GPUs and the content of this communication in a specific way within the DAG graph. <<<把GPU之间的通信，以及通信的内容，用特定的方式在DAG图中标注出来>>>
+Label the communication between GPUs and the content of the communication in a concise and intuitive manner in the DAG diagram. <<<把GPU之间的通信，以及通信的内容，用简洁直观的方式在DAG图中标注出来>>>
 
 The aggregation and split of data need to be represented by nodes. <<<显示数据聚合与分割>>>
 
@@ -52,11 +52,9 @@ You need to follow the following constraints:
 
 If multiple models are used in the paper, all the DAGs of them need to be generated.<<<提醒要生成多个dag而不是合并模型>>>
 
-The baseline DAG also needs to be generated, so you will output at least two DAGs.<<<baseline同样需要被生成>>>
+Two DAG graphs are required to be generated: one representing the baseline, and the other representing the optimal solution of the parallel strategy proposed in this paper. <<<要求生成两个DAG图，一个是baseline的，一个是本论文提出的并行策略的最优解>>>
 
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
-
-Not all knowledge in supplementary materials will be useful to you. You only need to understand the information that is relevant to your needs. <<<提醒不是所有知识都是有用的>>>
 
 Generally speaking, a layer in the model consists of a Multi-Head Attention along with an FFN or (Gate and Experts). <<<提供模型一层的组成信息>>>
 
@@ -125,6 +123,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
