@@ -19,7 +19,7 @@ Mixture-of-Experts (MoE) architectures have emerged as a powerful approach for s
 Traditional MoE parallelization strategies often assign multiple experts to the same GPU to reduce inter-node communication. While this minimizes network traffic, it also creates computational bottlenecks and limits the degree of true expert parallelism. As model and cluster sizes grow, this trade-off becomes increasingly suboptimal.
 
 
-In this work, we present a cross-node expert parallelism method that prioritizes distributing experts across nodes such that each GPU hosts at most one expert. By pushing Expert Parallelism (EP) to 16 or beyond, we unlock higher degrees of concurrent computation, allowing each expert to run in near isolation. This design shifts the optimization focus from reducing communication to maximizing compute concurrency, leveraging modern HPC networking capabilities to sustain high bandwidth and low latency across nodes.
+In this work, we present a cross-node expert parallelism method that prioritizes distributing experts across nodes such that each GPU hosts at most one expert. By pushing Expert Parallelism (EP) to large number, we unlock higher degrees of concurrent computation, allowing each expert to run in near isolation. This design shifts the optimization focus from reducing communication to maximizing compute concurrency, leveraging modern HPC networking capabilities to sustain high bandwidth and low latency across nodes.
 
 
 ---
@@ -46,7 +46,7 @@ However, as network interconnects such as NVLink, InfiniBand, and H100-class NVS
 ### **Large Expert Parallelism (Large EP)**
 
 
-We define *large EP* as configurations where EP ≥ 16. In such regimes, distributing experts across as many devices as possible—ideally one per GPU—minimizes resource contention and maximizes expert-level parallel execution. The challenge lies in efficiently coordinating cross-node communication and ensuring balanced routing without overloading the network.
+In such regimes, distributing experts across as many devices as possible—ideally one per GPU—minimizes resource contention and maximizes expert-level parallel execution. The challenge lies in efficiently coordinating cross-node communication and ensuring balanced routing without overloading the network.
 
 
 Our proposed method addresses this challenge by exploiting large EP setups, carefully aligning expert placement with the cluster topology, and overlapping communication with computation to achieve near-linear scaling in large MoE deployments.
@@ -164,7 +164,7 @@ This fine-grained pipeline increases throughput and reduces idle time for each e
 ### **5. Scalability Considerations**
 
 
-#### **5.1 Large EP Regime (EP ≥ 16)**
+#### **5.1 Large EP Regime**
 
 
 Our method is optimized for large EP setups, defined as having 16 or more experts per parallel group. In this regime:
@@ -195,7 +195,7 @@ Our method provides:
 
 1. **Maximized Expert Parallelism:** One expert per GPU ensures minimal contention and high compute efficiency.
 2. **Balanced Load Across Nodes:** Topology-aware placement and dynamic gating prevent network bottlenecks.
-3. **Scalable Communication Overlap:** Asynchronous token routing allows near-linear scaling for EP ≥ 16.
+3. **Scalable Communication Overlap:** Asynchronous token routing allows near-linear scaling.
 4. **Compatibility with Large Models:** Integrates seamlessly with TP and DP for models exceeding single-GPU memory.
 
 
@@ -292,7 +292,7 @@ This deployment ensures **all experts per layer compute in parallel**, maximizin
 
 * Deploying **one expert per GPU** allows full utilization of GPU compute and memory.
 * Asynchronous token routing ensures minimal waiting, even across nodes.
-* With 16 GPUs (unlimited H100s), the system scales near-linearly in the large EP regime (EP ≥ 16).
+* With 16 GPUs (unlimited H100s), the system scales near-linearly in the large EP regime.
 
 
 
