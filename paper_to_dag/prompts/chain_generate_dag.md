@@ -20,7 +20,7 @@ You are tested to completed the following tasks:
 
 Gain a deep understanding of the methods proposed in the paper. <<<要求理解论文>>> 
 
-Determine how to deploy the model onto GPUs by according to the paper. Ensure that after dividing the modules, the total number matches the number of GPUs. <<<要求按论文提出方法提出部署方案>>>
+Determine how to deploy the model onto GPUs by according to the paper, The provided GPU resources are sufficient. <<<要求按论文提出方法提出部署方案且提供的GPU的资源是充足的>>>
 
 After you complete the division of one module, calculate how many parts the module has been divided into and whether it matches the number of GPUs.  <<<要求反思部署方案是否符合实际>>>
 
@@ -123,6 +123,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
