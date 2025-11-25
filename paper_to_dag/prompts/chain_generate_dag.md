@@ -20,7 +20,9 @@ You are tested to completed the following tasks:
 
 Gain a deep understanding of the methods proposed in the paper. <<<要求理解论文>>> 
 
-Determine how to deploy the model onto GPUs by according to the paper, The provided GPU resources are sufficient. <<<要求按论文提出方法提出部署方案且提供的GPU的资源是充足的>>>
+Determine how to deploy the model onto GPUs by according to the paper. <<<要求按论文提出方法提出部署方案>>>
+
+The provided GPU resources are sufficient. The proposed deployment solution should aim to minimize latency and maximize throughput for a single GPU. <<<提供的GPU的资源是充足的，要求提出的部署方案尽可能使单GPU的时延小和吞吐量大>>>
 
 Require reflection on whether the deployment plan is practical.  <<<要求反思部署方案是否符合实际>>>
 
@@ -123,6 +125,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
