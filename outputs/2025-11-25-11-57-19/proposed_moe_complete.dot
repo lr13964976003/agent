@@ -1,0 +1,750 @@
+// Complete Corrected Proposed MoE DAG with EP=16
+// Expert Parallelism: 1 expert per GPU across 16 GPUs
+// All 16 layers included with proper connections
+
+strict digraph proposed_moe_complete {
+	rankdir=TB
+	splines=ortho
+	node [shape=rectangle, style=filled, fillcolor=lightblue]
+	
+	// Input and Output
+	input [label="Total Input\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: All", fillcolor=lightgreen, shape=ellipse]
+	output [label="Total Output\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: All", fillcolor=lightgreen, shape=ellipse]
+	
+	// Layer 0
+	layer_0_qkv [label="QKV Linear Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_0_attn [label="Multi-Head Attention Layer 0\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_0_proj [label="Projection Layer 0\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_0_add_norm1 [label="Add+Norm Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_0_gate [label="Gating Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_0_scatter [label="Scatter Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_0_gather [label="Gather Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_0_add_norm2 [label="Add+Norm Layer 0 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 1
+	layer_1_qkv [label="QKV Linear Layer 1\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_1_attn [label="Multi-Head Attention Layer 1\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_1_proj [label="Projection Layer 1\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_1_add_norm1 [label="Add+Norm Layer 1\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_1_gate [label="Gating Layer 1\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_1_scatter [label="Scatter Layer 1\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_1_gather [label="Gather Layer 1\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_1_add_norm2 [label="Add+Norm Layer 1 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 2
+	layer_2_qkv [label="QKV Linear Layer 2\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_2_attn [label="Multi-Head Attention Layer 2\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_2_proj [label="Projection Layer 2\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_2_add_norm1 [label="Add+Norm Layer 2\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_2_gate [label="Gating Layer 2\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_2_scatter [label="Scatter Layer 2\nInput: [batch=rag=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_2_gather [label="Gather Layer 2\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_2_add_norm2 [label="Add+Norm Layer 2 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 3
+	layer_3_qkv [label="QKV Linear Layer 3\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_3_attn [label="Multi-Head Attention Layer 3\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_3_proj [label="Projection Layer 3\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_3_add_norm1 [label="Add+Norm Layer 3\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_3_gate [label="Gating Layer 3\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_3_scatter [label="Scatter Layer 3\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_3_gather [label="Gather Layer 3\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_3_add_norm2 [label="Add+Norm Layer 3 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 4
+	layer_4_qkv [label="QKV Linear Layer 4\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_4_attn [label="Multi-Head Attention Layer 4\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_4_proj [label="Projection Layer 4\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_4_add_norm1 [label="Add+Norm Layer 4\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_4_gate [label="Gating Layer 4\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_4_scatter [label="Scatter Layer 4\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_4_gather [label="Gather Layer 4\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_4_add_norm2 [label="Add+Norm Layer 4 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 5
+	layer_5_qkv [label="QKV Linear Layer 5\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_5_attn [label="Multi-Head Attention Layer 5\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_5_proj [label="Projection Layer 5\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_5_add_norm1 [label="Add+Norm Layer 5\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_5_gate [label="Gating Layer 5\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_5_scatter [label="Scatter Layer 5\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_5_gather [label="Gather Layer 5\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_5_add_norm2 [label="Add+Norm Layer 5 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 6
+	layer_6_qkv [label="QKV Linear Layer 6\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_6_attn [label="Multi-Head Attention Layer 6\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_6_proj [label="Projection Layer 6\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput:: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_6_add_norm1 [label="Add+Norm Layer 6\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_6_gate [label="Gating Layer 6\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_6_scatter [label="Scatter Layer 6\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_6_gather [label="Gather Layer 6\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_6_add_norm2 [label="Add+Norm Layer 6 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 7
+	layer_7_qkv [label="QKV Linear Layer 7\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_7_attn [label="Multi-Head Attention Layer 7\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_7_proj [label="Projection Layer 7\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_7_add_norm1 [label="Add+Norm Layer 7\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_7_gate [label="Gating Layer 7\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_7_scatter [label="Scatter Layer 7\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_7_gather [label="Gather Layer 7\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_7_add_norm2 [label="Add+Norm Layer 7 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 8
+	layer_8_qkv [label="QKV Linear Layer 8\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_8_attn [label="Multi-Head Attention Layer 8\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_8_proj [label="Projection Layer 8\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_8_add_norm1 [label="Add+Norm Layer 8\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_8_gate [label="Gating Layer 8\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_8_scatter [label="Scatter Layer 8\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_8_gather [label="Gather Layer 8\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_8_add_norm2 [label="Add+Norm Layer 8 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 9
+	layer_9_qkv [label="QKV Linear Layer 9\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_9_attn [label="Multi-Head Attention Layer 9\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_9_proj [label="Projection Layer 9\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_9_add_norm1 [label="Add+Norm Layer 9\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_9_gate [label="Gating Layer 9\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_9_scatter [label="Scatter Layer 9\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_9_gather [label="Gather Layer 9\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_9_add_norm2 [label="Add+Norm Layer 9 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 10
+	layer_10_qkv [label="QKV Linear Layer 10\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_10_attn [label="Multi-Head Attention Layer 10\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_10_proj [label="Projection Layer 10\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_10_add_norm1 [label="Add+Norm Layer 10\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_10_gate [label="Gating Layer 10\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_10_scatter [label="Scatter Layer 10\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_10_gather [label="Gather Layer 10\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_10_add_norm2 [label="Add+Norm Layer 10 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 11
+	layer_11_qkv [label="QKV Linear Layer 11\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_11_attn [label="Multi-Head Attention Layer 11\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_11_proj [label="Projection Layer 11\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_11_add_norm1 [label="Add+Norm Layer 11\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_11_gate [label="Gating Layer 11\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_11_scatter [label="Scatter Layer 11\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_11_gather [label="Gather Layer 11\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_11_add_norm2 [label="Add+Norm Layer 11 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 12
+	layer_12_qkv [label="QKV Linear Layer 12\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_12_attn [label="Multi-Head Attention Layer 12\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_12_proj [label="Projection Layer 12\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_12_add_norm1 [label="Add+Norm Layer 12\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_12_gate [label="Gating Layer 12\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_12_scatter [label="Scatter Layer 12\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_12_gather [label="Gather Layer 12\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_12_add_norm2 [label="Add+Norm Layer 12 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 13
+	layer_13_qkv [label="QKV Linear Layer 13\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_13_attn [label="Multi-Head Attention Layer 13\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_13_proj [label="Projection Layer 13\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_13_add_norm1 [label="Add+Norm Layer 13\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_13_gate [label="Gating Layer 13\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_13_scatter [label="Scatter Layer 13\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_13_gather [label="Gather Layer 13\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_13_add_norm2 [label="Add+Norm Layer 13 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 14
+	layer_14_qkv [label="QKV Linear Layer 14\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_14_attn [label="Multi-Head Attention Layer 14\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_14_proj [label="Projection Layer 14\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_14_add_norm1 [label="Add+Norm Layer 14\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_14_gate [label="Gating Layer 14\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_14_scatter [label="Scatter Layer 14\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_14_gather [label="Gather Layer 14\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_14_add_norm2 [label="Add+Norm Layer 14 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Layer 15
+	layer_15_qkv [label="QKV Linear Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_15_attn [label="Multi-Head Attention Layer 15\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_15_proj [label="Projection Layer 15\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_15_add_norm1 [label="Add+Norm Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_15_gate [label="Gating Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_15_scatter [label="Scatter Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_15_gather [label="Gather Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_15_add_norm2 [label="Add+Norm Layer 15 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Expert nodes - EP=16, one expert per GPU
+	expert_0 [label="Expert 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0"]
+	expert_1 [label="Expert 1\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 1"]
+	expert_2 [label="Expert 2\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 2"]
+	expert_3 [label="Expert 3\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 3"]
+	expert_4 [label="Expert 4\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 4"]
+	expert_5 [label="Expert 5\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 5"]
+	expert_6 [label="Expert 6\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 6"]
+	expert_7 [label="Expert 7\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 7"]
+	expert_8 [label="Expert 8\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 8"]
+	expert_9 [label="Expert 9\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 9"]
+	expert_10 [label="Expert 10\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 10"]
+	expert_11 [label="Expert 11\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 11"]
+	expert_12 [label="Expert 12\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 12"]
+	expert_13 [label="Expert 13\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 13"]
+	expert_14 [label="Expert 14\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 14"]
+	expert_15 [label="Expert 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 15"]
+	
+	// Connections - Layer 0
+	input -> layer_0_qkv
+	layer_0_qkv -> layer_0_attn
+	layer_0_attn -> layer_0_proj
+	layer_0_proj -> layer_0_add_norm1
+	input -> layer_0_add_norm1 [style=dashed, label="residual"]
+	layer_0_add_norm1 -> layer_0_gate
+	layer_0_add_norm1 -> layer_0_scatter
+	layer_0_gate -> layer_0_scatter [style=dashed, label="routing"]
+	
+	// Scatter to experts
+	layer_0_scatter -> expert_0
+	layer_0_scatter -> expert_1
+	layer_0_scatter -> expert_2
+	layer_0_scatter -> expert_3
+	layer_0_scatter -> expert_4
+	layer_0_scatter -> expert_5
+	layer_0_scatter -> expert_6
+	layer_0_scatter -> expert_7
+	layer_0_scatter -> expert_8
+	layer_0_scatter -> expert_9
+	layer_0_scatter -> expert_10
+	layer_0_scatter -> expert_11
+	layer_0_scatter -> expert_12
+	layer_0_scatter -> expert_13
+	layer_0_scatter -> expert_14
+	layer_0_scatter -> expert_15
+	
+	// Gather from experts
+	expert_0 -> layer_0_gather
+	expert_1 -> layer_0_gather
+	expert_2 -> layer_0_gather
+	expert_3 -> layer_0_gather
+	expert_4 -> layer_0_gather
+	expert_5 -> layer_0_gather
+	expert_6 -> layer_0_gather
+	expert_7 -> layer_0_gather
+	expert_8 -> layer_0_gather
+	expert_9 -> layer_0_gather
+	expert_10 -> layer_0_gather
+	expert_11 -> layer_0_gather
+	expert_12 -> layer_0_gather
+	expert_13 -> layer_0_gather
+	expert_14 -> layer_0_gather
+	expert_15 -> layer_0_gather
+	
+	layer_0_gather -> layer_0_add_norm2
+	layer_0_add_norm1 -> layer_0_add_norm2 [style=dashed, label="residual"]
+	
+	// Continue sequential connections for all layers
+	layer_0_add_norm2 -> layer_1_qkv
+	layer_1_qkv -> layer_1_attn
+	layer_1_attn -> layer_1_proj
+	layer_1_proj -> layer_1_add_norm1
+	layer_0_add_norm2 -> layer_1_add_norm1 [style=dashed, label="residual"]
+	layer_1_add_norm1 -> layer_1_gate
+	layer_1_add_norm1 -> layer_1_scatter
+	layer_1_gate -> layer_1_scatter [style=dashed, label="routing"]
+	
+	// Layer 1 scatter to experts
+	layer_1_scatter -> expert_0
+	layer_1_scatter -> expert_1
+	layer_1_scatter -> expert_2
+	layer_1_scatter -> expert_3
+	layer_1_scatter -> expert_4
+	layer_1_scatter -> expert_5
+	layer_1_scatter -> expert_6
+	layer_1_scatter -> expert_7
+	layer_1_scatter -> expert_8
+	layer_1_scatter -> expert_9
+	layer_1_scatter -> expert_10
+	layer_1_scatter -> expert_11
+	layer_1_scatter -> expert_12
+	layer_1_scatter -> expert_13
+	layer_1_scatter -> expert_14
+	layer_1_scatter -> expert_15
+	
+	// Layer 1 gather from experts
+	expert_0 -> layer_1_gather
+	expert_1 -> layer_1_gather
+	expert_2 -> layer_1_gather
+	expert_3 -> layer_1_gather
+	expert_4 -> layer_1_gather
+	expert_5 -> layer_1_gather
+	expert_6 -> layer_1_gather
+	expert_7 -> layer_1_gather
+	expert_8 -> layer_1_gather
+	expert_9 -> layer_1_gather
+	expert_10 -> layer_1_gather
+	expert_11 -> layer_1_gather
+	expert_12 -> layer_1_gather
+	expert_13 -> layer_1_gather
+	expert_14 -> layer_1_gather
+	expert_15 -> layer_1_gather
+	
+	layer_1_gather -> layer_1_add_norm2
+	layer_1_add_norm1 -> layer_1_add_norm2 [style=dashed, label="residual"]
+	
+	layer_1_add_norm2 -> layer_2_qkv
+	layer_2_qkv -> layer_2_attn
+	layer_2_attn -> layer_2_proj
+	layer_2_proj -> layer_2_add_norm1
+	layer_1_add_norm2 -> layer_2_add_norm1 [style=dashed, label="residual"]
+	layer_2_add_norm1 -> layer_2_gate
+	layer_2_add_norm1 -> layer_2_scatter
+	layer_2_gate -> layer_2_scatter [style=dashed, label="routing"]
+	
+	// Layer 2 scatter to experts
+	layer_2_scatter -> expert_0
+	layer_2_scatter -> expert_1
+	layer_2_scatter -> expert_2
+	layer_2_scatter -> expert_3
+	layer_2_scatter -> expert_4
+	layer_2_scatter -> expert_5
+	layer_2_scatter -> expert_6
+	layer_2_scatter -> expert_7
+	layer_2_scatter -> expert_8
+	layer_2_scatter -> expert_9
+	layer_2_scatter -> expert_10
+	layer_2_scatter -> expert_11
+	layer_2_scatter -> expert_12
+	layer_2_scatter -> expert_13
+	layer_2_scatter -> expert_14
+	layer_2_scatter -> expert_15
+	
+	// Layer 2 gather from experts
+	expert_0 -> layer_2_gather
+	expert_1 -> layer_2_gather
+	expert_2 -> layer_2_gather
+	expert_3 -> layer_2_gather
+	expert_4 -> layer_2_gather
+	expert_5 -> layer_2_gather
+	expert_6 -> layer_2_gather
+	expert_7 -> layer_2_gather
+	expert_8 -> layer_2_gather
+	expert_9 -> layer_2_gather
+	expert_10 -> layer_2_gather
+	expert_11 -> layer_2_gather
+	expert_12 -> layer_2_gather
+	expert_13 -> layer_2_gather
+	expert_14 -> layer_2_gather
+	expert_15 -> layer_2_gather
+	
+	layer_2_gather -> layer_2_add_norm2
+	layer_2_add_norm1 -> layer_2_add_norm2 [style=dashed, label="residual"]
+	
+	layer_2_add_norm2 -> layer_3_qkv
+	layer_3_qkv -> layer_3_attn
+	layer_3_attn -> layer_3_proj
+	layer_3_proj -> layer_3_add_norm1
+	layer_2_add_norm2 -> layer_3_add_norm1 [style=dashed, label="residual"]
+	layer_3_add_norm1 -> layer_3_gate
+	layer_3_add_norm1 -> layer_3_scatter
+	layer_3_gate -> layer_3_scatter [style=dashed, label="routing"]
+	
+	// Layer 3 scatter to experts
+	layer_3_scatter -> expert_0
+	layer_3_scatter -> expert_1
+	layer_3_scatter -> expert_2
+	layer_3_scatter -> expert_3
+	layer_3_scatter -> expert_4
+	layer_3_scatter -> expert_5
+	layer_3_scatter -> expert_6
+	layer_3_scatter -> expert_7
+	layer_3_scatter -> expert_8
+	layer_3_scatter -> expert_9
+	layer_3_scatter -> expert_10
+	layer_3_scatter -> expert_11
+	layer_3_scatter -> expert_12
+	layer_3_scatter -> expert_13
+	layer_3_scatter -> expert_14
+	layer_3_scatter -> expert_15
+	
+	// Layer 3 gather from experts
+	expert_0 -> layer_3_gather
+	expert_1 -> layer_3_gather
+	expert_2 -> layer_3_gather
+	expert_3 -> layer_3_gather
+	expert_4 -> layer_3_gather
+	expert_5 -> layer_3_gather
+	expert_6 -> layer_3_gather
+	expert_7 -> layer_3_gather
+	expert_8 -> layer_3_gather
+	expert_9 -> layer_3_gather
+	expert_10 -> layer_3_gather
+	expert_11 -> layer_3_gather
+	expert_12 -> layer_3_gather
+	expert_13 -> layer_3_gather
+	expert_14 -> layer_3_gather
+	expert_15 -> layer_3_gather
+	
+	layer_3_gather -> layer_3_add_norm2
+	layer_3_add_norm1 -> layer_3_add_norm2 [style=dashed, label="residual"]
+	
+	layer_3_add_norm2 -> layer_4_qkv
+	layer_4_qkv -> layer_4_attn
+	layer_4_attn -> layer_4_proj
+	layer_4_proj -> layer_4_add_norm1
+	layer_3_add_norm2 -> layer_4_add_norm1 [style=dashed, label="residual"]
+	layer_4_add_norm1 -> layer_4_gate
+	layer_4_add_norm1 -> layer_4_scatter
+	layer_4_gate -> layer_4_scatter [style=dashed, label="routing"]
+	
+	// Layer 4 scatter to experts
+	layer_4_scatter -> expert_0
+	layer_4_scatter -> expert_1
+	layer_4_scatter -> expert_2
+	layer_4_scatter -> expert_3
+	layer_4_scatter -> expert_4
+	layer_4_scatter -> expert_5
+	layer_4_scatter -> expert_6
+	layer_4_scatter -> expert_7
+	layer_4_scatter -> expert_8
+	layer_4_scatter -> expert_9
+	layer_4_scatter -> expert_10
+	layer_4_scatter -> expert_11
+	layer_4_scatter -> expert_12
+	layer_4_scatter -> expert_13
+	layer_4_scatter -> expert_14
+	layer_4_scatter -> expert_15
+	
+	// Layer 4 gather from experts
+	expert_0 -> layer_4_gather
+	expert_1 -> layer_4_gather
+	expert_2 -> layer_4_gather
+	expert_3 -> layer_4_gather
+	expert_4 -> layer_4_gather
+	expert_5 -> layer_4_gather
+	expert_6 -> layer_4_gather
+	expert_7 -> layer_4_gather
+	expert_8 -> layer_4_gather
+	expert_9 -> layer_4_gather
+	expert_10 -> layer_4_gather
+	expert_11 -> layer_4_gather
+	expert_12 -> layer_4_gather
+	expert_13 -> layer_4_gather
+	expert_14 -> layer_4_gather
+	expert_15 -> layer_4_gather
+	
+	layer_4_gather -> layer_4_add_norm2
+	layer_4_add_norm1 -> layer_4_add_norm2 [style=dashed, label="residual"]
+	
+	layer_4_add_norm2 -> layer_5_qkv
+	layer_5_qkv -> layer_5_attn
+	layer_5_attn -> layer_5_proj
+	layer_5_proj -> layer_5_add_norm1
+	layer_4_add_norm2 -> layer_5_add_norm1 [style=dashed, label="residual"]
+	layer_5_add_norm1 -> layer_5_gate
+	layer_5_add_norm1 -> layer_5_scatter
+	layer_5_gate -> layer_5_scatter [style=dashed, label="routing"]
+	
+	// Layer 5 scatter to experts
+	layer_5_scatter -> expert_0
+	layer_5_scatter -> expert_1
+	layer_5_scatter -> expert_2
+	layer_5_scatter -> expert_3
+	layer_5_scatter -> expert_4
+	layer_5_scatter -> expert_5
+	layer_5_scatter -> expert_6
+	layer_5_scatter -> expert_7
+	layer_5_scatter -> expert_8
+	layer_5_scatter -> expert_9
+	layer_5_scatter -> expert_10
+	layer_5_scatter -> expert_11
+	layer_5_scatter -> expert_12
+	layer_5_scatter -> expert_13
+	layer_5_scatter -> expert_14
+	layer_5_scatter -> expert_15
+	
+	// Layer 5 gather from experts
+	expert_0 -> layer_5_gather
+	expert_1 -> layer_5_gather
+	expert_2 -> layer_5_gather
+	expert_3 -> layer_5_gather
+	expert_4 -> layer_5_gather
+	expert_5 -> layer_5_gather
+	expert_6 -> layer_5_gather
+	expert_7 -> layer_5_gather
+	expert_8 -> layer_5_gather
+	expert_9 -> layer_5_gather
+	expert_10 -> layer_5_gather
+	expert_11 -> layer_5_gather
+	expert_12 -> layer_5_gather
+	expert_13 -> layer_5_gather
+	expert_14 -> layer_5_gather
+	expert_15 -> layer_5_gather
+	
+	layer_5_gather -> layer_5_add_norm2
+	layer_5_add_norm1 -> layer_5_add_norm2 [style=dashed, label="residual"]
+	
+	layer_5_add_norm2 -> layer_6_qkv
+	layer_6_qkv -> layer_6_attn
+	layer_6_attn -> layer_6_proj
+	layer_6_proj -> layer_6_add_norm1
+	layer_5_add_norm2 -> layer_6_add_norm1 [style=dashed, label="residual"]
+	layer_6_add_norm1 -> layer_6_gate
+	layer_6_add_norm1 -> layer_6_scatter
+	layer_6_gate -> layer_6_scatter [style=dashed, label="routing"]
+	
+	// Layer 6 scatter to experts
+	layer_6_scatter -> expert_0
+	layer_6_scatter -> expert_1
+	layer_6_scatter -> expert_2
+	layer_6_scatter -> expert_3
+	layer_6_scatter -> expert_4
+	layer_6_scatter -> expert_5
+	layer_6_scatter -> expert_6
+	layer_6_scatter -> expert_7
+	layer_6_scatter -> expert_8
+	layer_6_scatter -> expert_9
+	layer_6_scatter -> expert_10
+	layer_6_scatter -> expert_11
+	layer_6_scatter -> expert_12
+	layer_6_scatter -> expert_13
+	layer_6_scatter -> expert_14
+	layer_6_scatter -> expert_15
+	
+	// Layer 6 gather from experts
+	expert_0 -> layer_6_gather
+	expert_1 -> layer_6_gather
+	expert_2 -> layer_6_gather
+	expert_3 -> layer_6_gather
+	expert_4 -> layer_6_gather
+	expert_5 -> layer_6_gather
+	expert_6 -> layer_6_gather
+	expert_7 -> layer_6_gather
+	expert_8 -> layer_6_gather
+	expert_9 -> layer_6_gather
+	expert_10 -> layer_6_gather
+	expert_11 -> layer_6_gather
+	expert_12 -> layer_6_gather
+	expert_13 -> layer_6_gather
+	expert_14 -> layer_6_gather
+	expert_15 -> layer_6_gather
+	
+	layer_6_gather -> layer_6_add_norm2
+	layer_6_add_norm1 -> layer_6_add_norm2 [style=dashed, label="residual"]
+	
+	layer_6_add_norm2 -> layer_7_qkv
+	layer_7_qkv -> layer_7_attn
+	layer_7_attn -> layer_7_proj
+	layer_7_proj -> layer_7_add_norm1
+	layer_6_add_norm2 -> layer_7_add_norm1 [style=dashed, label="residual"]
+	layer_7_add_norm1 -> layer_7_gate
+	layer_7_add_norm1 -> layer_7_scatter
+	layer_7_gate -> layer_7_scatter [style=dashed, label="routing"]
+	
+	// Layer 7 scatter to experts
+	layer_7_scatter -> expert_0
+	layer_7_scatter -> expert_1
+	layer_7_scatter -> expert_2
+	layer_7_scatter -> expert_3
+	layer_7_scatter -> expert_4
+	layer_7_scatter -> expert_5
+	layer_7_scatter -> expert_6
+	layer_7_scatter -> expert_7
+	layer_7_scatter -> expert_8
+	layer_7_scatter -> expert_9
+	layer_7_scatter -> expert_10
+	layer_7_scatter -> expert_11
+	layer_7_scatter -> expert_12
+	layer_7_scatter -> expert_13
+	layer_7_scatter -> expert_14
+	layer_7_scatter -> expert_15
+	
+	// Layer 7 gather from experts
+	expert_0 -> layer_7_gather
+	expert_1 -> layer_7_gather
+	expert_2 -> layer_7_gather
+	expert_3 -> layer_7_gather
+	expert_4 -> layer_7_gather
+	expert_5 -> layer_7_gather
+	expert_6 -> layer_7_gather
+	expert_7 -> layer_7_gather
+	expert_8 -> layer_7_gather
+	expert_9 -> layer_7_gather
+	expert_10 -> layer_7_gather
+	expert_11 -> layer_7_gather
+	expert_12 -> layer_7_gather
+	expert_13 -> layer_7_gather
+	expert_14 -> layer_7_gather
+	expert_15 -> layer_7_gather
+	
+	layer_7_gather -> layer_7_add_norm2
+	layer_7_add_norm1 -> layer_7_add_norm2 [style=dashed, label="residual"]
+	
+	layer_7_add_norm2 -> layer_8_qkv
+	layer_8_qkv -> layer_8_attn
+	layer_8_attn -> layer_8_proj
+	layer_8_proj -> layer_8_add_norm1
+	layer_7_add_norm2 -> layer_8_add_norm1 [style=dashed, label="residual"]
+	layer_8_add_norm1 -> layer_8_gate
+	layer_8_add_norm1 -> layer_8_scatter
+	layer_8_gate -> layer_8_scatter [style=dashed, label="routing"]
+	
+	// Layer 8 scatter to experts
+	layer_8_scatter -> expert_0
+	layer_8_scatter -> expert_1
+	layer_8_scatter -> expert_2
+	layer_8_scatter -> expert_3
+	layer_8_scatter -> expert_4
+	layer_8_scatter -> expert_5
+	layer_8_scatter -> expert_6
+	layer_8_scatter -> expert_7
+	layer_8_scatter -> expert_8
+	layer_8_scatter -> expert_9
+	layer_8_scatter -> expert_10
+	layer_8_scatter -> expert_11
+	layer_8_scatter -> expert_12
+	layer_8_scatter -> expert_13
+	layer_8_scatter -> expert_14
+	layer_8_scatter -> expert_15
+	
+	// Layer 8 gather from experts
+	expert_0 -> layer_8_gather
+	expert_1 -> layer_8_gather
+	expert_2 -> layer_8_gather
+	expert_3 -> layer_8_gather
+	expert_4 -> layer_8_gather
+	expert_5 -> layer_8_gather
+	expert_6 -> layer_8_gather
+	expert_7 -> layer_8_gather
+	expert_8 -> layer_8_gather
+	expert_9 -> layer_8_gather
+	expert_10 -> layer_8_gather
+	expert_11 -> layer_8_gather
+	expert_12 -> layer_8_gather
+	expert_13 -> layer_8_gather
+	expert_14 -> layer_8_gather
+	expert_15 -> layer_8_gather
+	
+	layer_8_gather -> layer_8_add_norm2
+	layer_8_add_norm1 -> layer_8_add_norm2 [style=dashed, label="residual"]
+	
+	layer_8_add_norm2 -> layer_9_qkv
+	layer_9_qkv -> layer_9_attn
+	layer_9_attn -> layer_9_proj
+	layer_9_proj -> layer_9_add_norm1
+	layer_8_add_norm2 -> layer_9_add_norm1 [style=dashed, label="residual"]
+	layer_9_add_norm1 -> layer_9_gate
+	layer_9_add_norm1 -> layer_9_scatter
+	layer_9_gate -> layer_9_scatter [style=dashed, label="routing"]
+	
+	// Layer 9 scatter to experts
+	layer_9_scatter -> expert_0
+	layer_9_scatter -> expert_1
+	layer_9_scatter -> expert_2
+	layer_9_scatter -> expert_3
+	layer_9_scatter -> expert_4
+	layer_9_scatter -> expert_5
+	layer_9_scatter -> expert_6
+	layer_9_scatter -> expert_7
+	layer_9_scatter -> expert_8
+	layer_9_scatter -> expert_9
+	layer_9_scatter -> expert_10
+	layer_9_scatter -> expert_11
+	layer_9_scatter -> expert_12
+	layer_9_scatter -> expert_13
+	layer_9_scatter -> expert_14
+	layer_9_scatter -> expert_15
+	
+	// Layer 9 gather from experts
+	expert_0 -> layer_9_gather
+	expert_1 -> layer_9_gather
+	expert_2 -> layer_9_gather
+	expert_3 -> layer_9_gather
+	expert_4 -> layer_9_gather
+	expert_5 -> layer_9_gather
+	expert_6 -> layer_9_gather
+	expert_7 -> layer_9_gather
+	expert_8 -> layer_9_gather
+	expert_9 -> layer_9_gather
+	expert_10 -> layer_9_gather
+	expert_11 -> layer_9_gather
+	expert_12 -> layer_9_gather
+	expert_13 -> layer_9_gather
+	expert_14 -> layer_9_gather
+	expert_15 -> layer_9_gather
+	
+	layer_9_gather -> layer_9_add_norm2
+	layer_9_add_norm1 -> layer_9_add_norm2 [style=dashed, label="residual"]
+	
+	layer_9_add_norm2 -> layer_10_qkv
+	layer_10_qkv -> layer_10_attn
+	layer_10_attn -> layer_10_proj
+	layer_10_proj -> layer_10_add_norm1
+	layer_9_add_norm2 -> layer_10_add_norm1 [style=dashed, label="residual"]
+	layer_10_add_norm1 -> layer_10_gate
+	layer_10_add_norm1 -> layer_10_scatter
+	layer_10_gate -> layer_10_scatter [style=dashed, label="routing"]
+	
+	// Layer 10 scatter to experts
+	layer_10_scatter -> expert_0
+	layer_10_scatter -> expert_1
+	layer_10_scatter -> expert_2
+	layer_10_scatter -> expert_3
+	layer_10_scatter -> expert_4
+	layer_10_scatter -> expert_5
+	layer_10_scatter -> expert_6
+	layer_10_scatter -> expert_7
+	layer_10_scatter -> expert_8
+	layer_10_scatter -> expert_9
+	layer_10_scatter -> expert_10
+	layer_10_scatter -> expert_11
+	layer_10_scatter -> expert_12
+	layer_10_scatter -> expert_13
+	layer_10_scatter -> expert_14
+	layer_10_scatter -> expert_15
+	
+	// Layer 10 gather from experts
+	expert_0 -> layer_10_gather
+	expert_1 -> layer_10_gather
+	expert_2 -> layer_10_gather
+	expert_3 -> layer_10_gather
+	expert_4 -> layer_10_gather
+	expert_5 -> layer_10_gather
+	expert_6 -> layer_10_gather
+	expert_7 -> layer_10_gather
+	expert_8 -> layer_10_gather
+	expert_9 -> layer_10_gather
+	expert_10 -> layer_10_gather
+	expert_11 -> layer_10_gather
+	expert_12 -> layer_10_gather
+	expert_13 -> layer_10_gather
+	expert_14 -> layer_10_gather
+	expert_15 -> layer_10_gather
+	
+	layer_10_gather -> layer_10_add_norm2
+	layer_10_add_norm1 -> layer_10_add_norm2 [style=dashed, label="residual"]
+	
+	layer_10_add_norm2 -> layer_11_qkv
+	layer_11_qkv -> layer_11_attn
+	layer_11_attn -> layer_11_proj
+	layer_11_proj -> layer_11_add_norm1
+	layer_10_add_norm2 -> layer_11_add_norm1 [style=dashed, label="residual"]
+	layer_11_add_norm1 -> layer_11_gate
+	layer_11_add_norm1 -> layer_11_scatter
+	layer_11_gate -> layer_11_scatter [style=dashed, label="routing"]
+	
+	// Layer 11 scatter to experts
+	layer_11_scatter -> expert_0
+	layer_11_scatter -> expert_1
+	layer_11_scatter -> expert_2
+	layer_11_scatter -> expert_3
+	layer_11_scatter -> expert_4
+	layer_11_scatter -> expert_5
+	layer_11_scatter -> expert_6
+	layer_11_scatter -> expert_7
+	layer_11_scatter -> expert_8
+	layer_11_scatter -> expert_9
+	layer_11_scatter -> expert_10
+	layer_11_scatter -> expert_11
+	layer_11_scatter -> expert_12
+	layer_11_scatter -> expert_13
+	layer_11_scatter -> expert_14
+	layer_11_scatter -> expert_15
+	
+	// Layer 11 gather from experts
+	expert_0 -> layer_11_gather

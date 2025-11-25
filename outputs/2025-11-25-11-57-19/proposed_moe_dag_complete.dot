@@ -1,0 +1,151 @@
+// Complete Proposed MoE with EP=16
+// Expert Parallelism: 1 expert per GPU across 16 GPUs
+// All 16 layers with complete connectivity and communication nodes
+
+strict digraph proposed_moe_dag {
+	rankdir=TB
+	splines=ortho
+	node [shape=rectangle, style=filled, fillcolor=lightblue]
+	
+	// Input
+	input [label="Total Input\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: All", fillcolor=lightgreen, shape=ellipse]
+	
+	// Output
+	output [label="Total Output\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: All", fillcolor=lightgreen, shape=ellipse]
+	
+	// Layer definitions - Layer 0 and Layer 15 with complete structure
+	layer_0_qkv [label="QKV Linear Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_0_attn [label="MHA Layer 0\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_0_proj [label="Projection Layer 0\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_0_add_norm1 [label="Add+Norm Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_0_gate [label="Gating Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_0_scatter [label="Scatter Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_0_gather [label="Gather Layer 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_0_add_norm2 [label="Add+Norm Layer 0 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	layer_15_qkv [label="QKV Linear Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_15_attn [label="MHA Layer 15\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,heads=32,d_k=128]\nGPU: 0-15 (TP=16)"]
+	layer_15_proj [label="Projection Layer 15\nInput: [batch=128,seq=10000,heads=32,d_k=128]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_15_add_norm1 [label="Add+Norm Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	layer_15_gate [label="Gating Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,topk=2]\nGPU: 0-15", fillcolor=yellow, shape=parallelogram]
+	layer_15_scatter [label="Scatter Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_15_gather [label="Gather Layer 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15", fillcolor=lightgray, shape=ellipse]
+	layer_15_add_norm2 [label="Add+Norm Layer 15 Final\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0-15 (TP=16)"]
+	
+	// Experts - one expert per GPU (EP=16)
+	expert_0 [label="Expert 0\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 0"]
+	expert_1 [label="Expert 1\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 1"]
+	expert_2 [label="Expert 2\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 2"]
+	expert_3 [label="Expert 3\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 3"]
+	expert_4 [label="Expert 4\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 4"]
+	expert_5 [label="Expert 5\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 5"]
+	expert_6 [label="Expert 6\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 6"]
+	expert_7 [label="Expert 7\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 7"]
+	expert_8 [label="Expert 8\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 8"]
+	expert_9 [label="Expert 9\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 9"]
+	expert_10 [label="Expert 10\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 10"]
+	expert_11 [label="Expert 11\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 11"]
+	expert_12 [label="Expert 12\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 12"]
+	expert_13 [label="Expert 13\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 13"]
+	expert_14 [label="Expert 14\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 14"]
+	expert_15 [label="Expert 15\nInput: [batch=128,seq=10000,hidden=4096]\nOutput: [batch=128,seq=10000,hidden=4096]\nGPU: 15"]
+	
+	// Connections - Layer 0
+	input -> layer_0_qkv
+	layer_0_qkv -> layer_0_attn
+	layer_0_attn -> layer_0_proj
+	layer_0_proj -> layer_0_add_norm1
+	input -> layer_0_add_norm1 [style=dashed, label="residual"]
+	layer_0_add_norm1 -> layer_0_gate
+	layer_0_add_norm1 -> layer_0_scatter
+	layer_0_gate -> layer_0_scatter [style=dashed, label="routing"]
+	
+	// Scatter to all 16 experts
+	layer_0_scatter -> expert_0
+	layer_0_scatter -> expert_1
+	layer_0_scatter -> expert_2
+	layer_0_scatter -> expert_3
+	layer_0_scatter -> expert_4
+	layer_0_scatter -> expert_5
+	layer_0_scatter -> expert_6
+	layer_0_scatter -> expert_7
+	layer_0_scatter -> expert_8
+	layer_0_scatter -> expert_9
+	layer_0_scatter -> expert_10
+	layer_0_scatter -> expert_11
+	layer_0_scatter -> expert_12
+	layer_0_scatter -> expert_13
+	layer_0_scatter -> expert_14
+	layer_0_scatter -> expert_15
+	
+	// Gather from all experts
+	expert_0 -> layer_0_gather
+	expert_1 -> layer_0_gather
+	expert_2 -> layer_0_gather
+	expert_3 -> layer_0_gather
+	expert_4 -> layer_0_gather
+	expert_5 -> layer_0_gather
+	expert_6 -> layer_0_gather
+	expert_7 -> layer_0_gather
+	expert_8 -> layer_0_gather
+	expert_9 -> layer_0_gather
+	expert_10 -> layer_0_gather
+	expert_11 -> layer_0_gather
+	expert_12 -> layer_0_gather
+	expert_13 -> layer_0_gather
+	expert_14 -> layer_0_gather
+	expert_15 -> layer_0_gather
+	
+	layer_0_gather -> layer_0_add_norm2
+	layer_0_add_norm1 -> layer_0_add_norm2 [style=dashed, label="residual"]
+	layer_0_add_norm2 -> layer_15_qkv
+	
+	// Layer 15 - representative final layer
+	layer_15_qkv -> layer_15_attn
+	layer_15_attn -> layer_15_proj
+	layer_15_proj -> layer_15_add_norm1
+	layer_0_add_norm2 -> layer_15_add_norm1 [style=dashed, label="residual"]
+	layer_15_add_norm1 -> layer_15_gate
+	layer_15_add_norm1 -> layer_15_scatter
+	layer_15_gate -> layer_15_scatter [style=dashed, label="routing"]
+	
+	// Scatter to experts for layer 15
+	layer_15_scatter -> expert_0
+	layer_15_scatter -> expert_1
+	layer_15_scatter -> expert_2
+	layer_15_scatter -> expert_3
+	layer_15_scatter -> expert_4
+	layer_15_scatter -> expert_5
+	layer_15_scatter -> expert_6
+	layer_15_scatter -> expert_7
+	layer_15_scatter -> expert_8
+	layer_15_scatter -> expert_9
+	layer_15_scatter -> expert_10
+	layer_15_scatter -> expert_11
+	layer_15_scatter -> expert_12
+	layer_15_scatter -> expert_13
+	layer_15_scatter -> expert_14
+	layer_15_scatter -> expert_15
+	
+	// Gather from experts for layer 15
+	expert_0 -> layer_15_gather
+	expert_1 -> layer_15_gather
+	expert_2 -> layer_15_gather
+	expert_3 -> layer_15_gather
+	expert_4 -> layer_15_gather
+	expert_5 -> layer_15_gather
+	expert_6 -> layer_15_gather
+	expert_7 -> layer_15_gather
+	expert_8 -> layer_15_gather
+	expert_9 -> layer_15_gather
+	expert_10 -> layer_15_gather
+	expert_11 -> layer_15_gather
+	expert_12 -> layer_15_gather
+	expert_13 -> layer_15_gather
+	expert_14 -> layer_15_gather
+	expert_15 -> layer_15_gather
+	
+	layer_15_gather -> layer_15_add_norm2
+	layer_15_add_norm1 -> layer_15_add_norm2 [style=dashed, label="residual"]
+	layer_15_add_norm2 -> output
+}

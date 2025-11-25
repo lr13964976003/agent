@@ -1,0 +1,424 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "Baseline MoE Deployment",
+      "parallelism": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "strategy": "column_row_split",
+          "parameters": {
+            "column_parallel_dim": "hidden_size",
+            "row_parallel_dim": "ffn_hidden_size"
+          }
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "strategy": "layer_wise_split",
+          "parameters": {
+            "layers_per_stage": 8,
+            "micro_batch_size": 64
+          }
+        },
+        "expert_parallelism": {
+          "degree": 1,
+          "strategy": "colocated_experts"
+        }
+      },
+      "model_configuration": {
+        "num_layers": 16,
+        "experts_per_layer": 16,
+        "hidden_size": 4096,
+        "ffn_hidden_size": 16384,
+        "num_attention_heads": 32,
+        "head_dim": 128,
+        "precision": "BF16",
+        "sequence_length": 10000,
+        "batch_size": 128
+      },
+      "device_mapping": {
+        "stage_0_devices": [0, 1, 2, 3, 4, 5, 6, 7],
+        "stage_1_devices": [8, 9, 10, 11, 12, 13, 14, 15],
+        "expert_placement": {
+          "device_0": ["expert_0", "expert_1"],
+          "device_1": ["expert_2", "expert_3"],
+          "device_2": ["expert_4", "expert_5"],
+          "device_3": ["expert_6", "expert_7"],
+          "device_4": ["expert_8", "expert_9"],
+          "device_5": ["expert_10", "expert_11"],
+          "device_6": ["expert_12", "expert_13"],
+          "device_7": ["expert_14", "expert_15"],
+          "device_8": ["expert_0", "expert_1"],
+          "device_9": ["expert_2", "expert_3"],
+          "device_10": ["expert_4", "expert_5"],
+          "device_11": ["expert_6", "expert_7"],
+          "device_12": ["expert_8", "expert_9"],
+          "device_13": ["expert_10", "expert_11"],
+          "device_14": ["expert_12", "expert_13"],
+          "device_15": ["expert_14", "expert_15"]
+        }
+      },
+      "communication_parameters": {
+        "intra_node_bandwidth": "NVLink",
+        "inter_node_bandwidth": "InfiniBand",
+        "all_reduce_algorithm": "ring",
+        "pipeline_flush_frequency": "per_micro_batch"
+      }
+    },
+    "proposed": {
+      "name": "Cross-Node Expert Parallelism Deployment",
+      "parallelism": {
+        "expert_parallelism": {
+          "degree": 16,
+          "strategy": "single_expert_per_gpu",
+          "parameters": {
+            "max_experts_per_gpu": 1,
+            "topology_aware_placement": true,
+            "load_balancing": "dynamic"
+          }
+        },
+        "tensor_parallelism": {
+          "degree": 1,
+          "strategy": "disabled",
+          "note": "Applied within expert if needed"
+        },
+        "pipeline_parallelism": {
+          "degree": 1,
+          "strategy": "layer_wise_processing",
+          "parameters": {
+            "overlapping_computation": true
+          }
+        },
+        "data_parallelism": {
+          "degree": 1,
+          "note": "Can be applied for training across replicas"
+        }
+      },
+      "model_configuration": {
+        "num_layers": 16,
+        "experts_per_layer": 16,
+        "hidden_size": 4096,
+        "ffn_hidden_size": 16384,
+        "num_attention_heads": 32,
+        "head_dim": 128,
+        "precision": "BF16",
+        "sequence_length": 10000,
+        "batch_size": 128,
+        "gating_k": 2
+      },
+      "device_mapping": {
+        "layer_0": {
+          "expert_0": {"device": 0, "node": "node_0"},
+          "expert_1": {"device": 1, "node": "node_0"},
+          "expert_2": {"device": 2, "node": "node_0"},
+          "expert_3": {"device": 3, "node": "node_0"},
+          "expert_4": {"device": 4, "node": "node_1"},
+          "expert_5": {"device": 5, "node": "node_1"},
+          "expert_6": {"device": 6, "node": "node_1"},
+          "expert_7": {"device": 7, "node": "node_1"},
+          "expert_8": {"device": 8, "node": "node_2"},
+          "expert_9": {"device": 9, "node": "node_2"},
+          "expert_10": {"device": 10, "node": "node_2"},
+          "expert_11": {"device": 11, "node": "node_2"},
+          "expert_12": {"device": 12, "node": "node_3"},
+          "expert_13": {"device": 13, "node": "node_3"},
+          "expert_14": {"device": 14, "node": "node_3"},
+          "expert_15": {"device": 15, "node": "node_3"}
+        },
+        "layer_1": {
+          "expert_0": {"device": 16, "node": "node_4"},
+          "expert_1": {"device": 17, "node": "node_4"},
+          "expert_2": {"device": 18, "node": "node_4"},
+          "expert_3": {"device": 19, "node": "node_4"},
+          "expert_4": {"device": 20, "node": "node_5"},
+          "expert_5": {"device": 21, "node": "node_5"},
+          "expert_6": {"device": 22, "node": "node_5"},
+          "expert_7": {"device": 23, "node": "node_5"},
+          "expert_8": {"device": 24, "node": "node_6"},
+          "expert_9": {"device": 25, "node": "node_6"},
+          "expert_10": {"device": 26, "node": "node_6"},
+          "expert_11": {"device": 27, "node": "node_6"},
+          "expert_12": {"device": 28, "node": "node_7"},
+          "expert_13": {"device": 29, "node": "node_7"},
+          "expert_14": {"device": 30, "node": "node_7"},
+          "expert_15": {"device": 31, "node": "node_7"}
+        },
+        "layer_2": {
+          "expert_0": {"device": 32, "node": "node_8"},
+          "expert_1": {"device": 33, "node": "node_8"},
+          "expert_2": {"device": 34, "node": "node_8"},
+          "expert_3": {"device": 35, "node": "node_8"},
+          "expert_4": {"device": 36, "node": "node_9"},
+          "expert_5": {"device": 37, "node": "node_9"},
+          "expert_6": {"device": 38, "node": "node_9"},
+          "expert_7": {"device": 39, "node": "node_9"},
+          "expert_8": {"device": 40, "node": "node_10"},
+          "expert_9": {"device": 41, "node": "node_10"},
+          "expert_10": {"device": 42, "node": "node_10"},
+          "expert_11": {"device": 43, "node": "node_10"},
+          "expert_12": {"device": 44, "node": "node_11"},
+          "expert_13": {"device": 45, "node": "node_11"},
+          "expert_14": {"device": 46, "node": "node_11"},
+          "expert_15": {"device": 47, "node": "node_11"}
+        },
+        "layer_3": {
+          "expert_0": {"device": 48, "node": "node_12"},
+          "expert_1": {"device": 49, "node": "node_12"},
+          "expert_2": {"device": 50, "node": "node_12"},
+          "expert_3": {"device": 51, "node": "node_12"},
+          "expert_4": {"device": 52, "node": "node_13"},
+          "expert_5": {"device": 53, "node": "node_13"},
+          "expert_6": {"device": 54, "node": "node_13"},
+          "expert_7": {"device": 55, "node": "node_13"},
+          "expert_8": {"device": 56, "node": "node_14"},
+          "expert_9": {"device": 57, "node": "node_14"},
+          "expert_10": {"device": 58, "node": "node_14"},
+          "expert_11": {"device": 59, "node": "node_14"},
+          "expert_12": {"device": 60, "node": "node_15"},
+          "expert_13": {"device": 61, "node": "node_15"},
+          "expert_14": {"device": 62, "node": "node_15"},
+          "expert_15": {"device": 63, "node": "node_15"}
+        },
+        "layer_4": {
+          "expert_0": {"device": 64, "node": "node_16"},
+          "expert_1": {"device": 65, "node": "node_16"},
+          "expert_2": {"device": 66, "node": "node_16"},
+          "expert_3": {"device": 67, "node": "node_16"},
+          "expert_4": {"device": 68, "node": "node_17"},
+          "expert_5": {"device": 69, "node": "node_17"},
+          "expert_6": {"device": 70, "node": "node_17"},
+          "expert_7": {"device": 71, "node": "node_17"},
+          "expert_8": {"device": 72, "node": "node_18"},
+          "expert_9": {"device": 73, "node": "node_18"},
+          "expert_10": {"device": 74, "node": "node_18"},
+          "expert_11": {"device": 75, "node": "node_18"},
+          "expert_12": {"device": 76, "node": "node_19"},
+          "expert_13": {"device": 77, "node": "node_19"},
+          "expert_14": {"device": 78, "node": "node_19"},
+          "expert_15": {"device": 79, "node": "node_19"}
+        },
+        "layer_5": {
+          "expert_0": {"device": 80, "node": "node_20"},
+          "expert_1": {"device": 81, "node": "node_20"},
+          "expert_2": {"device": 82, "node": "node_20"},
+          "expert_3": {"device": 83, "node": "node_20"},
+          "expert_4": {"device": 84, "node": "node_21"},
+          "expert_5": {"device": 85, "node": "node_21"},
+          "expert_6": {"device": 86, "node": "node_21"},
+          "expert_7": {"device": 87, "node": "node_21"},
+          "expert_8": {"device": 88, "node": "node_22"},
+          "expert_9": {"device": 89, "node": "node_22"},
+          "expert_10": {"device": 90, "node": "node_22"},
+          "expert_11": {"device": 91, "node": "node_22"},
+          "expert_12": {"device": 92, "node": "node_23"},
+          "expert_13": {"device": 93, "node": "node_23"},
+          "expert_14": {"device": 94, "node": "node_23"},
+          "expert_15": {"device": 95, "node": "node_23"}
+        },
+        "layer_6": {
+          "expert_0": {"device": 96, "node": "node_24"},
+          "expert_1": {"device": 97, "node": "node_24"},
+          "expert_2": {"device": 98, "node": "node_24"},
+          "expert_3": {"device": 99, "node": "node_24"},
+          "expert_4": {"device": 100, "node": "node_25"},
+          "expert_5": {"device": 101, "node": "node_25"},
+          "expert_6": {"device": 102, "node": "node_25"},
+          "expert_7": {"device": 103, "node": "node_25"},
+          "expert_8": {"device": 104, "node": "node_26"},
+          "expert_9": {"device": 105, "node": "node_26"},
+          "expert_10": {"device": 106, "node": "node_26"},
+          "expert_11": {"device": 107, "node": "node_26"},
+          "expert_12": {"device": 108, "node": "node_27"},
+          "expert_13": {"device": 109, "node": "node_27"},
+          "expert_14": {"device": 110, "node": "node_27"},
+          "expert_15": {"device": 111, "node": "node_27"}
+        },
+        "layer_7": {
+          "expert_0": {"device": 112, "node": "node_28"},
+          "expert_1": {"device": 113, "node": "node_28"},
+          "expert_2": {"device": 114, "node": "node_28"},
+          "expert_3": {"device": 115, "node": "node_28"},
+          "expert_4": {"device": 116, "node": "node_29"},
+          "expert_5": {"device": 117, "node": "node_29"},
+          "expert_6": {"device": 118, "node": "node_29"},
+          "expert_7": {"device": 119, "node": "node_29"},
+          "expert_8": {"device": 120, "node": "node_30"},
+          "expert_9": {"device": 121, "node": "node_30"},
+          "expert_10": {"device": 122, "node": "node_30"},
+          "expert_11": {"device": 123, "node": "node_30"},
+          "expert_12": {"device": 124, "node": "node_31"},
+          "expert_13": {"device": 125, "node": "node_31"},
+          "expert_14": {"device": 126, "node": "node_31"},
+          "expert_15": {"device": 127, "node": "node_31"}
+        },
+        "layer_8": {
+          "expert_0": {"device": 128, "node": "node_32"},
+          "expert_1": {"device": 129, "node": "node_32"},
+          "expert_2": {"device": 130, "node": "node_32"},
+          "expert_3": {"device": 131, "node": "node_32"},
+          "expert_4": {"device": 132, "node": "node_33"},
+          "expert_5": {"device": 133, "node": "node_33"},
+          "expert_6": {"device": 134, "node": "node_33"},
+          "expert_7": {"device": 135, "node": "node_33"},
+          "expert_8": {"device": 136, "node": "node_34"},
+          "expert_9": {"device": 137, "node": "node_34"},
+          "expert_10": {"device": 138, "node": "node_34"},
+          "expert_11": {"device": 139, "node": "node_34"},
+          "expert_12": {"device": 140, "node": "node_35"},
+          "expert_13": {"device": 141, "node": "node_35"},
+          "expert_14": {"device": 142, "node": "node_35"},
+          "expert_15": {"device": 143, "node": "node_35"}
+        },
+        "layer_9": {
+          "expert_0": {"device": 144, "node": "node_36"},
+          "expert_1": {"device": 145, "node": "node_36"},
+          "expert_2": {"device": 146, "node": "node_36"},
+          "expert_3": {"device": 147, "node": "node_36"},
+          "expert_4": {"device": 148, "node": "node_37"},
+          "expert_5": {"device": 149, "node": "node_37"},
+          "expert_6": {"device": 150, "node": "node_37"},
+          "expert_7": {"device": 151, "node": "node_37"},
+          "expert_8": {"device": 152, "node": "node_38"},
+          "expert_9": {"device": 153, "node": "node_38"},
+          "expert_10": {"device": 154, "node": "node_38"},
+          "expert_11": {"device": 155, "node": "node_38"},
+          "expert_12": {"device": 156, "node": "node_39"},
+          "expert_13": {"device": 157, "node": "node_39"},
+          "expert_14": {"device": 158, "node": "node_39"},
+          "expert_15": {"device": 159, "node": "node_39"}
+        },
+        "layer_10": {
+          "expert_0": {"device": 160, "node": "node_40"},
+          "expert_1": {"device": 161, "node": "node_40"},
+          "expert_2": {"device": 162, "node": "node_40"},
+          "expert_3": {"device": 163, "node": "node_40"},
+          "expert_4": {"device": 164, "node": "node_41"},
+          "expert_5": {"device": 165, "node": "node_41"},
+          "expert_6": {"device": 166, "node": "node_41"},
+          "expert_7": {"device": 167, "node": "node_41"},
+          "expert_8": {"device": 168, "node": "node_42"},
+          "expert_9": {"device": 169, "node": "node_42"},
+          "expert_10": {"device": 170, "node": "node_42"},
+          "expert_11": {"device": 171, "node": "node_42"},
+          "expert_12": {"device": 172, "node": "node_43"},
+          "expert_13": {"device": 173, "node": "node_43"},
+          "expert_14": {"device": 174, "node": "node_43"},
+          "expert_15": {"device": 175, "node": "node_43"}
+        },
+        "layer_11": {
+          "expert_0": {"device": 176, "node": "node_44"},
+          "expert_1": {"device": 177, "node": "node_44"},
+          "expert_2": {"device": 178, "node": "node_44"},
+          "expert_3": {"device": 179, "node": "node_44"},
+          "expert_4": {"device": 180, "node": "node_45"},
+          "expert_5": {"device": 181, "node": "node_45"},
+          "expert_6": {"device": 182, "node": "node_45"},
+          "expert_7": {"device": 183, "node": "node_45"},
+          "expert_8": {"device": 184, "node": "node_46"},
+          "expert_9": {"device": 185, "node": "node_46"},
+          "expert_10": {"device": 186, "node": "node_46"},
+          "expert_11": {"device": 187, "node": "node_46"},
+          "expert_12": {"device": 188, "node": "node_47"},
+          "expert_13": {"device": 189, "node": "node_47"},
+          "expert_14": {"device": 190, "node": "node_47"},
+          "expert_15": {"device": 191, "node": "node_47"}
+        },
+        "layer_12": {
+          "expert_0": {"device": 192, "node": "node_48"},
+          "expert_1": {"device": 193, "node": "node_48"},
+          "expert_2": {"device": 194, "node": "node_48"},
+          "expert_3": {"device": 195, "node": "node_48"},
+          "expert_4": {"device": 196, "node": "node_49"},
+          "expert_5": {"device": 197, "node": "node_49"},
+          "expert_6": {"device": 198, "node": "node_49"},
+          "expert_7": {"device": 199, "node": "node_49"},
+          "expert_8": {"device": 200, "node": "node_50"},
+          "expert_9": {"device": 201, "node": "node_50"},
+          "expert_10": {"device": 202, "node": "node_50"},
+          "expert_11": {"device": 203, "node": "node_50"},
+          "expert_12": {"device": 204, "node": "node_51"},
+          "expert_13": {"device": 205, "node": "node_51"},
+          "expert_14": {"device": 206, "node": "node_51"},
+          "expert_15": {"device": 207, "node": "node_51"}
+        },
+        "layer_13": {
+          "expert_0": {"device": 208, "node": "node_52"},
+          "expert_1": {"device": 209, "node": "node_52"},
+          "expert_2": {"device": 210, "node": "node_52"},
+          "expert_3": {"device": 211, "node": "node_52"},
+          "expert_4": {"device": 212, "node": "node_53"},
+          "expert_5": {"device": 213, "node": "node_53"},
+          "expert_6": {"device": 214, "node": "node_53"},
+          "expert_7": {"device": 215, "node": "node_53"},
+          "expert_8": {"device": 216, "node": "node_54"},
+          "expert_9": {"device": 217, "node": "node_54"},
+          "expert_10": {"device": 218, "node": "node_54"},
+          "expert_11": {"device": 219, "node": "node_54"},
+          "expert_12": {"device": 220, "node": "node_55"},
+          "expert_13": {"device": 221, "node": "node_55"},
+          "expert_14": {"device": 222, "node": "node_55"},
+          "expert_15": {"device": 223, "node": "node_55"}
+        },
+        "layer_14": {
+          "expert_0": {"device": 224, "node": "node_56"},
+          "expert_1": {"device": 225, "node": "node_56"},
+          "expert_2": {"device": 226, "node": "node_56"},
+          "expert_3": {"device": 227, "node": "node_56"},
+          "expert_4": {"device": 228, "node": "node_57"},
+          "expert_5": {"device": 229, "node": "node_57"},
+          "expert_6": {"device": 230, "node": "node_57"},
+          "expert_7": {"device": 231, "node": "node_57"},
+          "expert_8": {"device": 232, "node": "node_58"},
+          "expert_9": {"device": 233, "node": "node_58"},
+          "expert_10": {"device": 234, "node": "node_58"},
+          "expert_11": {"device": 235, "node": "node_58"},
+          "expert_12": {"device": 236, "node": "node_59"},
+          "expert_13": {"device": 237, "node": "node_59"},
+          "expert_14": {"device": 238, "node": "node_59"},
+          "expert_15": {"device": 239, "node": "node_59"}
+        },
+        "layer_15": {
+          "expert_0": {"device": 240, "node": "node_60"},
+          "expert_1": {"device": 241, "node": "node_60"},
+          "expert_2": {"device": 242, "node": "node_60"},
+          "expert_3": {"device": 243, "node": "node_60"},
+          "expert_4": {"device": 244, "node": "node_61"},
+          "expert_5": {"device": 245, "node": "node_61"},
+          "expert_6": {"device": 246, "node": "node_61"},
+          "expert_7": {"device": 247, "node": "node_61"},
+          "expert_8": {"device": 248, "node": "node_62"},
+          "expert_9": {"device": 249, "node": "node_62"},
+          "expert_10": {"device": 250, "node": "node_62"},
+          "expert_11": {"device": 251, "node": "node_62"},
+          "expert_12": {"device": 252, "node": "node_63"},
+          "expert_13": {"device": 253, "node": "node_63"},
+          "expert_14": {"device": 254, "node": "node_63"},
+          "expert_15": {"device": 255, "node": "node_63"}
+        }
+      },
+      "communication_parameters": {
+        "inter_node_bandwidth": "InfiniBand_400Gbps",
+        "intra_node_bandwidth": "NVLink_600GBps",
+        "communication_library": "NCCL",
+        "async_communication": true,
+        "token_batching": {
+          "strategy": "destination_expert_grouping",
+          "batch_size": 64
+        },
+        "load_balancing": {
+          "strategy": "dynamic_gating_adjustment",
+          "monitoring_interval": 100
+        },
+        "overlap_strategy": {
+          "compute_stream": "cuda_stream_0",
+          "communication_stream": "cuda_stream_1",
+          "pipeline_depth": 2
+        }
+      },
+      "memory_requirements": {
+        "per_expert_memory_gb": 8.0,
+        "activation_memory_gb": 4.0,
+        "total_per_gpu_gb": 12.0
+      }
+    }
+  }
+}
