@@ -56,6 +56,10 @@ Not all knowledge in supplementary materials will be useful to you. You only nee
 
 Generally speaking, a layer in the model consists of a Multi-Head Attention along with an FFN or (Gate and Experts). <<<提供模型一层的组成信息>>>
 
+Each node can only contain one GPU. If a node contains multiple GPUs, it should be split. <<<每个节点的只能包含一个GPU，如果有节点包含多个GPU，则把它拆分>>>
+
+Each node is labeled with which attention head it corresponds to, especially when performing parallel processing by attention head. <<<每个节点标注计算的是哪一个注意力头，尤其是在进行按注意力头并行的时候>>>
+
 Extract the important components of the DAG graph as much as possible, and omit unnecessary parts. <<<尽量提取DAG图中重要的组成部分，省略不必要的部分>>>
 
 Omit layers with high similarity or repetition in the DAG graph, retaining only representative layers. Repeated modules can be labeled with the number of repetitions. <<<省略DAG图中相似度很高或者重复的层，只保留具有代表性的层，重复的模块可以标定重复次数>>>
@@ -119,6 +123,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
