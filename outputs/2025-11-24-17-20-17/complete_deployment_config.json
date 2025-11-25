@@ -1,0 +1,407 @@
+{
+  "deployment_configurations": {
+    "baseline": {
+      "name": "Baseline Tensor+Pipeline Parallelism",
+      "description": "Traditional TP=8 + PP=2 deployment for 4-layer Dense Transformer",
+      "parallel_strategy": {
+        "type": "tensor_parallelism_plus_pipeline_parallelism",
+        "tensor_parallelism_degree": 8,
+        "pipeline_parallelism_degree": 2,
+        "total_devices": 16
+      },
+      "model_parameters": {
+        "layers": 4,
+        "hidden_size": 4096,
+        "num_attention_heads": 32,
+        "attention_head_size": 128,
+        "sequence_length": 10000,
+        "batch_size": 128,
+        "mlp_hidden_size": 16384,
+        "precision": "FP16",
+        "total_parameters": {
+          "mha_layer": 50331648,
+          "mlp_layer": 134217728,
+          "total_model": 738197504
+        }
+      },
+      "memory_analysis": {
+        "parameters_per_device": {
+          "mha_layer": 6291456,
+          "mlp_layer": 16777216,
+          "total_per_device": 46137344
+        },
+        "activations_per_device": {
+          "input_shape": [128, 10000, 4096],
+          "activation_elements": 5242880000,
+          "memory_bytes": 10485760000
+        }
+      },
+      "device_mapping": {
+        "pipeline_stages": {
+          "stage_0": {
+            "devices": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_parallel_group": "tp_group_0",
+            "layers": [0, 1],
+            "activation_buffer_size": 2621440000,
+            "communication_pattern": "all_reduce_across_8_devices"
+          },
+          "stage_1": {
+            "devices": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_parallel_group": "tp_group_1",
+            "layers": [2, 3],
+            "activation_buffer_size": 2621440000,
+            "communication_pattern": "all_reduce_across_8_devices"
+          }
+        }
+      },
+      "communication_details": {
+        "stage_0_to_stage_1": {
+          "buffer_size": 524288000,
+          "tensor_shape": [128, 10000, 4096],
+          "devices": [[7, 8]]
+        }
+      }
+    },
+    "helix_proposed": {
+      "name": "Helix Two-Level Attention Partitioning",
+      "description": "4-layer Dense Transformer with m×n partitioning for 16 GPUs",
+      "parallel_strategy": {
+        "type": "two_level_attention_partitioning",
+        "head_partitioning": {
+          "n": 4,
+          "heads_per_group": 8,
+          "total_head_groups": 4,
+          "group_names": ["group_0", "group_1", "group_2", "group_3"]
+        },
+        "dimension_partitioning": {
+          "m": 4,
+          "dimension_per_slice": 32,
+          "total_slices": 4,
+          "slice_names": ["slice_0", "slice_1", "slice_2", "slice_3"]
+        },
+        "total_partitions": 16,
+        "total_devices": 16
+      },
+      "model_parameters": {
+        "layers": 4,
+        "hidden_size": 4096,
+        "num_attention_heads": 32,
+        "attention_head_size": 128,
+        "sequence_length": 10000,
+        "batch_size": 128,
+        "mlp_hidden_size": 16384,
+        "precision": "FP16",
+        "total_parameters": {
+          "mha_layer": 50331648,
+          "mlp_layer": 134217728,
+          "total_model": 738197504
+        }
+      },
+      "memory_analysis": {
+        "parameters_per_device": {
+          "weight_matrices": {
+            "W_Q": 1048576,
+            "W_K": 1048576,
+            "W_V": 1048576,
+            "total": 3145728
+          },
+          "activation_tensors": {
+            "Q_matrix": [128, 10000, 32, 8],
+            "K_matrix": [128, 10000, 32, 8],
+            "V_matrix": [128, 10000, 32, 8],
+            "attention_output": [128, 10000, 32, 8],
+            "activation_elements": 327680000,
+            "memory_bytes": 655360000
+          }
+        }
+      },
+      "device_mapping": {
+        "device_0": {
+          "head_group": 0,
+          "dimension_slice": 0,
+          "partition_id": "(0,0)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_1": {
+          "head_group": 0,
+          "dimension_slice": 1,
+          "partition_id": "(0,1)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_2": {
+          "head_group": 0,
+          "dimension_slice": 2,
+          "partition_id": "(0,2)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_3": {
+          "head_group": 0,
+          "dimension_slice": 3,
+          "partition_id": "(0,3)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_4": {
+          "head_group": 1,
+          "dimension_slice": 0,
+          "partition_id": "(1,0)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_5": {
+          "head_group": 1,
+          "dimension_slice": 1,
+          "partition_id": "(1,1)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_6": {
+          "head_group": 1,
+          "dimension_slice": 2,
+          "partition_id": "(1,2)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_7": {
+          "head_group": 1,
+          "dimension_slice": 3,
+          "partition_id": "(1,3)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_8": {
+          "head_group": 2,
+          "dimension_slice": 0,
+          "partition_id": "(2,0)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_9": {
+          "head_group": 2,
+          "dimension_slice": 1,
+          "partition_id": "(2,1)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_10": {
+          "head_group": 2,
+          "dimension_slice": 2,
+          "partition_id": "(2,2)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_11": {
+          "head_group": 2,
+          "dimension_slice": 3,
+          "partition_id": "(2,3)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_12": {
+          "head_group": 3,
+          "dimension_slice": 0,
+          "partition_id": "(3,0)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_13": {
+          "head_group": 3,
+          "dimension_slice": 1,
+          "partition_id": "(3,1)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_14": {
+          "head_group": 3,
+          "dimension_slice": 2,
+          "partition_id": "(3,2)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        },
+        "device_15": {
+          "head_group": 3,
+          "dimension_slice": 3,
+          "partition_id": "(3,3)",
+          "memory_allocation": {
+            "parameters": 3145728,
+            "activations": 327680000,
+            "total_memory": 330825728
+          },
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "output": [128, 10000, 32, 8],
+            "weight_matrix": [256, 256]
+          }
+        }
+      },
+      "communication_details": {
+        "intra_group_communication": {
+          "phase_1_concatenation": {
+            "groups": {
+              "group_0": {"devices": [0, 1, 2, 3], "buffer_size": 1310720000},
+              "group_1": {"devices": [4, 5, 6, 7], "buffer_size": 1310720000},
+              "group_2": {"devices": [8, 9, 10, 11], "buffer_size": 1310720000},
+              "group_3": {"devices": [12, 13, 14, 15], "buffer_size": 1310720000}
+            },
+            "tensor_shape": [128, 10000, 128, 8],
+            "communication_type": "concatenate_dimension_slices"
+          }
+        },
+        "inter_group_communication": {
+          "phase_2_concatenation": {
+            "final_output": {
+              "devices": [0, 4, 8, 12],
+              "buffer_size": 5242880000,
+              "tensor_shape": [128, 10000, 4096],
+              "communication_type": "concatenate_head_groups"
+            }
+          }
+        }
+      },
+      "computation_flow": {
+        "step_1_projection": {
+          "each_device": "X → Q^(i,j), K^(i,j), V^(i,j)",
+          "tensor_shapes": {
+            "input": [128, 10000, 4096],
+            "projected": [128, 10000, 32, 8]
+          }
+        },
+        "step_2_attention": {
+          "each_device": "softmax(QK^T/√32)V",
+          "tensor_shapes": {
+            "QK^T": [128, 10000, 10000],
+            "attention_weights": [128, 10000, 10000],
+            "output": [128, 10000, 32, 8]
+          }
+        },
+        "step_3_aggregation": {
+          "phase_1": "concatenate_4_slices → [128, 10000, 128, 8]",
+          "phase_2": "concatenate_4_groups → [128, 10000, 4096]"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,188 @@
+digraph baseline_dag_final {
+    rankdir=TB;
+    splines=ortho;
+    nodesep=0.5;
+    ranksep=1.2;
+    
+    node [shape=ellipse style=filled fillcolor=lightblue];
+    input [label="Model Input\nGPU: [0-15]\nInput: [batch_size=128 seq_len=10000 hidden_dim=4096]"];
+    output [label="Model Output\nGPU: [15]\nOutput: [batch_size=128 seq_len=10000 hidden_dim=4096]"];
+    
+    subgraph cluster_stage_0 {
+        label="Pipeline Stage 0\nGPU: [0-7]\nTensor Parallel\nLayers: 0-1";
+        style=rounded filled fillcolor=lightgrey;
+        
+        /* Layer 0 */
+        subgraph cluster_layer0_mha {
+            label="Layer 0 MHA";
+            style=dotted;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer0_q_proj [label="Q Projection\nGPU: [0-7]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer0_k_proj [label="K Projection\nGPU: [0-7]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer0_v_proj [label="V Projection\nGPU: [0-7]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer0_attention [label="Attention\nGPU: [0-7]\nCollective: AllReduce\nInput: [128 10000 512]×3\nOutput: [128 10000 4096]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer0_residual [label="Residual Add\nGPU: [0-7]\nInput1: [128 10000 4096]\nInput2: [128 10000 4096]\nOutput: [128 10000 4096]"];
+        }
+        
+        subgraph cluster_layer0_mlp {
+            label="Layer 0 MLP";
+            style=dotted;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer0_mlp_fc1 [label="MLP FC1\nGPU: [0-7]\nWeight: [4096 2048]\nInput: [128 10000 4096]\nOutput: [128 10000 2048]"];
+            layer0_mlp_fc2 [label="MLP FC2\nGPU: [0-7]\nWeight: [2048 4096]\nInput: [128 10000 2048]\nOutput: [128 10000 4096]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer0_mlp_residual [label="Residual Add\nGPU: [0-7]\nInput1: [128 10000 4096]\nInput2: [128 10000 4096]\nOutput: [128 10000 4096]"];
+        }
+        
+        /* Layer 1 */
+        subgraph cluster_layer1_mha {
+            label="Layer 1 MHA";
+            style=dotted;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer1_q_proj [label="Q Projection\nGPU: [0-7]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer1_k_proj [label="K Projection\nGPU: [0-7]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer1_v_proj [label="V Projection\nGPU: [0-7]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer1_attention [label="Attention\nGPU: [0-7]\nCollective: AllReduce\nInput: [128 10000 512]×3\nOutput: [128 10000 4096]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer1_residual [label="Residual Add\nGPU: [0-7]\nInput1: [128 10000 4096]\nInput2: [128 10000 4096]\nOutput: [128 10000 4096]"];
+        }
+        
+        subgraph cluster_layer1_mlp {
+            label="Layer 1 MLP";
+            style=dotted;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer1_mlp_fc1 [label="MLP FC1\nGPU: [0-7]\nWeight: [4096 2048]\nInput: [128 10000 4096]\nOutput: [128 10000 2048]"];
+            layer1_mlp_fc2 [label="MLP FC2\nGPU: [0-7]\nWeight: [2048 4096]\nInput: [128 10000 2048]\nOutput: [128 10000 4096]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer1_mlp_residual [label="Residual Add\nGPU: [0-7]\nInput1: [128 10000 4096]\nInput2: [128 10000 4096]\nOutput: [128 10000 4096]"];
+        }
+    }
+    
+    subgraph cluster_stage_1 {
+        label="Pipeline Stage 1\nGPU: [8-15]\nTensor Parallel\nLayers: 2-3";
+        style=rounded filled fillcolor=lightgrey;
+        
+        /* Layer 2 */
+        subgraph cluster_layer2_mha {
+            label="Layer 2 MHA";
+            style=dotted;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer2_q_proj [label="Q Projection\nGPU: [8-15]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer2_k_proj [label="K Projection\nGPU: [8-15]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer2_v_proj [label="V Projection\nGPU: [8-15]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer2_attention [label="Attention\nGPU: [8-15]\nCollective: AllReduce\nInput: [128 10000 512]×3\nOutput: [128 10000 4096]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer2_residual [label="Residual Add\nGPU: [8-15]\nInput1: [128 10000 4096]\nInput2: [128 10000 4096]\nOutput: [128 10000 4096]"];
+        }
+        
+        subgraph cluster_layer2_mlp {
+            label="Layer 2 MLP";
+            style=dotted;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer2_mlp_fc1 [label="MLP FC1\nGPU: [8-15]\nWeight: [4096 2048]\nInput: [128 10000 4096]\nOutput: [128 10000 2048]"];
+            layer2_mlp_fc2 [label="MLP FC2\nGPU: [8-15]\nWeight: [2048 4096]\nInput: [128 10000 2048]\nOutput: [128 10000 4096]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer2_mlp_residual [label="Residual Add\nGPU: [8-15]\nInput1: [128 10000 4096]\nInput2: [128 10000 4096]\nOutput: [128 10000 4096]"];
+        }
+        
+        /* Layer 3 */
+        subgraph cluster_layer3_mha {
+            label="Layer 3 MHA";
+            style=dotted;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer3_q_proj [label="Q Projection\nGPU: [8-15]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer3_k_proj [label="K Projection\nGPU: [8-15]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer3_v_proj [label="V Projection\nGPU: [8-15]\nWeight: [4096 512]\nInput: [128 10000 4096]\nOutput: [128 10000 512]"];
+            layer3_attention [label="Attention\nGPU: [8-15]\nCollective: AllReduce\nInput: [128 10000 512]×3\nOutput: [128 10000 4096]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer3_residual [label="Residual Add\nGPU: [8-15]\nInput1: [128 10000 4096]\nInput2: [128 10000 4096]\nOutput: [128 10000 4096]"];
+        }
+        
+        subgraph cluster_layer3_mlp {
+            label="Layer 3 MLP";
+            style=dotted;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer3_mlp_fc1 [label="MLP FC1\nGPU: [8-15]\nWeight: [4096 2048]\nInput: [128 10000 4096]\nOutput: [128 10000 2048]"];
+            layer3_mlp_fc2 [label="MLP FC2\nGPU: [8-15]\nWeight: [2048 4096]\nInput: [128 10000 2048]\nOutput: [128 10000 4096]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer3_mlp_residual [label="Residual Add\nGPU: [8-15]\nInput1: [128 10000 4096]\nInput2: [128 10000 4096]\nOutput: [128 10000 4096]"];
+        }
+    }
+    
+    /* Pipeline communication */
+    node [shape=parallelogram style=filled fillcolor=yellow];
+    pipeline_comm [label="Pipeline Communication\nGPU: [7] -> [8]\nTensor: [128 10000 4096]\nBuffer: 524M elements"];
+    
+    /* Connections */
+    input -> layer0_q_proj;
+    input -> layer0_k_proj;
+    input -> layer0_v_proj;
+    layer0_q_proj -> layer0_attention;
+    layer0_k_proj -> layer0_attention;
+    layer0_v_proj -> layer0_attention;
+    input -> layer0_residual;
+    layer0_attention -> layer0_residual;
+    layer0_residual -> layer0_mlp_fc1;
+    layer0_mlp_fc1 -> layer0_mlp_fc2;
+    layer0_residual -> layer0_mlp_residual;
+    layer0_mlp_fc2 -> layer0_mlp_residual;
+    
+    layer0_mlp_residual -> layer1_q_proj;
+    layer0_mlp_residual -> layer1_k_proj;
+    layer0_mlp_residual -> layer1_v_proj;
+    layer1_q_proj -> layer1_attention;
+    layer1_k_proj -> layer1_attention;
+    layer1_v_proj -> layer1_attention;
+    layer0_mlp_residual -> layer1_residual;
+    layer1_attention -> layer1_residual;
+    layer1_residual -> layer1_mlp_fc1;
+    layer1_mlp_fc1 -> layer1_mlp_fc2;
+    layer1_residual -> layer1_mlp_residual;
+    layer1_mlp_fc2 -> layer1_mlp_residual;
+    
+    layer1_mlp_residual -> pipeline_comm;
+    pipeline_comm -> layer2_q_proj;
+    pipeline_comm -> layer2_k_proj;
+    pipeline_comm -> layer2_v_proj;
+    layer2_q_proj -> layer2_attention;
+    layer2_k_proj -> layer2_attention;
+    layer2_v_proj -> layer2_attention;
+    pipeline_comm -> layer2_residual;
+    layer2_attention -> layer2_residual;
+    layer2_residual -> layer2_mlp_fc1;
+    layer2_mlp_fc1 -> layer2_mlp_fc2;
+    layer2_residual -> layer2_mlp_residual;
+    layer2_mlp_fc2 -> layer2_mlp_residual;
+    
+    layer2_mlp_residual -> layer3_q_proj;
+    layer2_mlp_residual -> layer3_k_proj;
+    layer2_mlp_residual -> layer3_v_proj;
+    layer3_q_proj -> layer3_attention;
+    layer3_k_proj -> layer3_attention;
+    layer3_v_proj -> layer3_attention;
+    layer2_mlp_residual -> layer3_residual;
+    layer3_attention -> layer3_residual;
+    layer3_residual -> layer3_mlp_fc1;
+    layer3_mlp_fc1 -> layer3_mlp_fc2;
+    layer3_residual -> layer3_mlp_residual;
+    layer3_mlp_fc2 -> layer3_mlp_residual;
+    
+    layer3_mlp_residual -> output;
+}

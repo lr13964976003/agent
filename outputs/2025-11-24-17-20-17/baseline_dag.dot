@@ -1,0 +1,144 @@
+digraph baseline_dag {
+    rankdir=TB;
+    splines=ortho;
+    nodesep=0.5;
+    ranksep=1.0;
+    
+    node [shape=ellipse, style=filled, fillcolor=lightblue];
+    input [label="Model Input\n[B=128, L=10000, D=4096]"];
+    output [label="Model Output\n[B=128, L=10000, D=4096]"];
+    
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0\nGPUs [0-7]\nLayers 0-1";
+        style=rounded,filled;
+        fillcolor=lightgrey;
+        
+        node [shape=rectangle, style=filled, fillcolor=lightgreen];
+        layer0_mha_q [label="Layer0 MHA Q\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer0_mha_k [label="Layer0 MHA K\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer0_mha_v [label="Layer0 MHA V\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer0_attention [label="Layer0 Attention\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=hexagon, style=filled, fillcolor=lightcoral];
+        layer0_residual [label="Layer0 Residual Add\nGPU: 0-7\nInput1: [128,10000,4096]\nInput2: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=rectangle, style=filled, fillcolor=lightgreen];
+        layer0_mlp_fc1 [label="Layer0 MLP FC1\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,16384]"];
+        layer0_mlp_fc2 [label="Layer0 MLP FC2\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,16384]\nOutput: [128,10000,4096]"];
+        
+        node [shape=hexagon, style=filled, fillcolor=lightcoral];
+        layer0_mlp_residual [label="Layer0 MLP Residual\nGPU: 0-7\nInput1: [128,10000,4096]\nInput2: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=rectangle, style=filled, fillcolor=lightgreen];
+        layer1_mha_q [label="Layer1 MHA Q\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer1_mha_k [label="Layer1 MHA K\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer1_mha_v [label="Layer1 MHA V\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer1_attention [label="Layer1 Attention\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=hexagon, style=filled, fillcolor=lightcoral];
+        layer1_residual [label="Layer1 Residual Add\nGPU: 0-7\nInput1: [128,10000,4096]\nInput2: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=rectangle, style=filled, fillcolor=lightgreen];
+        layer1_mlp_fc1 [label="Layer1 MLP FC1\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,16384]"];
+        layer1_mlp_fc2 [label="Layer1 MLP FC2\nGPU: 0-7\nAllReduce across 8 GPUs\nInput: [128,10000,16384]\nOutput: [128,10000,4096]"];
+        
+        node [shape=hexagon, style=filled, fillcolor=lightcoral];
+        layer1_mlp_residual [label="Layer1 MLP Residual\nGPU: 0-7\nInput1: [128,10000,4096]\nInput2: [128,10000,4096]\nOutput: [128,10000,4096]"];
+    }
+    
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1\nGPUs [8-15]\nLayers 2-3";
+        style=rounded,filled;
+        fillcolor=lightgrey;
+        
+        node [shape=rectangle, style=filled, fillcolor=lightgreen];
+        layer2_mha_q [label="Layer2 MHA Q\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer2_mha_k [label="Layer2 MHA K\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer2_mha_v [label="Layer2 MHA V\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer2_attention [label="Layer2 Attention\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=hexagon, style=filled, fillcolor=lightcoral];
+        layer2_residual [label="Layer2 Residual Add\nGPU: 8-15\nInput1: [128,10000,4096]\nInput2: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=rectangle, style=filled, fillcolor=lightgreen];
+        layer2_mlp_fc1 [label="Layer2 MLP FC1\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,16384]"];
+        layer2_mlp_fc2 [label="Layer2 MLP FC2\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,16384]\nOutput: [128,10000,4096]"];
+        
+        node [shape=hexagon, style=filled, fillcolor=lightcoral];
+        layer2_mlp_residual [label="Layer2 MLP Residual\nGPU: 8-15\nInput1: [128,10000,4096]\nInput2: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=rectangle, style=filled, fillcolor=lightgreen];
+        layer3_mha_q [label="Layer3 MHA Q\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer3_mha_k [label="Layer3 MHA K\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer3_mha_v [label="Layer3 MHA V\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        layer3_attention [label="Layer3 Attention\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=hexagon, style=filled, fillcolor=lightcoral];
+        layer3_residual [label="Layer3 Residual Add\nGPU: 8-15\nInput1: [128,10000,4096]\nInput2: [128,10000,4096]\nOutput: [128,10000,4096]"];
+        
+        node [shape=rectangle, style=filled, fillcolor=lightgreen];
+        layer3_mlp_fc1 [label="Layer3 MLP FC1\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,4096]\nOutput: [128,10000,16384]"];
+        layer3_mlp_fc2 [label="Layer3 MLP FC2\nGPU: 8-15\nAllReduce across 8 GPUs\nInput: [128,10000,16384]\nOutput: [128,10000,4096]"];
+        
+        node [shape=hexagon, style=filled, fillcolor=lightcoral];
+        layer3_mlp_residual [label="Layer3 MLP Residual\nGPU: 8-15\nInput1: [128,10000,4096]\nInput2: [128,10000,4096]\nOutput: [128,10000,4096]"];
+    }
+    
+    node [shape=parallelogram, style=filled, fillcolor=yellow];
+    stage_comm [label="Pipeline Communication\nGPU 7 ↔ GPU 8\nTensor: [128,10000,4096]\nBuffer: 524M elements"];
+    
+    input -> layer0_mha_q;
+    input -> layer0_mha_k;
+    input -> layer0_mha_v;
+    layer0_mha_q -> layer0_attention;
+    layer0_mha_k -> layer0_attention;
+    layer0_mha_v -> layer0_attention;
+    input -> layer0_residual;
+    layer0_attention -> layer0_residual;
+    layer0_residual -> layer0_mlp_fc1;
+    layer0_mlp_fc1 -> layer0_mlp_fc2;
+    layer0_residual -> layer0_mlp_residual;
+    layer0_mlp_fc2 -> layer0_mlp_residual;
+    
+    layer0_mlp_residual -> layer1_mha_q;
+    layer0_mlp_residual -> layer1_mha_k;
+    layer0_mlp_residual -> layer1_mha_v;
+    layer1_mha_q -> layer1_attention;
+    layer1_mha_k -> layer1_attention;
+    layer1_mha_v -> layer1_attention;
+    layer0_mlp_residual -> layer1_residual;
+    layer1_attention -> layer1_residual;
+    layer1_residual -> layer1_mlp_fc1;
+    layer1_mlp_fc1 -> layer1_mlp_fc2;
+    layer1_residual -> layer1_mlp_residual;
+    layer1_mlp_fc2 -> layer1_mlp_residual;
+    
+    layer1_mlp_residual -> stage_comm;
+    stage_comm -> layer2_mha_q;
+    stage_comm -> layer2_mha_k;
+    stage_comm -> layer2_mha_v;
+    layer2_mha_q -> layer2_attention;
+    layer2_mha_k -> layer2_attention;
+    layer2_mha_v -> layer2_attention;
+    stage_comm -> layer2_residual;
+    layer2_attention -> layer2_residual;
+    layer2_residual -> layer2_mlp_fc1;
+    layer2_mlp_fc1 -> layer2_mlp_fc2;
+    layer2_residual -> layer2_mlp_residual;
+    layer2_mlp_fc2 -> layer2_mlp_residual;
+    
+    layer2_mlp_residual -> layer3_mha_q;
+    layer2_mlp_residual -> layer3_mha_k;
+    layer2_mlp_residual -> layer3_mha_v;
+    layer3_mha_q -> layer3_attention;
+    layer3_mha_k -> layer3_attention;
+    layer3_mha_v -> layer3_attention;
+    layer2_mlp_residual -> layer3_residual;
+    layer3_attention -> layer3_residual;
+    layer3_residual -> layer3_mlp_fc1;
+    layer3_mlp_fc1 -> layer3_mlp_fc2;
+    layer3_residual -> layer3_mlp_residual;
+    layer3_mlp_fc2 -> layer3_mlp_residual;
+    
+    layer3_mlp_residual -> output;
+}

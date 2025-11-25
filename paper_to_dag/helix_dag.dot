@@ -1,0 +1,139 @@
+digraph helix_dag_all_layers {
+    rankdir=TB;
+    splines=ortho;
+    nodesep=0.3;
+    ranksep=1.0;
+    
+    node [shape=ellipse style=filled fillcolor=lightblue];
+    input [label="Model Input\nGPU: 0\nBroadcast to all GPUs\nInput: [batch_size=128 seq_len=10000 hidden_dim=4096]"];
+    output [label="Model Output\nGPU: 15\nOutput: [batch_size=128 seq_len=10000 hidden_dim=4096]"];
+    
+    /* Layer 0 - Full 4×4 Helix Partitioning */
+    subgraph cluster_layer0 {
+        label="Layer 0 - 4×4 Helix (16 GPUs)";
+        style=rounded filled fillcolor=lightgrey;
+        
+        /* MHA - 16 GPU partitions */
+        subgraph cluster_layer0_mha {
+            label="Multi-Head Attention (16-way partition)";
+            style=dashed;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            /* Q,K,V projections for each GPU */
+            layer0_q_proj [label="Q Projection L0\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_proj [label="K Projection L0\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_proj [label="V Projection L0\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            
+            layer0_attention [label="Attention Compute\nAll 16 GPUs\nGPU 0-15\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+        }
+        
+        /* Concatenation and Residual */
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer0_concat [label="All-Gather\nGPU: 0\nCollect from 16 GPUs\nInput: 16×[128 10000 32 8]\nOutput: [128 10000 4096]"];
+        layer0_mha_residual [label="MHA Residual L0\nGPU: 0\nInput: [128 10000 4096]×2\nOutput: [128 10000 4096]"];
+        
+        /* MLP - All-GPU parallel */
+        node [shape=rectangle style=filled fillcolor=lightgreen];
+        layer0_mlp_fc1 [label="MLP FC1 L0\nAll 16 GPUs\nEach GPU: [4096 1024]\nInput: [128 10000 4096]\nOutput: [128 10000 1024]"];
+        layer0_mlp_fc2 [label="MLP FC2 L0\nAll 16 GPUs\nEach GPU: [1024 4096]\nInput: [128 10000 1024]\nOutput: [128 10000 4096]"];
+        
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer0_mlp_residual [label="MLP Residual L0\nGPU: 0\nInput: [128 10000 4096]×2\nOutput: [128 10000 4096]"];
+    }
+    
+    /* Layer 1 - Identical structure */
+    subgraph cluster_layer1 {
+        label="Layer 1 - 4×4 Helix (16 GPUs)";
+        style=rounded filled fillcolor=lightgrey;
+        
+        /* MHA - 16 GPU partitions */
+        subgraph cluster_layer1_mha {
+            label="Multi-Head Attention (16-way partition)";
+            style=dashed;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer1_q_proj [label="Q Projection L1\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer1_k_proj [label="K Projection L1\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer1_v_proj [label="V Projection L1\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            
+            layer1_attention [label="Attention Compute\nAll 16 GPUs\nGPU 0-15\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+        }
+        
+        /* Concatenation and Residual */
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer1_concat [label="All-Gather\nGPU: 0\nCollect from 16 GPUs\nInput: 16×[128 10000 32 8]\nOutput: [128 10000 4096]"];
+        layer1_mha_residual [label="MHA Residual L1\nGPU: 0\nInput: [128 10000 4096]×2\nOutput: [128 10000 4096]"];
+        
+        /* MLP - All-GPU parallel */
+        node [shape=rectangle style=filled fillcolor=lightgreen];
+        layer1_mlp_fc1 [label="MLP FC1 L1\nAll 16 GPUs\nEach GPU: [4096 1024]\nInput: [128 10000 4096]\nOutput: [128 10000 1024]"];
+        layer1_mlp_fc2 [label="MLP FC2 L1\nAll 16 GPUs\nEach GPU: [1024 4096]\nInput: [128 10000 1024]\nOutput: [128 10000 4096]"];
+        
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer1_mlp_residual [label="MLP Residual L1\nGPU: 0\nInput: [128 10000 4096]×2\nOutput: [128 10000 4096]"];
+    }
+    
+    /* Layer 2 - Identical structure */
+    subgraph cluster_layer2 {
+        label="Layer 2 - 4×4 Helix (16 GPUs)";
+        style=rounded filled fillcolor=lightgrey;
+        
+        /* MHA - 16 GPU partitions */
+        subgraph cluster_layer2_mha {
+            label="Multi-Head Attention (16-way partition)";
+            style=dashed;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer2_q_proj [label="Q Projection L2\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer2_k_proj [label="K Projection L2\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer2_v_proj [label="V Projection L2\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            
+            layer2_attention [label="Attention Compute\nAll 16 GPUs\nGPU 0-15\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+        }
+        
+        /* Concatenation and Residual */
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer2_concat [label="All-Gather\nGPU: 0\nCollect from 16 GPUs\nInput: 16×[128 10000 32 8]\nOutput: [128 10000 4096]"];
+        layer2_mha_residual [label="MHA Residual L2\nGPU: 0\nInput: [128 10000 4096]×2\nOutput: [128 10000 4096]"];
+        
+        /* MLP - All-GPU parallel */
+        node [shape=rectangle style=filled fillcolor=lightgreen];
+        layer2_mlp_fc1 [label="MLP FC1 L2\nAll 16 GPUs\nEach GPU: [4096 1024]\nInput: [128 10000 4096]\nOutput: [128 10000 1024]"];
+        layer2_mlp_fc2 [label="MLP FC2 L2\nAll 16 GPUs\nEach GPU: [1024 4096]\nInput: [128 10000 1024]\nOutput: [128 10000 4096]"];
+        
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer2_mlp_residual [label="MLP Residual L2\nGPU: 0\nInput: [128 10000 4096]×2\nOutput: [128 10000 4096]"];
+    }
+    
+    /* Layer 3 - Identical structure */
+    subgraph cluster_layer3 {
+        label="Layer 3 - 4×4 Helix (16 GPUs)";
+        style=rounded filled fillcolor=lightgrey;
+        
+        /* MHA - 16 GPU partitions */
+        subgraph cluster_layer3_mha {
+            label="Multi-Head Attention (16-way partition)";
+            style=dashed;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer3_q_proj [label="Q Projection L3\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer3_k_proj [label="K Projection L3\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer3_v_proj [label="V Projection L3\nAll 16 GPUs\nEach GPU: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            
+            layer3_attention [label="Attention Compute\nAll 16 GPUs\nGPU 0-15\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+        }
+        
+        /* Concatenation and Residual */
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer3_concat [label="All-Gather\nGPU: 0\nCollect from 16 GPUs\nInput: 16×[128 10000 32 8]\nOutput: [128 10000 4096]"];
+        layer3_mha_residual [label="MHA Residual L3\nGPU: 0\nInput: [128 10000 4096]×2\nOutput: [128 10000 4096]"];
+        
+        /* MLP - All-GPU parallel */
+        node [shape=rectangle style=filled fillcolor=lightgreen];
+        layer3_mlp_fc1 [label="MLP FC1 L3\nAll 16 GPUs\nEach GPU: [4096 1024]\nInput: [128 10000 4096]\nOutput: [128 10000 1024]"];
+        layer3_mlp_fc2 [label="MLP FC2 L3\nAll 16 GPUs\nEach GPU: [1024 4096]\nInput: [128 10000 1024]\nOutput: [128 10000 4096]"];
+        
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer3_mlp_residual [label="MLP Residual L3\nGPU: 0\nInput: [128 10000 4096]×2\nOutput: [128 10000 4096]"];
+    }
+}

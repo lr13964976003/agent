@@ -1,0 +1,338 @@
+digraph helix_dag_final {
+    rankdir=TB;
+    splines=ortho;
+    nodesep=0.3;
+    ranksep=1.0;
+    
+    node [shape=ellipse style=filled fillcolor=lightblue];
+    input [label="Model Input\nGPU: [0-15]\nBroadcast: [0 1 2...15]\nInput: [batch_size=128 seq_len=10000 hidden_dim=4096]"];
+    output [label="Model Output\nGPU: [15]\nFinal Output: [batch_size=128 seq_len=10000 hidden_dim=4096]"];
+    
+    /* Layer 0 with 4×4 partitioning */
+    subgraph cluster_layer0 {
+        label="Layer 0 - 4×4 Helix Partitioning\n16 GPUs 4 Head Groups × 4 Dimension Slices";
+        style=rounded filled fillcolor=lightgrey;
+        
+        /* Head Group 0: GPUs 0-3 */
+        subgraph cluster_hg0 {
+            label="Head Group 0 (Heads 0-7)";
+            style=dashed;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer0_q_0_0 [label="Q Projection\nGPU: 0\nPartition: (hg=0 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_0_0 [label="K Projection\nGPU: 0\nPartition: (hg=0 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_0_0 [label="V Projection\nGPU: 0\nPartition: (hg=0 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_0_0 [label="Attention\nGPU: 0\nPartition: (hg=0 dim=0-31)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_0_1 [label="Q Projection\nGPU: 1\nPartition: (hg=0 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_0_1 [label="K Projection\nGPU: 1\nPartition: (hg=0 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_0_1 [label="V Projection\nGPU: 1\nPartition: (hg=0 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_0_1 [label="Attention\nGPU: 1\nPartition: (hg=0 dim=32-63)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_0_2 [label="Q Projection\nGPU: 2\nPartition: (hg=0 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_0_2 [label="K Projection\nGPU: 2\nPartition: (hg=0 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_0_2 [label="V Projection\nGPU: 2\nPartition: (hg=0 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_0_2 [label="Attention\nGPU: 2\nPartition: (hg=0 dim=64-95)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_0_3 [label="Q Projection\nGPU: 3\nPartition: (hg=0 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_0_3 [label="K Projection\nGPU: 3\nPartition: (hg=0 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_0_3 [label="V Projection\nGPU: 3\nPartition: (hg=0 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_0_3 [label="Attention\nGPU: 3\nPartition: (hg=0 dim=96-127)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer0_hg0_concat [label="Concatenate\nGPU: 0\nIntra-Group\nGroup: [0 1 2 3]\nInput: 4×[128 10000 32 8]\nOutput: [128 10000 128 8]"];
+        }
+        
+        /* Head Group 1: GPUs 4-7 */
+        subgraph cluster_hg1 {
+            label="Head Group 1 (Heads 8-15)";
+            style=dashed;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer0_q_1_0 [label="Q Projection\nGPU: 4\nPartition: (hg=1 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_1_0 [label="K Projection\nGPU: 4\nPartition: (hg=1 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_1_0 [label="V Projection\nGPU: 4\nPartition: (hg=1 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_1_0 [label="Attention\nGPU: 4\nPartition: (hg=1 dim=0-31)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_1_1 [label="Q Projection\nGPU: 5\nPartition: (hg=1 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_1_1 [label="K Projection\nGPU: 5\nPartition: (hg=1 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_1_1 [label="V Projection\nGPU: 5\nPartition: (hg=1 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_1_1 [label="Attention\nGPU: 5\nPartition: (hg=1 dim=32-63)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_1_2 [label="Q Projection\nGPU: 6\nPartition: (hg=1 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_1_2 [label="K Projection\nGPU: 6\nPartition: (hg=1 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_1_2 [label="V Projection\nGPU: 6\nPartition: (hg=1 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_1_2 [label="Attention\nGPU: 6\nPartition: (hg=1 dim=64-95)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_1_3 [label="Q Projection\nGPU: 7\nPartition: (hg=1 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_1_3 [label="K Projection\nGPU: 7\nPartition: (hg=1 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_1_3 [label="V Projection\nGPU: 7\nPartition: (hg=1 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_1_3 [label="Attention\nGPU: 7\nPartition: (hg=1 dim=96-127)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer0_hg1_concat [label="Concatenate\nGPU: 4\nIntra-Group\nGroup: [4 5 6 7]\nInput: 4×[128 10000 32 8]\nOutput: [128 10000 128 8]"];
+        }
+        
+        /* Head Group 2: GPUs 8-11 */
+        subgraph cluster_hg2 {
+            label="Head Group 2 (Heads 16-23)";
+            style=dashed;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer0_q_2_0 [label="Q Projection\nGPU: 8\nPartition: (hg=2 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_2_0 [label="K Projection\nGPU: 8\nPartition: (hg=2 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_2_0 [label="V Projection\nGPU: 8\nPartition: (hg=2 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_2_0 [label="Attention\nGPU: 8\nPartition: (hg=2 dim=0-31)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_2_1 [label="Q Projection\nGPU: 9\nPartition: (hg=2 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_2_1 [label="K Projection\nGPU: 9\nPartition: (hg=2 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_2_1 [label="V Projection\nGPU: 9\nPartition: (hg=2 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_2_1 [label="Attention\nGPU: 9\nPartition: (hg=2 dim=32-63)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_2_2 [label="Q Projection\nGPU: 10\nPartition: (hg=2 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_2_2 [label="K Projection\nGPU: 10\nPartition: (hg=2 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_2_2 [label="V Projection\nGPU: 10\nPartition: (hg=2 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_2_2 [label="Attention\nGPU: 10\nPartition: (hg=2 dim=64-95)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_2_3 [label="Q Projection\nGPU: 11\nPartition: (hg=2 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_2_3 [label="K Projection\nGPU: 11\nPartition: (hg=2 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_2_3 [label="V Projection\nGPU: 11\nPartition: (hg=2 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_2_3 [label="Attention\nGPU: 11\nPartition: (hg=2 dim=96-127)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer0_hg2_concat [label="Concatenate\nGPU: 8\nIntra-Group\nGroup: [8 9 10 11]\nInput: 4×[128 10000 32 8]\nOutput: [128 10000 128 8]"];
+        }
+        
+        /* Head Group 3: GPUs 12-15 */
+        subgraph cluster_hg3 {
+            label="Head Group 3 (Heads 24-31)";
+            style=dashed;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer0_q_3_0 [label="Q Projection\nGPU: 12\nPartition: (hg=3 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_3_0 [label="K Projection\nGPU: 12\nPartition: (hg=3 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_3_0 [label="V Projection\nGPU: 12\nPartition: (hg=3 dim=0-31)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_3_0 [label="Attention\nGPU: 12\nPartition: (hg=3 dim=0-31)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_3_1 [label="Q Projection\nGPU: 13\nPartition: (hg=3 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_3_1 [label="K Projection\nGPU: 13\nPartition: (hg=3 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_3_1 [label="V Projection\nGPU: 13\nPartition: (hg=3 dim=32-63)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_3_1 [label="Attention\nGPU: 13\nPartition: (hg=3 dim=32-63)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_3_2 [label="Q Projection\nGPU: 14\nPartition: (hg=3 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_3_2 [label="K Projection\nGPU: 14\nPartition: (hg=3 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_3_2 [label="V Projection\nGPU: 14\nPartition: (hg=3 dim=64-95)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_3_2 [label="Attention\nGPU: 14\nPartition: (hg=3 dim=64-95)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            layer0_q_3_3 [label="Q Projection\nGPU: 15\nPartition: (hg=3 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_k_3_3 [label="K Projection\nGPU: 15\nPartition: (hg=3 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_v_3_3 [label="V Projection\nGPU: 15\nPartition: (hg=3 dim=96-127)\nWeight: [4096 256]\nInput: [128 10000 4096]\nOutput: [128 10000 32 8]"];
+            layer0_attn_3_3 [label="Attention\nGPU: 15\nPartition: (hg=3 dim=96-127)\nInput: [128 10000 32 8]×3\nOutput: [128 10000 32 8]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer0_hg3_concat [label="Concatenate\nGPU: 12\nIntra-Group\nGroup: [12 13 14 15]\nInput: 4×[128 10000 32 8]\nOutput: [128 10000 128 8]"];
+        }
+        
+        /* Inter-group concatenation */
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer0_inter_concat [label="Inter-Group Concat\nGPU: 0\nFinal Concatenation\nGroups: [0 4 8 12]\nInput: 4×[128 10000 128 8]\nOutput: [128 10000 4096]"];
+        
+        /* MLP Layer 0 */
+        subgraph cluster_layer0_mlp {
+            label="MLP Layer 0";
+            style=dotted;
+            
+            node [shape=rectangle style=filled fillcolor=lightgreen];
+            layer0_mlp_fc1 [label="MLP FC1\nGPU: 0\nAll-GPU\nWeight: [4096 16384]\nInput: [128 10000 4096]\nOutput: [128 10000 16384]"];
+            layer0_mlp_fc2 [label="MLP FC2\nGPU: 0\nAll-GPU\nWeight: [16384 4096]\nInput: [128 10000 16384]\nOutput: [128 10000 4096]"];
+            
+            node [shape=hexagon style=filled fillcolor=lightcoral];
+            layer0_mlp_residual [label="Residual Add\nGPU: 0\nInput1: [128 10000 4096]\nInput2: [128 10000 4096]\nOutput: [128 10000 4096]"];
+        }
+    }
+    
+    /* Layers 1-3 with simplified representation */
+    subgraph cluster_layers_1_3 {
+        label="Layers 1-3 (4×4 Helix Pattern)";
+        style=rounded filled fillcolor=lightgrey;
+        
+        node [shape=rectangle style=filled fillcolor=lightgreen];
+        layer1_pattern [label="Layer 1 Operations\n16×[32×8] partitions\nHelix Pattern\nGPUs: 0-15"];
+        layer2_pattern [label="Layer 2 Operations\n16×[32×8] partitions\nHelix Pattern\nGPUs: 0-15"];
+        layer3_pattern [label="Layer 3 Operations\n16×[32×8] partitions\nHelix Pattern\nGPUs: 0-15"];
+        
+        node [shape=hexagon style=filled fillcolor=lightcoral];
+        layer1_concat [label="Layer 1 Concat\nGPU: 0\nFinal: [128 10000 4096]"];
+        layer2_concat [label="Layer 2 Concat\nGPU: 0\nFinal: [128 10000 4096]"];
+        layer3_concat [label="Layer 3 Concat\nGPU: 0\nFinal: [128 10000 4096]"];
+    }
+    
+    /* Connections */
+    /* Input to all devices */
+    input -> layer0_q_0_0;
+    input -> layer0_k_0_0;
+    input -> layer0_v_0_0;
+    input -> layer0_q_0_1;
+    input -> layer0_k_0_1;
+    input -> layer0_v_0_1;
+    input -> layer0_q_0_2;
+    input -> layer0_k_0_2;
+    input -> layer0_v_0_2;
+    input -> layer0_q_0_3;
+    input -> layer0_k_0_3;
+    input -> layer0_v_0_3;
+    
+    input -> layer0_q_1_0;
+    input -> layer0_k_1_0;
+    input -> layer0_v_1_0;
+    input -> layer0_q_1_1;
+    input -> layer0_k_1_1;
+    input -> layer0_v_1_1;
+    input -> layer0_q_1_2;
+    input -> layer0_k_1_2;
+    input -> layer0_v_1_2;
+    input -> layer0_q_1_3;
+    input -> layer0_k_1_3;
+    input -> layer0_v_1_3;
+    
+    input -> layer0_q_2_0;
+    input -> layer0_k_2_0;
+    input -> layer0_v_2_0;
+    input -> layer0_q_2_1;
+    input -> layer0_k_2_1;
+    input -> layer0_v_2_1;
+    input -> layer0_q_2_2;
+    input -> layer0_k_2_2;
+    input -> layer0_v_2_2;
+    input -> layer0_q_2_3;
+    input -> layer0_k_2_3;
+    input -> layer0_v_2_3;
+    
+    input -> layer0_q_3_0;
+    input -> layer0_k_3_0;
+    input -> layer0_v_3_0;
+    input -> layer0_q_3_1;
+    input -> layer0_k_3_1;
+    input -> layer0_v_3_1;
+    input -> layer0_q_3_2;
+    input -> layer0_k_3_2;
+    input -> layer0_v_3_2;
+    input -> layer0_q_3_3;
+    input -> layer0_k_3_3;
+    input -> layer0_v_3_3;
+    
+    /* Projection to Attention */
+    layer0_q_0_0 -> layer0_attn_0_0;
+    layer0_k_0_0 -> layer0_attn_0_0;
+    layer0_v_0_0 -> layer0_attn_0_0;
+    
+    layer0_q_0_1 -> layer0_attn_0_1;
+    layer0_k_0_1 -> layer0_attn_0_1;
+    layer0_v_0_1 -> layer0_attn_0_1;
+    
+    layer0_q_0_2 -> layer0_attn_0_2;
+    layer0_k_0_2 -> layer0_attn_0_2;
+    layer0_v_0_2 -> layer0_attn_0_2;
+    
+    layer0_q_0_3 -> layer0_attn_0_3;
+    layer0_k_0_3 -> layer0_attn_0_3;
+    layer0_v_0_3 -> layer0_attn_0_3;
+    
+    layer0_q_1_0 -> layer0_attn_1_0;
+    layer0_k_1_0 -> layer0_attn_1_0;
+    layer0_v_1_0 -> layer0_attn_1_0;
+    
+    layer0_q_1_1 -> layer0_attn_1_1;
+    layer0_k_1_1 -> layer0_attn_1_1;
+    layer0_v_1_1 -> layer0_attn_1_1;
+    
+    layer0_q_1_2 -> layer0_attn_1_2;
+    layer0_k_1_2 -> layer0_attn_1_2;
+    layer0_v_1_2 -> layer0_attn_1_2;
+    
+    layer0_q_1_3 -> layer0_attn_1_3;
+    layer0_k_1_3 -> layer0_attn_1_3;
+    layer0_v_1_3 -> layer0_attn_1_3;
+    
+    layer0_q_2_0 -> layer0_attn_2_0;
+    layer0_k_2_0 -> layer0_attn_2_0;
+    layer0_v_2_0 -> layer0_attn_2_0;
+    
+    layer0_q_2_1 -> layer0_attn_2_1;
+    layer0_k_2_1 -> layer0_attn_2_1;
+    layer0_v_2_1 -> layer0_attn_2_1;
+    
+    layer0_q_2_2 -> layer0_attn_2_2;
+    layer0_k_2_2 -> layer0_attn_2_2;
+    layer0_v_2_2 -> layer0_attn_2_2;
+    
+    layer0_q_2_3 -> layer0_attn_2_3;
+    layer0_k_2_3 -> layer0_attn_2_3;
+    layer0_v_2_3 -> layer0_attn_2_3;
+    
+    layer0_q_3_0 -> layer0_attn_3_0;
+    layer0_k_3_0 -> layer0_attn_3_0;
+    layer0_v_3_0 -> layer0_attn_3_0;
+    
+    layer0_q_3_1 -> layer0_attn_3_1;
+    layer0_k_3_1 -> layer0_attn_3_1;
+    layer0_v_3_1 -> layer0_attn_3_1;
+    
+    layer0_q_3_2 -> layer0_attn_3_2;
+    layer0_k_3_2 -> layer0_attn_3_2;
+    layer0_v_3_2 -> layer0_attn_3_2;
+    
+    layer0_q_3_3 -> layer0_attn_3_3;
+    layer0_k_3_3 -> layer0_attn_3_3;
+    layer0_v_3_3 -> layer0_attn_3_3;
+    
+    /* Attention to concatenation */
+    layer0_attn_0_0 -> layer0_hg0_concat;
+    layer0_attn_0_1 -> layer0_hg0_concat;
+    layer0_attn_0_2 -> layer0_hg0_concat;
+    layer0_attn_0_3 -> layer0_hg0_concat;
+    
+    layer0_attn_1_0 -> layer0_hg1_concat;
+    layer0_attn_1_1 -> layer0_hg1_concat;
+    layer0_attn_1_2 -> layer0_hg1_concat;
+    layer0_attn_1_3 -> layer0_hg1_concat;
+    
+    layer0_attn_2_0 -> layer0_hg2_concat;
+    layer0_attn_2_1 -> layer0_hg2_concat;
+    layer0_attn_2_2 -> layer0_hg2_concat;
+    layer0_attn_2_3 -> layer0_hg2_concat;
+    
+    layer0_attn_3_0 -> layer0_hg3_concat;
+    layer0_attn_3_1 -> layer0_hg3_concat;
+    layer0_attn_3_2 -> layer0_hg3_concat;
+    layer0_attn_3_3 -> layer0_hg3_concat;
+    
+    /* Intra-group to inter-group concatenation */
+    layer0_hg0_concat -> layer0_inter_concat;
+    layer0_hg1_concat -> layer0_inter_concat;
+    layer0_hg2_concat -> layer0_inter_concat;
+    layer0_hg3_concat -> layer0_inter_concat;
+    
+    /* MLP connections */
+    input -> layer0_mlp_residual;
+    layer0_inter_concat -> layer0_mlp_residual;
+    layer0_mlp_residual -> layer0_mlp_fc1;
+    layer0_mlp_fc1 -> layer0_mlp_fc2;
+    layer0_mlp_residual -> layer0_mlp_residual;
+    layer0_mlp_fc2 -> layer0_mlp_residual;
+    
+    /* Connect to next layers */
+    layer0_mlp_residual -> layer1_pattern;
+    layer1_pattern -> layer1_concat;
+    input -> layer1_concat;
+    layer1_concat -> layer1_mlp_residual;
+    layer1_mlp_residual -> layer2_pattern;
+    layer2_pattern -> layer2_concat;
+    layer1_mlp_residual -> layer2_concat;
+    layer2_concat -> layer2_mlp_residual;
+    layer2_mlp_residual -> layer3_pattern;
+    layer3_pattern -> layer3_concat;
+    layer2_mlp_residual -> layer3_concat;
+    layer3_concat -> layer3_mlp_residual;
+    layer3_mlp_residual -> output;
+}
