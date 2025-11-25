@@ -1,120 +1,125 @@
-digraph G {
+digraph MoE_Proposed_EP16 {
     rankdir=TB;
-    node [shape=rectangle, style=filled];
+    size="25,35";
+    node [fontname="Arial", fontsize=10];
     
-    // Title
-    label="Proposed: Ring Attention + Sequence Parallelism (16 devices)";
-    labelloc="t";
-    fontsize=24;
+    // Input
+    input [label="Model Input\nbatch_size=128, seq_len=10000, d_model=4096" 
+           shape=ellipse, fillcolor=lightgreen, style=filled];
     
-    // Input node
-    input [shape=ellipse, label="Input\nInput: [batch=1024, seq=10000, hidden=8192]\nGPU: Host"];
-    
-    // Sequence split across devices
-    sequence_split [shape=parallelogram, label="Sequence Split\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=625, hidden=8192] x 16\nGPU: All 16"];
-    
-    // ===== Layer 0 =====
+    // Representative Layer 0 (all 16 layers follow same pattern)
     subgraph cluster_layer0 {
-        label="Layer 0 (All Devices)";
-        style=dashed;
+        label="Layer 0 (Representative)\n16 Total Layers";
+        color=blue;
         
-        // Loop through all devices
-        subgraph cluster_device0 {
-            label="GPU 0 (Seq 0-624)";
-            style=dotted;
+        // MHA - split across 256 GPUs as needed
+        l0_mha [label="Multi-Head Attention\nIn: [128,10000,4096]\nOut: [128,10000,4096]\nParallel across GPUs" 
+               shape=rectangle, fillcolor=lightcoral, style=filled];
+        
+        // Routing
+        l0_route [label="Token Routing\nIn: [128,10000,4096]\nOut: [128,10000,2] gate scores + [tokens,4096] data\nGPUs: 0-15" 
+                 shape=parallelogram, fillcolor=orange, style=filled];
+        
+        // 16 experts - one per GPU
+        subgraph cluster_experts_l0 {
+            label="16 Experts (1 per GPU)";
+            color=lightgray;
             
-            // Embedding for device 0
-            emb0 [label="Embedding\nInput: [batch=1024, seq=625, hidden=8192]\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
-            
-            // Layer Norm
-            ln0_0 [label="LayerNorm\nInput: [batch=1024, seq=625, hidden=8192]\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
-            
-            // QKV projections (full parameters, local computation)
-            q_proj0_0 [label="Q Projection\nInput: [batch=1024, seq=625, hidden=8192]\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
-            k_proj0_0 [label="K Projection\nInput: [batch=1024, seq=625, hidden=8192]\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
-            v_proj0_0 [label="V Projection\nInput: [batch=1024, seq=625, hidden=8192]\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
-            
-            // Ring attention components
-            ring_attn0_0 [label="Local Q Computation\nInput: [batch=1024, seq=625, hidden=8192]\nOutput: [batch=1024, seq=625, heads=16, dim=512]\nGPU: 0"];
-            
-            // KV ring exchange for 16 stages
-            kv_send0_0 [shape=ellipse, label="Send KV\nInput: [batch=1024, seq=625, hidden=8192]\nOutput: → GPU 1\nGPU: 0"];
-            kv_recv0_0 [shape=ellipse, label="Recv KV\nInput: ← GPU 15\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
-            
-            // Attention computation
-            attn0_0 [label="Attention\nInput: Q[batch=1024, seq=625, heads=16, dim=512]\n       K[batch=1024, seq=625, heads=16, dim=512]\n       V[batch=1024, seq=625, heads=16, dim=512]\nOutput: [batch=1024, seq=625, heads=16, dim=512]\nGPU: 0"];
-            
-            // Output projection
-            out_proj0_0 [label="Output Projection\nInput: [batch=1024, seq=625, heads=16, dim=512]\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
-            
-            // Residual
-            residual0_0 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=625, hidden=8192] x2\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
-            
-            // MLP
-            gate0_0 [label="Gate Projection\nInput: [batch=1024, seq=625, hidden=8192]\nOutput: [batch=1024, seq=625, hidden=32768]\nGPU: 0"];
-            up0_0 [label="Up Projection\nInput: [batch=1024, seq=625, hidden=8192]\nOutput: [batch=1024, seq=625, hidden=32768]\nGPU: 0"];
-            silu0_0 [label="SiLU\nInput: [batch=1024, seq=625, hidden=32768]\nOutput: [batch=1024, seq=625, hidden=32768]\nGPU: 0"];
-            mul0_0 [label="Elementwise Mul\nInput: [batch=1024, seq=625, hidden=32768] x2\nOutput: [batch=1024, seq=625, hidden=32768]\nGPU: 0"];
-            down0_0 [label="Down Projection\nInput: [batch=1024, seq=625, hidden=32768]\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
-            residual_mlp0_0 [shape=parallelogram, label="Add\nInput: [batch=1024, seq=625, hidden=8192] x2\nOutput: [batch=1024, seq=625, hidden=8192]\nGPU: 0"];
+            l0_exp0 [label="Expert 0\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 0" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp1 [label="Expert 1\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 1" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp2 [label="Expert 2\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 2" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp3 [label="Expert 3\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 3" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp4 [label="Expert 4\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 4" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp5 [label="Expert 5\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 5" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp6 [label="Expert 6\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 6" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp7 [label="Expert 7\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 7" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp8 [label="Expert 8\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 8" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp9 [label="Expert 9\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 9" 
+                    shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp10 [label="Expert 10\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 10" 
+                     shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp11 [label="Expert 11\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 11" 
+                      shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp12 [label="Expert 12\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 12" 
+                      shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp13 [label="Expert 13\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 13" 
+                      shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp14 [label="Expert 14\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 14" 
+                      shape=rectangle, fillcolor=lightyellow, style=filled];
+            l0_exp15 [label="Expert 15\nIn: [tokens,4096]\nOut: [tokens,4096]\nGPU: 15" 
+                      shape=rectangle, fillcolor=lightyellow, style=filled];
         }
         
-        // Repeat for device 1 (simplified representation)
-        device1_rep [label="...\nGPU 1-15\n(Same structure as GPU 0)"];
-    }
-    
-    // Ring topology connections
-    ring_topology [shape=ellipse, label="Ring Topology\nKV exchange in 16 stages\nGPU 0→1→2→...→15→0"];
-    
-    // ===== Layer 1 (repeated for all layers) =====
-    subgraph cluster_layer1_all {
-        label="Layer 1-3 (All Devices - Same Structure)";
-        style=dashed;
+        // Aggregation
+        l0_aggregate [label="Token Aggregation\nIn: [tokens,4096] from 16 experts\nOut: [128,10000,4096]\nGPUs: 0-15" 
+                     shape=parallelogram, fillcolor=lightblue, style=filled];
         
-        layer1_rep [label="Layers 1-3\nSame structure repeated\n16 devices, 625 tokens each"];
+        // Residual
+        l0_residual [label="Add & LayerNorm\nIn: [128,10000,4096] + [128,10000,4096]\nOut: [128,10000,4096]\nAll GPUs" 
+                    shape=ellipse, fillcolor=lightgreen, style=filled];
     }
     
-    // Sequence gather
-    sequence_gather [shape=parallelogram, label="Sequence Gather\nInput: [batch=1024, seq=625, hidden=8192] x 16\nOutput: [batch=1024, seq=10000, hidden=8192]\nGPU: All 16"];
+    // Layer connections (representing all 16 layers)
+    input -> l0_mha;
+    l0_mha -> l0_route;
+    l0_route -> l0_exp0 [label="async route"];
+    l0_route -> l0_exp1 [label="async route"];
+    l0_route -> l0_exp2 [label="async route"];
+    l0_route -> l0_exp3 [label="async route"];
+    l0_route -> l0_exp4 [label="async route"];
+    l0_route -> l0_exp5 [label="async route"];
+    l0_route -> l0_exp6 [label="async route"];
+    l0_route -> l0_exp7 [label="async route"];
+    l0_route -> l0_exp8 [label="async route"];
+    l0_route -> l0_exp9 [label="async route"];
+    l0_route -> l0_exp10 [label="async route"];
+    l0_route -> l0_exp11 [label="async route"];
+    l0_route -> l0_exp12 [label="async route"];
+    l0_route -> l0_exp13 [label="async route"];
+    l0_route -> l0_exp14 [label="async route"];
+    l0_route -> l0_exp15 [label="async route"];
     
-    // Final output
-    output [shape=ellipse, label="Output\nInput: [batch=1024, seq=10000, hidden=8192]\nOutput: [batch=1024, seq=10000, vocab_size]\nGPU: All 16"];
+    l0_exp0 -> l0_aggregate [label="async gather"];
+    l0_exp1 -> l0_aggregate [label="async gather"];
+    l0_exp2 -> l0_aggregate [label="async gather"];
+    l0_exp3 -> l0_aggregate [label="async gather"];
+    l0_exp4 -> l0_aggregate [label="async gather"];
+    l0_exp5 -> l0_aggregate [label="async gather"];
+    l0_exp6 -> l0_aggregate [label="async gather"];
+    l0_exp7 -> l0_aggregate [label="async gather"];
+    l0_exp8 -> l0_aggregate [label="async gather"];
+    l0_exp9 -> l0_aggregate [label="async gather"];
+    l0_exp10 -> l0_aggregate [label="async gather"];
+    l0_exp11 -> l0_aggregate [label="async gather"];
+    l0_exp12 -> l0_aggregate [label="async gather"];
+    l0_exp13 -> l0_aggregate [label="async gather"];
+    l0_exp14 -> l0_aggregate [label="async gather"];
+    l0_exp15 -> l0_aggregate [label="async gather"];
     
-    // Connections
-    input -> sequence_split;
+    l0_aggregate -> l0_residual;
     
-    // Device 0 connections
-    sequence_split -> emb0;
-    emb0 -> ln0_0;
-    ln0_0 -> q_proj0_0;
-    ln0_0 -> k_proj0_0;
-    ln0_0 -> v_proj0_0;
+    // Output
+    output [label="Model Output\nbatch_size=128, seq_len=10000, d_model=4096" 
+           shape=ellipse, fillcolor=lightgreen, style=filled];
     
-    q_proj0_0 -> ring_attn0_0;
-    k_proj0_0 -> kv_send0_0;
-    v_proj0_0 -> kv_send0_0;
+    // Layer repetition indication
+    layer_rep [label=<<table border="0" cellborder="1" cellspacing="0">
+        <tr><td><b>Architecture Overview</b></td></tr>
+        <tr><td>16 Total Layers (0-15)</td></tr>
+        <tr><td>256 GPUs (16 layers × 16 experts)</td></tr>
+        <tr><td>1 Expert per GPU</td></tr>
+        <tr><td>Each layer: MHA -> Route -> 16 Experts -> Aggregate -> Residual</td></tr>
+        <tr><td>Async all-to-all communication</td></tr>
+        </table>>, shape=plaintext];
     
-    kv_recv0_0 -> attn0_0;
-    ring_attn0_0 -> attn0_0;
-    
-    attn0_0 -> out_proj0_0;
-    out_proj0_0 -> residual0_0;
-    emb0 -> residual0_0;
-    
-    residual0_0 -> gate0_0;
-    residual0_0 -> up0_0;
-    gate0_0 -> silu0_0;
-    up0_0 -> mul0_0;
-    silu0_0 -> mul0_0;
-    mul0_0 -> down0_0;
-    down0_0 -> residual_mlp0_0;
-    residual0_0 -> residual_mlp0_0;
-    
-    // Connect to layer representation
-    residual_mlp0_0 -> layer1_rep;
-    layer1_rep -> sequence_gather;
-    sequence_gather -> output;
-    
-    // Ring topology visualization
-    kv_send0_0 -> ring_topology [style=dashed];
-    ring_topology -> kv_recv0_0 [style=dashed];
+    l0_residual -> output [label="x16 layers"];
+}

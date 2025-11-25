@@ -1,0 +1,126 @@
+digraph MoE_Baseline_TP8_PP2_Final {
+    rankdir=TB;
+    size="20,25";
+    node [fontname="Arial", fontsize=10];
+    
+    // Model Input
+    input [label="Input\nGPU: ALL\nIn: [batch_size=128, seq_len=10000, d_model=4096]\nOut: [batch_size=128, seq_len=10000, d_model=4096]" 
+           shape=ellipse, fillcolor=lightgreen, style=filled];
+    
+    // Pipeline Stage 0 (Layers 0-7)
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0\nLayers 0-7, GPUs 0-7";
+        color=blue;
+        
+        // Layer 0 - Full specification
+        l0_mha [label="Layer 0 MHA\nGPU: 0-7 (TP8)\nIn: [128,10000,4096]\nOut: [128,10000,4096]" 
+               shape=rectangle, fillcolor=lightcoral, style=filled];
+        
+        l0_gate [label="Layer 0 Gate\nGPU: 0\nIn: [128,10000,4096]\nOut: [128,10000,2]" 
+                  shape=parallelogram, fillcolor=orange, style=filled];
+        
+        l0_exp0 [label="Expert 0\nGPU: 0\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l0_exp1 [label="Expert 1\nGPU: 1\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l0_exp2 [label="Expert 2\nGPU: 2\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l0_exp3 [label="Expert 3\nGPU: 3\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l0_exp4 [label="Expert 4\nGPU: 0\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l0_exp5 [label="Expert 5\nGPU: 1\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l0_exp6 [label="Expert 6\nGPU: 2\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l0_exp7 [label="Expert 7\nGPU: 3\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        
+        l0_aggregate [label="Layer 0 Aggregate\nGPU: 0-7\nIn: [tokens,4096] x8\nOut: [128,10000,4096]" 
+                      shape=parallelogram, fillcolor=lightblue, style=filled];
+        
+        l0_residual [label="Layer 0 Residual\nGPU: 0-7\nIn: [128,10000,4096] x2\nOut: [128,10000,4096]" 
+                     shape=ellipse, fillcolor=lightgreen, style=filled];
+    }
+    
+    // Pipeline Stage 1 (Layers 8-15)
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1\nLayers 8-15, GPUs 8-15";
+        color=red;
+        
+        // Layer 8 - Full specification
+        l8_mha [label="Layer 8 MHA\nGPU: 8-15 (TP8)\nIn: [128,10000,4096]\nOut: [128,10000,4096]" 
+               shape=rectangle, fillcolor=lightcoral, style=filled];
+        
+        l8_gate [label="Layer 8 Gate\nGPU: 8\nIn: [128,10000,4096]\nOut: [128,10000,2]" 
+                  shape=parallelogram, fillcolor=orange, style=filled];
+        
+        l8_exp0 [label="Expert 8\nGPU: 8\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l8_exp1 [label="Expert 9\nGPU: 9\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l8_exp2 [label="Expert 10\nGPU: 10\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l8_exp3 [label="Expert 11\nGPU: 11\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l8_exp4 [label="Expert 12\nGPU: 12\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l8_exp5 [label="Expert 13\nGPU: 13\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l8_exp6 [label="Expert 14\nGPU: 14\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        l8_exp7 [label="Expert 15\nGPU: 15\nIn: [tokens,4096]\nOut: [tokens,4096]" 
+                  shape=rectangle, fillcolor=lightyellow, style=filled];
+        
+        l8_aggregate [label="Layer 8 Aggregate\nGPU: 8-15\nIn: [tokens,4096] x8\nOut: [128,10000,4096]" 
+                      shape=parallelogram, fillcolor=lightblue, style=filled];
+        
+        l8_residual [label="Layer 8 Residual\nGPU: 8-15\nIn: [128,10000,4096] x2\nOut: [128,10000,4096]" 
+                     shape=ellipse, fillcolor=lightgreen, style=filled];
+    }
+    
+    // Model Output
+    output [label="Output\nGPU: ALL\nIn: [128,10000,4096]\nOut: [128,10000,4096]" 
+            shape=ellipse, fillcolor=lightgreen, style=filled];
+    
+    // Connections - acyclic structure
+    input -> l0_mha;
+    l0_mha -> l0_gate;
+    l0_gate -> l0_exp0 [label="route"];
+    l0_gate -> l0_exp1 [label="route"];
+    l0_gate -> l0_exp2 [label="route"];
+    l0_gate -> l0_exp3 [label="route"];
+    l0_gate -> l0_exp4 [label="route"];
+    l0_gate -> l0_exp5 [label="route"];
+    l0_gate -> l0_exp6 [label="route"];
+    l0_gate -> l0_exp7 [label="route"];
+    
+    {l0_exp0 l0_exp1 l0_exp2 l0_exp3 l0_exp4 l0_exp5 l0_exp6 l0_exp7} -> l0_aggregate;
+    l0_aggregate -> l0_residual;
+    l0_residual -> l8_mha [label="pipeline stage transfer"];
+    
+    l8_mha -> l8_gate;
+    l8_gate -> l8_exp0 [label="route"];
+    l8_gate -> l8_exp1 [label="route"];
+    l8_gate -> l8_exp2 [label="route"];
+    l8_gate -> l8_exp3 [label="route"];
+    l8_gate -> l8_exp4 [label="route"];
+    l8_gate -> l8_exp5 [label="route"];
+    l8_gate -> l8_exp6 [label="route"];
+    l8_gate -> l8_exp7 [label="route"];
+    
+    {l8_exp0 l8_exp1 l8_exp2 l8_exp3 l8_exp4 l8_exp5 l8_exp6 l8_exp7} -> l8_aggregate;
+    l8_aggregate -> l8_residual;
+    l8_residual -> output [label="through layers 1-7,9-15"];
+    
+    // Architecture summary
+    summary [label=<<table border="0" cellborder="1" cellspacing="0">
+        <tr><td><b>Baseline Architecture</b></td></tr>
+        <tr><td>16 Layers Total</td></tr>
+        <tr><td>2 Pipeline Stages</td></tr>
+        <tr><td>8 GPUs per Stage</td></tr>
+        <tr><td>Tensor Parallelism: 8</td></tr>
+        <tr><td>Experts per GPU: 2</td></tr>
+        <tr><td>Total GPUs: 16</td></tr>
+        </table>>, shape=plaintext];
+}

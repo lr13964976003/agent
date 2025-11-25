@@ -1,0 +1,69 @@
+digraph MoE_Proposed_EP16_Final {
+    rankdir=TB;
+    size="25,30";
+    node [fontname="Arial", fontsize=10];
+    
+    // Model Input
+    input [label="Input\nGPU: ALL\nIn: [batch_size=128, seq_len=10000, d_model=4096]\nOut: [batch_size=128, seq_len=10000, d_model=4096]" 
+           shape=ellipse, fillcolor=lightgreen, style=filled];
+    
+    // Representative Layer Pattern (applies to all 16 layers)
+    subgraph cluster_layer_pattern {
+        label="Layer Pattern (16 Total Layers)";
+        color=blue;
+        
+        // Multi-Head Attention
+        mha [label="MHA\nGPU: 0-255\nIn: [128,10000,4096]\nOut: [128,10000,4096]" 
+             shape=rectangle, fillcolor=lightcoral, style=filled];
+        
+        // Gate for routing tokens
+        gate [label="Gate\nGPU: layer_gpu\nIn: [128,10000,4096]\nOut: [128,10000,2]" 
+              shape=parallelogram, fillcolor=orange, style=filled];
+        
+        // Token routing (async)
+        route [label="Route Tokens\nGPU: 0-255\nIn: [128,10000,4096]\nOut: [tokens,4096] routed" 
+               shape=parallelogram, fillcolor=lightblue, style=filled];
+        
+        // Expert cluster - 16 experts, 1 per GPU
+        subgraph cluster_experts {
+            label="16 Experts (1 per GPU)";
+            color=lightgray;
+            
+            expert_template [label="Expert N\nGPU: layer×16+N\nIn: [tokens,4096]\nOut: [tokens,4096]\nN=0..15" 
+                            shape=rectangle, fillcolor=lightyellow, style=filled];
+        }
+        
+        // Token aggregation
+        aggregate [label="Aggregate\nGPU: 0-255\nIn: [tokens,4096] from 16 experts\nOut: [128,10000,4096]" 
+                   shape=parallelogram, fillcolor=lightblue, style=filled];
+        
+        // Residual connection
+        residual [label="Add+Norm\nGPU: 0-255\nIn: [128,10000,4096]×2\nOut: [128,10000,4096]" 
+                  shape=ellipse, fillcolor=lightgreen, style=filled];
+    }
+    
+    // Model Output
+    output [label="Output\nGPU: ALL\nIn: [128,10000,4096]\nOut: [128,10000,4096]" 
+            shape=ellipse, fillcolor=lightgreen, style=filled];
+    
+    // Connections
+    input -> mha;
+    mha -> gate;
+    gate -> route [style=dashed, label="gate scores"];
+    mha -> route [style=dashed, label="tokens"];
+    route -> expert_template [label="async route to 16 experts"];
+    expert_template -> aggregate [label="async gather"];
+    aggregate -> residual;
+    residual -> output [label="x16 layers"];
+    
+    // Architecture summary
+    summary [label=<<table border="0" cellborder="1" cellspacing="0">
+        <tr><td><b>Proposed Architecture</b></td></tr>
+        <tr><td>16 Layers Total</td></tr>
+        <tr><td>256 GPUs Total</td></tr>
+        <tr><td>Experts per Layer: 16</td></tr>
+        <tr><td>GPUs per Expert: 1</td></tr>
+        <tr><td>Expert Parallelism: 16</td></tr>
+        <tr><td>1 Expert per GPU Rule</td></tr>
+        </table>>, shape=plaintext];
+}
