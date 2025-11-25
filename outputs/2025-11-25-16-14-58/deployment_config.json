@@ -1,0 +1,174 @@
+{
+  "model_config": {
+    "type": "MoE_Transformer",
+    "layers": 16,
+    "experts_per_layer": 16,
+    "token_dimension": 4096,
+    "mlp_hidden_size": 16384,
+    "mha_heads": 32,
+    "mha_head_dimension": 128,
+    "precision": "BF16",
+    "batch_size": 128,
+    "sequence_length": 10000,
+    "total_experts": 256
+  },
+  "baseline_deployment": {
+    "name": "Standard_TP_PP",
+    "parallel_strategy": {
+      "tensor_parallelism": 8,
+      "pipeline_parallelism": 2,
+      "expert_parallelism": 1,
+      "data_parallelism": 1
+    },
+    "device_mapping": {
+      "total_gpus": 16,
+      "gpu_specifications": {
+        "compute_tflops": 400,
+        "vram_gb": 64,
+        "bandwidth_tbps": 1.8,
+        "mfu_target": 0.6,
+        "bandwidth_utilization": 0.8
+      },
+      "tensor_parallel_sharding": {
+        "device_groups": [[0,1,2,3,4,5,6,7], [8,9,10,11,12,13,14,15]],
+        "sharding_dimension": "column_then_row",
+        "parameters_per_device": {
+          "attention_weights": "4096x4096/8 = 2MB",
+          "mlp_weights_layer1": "4096x16384/8 = 8MB",
+          "mlp_weights_layer2": "16384x4096/8 = 8MB",
+          "expert_parameters": "all_16_experts_per_gpu"
+        }
+      },
+      "pipeline_stages": {
+        "stage_0_devices": [0,1,2,3,4,5,6,7],
+        "stage_1_devices": [8,9,10,11,12,13,14,15],
+        "layers_per_stage": 8
+      }
+    },
+    "routing": {
+      "type": "local_expert_routing",
+      "experts_per_gpu": 16,
+      "intra_gpu_contention": true
+    },
+    "communication": {
+      "tensor_parallel_allreduce": "NCCL",
+      "pipeline_parallel_sendrecv": "NCCL",
+      "expert_parallel_none": true
+    },
+    "performance": {
+      "throughput_tps": 120000,
+      "latency_tpot_ms": 8.3
+    }
+  },
+  "proposed_deployment": {
+    "name": "Large_EP_Cross_Node",
+    "parallel_strategy": {
+      "expert_parallelism": 16,
+      "tensor_parallelism": 1,
+      "pipeline_parallelism": 1,
+      "data_parallelism": 1
+    },
+    "device_mapping": {
+      "total_gpus": 256,
+      "gpu_specifications": {
+        "compute_tflops": 400,
+        "vram_gb": 64,
+        "bandwidth_tbps": 1.8,
+        "mfu_target": 0.6,
+        "bandwidth_utilization": 0.8
+      },
+      "expert_placement": {
+        "strategy": "one_expert_per_gpu_per_layer",
+        "expert_distribution": {
+          "layer_0": {
+            "expert_0": {"device": 0},
+            "expert_1": {"device": 1},
+            "expert_2": {"device": 2},
+            "expert_3": {"device": 3},
+            "expert_4": {"device": 4},
+            "expert_5": {"device": 5},
+            "expert_6": {"device": 6},
+            "expert_7": {"device": 7},
+            "expert_8": {"device": 8},
+            "expert_9": {"device": 9},
+            "expert_10": {"device": 10},
+            "expert_11": {"device": 11},
+            "expert_12": {"device": 12},
+            "expert_13": {"device": 13},
+            "expert_14": {"device": 14},
+            "expert_15": {"device": 15}
+          },
+          "layer_pattern": "repeated_for_all_16_layers",
+          "layer_1_devices": [16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],
+          "layer_2_devices": [32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],
+          "layer_3_devices": [48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63],
+          "layer_4_devices": [64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79],
+          "layer_5_devices": [80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95],
+          "layer_6_devices": [96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111],
+          "layer_7_devices": [112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127],
+          "layer_8_devices": [128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143],
+          "layer_9_devices": [144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159],
+          "layer_10_devices": [160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175],
+          "layer_11_devices": [176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191],
+          "layer_12_devices": [192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207],
+          "layer_13_devices": [208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223],
+          "layer_14_devices": [224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239],
+          "layer_15_devices": [240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255]
+        }
+      },
+      "per_expert_parameters": {
+        "mlp_layer1_weights": "4096x16384 = 64MB",
+        "mlp_layer2_weights": "16384x4096 = 64MB",
+        "total_per_expert": "128MB",
+        "memory_per_gpu": "128MB (single expert)"
+      }
+    },
+    "routing": {
+      "type": "cross_node_expert_routing",
+      "gating": {
+        "mechanism": "top_k",
+        "k": 2,
+        "asynchronous": true
+      },
+      "token_batching": {
+        "strategy": "group_by_destination_expert",
+        "batch_size": "dynamically_adjusted"
+      },
+      "load_balancing": {
+        "dynamic_adjustment": true,
+        "monitoring": "per_expert_load",
+        "gating_probability_adjustment": "real_time"
+      }
+    },
+    "communication": {
+      "protocol": "NCCL",
+      "overlap_strategy": "compute_communication_interleaving",
+      "cuda_streams": "dedicated_for_communication",
+      "message_types": {
+        "token_transfer": "async_sendrecv",
+        "expert_outputs": "async_gather"
+      },
+      "topology_aware": true,
+      "bandwidth_optimization": {
+        "minimize_max_link_utilization": true,
+        "balance_token_distribution": true
+      }
+    },
+    "pipeline_optimization": {
+      "layer_scheduling": "fine_grained",
+      "partial_batch_processing": true,
+      "immediate_routing": true
+    },
+    "performance": {
+      "throughput_tps": 450000,
+      "latency_tpot_ms": 2.2,
+      "scaling_efficiency": "near_linear_for_ep_ge_16"
+    }
+  },
+  "deployment_validation": {
+    "ep_regime": ">=16",
+    "network_constraint": "bandwidth_limited",
+    "memory_constraint": "per_expert_128MB",
+    "compute_utilization": "maximized_per_expert"
+  }
+}
