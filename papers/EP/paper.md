@@ -205,10 +205,10 @@ Our method provides:
 ### **1. Experimental Setup**
 
 
-We evaluate the proposed large-scale cross-node expert parallelism method in an **inference-only** setting using H100 GPUs. The model and configuration are as follows:
+We evaluate the proposed large-scale cross-node expert parallelism method in an **inference-only** setting using adequate H100 GPUs. The model and configuration are as follows:
 
 
-* **Model**: 16-layer Mixture-of-Experts (MoE), 16 experts per layer, each expert is a MLP
+* **Model**: 16-layer Mixture-of-Experts (MoE), each expert is a MLP
 * **Precision**: BF16
 * **Batch size**: Each batch consists of 128 sequences.
 * **Sequence Length**: 10000 tokens per sequence.
@@ -233,20 +233,19 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 #### **2.1 Baseline Deployment (TP=8, PP=2)**
 
 
-* **GPUs Used**: 16 H100
+* **GPUs Used**: adequate H100 GPUs
 * **Per-GPU Allocation**:
 
 
-  * Each GPU holds 1/8 of the tensor-parallel shard for all layers.
-  * Each pipeline stage (2 stages total) spans 8 GPUs.
-  * Experts are colocated on GPUs, typically 8 experts each layer per GPU.
+  * Each GPU holds  tensor-parallel shard for all layers.
+  * Experts are colocated on GPUs.
 * **Processing**: Tokens flow sequentially through the pipeline stages, and multiple experts per GPU share compute resources.
 
 
 #### **2.2 Proposed Cross-Node Expert Parallelism**
 
 
-* **GPUs Used**: 16 H100 (one GPU per expert per layer)
+* **GPUs Used**: adequate H100 GPUs (one GPU per expert per layer)
 * **Per-GPU Allocation**:
 
 
@@ -269,8 +268,8 @@ This deployment ensures **all 16 experts per layer compute in parallel**, maximi
 
 | Method                                 | GPUs Used | Per-GPU Deployment           | TPS (Tokens/s) | TPOT (ms) |
 | -------------------------------------- | --------- | ---------------------------- | -------------- | --------- |
-| Baseline (TP=8, PP=2)                  | 16        | 8 experts each layer + TP shard per GPU | 120,000        | 8.3       |
-| Proposed Cross-Node Expert Parallelism | 16        | 1 expert each layer per GPU             | 450,000        | 2.2       |
+| Baseline (TP=8, PP=2)                  | adequate  | TP shard per GPU             | 120,000        | 8.3       |
+| Proposed Cross-Node Expert Parallelism | adequate  | 1 expert each layer per GPU  | 450,000        | 2.2       |
 
 
 **Notes:**
@@ -301,7 +300,7 @@ In this work, we proposed a **large-scale cross-node expert parallelism** method
 
 
 We demonstrated the effectiveness of our method in an **inference-only setting** on a 4-layer, 16-expert-per-layer MoE model using FP16 precision and a batch size of 1024. Compared to a baseline configuration with TP=8 and PP=2, our approach achieved **~3.75× higher throughput** and **~3.8× lower latency** by fully utilizing all 16 GPUs and enabling large Expert Parallelism (EP ≥ 16). The results confirm that distributing experts across GPUs and overlapping communication and computation can dramatically improve performance for large-scale MoE deployments.
-
+S
 
 Our method provides a **scalable blueprint** for future high-performance MoE inference, particularly in environments with abundant GPU resources such as H100 clusters. Future work may explore extending this approach to **training scenarios**, integrating **dynamic expert routing** for adaptive load balancing, and optimizing communication strategies for **even larger models with thousands of experts**.
 ```
