@@ -40,6 +40,14 @@ Information from different dimensions must be separated by commas.<<<不同维�
 
 Require that the information within each node in DAG must include the shapes of the input and output tensors, as well as the GPU ID. <<<要求每个节点内的信息必须包含输入输出张量的形状，所在GPU序号>>>
 
+Nodes in DAG containing multiple operators must be split. <<<包含多个算子的DAG图节点必须拆分>>>
+
+One layer in the model consists of a Multi-Head Attention along with an FFN(Gate and Experts). <<<模型中的一层由多头注意力机制以及前馈神经网络（包括门控和专家模块）组成>>>
+
+Both MHA and MLP need to be expanded into single operators; they cannot be written as a single entity. <<<MHA和MLP都要展开成单算子，不能写成一个整体>>>
+
+The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意DAG中不能漏残差的边>>>
+
 Please analyze how the dimensions of the tensor on each node will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析张量维度变化是否正确>>>
 
 The aggregation and split of tensor need to be represented by nodes. <<<显示张量的聚合与分割>>>
@@ -61,13 +69,7 @@ The generated DAG must not contain any cycles.<<<禁止有环>>>
 
 Except for the input node, each node in DAG must have a preceding input node; except for the output node, each node must output to another node. <<<禁止有空悬的节点>>>
 
-The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意DAG中不能漏残差的边>>>
-
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
-
-One layer in the model consists of a Multi-Head Attention along with an FFN(Gate and Experts). <<<模型中的一层由多头注意力机制以及前馈神经网络（包括门控和专家模块）组成>>>
-
-Nodes in DAG containing multiple operators must be split. <<<包含多个算子的DAG图节点必须拆分>>>
 
 In a batch, there are a total of batch size independent data points.<<<batch中数据是独立的>>>
 
@@ -104,6 +106,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
 Result: We will evaluate whether the deployment plan you generated is the optimal strategy.
+
 
 
 
