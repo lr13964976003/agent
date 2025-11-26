@@ -1,0 +1,167 @@
+{
+  "deployment_config": {
+    "model_config": {
+      "total_layers": 61,
+      "dense_layers": 3,
+      "moe_layers": 58,
+      "token_dimension": 7168,
+      "attention_heads": 128,
+      "attention_head_dimension": 128,
+      "mlp_hidden_size": 2048,
+      "precision": "BF16",
+      "variable_parameters": ["batch_size", "sequence_length"]
+    },
+    "hardware_specs": {
+      "gpu_type": "H100",
+      "single_card_compute": "400TFLOPS",
+      "mfu_utilization": 0.6,
+      "vram_bandwidth": "1.8TBps",
+      "bandwidth_utilization": 0.8,
+      "single_card_vram": "64GB"
+    },
+    "communication_specs": {
+      "async_routing": true,
+      "cuda_streams": true,
+      "cross_node_lib": ["NCCL", "MPI"],
+      "token_batching": true,
+      "topology_aware_placement": true
+    },
+    "proposed_approach": {
+      "name": "large_ep_method",
+      "expert_parallelism": 16,
+      "experts_per_layer": 16,
+      "total_gpus": 928,
+      "experts_per_gpu": 1,
+      "parallel_strategy": {
+        "type": "expert_parallelism",
+        "ep_degree": 16,
+        "tp_degree": 1,
+        "dp_degree": 1
+      },
+      "device_mapping": {
+        "layer_0_to_2": {
+          "type": "dense",
+          "gpu_assignment": "shared_across_layers"
+        },
+        "moe_layers_3_to_60": {
+          "expert_placement_strategy": "one_expert_per_gpu",
+          "layer_3": {
+            "expert_0": {"gpu_id": 0, "node_id": 0},
+            "expert_1": {"gpu_id": 1, "node_id": 0},
+            "expert_2": {"gpu_id": 2, "node_id": 0},
+            "expert_3": {"gpu_id": 3, "node_id": 0},
+            "expert_4": {"gpu_id": 4, "node_id": 1},
+            "expert_5": {"gpu_id": 5, "node_id": 1},
+            "expert_6": {"gpu_id": 6, "node_id": 1},
+            "expert_7": {"gpu_id": 7, "node_id": 1},
+            "expert_8": {"gpu_id": 8, "node_id": 2},
+            "expert_9": {"gpu_id": 9, "node_id": 2},
+            "expert_10": {"gpu_id": 10, "node_id": 2},
+            "expert_11": {"gpu_id": 11, "node_id": 2},
+            "expert_12": {"gpu_id": 12, "node_id": 3},
+            "expert_13": {"gpu_id": 13, "node_id": 3},
+            "expert_14": {"gpu_id": 14, "node_id": 3},
+            "expert_15": {"gpu_id": 15, "node_id": 3}
+          },
+          "general_mapping_pattern": {
+            "scheme": "sequential_assignment",
+            "gpu_offset_per_layer": 16,
+            "expert_to_gpu_mapping": "gpu_id = layer_offset + expert_id",
+            "total_experts": 928,
+            "gpu_range": "0-927"
+          }
+        }
+      },
+      "routing_config": {
+        "gating_mechanism": "top_k",
+        "k_value": 2,
+        "load_balancing": "dynamic",
+        "token_batching": true,
+        "async_communication": true
+      }
+    },
+    "baseline_approach": {
+      "name": "conventional_method",
+      "expert_parallelism": 4,
+      "experts_per_layer": 16,
+      "total_gpus": 232,
+      "experts_per_gpu": 4,
+      "parallel_strategy": {
+        "type": "expert_parallelism",
+        "ep_degree": 4,
+        "tp_degree": 1,
+        "dp_degree": 1
+      },
+      "device_mapping": {
+        "layer_0_to_2": {
+          "type": "dense",
+          "gpu_assignment": "shared_across_layers"
+        },
+        "moe_layers_3_to_60": {
+          "expert_placement_strategy": "multiple_experts_per_gpu",
+          "layer_3": {
+            "gpu_0": {
+              "experts": [0, 1, 2, 3],
+              "gpu_id": 0,
+              "node_id": 0
+            },
+            "gpu_1": {
+              "experts": [4, 5, 6, 7],
+              "gpu_id": 1,
+              "node_id": 0
+            },
+            "gpu_2": {
+              "experts": [8, 9, 10, 11],
+              "gpu_id": 2,
+              "node_id": 1
+            },
+            "gpu_3": {
+              "experts": [12, 13, 14, 15],
+              "gpu_id": 3,
+              "node_id": 1
+            }
+          },
+          "general_mapping_pattern": {
+            "scheme": "colocated_experts",
+            "experts_per_gpu": 4,
+            "total_experts": 928,
+            "gpu_range": "0-231"
+          }
+        }
+      },
+      "routing_config": {
+        "gating_mechanism": "top_k",
+        "k_value": 2,
+        "load_balancing": "static",
+        "local_routing": true,
+        "reduced_communication": true
+      }
+    },
+    "deployment_workflow": {
+      "preparation": {
+        "step_1": "Initialize NCCL/MPI communication fabric",
+        "step_2": "Load model weights and distribute across GPUs",
+        "step_3": "Establish topology-aware expert placement",
+        "step_4": "Configure CUDA streams for async communication"
+      },
+      "runtime": {
+        "step_1": "Token arrives at input layer",
+        "step_2": "Gating network selects top-k experts",
+        "step_3": "Asynchronously route tokens to expert GPUs",
+        "step_4": "Experts process tokens concurrently",
+        "step_5": "Collect results and route to next layer",
+        "step_6": "Repeat for all 61 layers"
+      }
+    },
+    "expert_parameters": {
+      "expert_type": "mlp",
+      "input_dimension": 7168,
+      "hidden_dimension": 2048,
+      "activation": "GELU",
+      "dropout": 0.0,
+      "precision": "BF16",
+      "weight_memory_per_expert": "28MB",
+      "activation_memory_per_expert": "14MB"
+    }
+  }
+}
