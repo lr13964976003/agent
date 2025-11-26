@@ -1,0 +1,34 @@
+// Simplified Large-Scale Cross-Node Expert Parallelism MoE DAG
+digraph {
+	rankdir=TB size="30,30"
+	node [fontname=Arial fontsize=12]
+	input [label="Input\n[batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	dense_block [label="Dense Layers (1-3)\nReplicated Across GPUs\nMHA + FFN" fillcolor=lightgreen shape=rectangle style=filled]
+	mha [label="Multi-Head Attention\nReplicated\n[batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	gate [label="Gating Network\nTop-K Selection\n[batch_size=batch_size, seq_len=seq_len, num_experts=16]" fillcolor=lightyellow shape=parallelogram style=filled]
+	route [label="Token Routing\nCross-Node Communication" fillcolor=lightblue shape=ellipse style=filled]
+	subgraph cluster_experts {
+		fillcolor=lightgray label="Expert Parallelism (16 Experts)" style="rounded,filled"
+		expert_0 [label="Expert 0\nGPU 0\nOne Expert Per GPU" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_1 [label="Expert 1\nGPU 1\nOne Expert Per GPU" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_2 [label="Expert 2\nGPU 2\nOne Expert Per GPU" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_3 [label="Expert 3\nGPU 3\nOne Expert Per GPU" fillcolor=lightgreen shape=rectangle style=filled]
+	}
+	aggregate [label="Expert Aggregation\nCross-Node Communication" fillcolor=lightblue shape=ellipse style=filled]
+	ffn [label="FFN Layer\nReplicated\n[batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	output [label="Output\n[batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	input -> dense_block
+	dense_block -> mha
+	mha -> gate
+	gate -> route
+	route -> expert_0
+	route -> expert_1
+	route -> expert_2
+	route -> expert_3
+	expert_0 -> aggregate
+	expert_1 -> aggregate
+	expert_2 -> aggregate
+	expert_3 -> aggregate
+	aggregate -> ffn
+	ffn -> output
+}

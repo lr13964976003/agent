@@ -1,0 +1,69 @@
+// Performance Comparison: Baseline vs Proposed Expert Parallelism
+digraph {
+	rankdir=LR size="20,15"
+	node [fontname=Arial fontsize=10]
+	subgraph cluster_baseline {
+		fillcolor=lightcoral label="Baseline: Multiple Experts per GPU" style="rounded,filled"
+		baseline_input [label="Input Tokens" fillcolor=lightgreen shape=rectangle]
+		baseline_route [label="Token Routing
+(Within Node)" fillcolor=lightblue shape=ellipse]
+		baseline_gpu0 [label="GPU 0
+4 Experts
+Contention" fillcolor=orange shape=rectangle]
+		baseline_gpu1 [label="GPU 1
+4 Experts
+Contention" fillcolor=orange shape=rectangle]
+		baseline_gpu2 [label="GPU 2
+4 Experts
+Contention" fillcolor=orange shape=rectangle]
+		baseline_gpu3 [label="GPU 3
+4 Experts
+Contention" fillcolor=orange shape=rectangle]
+		baseline_aggregate [label="Aggregation
+(Within Node)" fillcolor=lightblue shape=ellipse]
+		baseline_output [label="Output
+Lower Throughput" fillcolor=lightgreen shape=rectangle]
+		baseline_input -> baseline_route
+		baseline_route -> baseline_gpu0
+		baseline_route -> baseline_gpu1
+		baseline_route -> baseline_gpu2
+		baseline_route -> baseline_gpu3
+		baseline_gpu0 -> baseline_aggregate
+		baseline_gpu1 -> baseline_aggregate
+		baseline_gpu2 -> baseline_aggregate
+		baseline_gpu3 -> baseline_aggregate
+		baseline_aggregate -> baseline_output
+	}
+	subgraph cluster_proposed {
+		fillcolor=lightgreen label="Proposed: One Expert per GPU" style="rounded,filled"
+		proposed_input [label="Input Tokens" fillcolor=lightgreen shape=rectangle]
+		proposed_route [label="Token Routing
+(Cross-Node)" fillcolor=lightblue shape=ellipse]
+		proposed_gpu0 [label="GPU 0
+Expert 0
+No Contention" fillcolor=lightgreen shape=rectangle]
+		proposed_gpu1 [label="GPU 1
+Expert 1
+No Contention" fillcolor=lightgreen shape=rectangle]
+		proposed_gpu2 [label="GPU 2
+Expert 2
+No Contention" fillcolor=lightgreen shape=rectangle]
+		proposed_gpu15 [label="GPU 15
+Expert 15
+No Contention" fillcolor=lightgreen shape=rectangle]
+		proposed_aggregate [label="Aggregation
+(Cross-Node)" fillcolor=lightblue shape=ellipse]
+		proposed_output [label="Output
+Higher Throughput" fillcolor=lightgreen shape=rectangle]
+		proposed_input -> proposed_route
+		proposed_route -> proposed_gpu0
+		proposed_route -> proposed_gpu1
+		proposed_route -> proposed_gpu2
+		proposed_route -> proposed_gpu15
+		proposed_gpu0 -> proposed_aggregate
+		proposed_gpu1 -> proposed_aggregate
+		proposed_gpu2 -> proposed_aggregate
+		proposed_gpu15 -> proposed_aggregate
+		proposed_aggregate -> proposed_output
+	}
+}

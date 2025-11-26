@@ -1,0 +1,98 @@
+// Single MoE Layer - Large-Scale Cross-Node Expert Parallelism
+digraph {
+	rankdir=TB size="25,25"
+	node [fontname=Arial fontsize=10]
+	edge [fontname=Arial fontsize=8]
+	layer_input [label="Layer Input\nGPU: Distributed\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	mha [label="Multi-Head Attention\nGPU: Replicated Across Nodes\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]\nOutput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual1 [label="Residual Add 1\nGPU: Replicated\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168] x 2\nOutput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightyellow shape=parallelogram style=filled]
+	ln1 [label="Layer Norm 1\nGPU: Replicated\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]\nOutput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	gate [label="Gating Network (Top-2)\nGPU: Replicated per node\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]\nOutput: [batch_size=batch_size, seq_len=seq_len, num_experts=16]" fillcolor=lightyellow shape=parallelogram style=filled]
+	token_split [label="Token Split by Expert\nGPU: All GPUs\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]\nOutput: Expert-specific token subsets" fillcolor=lightblue shape=ellipse style=filled]
+	comm_node [label="Cross-Node Token Transfer\nGPU: NCCL Async\nInput: Token subsets\nOutput: Routed to destination GPUs" fillcolor=lightblue shape=ellipse style=filled]
+	subgraph cluster_experts {
+		fillcolor=lightgray label="Expert Parallelism - One Expert Per GPU" style="rounded,filled"
+		expert_0 [label="Expert 0 MLP\nGPU: 0\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_1 [label="Expert 1 MLP\nGPU: 1\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_2 [label="Expert 2 MLP\nGPU: 2\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_3 [label="Expert 3 MLP\nGPU: 3\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_4 [label="Expert 4 MLP\nGPU: 4\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_5 [label="Expert 5 MLP\nGPU: 5\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_6 [label="Expert 6 MLP\nGPU: 6\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_7 [label="Expert 7 MLP\nGPU: 7\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_8 [label="Expert 8 MLP\nGPU: 8\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_9 [label="Expert 9 MLP\nGPU: 9\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_10 [label="Expert 10 MLP\nGPU: 10\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_11 [label="Expert 11 MLP\nGPU: 11\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_12 [label="Expert 12 MLP\nGPU: 12\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_13 [label="Expert 13 MLP\nGPU: 13\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_14 [label="Expert 14 MLP\nGPU: 14\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+		expert_15 [label="Expert 15 MLP\nGPU: 15\nInput: [batch_size_subset, token_dim=7168]\nOutput: [batch_size_subset, token_dim=7168]\nHidden: 2048" fillcolor=lightgreen shape=rectangle style=filled]
+	}
+	expert_aggregate [label="Expert Output Aggregation\nGPU: All GPUs\nInput: [batch_size_subset, token_dim=7168] x 16\nOutput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightblue shape=ellipse style=filled]
+	weighted_combine [label="Weighted Combination\nGPU: Replicated\nInput: Expert outputs + Gate weights\nOutput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightyellow shape=parallelogram style=filled]
+	ffn [label="Feed-Forward Network\nGPU: Replicated\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]\nOutput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual2 [label="Residual Add 2\nGPU: Replicated\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168] x 2\nOutput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightyellow shape=parallelogram style=filled]
+	ln2 [label="Layer Norm 2\nGPU: Replicated\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]\nOutput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	layer_output [label="Layer Output\nGPU: Distributed\nInput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]\nOutput: [batch_size=batch_size, seq_len=seq_len, token_dim=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	layer_input -> mha
+	mha -> residual1
+	residual1 -> ln1
+	ln1 -> gate
+	gate -> token_split
+	token_split -> comm_node
+	comm_node -> expert_0
+	comm_node -> expert_1
+	comm_node -> expert_2
+	comm_node -> expert_3
+	comm_node -> expert_4
+	comm_node -> expert_5
+	comm_node -> expert_6
+	comm_node -> expert_7
+	comm_node -> expert_8
+	comm_node -> expert_9
+	comm_node -> expert_10
+	comm_node -> expert_11
+	comm_node -> expert_12
+	comm_node -> expert_13
+	comm_node -> expert_14
+	comm_node -> expert_15
+	expert_0 -> expert_aggregate
+	expert_1 -> expert_aggregate
+	expert_2 -> expert_aggregate
+	expert_3 -> expert_aggregate
+	expert_4 -> expert_aggregate
+	expert_5 -> expert_aggregate
+	expert_6 -> expert_aggregate
+	expert_7 -> expert_aggregate
+	expert_8 -> expert_aggregate
+	expert_9 -> expert_aggregate
+	expert_10 -> expert_aggregate
+	expert_11 -> expert_aggregate
+	expert_12 -> expert_aggregate
+	expert_13 -> expert_aggregate
+	expert_14 -> expert_aggregate
+	expert_15 -> expert_aggregate
+	expert_aggregate -> weighted_combine
+	gate -> weighted_combine
+	weighted_combine -> ffn
+	ffn -> residual2
+	residual2 -> ln2
+	ln2 -> layer_output
+	gate -> expert_0 [label=selects style=dashed]
+	gate -> expert_1 [label="" style=dashed]
+	gate -> expert_2 [label="" style=dashed]
+	gate -> expert_3 [label="" style=dashed]
+	gate -> expert_4 [label="" style=dashed]
+	gate -> expert_5 [label="" style=dashed]
+	gate -> expert_6 [label="" style=dashed]
+	gate -> expert_7 [label="" style=dashed]
+	gate -> expert_8 [label="" style=dashed]
+	gate -> expert_9 [label="" style=dashed]
+	gate -> expert_10 [label="" style=dashed]
+	gate -> expert_11 [label="" style=dashed]
+	gate -> expert_12 [label="" style=dashed]
+	gate -> expert_13 [label="" style=dashed]
+	gate -> expert_14 [label="" style=dashed]
+	gate -> expert_15 [label="" style=dashed]
+}
