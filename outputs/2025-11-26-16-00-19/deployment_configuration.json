@@ -1,0 +1,257 @@
+{
+  "model_deployments": {
+    "baseline_moe": {
+      "parallel_strategy": "conventional_moe_parallelism",
+      "strategy_parameters": {
+        "expert_parallelism_degree": 8,
+        "experts_per_gpu": 4,
+        "tensor_parallelism": false,
+        "pipeline_parallelism": false,
+        "data_parallelism": true
+      },
+      "module_divisions": {
+        "experts": {
+          "total_experts_per_layer": 32,
+          "experts_per_gpu": 4,
+          "gpu_memory_per_expert": "4GB",
+          "expert_type": "mlp",
+          "expert_hidden_size": 2048,
+          "expert_input_dim": 7168,
+          "expert_output_dim": 7168
+        },
+        "attention": {
+          "heads": 128,
+          "head_dimension": 128,
+          "total_attention_dimension": 16384,
+          "placement": "shared_across_gpus"
+        },
+        "embedding": {
+          "vocab_size": 32000,
+          "embedding_dim": 7168,
+          "placement": "replicated_across_dp_groups"
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "node_id": 0,
+          "device_id": 0,
+          "modules": ["expert_0", "expert_1", "expert_2", "expert_3", "attention_shared"],
+          "memory_allocation": "experts: 16GB, attention: 8GB, overhead: 4GB"
+        },
+        "gpu_1": {
+          "node_id": 0,
+          "device_id": 1,
+          "modules": ["expert_4", "expert_5", "expert_6", "expert_7", "attention_shared"],
+          "memory_allocation": "experts: 16GB, attention: 8GB, overhead: 4GB"
+        },
+        "gpu_2": {
+          "node_id": 0,
+          "device_id": 2,
+          "modules": ["expert_8", "expert_9", "expert_10", "expert_11", "attention_shared"],
+          "memory_allocation": "experts: 16GB, attention: 8GB, overhead: 4GB"
+        },
+        "gpu_3": {
+          "node_id": 0,
+          "device_id": 3,
+          "modules": ["expert_12", "expert_13", "expert_14", "expert_15", "attention_shared"],
+          "memory_allocation": "experts: 16GB, attention: 8GB, overhead: 4GB"
+        },
+        "gpu_4": {
+          "node_id": 1,
+          "device_id": 0,
+          "modules": ["expert_16", "expert_17", "expert_18", "expert_19", "attention_shared"],
+          "memory_allocation": "experts: 16GB, attention: 8GB, overhead: 4GB"
+        },
+        "gpu_5": {
+          "node_id": 1,
+          "device_id": 1,
+          "modules": ["expert_20", "expert_21", "expert_22", "expert_23", "attention_shared"],
+          "memory_allocation": "experts: 16GB, attention: 8GB, overhead: 4GB"
+        },
+        "gpu_6": {
+          "node_id": 1,
+          "device_id": 2,
+          "modules": ["expert_24", "expert_25", "expert_26", "expert_27", "attention_shared"],
+          "memory_allocation": "experts: 16GB, attention: 8GB, overhead: 4GB"
+        },
+        "gpu_7": {
+          "node_id": 1,
+          "device_id": 3,
+          "modules": ["expert_28", "expert_29", "expert_30", "expert_31", "attention_shared"],
+          "memory_allocation": "experts: 16GB, attention: 8GB, overhead: 4GB"
+        }
+      }
+    },
+    "proposed_large_ep_moe": {
+      "parallel_strategy": "large_scale_cross_node_expert_parallelism",
+      "strategy_parameters": {
+        "expert_parallelism_degree": 32,
+        "experts_per_gpu": 1,
+        "minimum_ep_degree": 16,
+        "tensor_parallelism": false,
+        "pipeline_parallelism": false,
+        "data_parallelism": true,
+        "communication_overlap": true,
+        "asynchronous_routing": true,
+        "topology_aware_placement": true
+      },
+      "module_divisions": {
+        "experts": {
+          "total_experts_per_layer": 32,
+          "experts_per_gpu": 1,
+          "gpu_memory_per_expert": "16GB",
+          "expert_type": "mlp",
+          "expert_hidden_size": 2048,
+          "expert_input_dim": 7168,
+          "expert_output_dim": 7168,
+          "placement_policy": "one_expert_per_gpu"
+        },
+        "attention": {
+          "heads": 128,
+          "head_dimension": 128,
+          "total_attention_dimension": 16384,
+          "placement": "shared_across_gpus",
+          "memory_per_gpu": "8GB"
+        },
+        "embedding": {
+          "vocab_size": 32000,
+          "embedding_dim": 7168,
+          "placement": "replicated_across_dp_groups"
+        },
+        "gating_network": {
+          "input_dim": 7168,
+          "num_experts": 32,
+          "top_k": 2,
+          "placement": "distributed_with_attention"
+        }
+      },
+      "device_mapping": {
+        "gpu_0": {
+          "node_id": 0,
+          "device_id": 0,
+          "modules": ["expert_0", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_1": {
+          "node_id": 0,
+          "device_id": 1,
+          "modules": ["expert_1", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_2": {
+          "node_id": 0,
+          "device_id": 2,
+          "modules": ["expert_2", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_3": {
+          "node_id": 0,
+          "device_id": 3,
+          "modules": ["expert_3", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_4": {
+          "node_id": 0,
+          "device_id": 4,
+          "modules": ["expert_4", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_5": {
+          "node_id": 0,
+          "device_id": 5,
+          "modules": ["expert_5", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_6": {
+          "node_id": 0,
+          "device_id": 6,
+          "modules": ["expert_6", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_7": {
+          "node_id": 0,
+          "device_id": 7,
+          "modules": ["expert_7", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_8": {
+          "node_id": 1,
+          "device_id": 0,
+          "modules": ["expert_8", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_9": {
+          "node_id": 1,
+          "device_id": 1,
+          "modules": ["expert_9", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_10": {
+          "node_id": 1,
+          "device_id": 2,
+          "modules": ["expert_10", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_11": {
+          "node_id": 1,
+          "device_id": 3,
+          "modules": ["expert_11", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_12": {
+          "node_id": 1,
+          "device_id": 4,
+          "modules": ["expert_12", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_13": {
+          "node_id": 1,
+          "device_id": 5,
+          "modules": ["expert_13", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_14": {
+          "node_id": 1,
+          "device_id": 6,
+          "modules": ["expert_14", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        },
+        "gpu_15": {
+          "node_id": 1,
+          "device_id": 7,
+          "modules": ["expert_15", "attention_shared", "gating_network"],
+          "memory_allocation": "expert: 16GB, attention: 8GB, gating: 2GB, overhead: 2GB, total: 28GB"
+        }
+      },
+      "communication_configuration": {
+        "inter_node_bandwidth": "1.8TBps",
+        "bandwidth_utilization": "80%",
+        "communication_library": "NCCL",
+        "async_communication": true,
+        "token_batching": true,
+        "routing_strategy": "topology_aware",
+        "load_balancing": "dynamic_gating"
+      }
+    }
+  },
+  "model_architecture": {
+    "total_layers": 61,
+    "dense_layers": 3,
+    "moe_layers": 58,
+    "token_dimension": 7168,
+    "mha_heads": 128,
+    "mha_head_dimension": 128,
+    "mlp_hidden_size": 2048,
+    "precision": "BF16",
+    "vocab_size": 32000
+  },
+  "hardware_specifications": {
+    "gpu_type": "H100",
+    "single_card_compute_power": "400TFlops",
+    "mfu_utilization": "60%",
+    "vram_bandwidth": "1.8TBps",
+    "bandwidth_utilization": "80%",
+    "single_card_memory": "64GB",
+    "total_available_gpus": "unlimited"
+  }
+}

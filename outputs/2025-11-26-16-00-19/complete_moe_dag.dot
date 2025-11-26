@@ -1,0 +1,1424 @@
+// Complete Large-Scale MoE Transformation DAG
+digraph {
+	rankdir=TB size="200,150" splines=ortho
+	node [fontsize=8 height=0.6 width=2.0]
+	input [label="Input Tokens
+GPU: All
+INPUT: [B=32, S=2048, H=7168]" fillcolor=lightgray shape=rect style=filled]
+	layernorm1 [label="LayerNorm
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	q_proj [label="Query Projection (Linear)
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, Nh=128, Dh=128]" fillcolor=lightblue shape=rect style=filled]
+	k_proj [label="Key Projection (Linear)
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, Nh=128, Dh=128]" fillcolor=lightblue shape=rect style=filled]
+	v_proj [label="Value Projection (Linear)
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, Nh=128, Dh=128]" fillcolor=lightblue shape=rect style=filled]
+	attention_scores [label="Attention Scores
+GPU: Shared
+INPUT: [B=32, S=2048, Nh=128, Dh=128]×[B=32, S=2048, Nh=128, Dh=128]
+OUTPUT: [B=32, Nh=128, S=2048, S=2048]" fillcolor=lightblue shape=rect style=filled]
+	attention_weights [label="Softmax
+GPU: Shared
+INPUT: [B=32, Nh=128, S=2048, S=2048]
+OUTPUT: [B=32, Nh=128, S=2048, S=2048]" fillcolor=lightblue shape=rect style=filled]
+	attention_output [label="Attention Output
+GPU: Shared
+INPUT: [B=32, Nh=128, S=2048, S=2048]×[B=32, S=2048, Nh=128, Dh=128]
+OUTPUT: [B=32, S=2048, Nh=128, Dh=128]" fillcolor=lightblue shape=rect style=filled]
+	attention_reshape [label="Reshape Attention
+GPU: Shared
+INPUT: [B=32, S=2048, Nh=128, Dh=128]
+OUTPUT: [B=32, S=2048, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	mha_out_proj [label="MHA Output Projection
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	mha_residual [label="MHA Residual Add
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168] + [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	gating [label="Gating Network (Linear)
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, Ne=32]" fillcolor=lightyellow shape=parallelogram style=filled]
+	topk_gate [label="Top-K Selection (K=2)
+GPU: Shared
+INPUT: [B=32, S=2048, Ne=32]
+OUTPUT: [B=32, S=2048, K=2] indices" fillcolor=lightyellow shape=parallelogram style=filled]
+	token_counts [label="Compute Token Counts
+GPU: Shared
+INPUT: [B=32, S=2048, K=2] indices
+OUTPUT: Expert token counts" fillcolor=lightyellow shape=parallelogram style=filled]
+	token_pack [label="Pack Tokens by Expert
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168]
+OUTPUT: [Σtokens, H=7168] per expert" fillcolor=lightyellow shape=parallelogram style=filled]
+	scatter_comm [label="All-to-All Scatter
+Communication: NCCL
+INPUT: [Σtokens, H=7168] per expert
+OUTPUT: [Σtokens_gpu, H=7168] per GPU" fillcolor=lightgreen shape=ellipse style=filled]
+	subgraph cluster_gpu_0 {
+		label="GPU 0" style=dotted
+		expert_0_ln [label="Expert 0 LayerNorm
+GPU: 0
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_0_gate [label="Expert 0 Gate
+GPU: 0
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_0_gate_act [label="Expert 0 SiLU
+GPU: 0
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_0_expert [label="Expert 0 Expert
+GPU: 0
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_0_expert_act [label="Expert 0 Expert Act
+GPU: 0
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_0_multiply [label="Expert 0 Multiply
+GPU: 0
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_0_out_proj [label="Expert 0 Output Proj
+GPU: 0
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_1 {
+		label="GPU 1" style=dotted
+		expert_1_ln [label="Expert 1 LayerNorm
+GPU: 1
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_1_gate [label="Expert 1 Gate
+GPU: 1
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_1_gate_act [label="Expert 1 SiLU
+GPU: 1
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_1_expert [label="Expert 1 Expert
+GPU: 1
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_1_expert_act [label="Expert 1 Expert Act
+GPU: 1
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_1_multiply [label="Expert 1 Multiply
+GPU: 1
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_1_out_proj [label="Expert 1 Output Proj
+GPU: 1
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_2 {
+		label="GPU 2" style=dotted
+		expert_2_ln [label="Expert 2 LayerNorm
+GPU: 2
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_2_gate [label="Expert 2 Gate
+GPU: 2
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_2_gate_act [label="Expert 2 SiLU
+GPU: 2
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_2_expert [label="Expert 2 Expert
+GPU: 2
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_2_expert_act [label="Expert 2 Expert Act
+GPU: 2
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_2_multiply [label="Expert 2 Multiply
+GPU: 2
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_2_out_proj [label="Expert 2 Output Proj
+GPU: 2
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_3 {
+		label="GPU 3" style=dotted
+		expert_3_ln [label="Expert 3 LayerNorm
+GPU: 3
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_3_gate [label="Expert 3 Gate
+GPU: 3
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_3_gate_act [label="Expert 3 SiLU
+GPU: 3
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_3_expert [label="Expert 3 Expert
+GPU: 3
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_3_expert_act [label="Expert 3 Expert Act
+GPU: 3
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_3_multiply [label="Expert 3 Multiply
+GPU: 3
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_3_out_proj [label="Expert 3 Output Proj
+GPU: 3
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_4 {
+		label="GPU 4" style=dotted
+		expert_4_ln [label="Expert 4 LayerNorm
+GPU: 4
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_4_gate [label="Expert 4 Gate
+GPU: 4
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_4_gate_act [label="Expert 4 SiLU
+GPU: 4
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_4_expert [label="Expert 4 Expert
+GPU: 4
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_4_expert_act [label="Expert 4 Expert Act
+GPU: 4
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_4_multiply [label="Expert 4 Multiply
+GPU: 4
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_4_out_proj [label="Expert 4 Output Proj
+GPU: 4
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_5 {
+		label="GPU 5" style=dotted
+		expert_5_ln [label="Expert 5 LayerNorm
+GPU: 5
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_5_gate [label="Expert 5 Gate
+GPU: 5
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_5_gate_act [label="Expert 5 SiLU
+GPU: 5
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_5_expert [label="Expert 5 Expert
+GPU: 5
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_5_expert_act [label="Expert 5 Expert Act
+GPU: 5
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_5_multiply [label="Expert 5 Multiply
+GPU: 5
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_5_out_proj [label="Expert 5 Output Proj
+GPU: 5
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_6 {
+		label="GPU 6" style=dotted
+		expert_6_ln [label="Expert 6 LayerNorm
+GPU: 6
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_6_gate [label="Expert 6 Gate
+GPU: 6
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_6_gate_act [label="Expert 6 SiLU
+GPU: 6
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_6_expert [label="Expert 6 Expert
+GPU: 6
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_6_expert_act [label="Expert 6 Expert Act
+GPU: 6
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_6_multiply [label="Expert 6 Multiply
+GPU: 6
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_6_out_proj [label="Expert 6 Output Proj
+GPU: 6
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_7 {
+		label="GPU 7" style=dotted
+		expert_7_ln [label="Expert 7 LayerNorm
+GPU: 7
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_7_gate [label="Expert 7 Gate
+GPU: 7
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_7_gate_act [label="Expert 7 SiLU
+GPU: 7
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_7_expert [label="Expert 7 Expert
+GPU: 7
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_7_expert_act [label="Expert 7 Expert Act
+GPU: 7
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_7_multiply [label="Expert 7 Multiply
+GPU: 7
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_7_out_proj [label="Expert 7 Output Proj
+GPU: 7
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_8 {
+		label="GPU 8" style=dotted
+		expert_8_ln [label="Expert 8 LayerNorm
+GPU: 8
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_8_gate [label="Expert 8 Gate
+GPU: 8
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_8_gate_act [label="Expert 8 SiLU
+GPU: 8
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_8_expert [label="Expert 8 Expert
+GPU: 8
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_8_expert_act [label="Expert 8 Expert Act
+GPU: 8
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_8_multiply [label="Expert 8 Multiply
+GPU: 8
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_8_out_proj [label="Expert 8 Output Proj
+GPU: 8
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_9 {
+		label="GPU 9" style=dotted
+		expert_9_ln [label="Expert 9 LayerNorm
+GPU: 9
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_9_gate [label="Expert 9 Gate
+GPU: 9
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_9_gate_act [label="Expert 9 SiLU
+GPU: 9
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_9_expert [label="Expert 9 Expert
+GPU: 9
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_9_expert_act [label="Expert 9 Expert Act
+GPU: 9
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_9_multiply [label="Expert 9 Multiply
+GPU: 9
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_9_out_proj [label="Expert 9 Output Proj
+GPU: 9
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_10 {
+		label="GPU 10" style=dotted
+		expert_10_ln [label="Expert 10 LayerNorm
+GPU: 10
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_10_gate [label="Expert 10 Gate
+GPU: 10
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_10_gate_act [label="Expert 10 SiLU
+GPU: 10
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_10_expert [label="Expert 10 Expert
+GPU: 10
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_10_expert_act [label="Expert 10 Expert Act
+GPU: 10
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_10_multiply [label="Expert 10 Multiply
+GPU: 10
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_10_out_proj [label="Expert 10 Output Proj
+GPU: 10
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_11 {
+		label="GPU 11" style=dotted
+		expert_11_ln [label="Expert 11 LayerNorm
+GPU: 11
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_11_gate [label="Expert 11 Gate
+GPU: 11
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_11_gate_act [label="Expert 11 SiLU
+GPU: 11
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_11_expert [label="Expert 11 Expert
+GPU: 11
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_11_expert_act [label="Expert 11 Expert Act
+GPU: 11
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_11_multiply [label="Expert 11 Multiply
+GPU: 11
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_11_out_proj [label="Expert 11 Output Proj
+GPU: 11
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_12 {
+		label="GPU 12" style=dotted
+		expert_12_ln [label="Expert 12 LayerNorm
+GPU: 12
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_12_gate [label="Expert 12 Gate
+GPU: 12
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_12_gate_act [label="Expert 12 SiLU
+GPU: 12
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_12_expert [label="Expert 12 Expert
+GPU: 12
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_12_expert_act [label="Expert 12 Expert Act
+GPU: 12
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_12_multiply [label="Expert 12 Multiply
+GPU: 12
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_12_out_proj [label="Expert 12 Output Proj
+GPU: 12
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_13 {
+		label="GPU 13" style=dotted
+		expert_13_ln [label="Expert 13 LayerNorm
+GPU: 13
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_13_gate [label="Expert 13 Gate
+GPU: 13
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_13_gate_act [label="Expert 13 SiLU
+GPU: 13
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_13_expert [label="Expert 13 Expert
+GPU: 13
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_13_expert_act [label="Expert 13 Expert Act
+GPU: 13
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_13_multiply [label="Expert 13 Multiply
+GPU: 13
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_13_out_proj [label="Expert 13 Output Proj
+GPU: 13
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_14 {
+		label="GPU 14" style=dotted
+		expert_14_ln [label="Expert 14 LayerNorm
+GPU: 14
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_14_gate [label="Expert 14 Gate
+GPU: 14
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_14_gate_act [label="Expert 14 SiLU
+GPU: 14
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_14_expert [label="Expert 14 Expert
+GPU: 14
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_14_expert_act [label="Expert 14 Expert Act
+GPU: 14
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_14_multiply [label="Expert 14 Multiply
+GPU: 14
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_14_out_proj [label="Expert 14 Output Proj
+GPU: 14
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_15 {
+		label="GPU 15" style=dotted
+		expert_15_ln [label="Expert 15 LayerNorm
+GPU: 15
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_15_gate [label="Expert 15 Gate
+GPU: 15
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_15_gate_act [label="Expert 15 SiLU
+GPU: 15
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_15_expert [label="Expert 15 Expert
+GPU: 15
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_15_expert_act [label="Expert 15 Expert Act
+GPU: 15
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_15_multiply [label="Expert 15 Multiply
+GPU: 15
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_15_out_proj [label="Expert 15 Output Proj
+GPU: 15
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_16 {
+		label="GPU 16" style=dotted
+		expert_16_ln [label="Expert 16 LayerNorm
+GPU: 16
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_16_gate [label="Expert 16 Gate
+GPU: 16
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_16_gate_act [label="Expert 16 SiLU
+GPU: 16
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_16_expert [label="Expert 16 Expert
+GPU: 16
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_16_expert_act [label="Expert 16 Expert Act
+GPU: 16
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_16_multiply [label="Expert 16 Multiply
+GPU: 16
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_16_out_proj [label="Expert 16 Output Proj
+GPU: 16
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_17 {
+		label="GPU 17" style=dotted
+		expert_17_ln [label="Expert 17 LayerNorm
+GPU: 17
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_17_gate [label="Expert 17 Gate
+GPU: 17
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_17_gate_act [label="Expert 17 SiLU
+GPU: 17
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_17_expert [label="Expert 17 Expert
+GPU: 17
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_17_expert_act [label="Expert 17 Expert Act
+GPU: 17
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_17_multiply [label="Expert 17 Multiply
+GPU: 17
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_17_out_proj [label="Expert 17 Output Proj
+GPU: 17
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_18 {
+		label="GPU 18" style=dotted
+		expert_18_ln [label="Expert 18 LayerNorm
+GPU: 18
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_18_gate [label="Expert 18 Gate
+GPU: 18
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_18_gate_act [label="Expert 18 SiLU
+GPU: 18
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_18_expert [label="Expert 18 Expert
+GPU: 18
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_18_expert_act [label="Expert 18 Expert Act
+GPU: 18
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_18_multiply [label="Expert 18 Multiply
+GPU: 18
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_18_out_proj [label="Expert 18 Output Proj
+GPU: 18
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_19 {
+		label="GPU 19" style=dotted
+		expert_19_ln [label="Expert 19 LayerNorm
+GPU: 19
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_19_gate [label="Expert 19 Gate
+GPU: 19
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_19_gate_act [label="Expert 19 SiLU
+GPU: 19
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_19_expert [label="Expert 19 Expert
+GPU: 19
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_19_expert_act [label="Expert 19 Expert Act
+GPU: 19
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_19_multiply [label="Expert 19 Multiply
+GPU: 19
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_19_out_proj [label="Expert 19 Output Proj
+GPU: 19
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_20 {
+		label="GPU 20" style=dotted
+		expert_20_ln [label="Expert 20 LayerNorm
+GPU: 20
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_20_gate [label="Expert 20 Gate
+GPU: 20
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_20_gate_act [label="Expert 20 SiLU
+GPU: 20
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_20_expert [label="Expert 20 Expert
+GPU: 20
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_20_expert_act [label="Expert 20 Expert Act
+GPU: 20
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_20_multiply [label="Expert 20 Multiply
+GPU: 20
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_20_out_proj [label="Expert 20 Output Proj
+GPU: 20
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_21 {
+		label="GPU 21" style=dotted
+		expert_21_ln [label="Expert 21 LayerNorm
+GPU: 21
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_21_gate [label="Expert 21 Gate
+GPU: 21
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_21_gate_act [label="Expert 21 SiLU
+GPU: 21
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_21_expert [label="Expert 21 Expert
+GPU: 21
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_21_expert_act [label="Expert 21 Expert Act
+GPU: 21
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_21_multiply [label="Expert 21 Multiply
+GPU: 21
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_21_out_proj [label="Expert 21 Output Proj
+GPU: 21
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_22 {
+		label="GPU 22" style=dotted
+		expert_22_ln [label="Expert 22 LayerNorm
+GPU: 22
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_22_gate [label="Expert 22 Gate
+GPU: 22
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_22_gate_act [label="Expert 22 SiLU
+GPU: 22
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_22_expert [label="Expert 22 Expert
+GPU: 22
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_22_expert_act [label="Expert 22 Expert Act
+GPU: 22
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_22_multiply [label="Expert 22 Multiply
+GPU: 22
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_22_out_proj [label="Expert 22 Output Proj
+GPU: 22
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_23 {
+		label="GPU 23" style=dotted
+		expert_23_ln [label="Expert 23 LayerNorm
+GPU: 23
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_23_gate [label="Expert 23 Gate
+GPU: 23
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_23_gate_act [label="Expert 23 SiLU
+GPU: 23
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_23_expert [label="Expert 23 Expert
+GPU: 23
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_23_expert_act [label="Expert 23 Expert Act
+GPU: 23
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_23_multiply [label="Expert 23 Multiply
+GPU: 23
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_23_out_proj [label="Expert 23 Output Proj
+GPU: 23
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_24 {
+		label="GPU 24" style=dotted
+		expert_24_ln [label="Expert 24 LayerNorm
+GPU: 24
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_24_gate [label="Expert 24 Gate
+GPU: 24
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_24_gate_act [label="Expert 24 SiLU
+GPU: 24
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_24_expert [label="Expert 24 Expert
+GPU: 24
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_24_expert_act [label="Expert 24 Expert Act
+GPU: 24
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_24_multiply [label="Expert 24 Multiply
+GPU: 24
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_24_out_proj [label="Expert 24 Output Proj
+GPU: 24
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_25 {
+		label="GPU 25" style=dotted
+		expert_25_ln [label="Expert 25 LayerNorm
+GPU: 25
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_25_gate [label="Expert 25 Gate
+GPU: 25
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_25_gate_act [label="Expert 25 SiLU
+GPU: 25
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_25_expert [label="Expert 25 Expert
+GPU: 25
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_25_expert_act [label="Expert 25 Expert Act
+GPU: 25
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_25_multiply [label="Expert 25 Multiply
+GPU: 25
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_25_out_proj [label="Expert 25 Output Proj
+GPU: 25
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_26 {
+		label="GPU 26" style=dotted
+		expert_26_ln [label="Expert 26 LayerNorm
+GPU: 26
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_26_gate [label="Expert 26 Gate
+GPU: 26
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_26_gate_act [label="Expert 26 SiLU
+GPU: 26
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_26_expert [label="Expert 26 Expert
+GPU: 26
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_26_expert_act [label="Expert 26 Expert Act
+GPU: 26
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_26_multiply [label="Expert 26 Multiply
+GPU: 26
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_26_out_proj [label="Expert 26 Output Proj
+GPU: 26
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_27 {
+		label="GPU 27" style=dotted
+		expert_27_ln [label="Expert 27 LayerNorm
+GPU: 27
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_27_gate [label="Expert 27 Gate
+GPU: 27
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_27_gate_act [label="Expert 27 SiLU
+GPU: 27
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_27_expert [label="Expert 27 Expert
+GPU: 27
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_27_expert_act [label="Expert 27 Expert Act
+GPU: 27
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_27_multiply [label="Expert 27 Multiply
+GPU: 27
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_27_out_proj [label="Expert 27 Output Proj
+GPU: 27
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_28 {
+		label="GPU 28" style=dotted
+		expert_28_ln [label="Expert 28 LayerNorm
+GPU: 28
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_28_gate [label="Expert 28 Gate
+GPU: 28
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_28_gate_act [label="Expert 28 SiLU
+GPU: 28
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_28_expert [label="Expert 28 Expert
+GPU: 28
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_28_expert_act [label="Expert 28 Expert Act
+GPU: 28
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_28_multiply [label="Expert 28 Multiply
+GPU: 28
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_28_out_proj [label="Expert 28 Output Proj
+GPU: 28
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_29 {
+		label="GPU 29" style=dotted
+		expert_29_ln [label="Expert 29 LayerNorm
+GPU: 29
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_29_gate [label="Expert 29 Gate
+GPU: 29
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_29_gate_act [label="Expert 29 SiLU
+GPU: 29
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_29_expert [label="Expert 29 Expert
+GPU: 29
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_29_expert_act [label="Expert 29 Expert Act
+GPU: 29
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_29_multiply [label="Expert 29 Multiply
+GPU: 29
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_29_out_proj [label="Expert 29 Output Proj
+GPU: 29
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_30 {
+		label="GPU 30" style=dotted
+		expert_30_ln [label="Expert 30 LayerNorm
+GPU: 30
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_30_gate [label="Expert 30 Gate
+GPU: 30
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_30_gate_act [label="Expert 30 SiLU
+GPU: 30
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_30_expert [label="Expert 30 Expert
+GPU: 30
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_30_expert_act [label="Expert 30 Expert Act
+GPU: 30
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_30_multiply [label="Expert 30 Multiply
+GPU: 30
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_30_out_proj [label="Expert 30 Output Proj
+GPU: 30
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	subgraph cluster_gpu_31 {
+		label="GPU 31" style=dotted
+		expert_31_ln [label="Expert 31 LayerNorm
+GPU: 31
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+		expert_31_gate [label="Expert 31 Gate
+GPU: 31
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_31_gate_act [label="Expert 31 SiLU
+GPU: 31
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_31_expert [label="Expert 31 Expert
+GPU: 31
+INPUT: [Σtokens_gpu, H=7168]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_31_expert_act [label="Expert 31 Expert Act
+GPU: 31
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_31_multiply [label="Expert 31 Multiply
+GPU: 31
+INPUT: [Σtokens_gpu, He=2048] × [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, He=2048]" fillcolor=lightblue shape=rect style=filled]
+		expert_31_out_proj [label="Expert 31 Output Proj
+GPU: 31
+INPUT: [Σtokens_gpu, He=2048]
+OUTPUT: [Σtokens_gpu, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	}
+	gather_comm [label="All-to-All Gather
+Communication: NCCL
+INPUT: [Σtokens_gpu, H=7168] per GPU
+OUTPUT: [B=32, S=2048, H=7168]" fillcolor=lightcoral shape=ellipse style=filled]
+	token_unpack [label="Unpack Tokens
+GPU: Shared
+INPUT: [Σtokens, H=7168]
+OUTPUT: [B=32, S=2048, H=7168]" fillcolor=lightcoral shape=parallelogram style=filled]
+	layernorm2 [label="LayerNorm
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	ffn_residual [label="FFN Residual Add
+GPU: Shared
+INPUT: [B=32, S=2048, H=7168] + [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, H=7168]" fillcolor=lightblue shape=rect style=filled]
+	final_output [label="Layer Output
+GPU: ALL
+INPUT: [B=32, S=2048, H=7168]
+OUTPUT: [B=32, S=2048, H=7168]" fillcolor=lightgray shape=rect style=filled]
+	input -> layernorm1
+	layernorm1 -> q_proj
+	layernorm1 -> k_proj
+	layernorm1 -> v_proj
+	q_proj -> attention_scores
+	k_proj -> attention_scores
+	attention_scores -> attention_weights
+	attention_weights -> attention_output
+	v_proj -> attention_output
+	attention_output -> attention_reshape
+	attention_reshape -> mha_out_proj
+	mha_out_proj -> mha_residual
+	input -> mha_residual
+	mha_residual -> gating
+	gating -> topk_gate
+	topk_gate -> token_counts
+	token_counts -> token_pack
+	mha_residual -> token_pack
+	token_pack -> scatter_comm
+	scatter_comm -> expert_0_ln
+	expert_0_ln -> expert_0_gate
+	expert_0_gate -> expert_0_gate_act
+	expert_0_ln -> expert_0_expert
+	expert_0_expert -> expert_0_expert_act
+	expert_0_gate_act -> expert_0_multiply
+	expert_0_expert_act -> expert_0_multiply
+	expert_0_multiply -> expert_0_out_proj
+	expert_0_out_proj -> gather_comm
+	token_pack -> expert_0_ln [constraint=false style=dashed]
+	scatter_comm -> expert_1_ln
+	expert_1_ln -> expert_1_gate
+	expert_1_gate -> expert_1_gate_act
+	expert_1_ln -> expert_1_expert
+	expert_1_expert -> expert_1_expert_act
+	expert_1_gate_act -> expert_1_multiply
+	expert_1_expert_act -> expert_1_multiply
+	expert_1_multiply -> expert_1_out_proj
+	expert_1_out_proj -> gather_comm
+	token_pack -> expert_1_ln [constraint=false style=dashed]
+	scatter_comm -> expert_2_ln
+	expert_2_ln -> expert_2_gate
+	expert_2_gate -> expert_2_gate_act
+	expert_2_ln -> expert_2_expert
+	expert_2_expert -> expert_2_expert_act
+	expert_2_gate_act -> expert_2_multiply
+	expert_2_expert_act -> expert_2_multiply
+	expert_2_multiply -> expert_2_out_proj
+	expert_2_out_proj -> gather_comm
+	token_pack -> expert_2_ln [constraint=false style=dashed]
+	scatter_comm -> expert_3_ln
+	expert_3_ln -> expert_3_gate
+	expert_3_gate -> expert_3_gate_act
+	expert_3_ln -> expert_3_expert
+	expert_3_expert -> expert_3_expert_act
+	expert_3_gate_act -> expert_3_multiply
+	expert_3_expert_act -> expert_3_multiply
+	expert_3_multiply -> expert_3_out_proj
+	expert_3_out_proj -> gather_comm
+	token_pack -> expert_3_ln [constraint=false style=dashed]
+	scatter_comm -> expert_4_ln
+	expert_4_ln -> expert_4_gate
+	expert_4_gate -> expert_4_gate_act
+	expert_4_ln -> expert_4_expert
+	expert_4_expert -> expert_4_expert_act
+	expert_4_gate_act -> expert_4_multiply
+	expert_4_expert_act -> expert_4_multiply
+	expert_4_multiply -> expert_4_out_proj
+	expert_4_out_proj -> gather_comm
+	token_pack -> expert_4_ln [constraint=false style=dashed]
+	scatter_comm -> expert_5_ln
+	expert_5_ln -> expert_5_gate
+	expert_5_gate -> expert_5_gate_act
+	expert_5_ln -> expert_5_expert
+	expert_5_expert -> expert_5_expert_act
+	expert_5_gate_act -> expert_5_multiply
+	expert_5_expert_act -> expert_5_multiply
+	expert_5_multiply -> expert_5_out_proj
+	expert_5_out_proj -> gather_comm
+	token_pack -> expert_5_ln [constraint=false style=dashed]
+	scatter_comm -> expert_6_ln
+	expert_6_ln -> expert_6_gate
+	expert_6_gate -> expert_6_gate_act
+	expert_6_ln -> expert_6_expert
+	expert_6_expert -> expert_6_expert_act
+	expert_6_gate_act -> expert_6_multiply
+	expert_6_expert_act -> expert_6_multiply
+	expert_6_multiply -> expert_6_out_proj
+	expert_6_out_proj -> gather_comm
+	token_pack -> expert_6_ln [constraint=false style=dashed]
+	scatter_comm -> expert_7_ln
+	expert_7_ln -> expert_7_gate
+	expert_7_gate -> expert_7_gate_act
+	expert_7_ln -> expert_7_expert
+	expert_7_expert -> expert_7_expert_act
+	expert_7_gate_act -> expert_7_multiply
+	expert_7_expert_act -> expert_7_multiply
+	expert_7_multiply -> expert_7_out_proj
+	expert_7_out_proj -> gather_comm
+	token_pack -> expert_7_ln [constraint=false style=dashed]
+	scatter_comm -> expert_8_ln
+	expert_8_ln -> expert_8_gate
+	expert_8_gate -> expert_8_gate_act
+	expert_8_ln -> expert_8_expert
+	expert_8_expert -> expert_8_expert_act
+	expert_8_gate_act -> expert_8_multiply
+	expert_8_expert_act -> expert_8_multiply
+	expert_8_multiply -> expert_8_out_proj
+	expert_8_out_proj -> gather_comm
+	token_pack -> expert_8_ln [constraint=false style=dashed]
+	scatter_comm -> expert_9_ln
+	expert_9_ln -> expert_9_gate
+	expert_9_gate -> expert_9_gate_act
+	expert_9_ln -> expert_9_expert
+	expert_9_expert -> expert_9_expert_act
+	expert_9_gate_act -> expert_9_multiply
+	expert_9_expert_act -> expert_9_multiply
+	expert_9_multiply -> expert_9_out_proj
+	expert_9_out_proj -> gather_comm
+	token_pack -> expert_9_ln [constraint=false style=dashed]
+	scatter_comm -> expert_10_ln
+	expert_10_ln -> expert_10_gate
+	expert_10_gate -> expert_10_gate_act
+	expert_10_ln -> expert_10_expert
+	expert_10_expert -> expert_10_expert_act
+	expert_10_gate_act -> expert_10_multiply
+	expert_10_expert_act -> expert_10_multiply
+	expert_10_multiply -> expert_10_out_proj
+	expert_10_out_proj -> gather_comm
+	token_pack -> expert_10_ln [constraint=false style=dashed]
+	scatter_comm -> expert_11_ln
+	expert_11_ln -> expert_11_gate
+	expert_11_gate -> expert_11_gate_act
+	expert_11_ln -> expert_11_expert
+	expert_11_expert -> expert_11_expert_act
+	expert_11_gate_act -> expert_11_multiply
+	expert_11_expert_act -> expert_11_multiply
+	expert_11_multiply -> expert_11_out_proj
+	expert_11_out_proj -> gather_comm
+	token_pack -> expert_11_ln [constraint=false style=dashed]
+	scatter_comm -> expert_12_ln
+	expert_12_ln -> expert_12_gate
+	expert_12_gate -> expert_12_gate_act
+	expert_12_ln -> expert_12_expert
+	expert_12_expert -> expert_12_expert_act
+	expert_12_gate_act -> expert_12_multiply
+	expert_12_expert_act -> expert_12_multiply
+	expert_12_multiply -> expert_12_out_proj
+	expert_12_out_proj -> gather_comm
+	token_pack -> expert_12_ln [constraint=false style=dashed]
+	scatter_comm -> expert_13_ln
+	expert_13_ln -> expert_13_gate
+	expert_13_gate -> expert_13_gate_act
+	expert_13_ln -> expert_13_expert
+	expert_13_expert -> expert_13_expert_act
+	expert_13_gate_act -> expert_13_multiply
+	expert_13_expert_act -> expert_13_multiply
+	expert_13_multiply -> expert_13_out_proj
+	expert_13_out_proj -> gather_comm
+	token_pack -> expert_13_ln [constraint=false style=dashed]
+	scatter_comm -> expert_14_ln
+	expert_14_ln -> expert_14_gate
+	expert_14_gate -> expert_14_gate_act
+	expert_14_ln -> expert_14_expert
+	expert_14_expert -> expert_14_expert_act
+	expert_14_gate_act -> expert_14_multiply
+	expert_14_expert_act -> expert_14_multiply
+	expert_14_multiply -> expert_14_out_proj
+	expert_14_out_proj -> gather_comm
+	token_pack -> expert_14_ln [constraint=false style=dashed]
+	scatter_comm -> expert_15_ln
+	expert_15_ln -> expert_15_gate
+	expert_15_gate -> expert_15_gate_act
+	expert_15_ln -> expert_15_expert
+	expert_15_expert -> expert_15_expert_act
+	expert_15_gate_act -> expert_15_multiply
+	expert_15_expert_act -> expert_15_multiply
+	expert_15_multiply -> expert_15_out_proj
+	expert_15_out_proj -> gather_comm
+	token_pack -> expert_15_ln [constraint=false style=dashed]
+	scatter_comm -> expert_16_ln
+	expert_16_ln -> expert_16_gate
+	expert_16_gate -> expert_16_gate_act
+	expert_16_ln -> expert_16_expert
+	expert_16_expert -> expert_16_expert_act
+	expert_16_gate_act -> expert_16_multiply
+	expert_16_expert_act -> expert_16_multiply
+	expert_16_multiply -> expert_16_out_proj
+	expert_16_out_proj -> gather_comm
+	token_pack -> expert_16_ln [constraint=false style=dashed]
+	scatter_comm -> expert_17_ln
+	expert_17_ln -> expert_17_gate
+	expert_17_gate -> expert_17_gate_act
+	expert_17_ln -> expert_17_expert
+	expert_17_expert -> expert_17_expert_act
+	expert_17_gate_act -> expert_17_multiply
+	expert_17_expert_act -> expert_17_multiply
+	expert_17_multiply -> expert_17_out_proj
+	expert_17_out_proj -> gather_comm
+	token_pack -> expert_17_ln [constraint=false style=dashed]
+	scatter_comm -> expert_18_ln
+	expert_18_ln -> expert_18_gate
+	expert_18_gate -> expert_18_gate_act
+	expert_18_ln -> expert_18_expert
+	expert_18_expert -> expert_18_expert_act
+	expert_18_gate_act -> expert_18_multiply
+	expert_18_expert_act -> expert_18_multiply
+	expert_18_multiply -> expert_18_out_proj
+	expert_18_out_proj -> gather_comm
+	token_pack -> expert_18_ln [constraint=false style=dashed]
+	scatter_comm -> expert_19_ln
+	expert_19_ln -> expert_19_gate
+	expert_19_gate -> expert_19_gate_act
+	expert_19_ln -> expert_19_expert
+	expert_19_expert -> expert_19_expert_act
+	expert_19_gate_act -> expert_19_multiply
+	expert_19_expert_act -> expert_19_multiply
+	expert_19_multiply -> expert_19_out_proj
+	expert_19_out_proj -> gather_comm
+	token_pack -> expert_19_ln [constraint=false style=dashed]
+	scatter_comm -> expert_20_ln
+	expert_20_ln -> expert_20_gate
+	expert_20_gate -> expert_20_gate_act
+	expert_20_ln -> expert_20_expert
+	expert_20_expert -> expert_20_expert_act
+	expert_20_gate_act -> expert_20_multiply
+	expert_20_expert_act -> expert_20_multiply
+	expert_20_multiply -> expert_20_out_proj
+	expert_20_out_proj -> gather_comm
+	token_pack -> expert_20_ln [constraint=false style=dashed]
+	scatter_comm -> expert_21_ln
+	expert_21_ln -> expert_21_gate
+	expert_21_gate -> expert_21_gate_act
+	expert_21_ln -> expert_21_expert
+	expert_21_expert -> expert_21_expert_act
+	expert_21_gate_act -> expert_21_multiply
+	expert_21_expert_act -> expert_21_multiply
+	expert_21_multiply -> expert_21_out_proj
+	expert_21_out_proj -> gather_comm
+	token_pack -> expert_21_ln [constraint=false style=dashed]
+	scatter_comm -> expert_22_ln
+	expert_22_ln -> expert_22_gate
+	expert_22_gate -> expert_22_gate_act
+	expert_22_ln -> expert_22_expert
+	expert_22_expert -> expert_22_expert_act
+	expert_22_gate_act -> expert_22_multiply
+	expert_22_expert_act -> expert_22_multiply
+	expert_22_multiply -> expert_22_out_proj
+	expert_22_out_proj -> gather_comm
+	token_pack -> expert_22_ln [constraint=false style=dashed]
+	scatter_comm -> expert_23_ln
+	expert_23_ln -> expert_23_gate
+	expert_23_gate -> expert_23_gate_act
+	expert_23_ln -> expert_23_expert
+	expert_23_expert -> expert_23_expert_act
+	expert_23_gate_act -> expert_23_multiply
+	expert_23_expert_act -> expert_23_multiply
+	expert_23_multiply -> expert_23_out_proj
+	expert_23_out_proj -> gather_comm
+	token_pack -> expert_23_ln [constraint=false style=dashed]
+	scatter_comm -> expert_24_ln
+	expert_24_ln -> expert_24_gate
+	expert_24_gate -> expert_24_gate_act
+	expert_24_ln -> expert_24_expert
+	expert_24_expert -> expert_24_expert_act
+	expert_24_gate_act -> expert_24_multiply
+	expert_24_expert_act -> expert_24_multiply
+	expert_24_multiply -> expert_24_out_proj
+	expert_24_out_proj -> gather_comm
+	token_pack -> expert_24_ln [constraint=false style=dashed]
+	scatter_comm -> expert_25_ln
+	expert_25_ln -> expert_25_gate
+	expert_25_gate -> expert_25_gate_act
+	expert_25_ln -> expert_25_expert
+	expert_25_expert -> expert_25_expert_act
+	expert_25_gate_act -> expert_25_multiply
+	expert_25_expert_act -> expert_25_multiply
+	expert_25_multiply -> expert_25_out_proj
+	expert_25_out_proj -> gather_comm
+	token_pack -> expert_25_ln [constraint=false style=dashed]
+	scatter_comm -> expert_26_ln
+	expert_26_ln -> expert_26_gate
+	expert_26_gate -> expert_26_gate_act
+	expert_26_ln -> expert_26_expert
+	expert_26_expert -> expert_26_expert_act
+	expert_26_gate_act -> expert_26_multiply
+	expert_26_expert_act -> expert_26_multiply
+	expert_26_multiply -> expert_26_out_proj
+	expert_26_out_proj -> gather_comm
+	token_pack -> expert_26_ln [constraint=false style=dashed]
+	scatter_comm -> expert_27_ln
+	expert_27_ln -> expert_27_gate
+	expert_27_gate -> expert_27_gate_act
+	expert_27_ln -> expert_27_expert
+	expert_27_expert -> expert_27_expert_act
+	expert_27_gate_act -> expert_27_multiply
+	expert_27_expert_act -> expert_27_multiply
+	expert_27_multiply -> expert_27_out_proj
+	expert_27_out_proj -> gather_comm
+	token_pack -> expert_27_ln [constraint=false style=dashed]
+	scatter_comm -> expert_28_ln
+	expert_28_ln -> expert_28_gate
+	expert_28_gate -> expert_28_gate_act
+	expert_28_ln -> expert_28_expert
+	expert_28_expert -> expert_28_expert_act
+	expert_28_gate_act -> expert_28_multiply
+	expert_28_expert_act -> expert_28_multiply
+	expert_28_multiply -> expert_28_out_proj
+	expert_28_out_proj -> gather_comm
+	token_pack -> expert_28_ln [constraint=false style=dashed]
+	scatter_comm -> expert_29_ln
+	expert_29_ln -> expert_29_gate
+	expert_29_gate -> expert_29_gate_act
+	expert_29_ln -> expert_29_expert
+	expert_29_expert -> expert_29_expert_act
+	expert_29_gate_act -> expert_29_multiply
+	expert_29_expert_act -> expert_29_multiply
+	expert_29_multiply -> expert_29_out_proj
+	expert_29_out_proj -> gather_comm
+	token_pack -> expert_29_ln [constraint=false style=dashed]
+	scatter_comm -> expert_30_ln
+	expert_30_ln -> expert_30_gate
+	expert_30_gate -> expert_30_gate_act
+	expert_30_ln -> expert_30_expert
+	expert_30_expert -> expert_30_expert_act
+	expert_30_gate_act -> expert_30_multiply
+	expert_30_expert_act -> expert_30_multiply
+	expert_30_multiply -> expert_30_out_proj
+	expert_30_out_proj -> gather_comm
+	token_pack -> expert_30_ln [constraint=false style=dashed]
+	scatter_comm -> expert_31_ln
+	expert_31_ln -> expert_31_gate
+	expert_31_gate -> expert_31_gate_act
+	expert_31_ln -> expert_31_expert
+	expert_31_expert -> expert_31_expert_act
+	expert_31_gate_act -> expert_31_multiply
+	expert_31_expert_act -> expert_31_multiply
+	expert_31_multiply -> expert_31_out_proj
+	expert_31_out_proj -> gather_comm
+	token_pack -> expert_31_ln [constraint=false style=dashed]
+	gather_comm -> token_unpack
+	token_unpack -> layernorm2
+	layernorm2 -> ffn_residual
+	mha_residual -> ffn_residual
+	ffn_residual -> final_output
+}
