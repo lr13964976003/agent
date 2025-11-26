@@ -46,7 +46,7 @@ SUBMISSION
 
 ---
 
-Is this DAG incorrect ? If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
+Is this DAG incorrect, If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
 
 If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the DAG in JSON format.
 
@@ -55,6 +55,7 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
+
 
 
 
