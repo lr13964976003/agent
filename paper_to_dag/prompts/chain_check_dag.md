@@ -18,11 +18,13 @@ Check if there are any errors in the DAG. The specific inspection items are as f
 
 Check whether the deployment plan is the optimal parallel strategy for the current hardware environment. <<<检查部署方案是否是当前硬件环境下的最优并行策略>>>
 
+Check if the DAG contains a cycle. <<<检查dag中是否包含环>>>
+
 Check whether the DAG graph includes three main components: communication, computation, and data aggregation. <<<检查DAG图是否包含了通信，计算和数据聚合三大部分>>>
 
 Check whether the DAG diagram is concise and clear, with no highly similar repeated modules.<<<检查DAG图是否做到简洁明晰，没有相似度很高的重复模块>>>
 
-Check if the DAG contains a cycle. <<<检查dag中是否包含环>>>
+
 
 Check whether each node has the input/output shapes and the corresponding GPU index.<<<检查每个节点是否都有输入输出的形状和所在GPU的序号>>>
 
@@ -55,6 +57,7 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
+
 
 
 
