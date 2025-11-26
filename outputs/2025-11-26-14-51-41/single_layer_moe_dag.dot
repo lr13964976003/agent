@@ -1,0 +1,280 @@
+// Single Layer MoE with Expert Parallelism
+digraph {
+	fontname=Arial rankdir=TB size="20,30"
+	layer_input [label="Layer Input\nGPU: All\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightcyan shape=ellipse style=filled]
+	mha_ln [label="MHA LayerNorm\nGPU: TP-8\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightblue style=filled]
+	mha_qkv [label="QKV Projection\nGPU: TP-8\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, num_heads=128, head_dim=128]" fillcolor=lightblue style=filled]
+	mha_attn [label="Multi-Head Attention\nGPU: TP-8\nInput: [batch_size=4, seq_len=2048, num_heads=128, head_dim=128]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightblue style=filled]
+	mha_res [label="MHA Residual\nGPU: All\nInput1: [batch_size=4, seq_len=2048, token_dim=7168]\nInput2: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightblue style=filled]
+	moe_ln [label="MoE LayerNorm\nGPU: All\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightblue style=filled]
+	gate [label="Gate Network\nGPU: Routing\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, top_k=2]" fillcolor=lightgreen shape=parallelogram style=filled]
+	expert_0_gate [label="Expert 0 Gate\nGPU: 0_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_0_up [label="Expert 0 Up\nGPU: 0_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_0_act [label="Expert 0 Activation\nGPU: 0_0\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_0_mul [label="Expert 0 Gate Mul\nGPU: 0_0\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_0_down [label="Expert 0 Down\nGPU: 0_0\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_1_gate [label="Expert 1 Gate\nGPU: 0_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_1_up [label="Expert 1 Up\nGPU: 0_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_1_act [label="Expert 1 Activation\nGPU: 0_1\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_1_mul [label="Expert 1 Gate Mul\nGPU: 0_1\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_1_down [label="Expert 1 Down\nGPU: 0_1\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_2_gate [label="Expert 2 Gate\nGPU: 0_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_2_up [label="Expert 2 Up\nGPU: 0_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_2_act [label="Expert 2 Activation\nGPU: 0_2\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_2_mul [label="Expert 2 Gate Mul\nGPU: 0_2\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_2_down [label="Expert 2 Down\nGPU: 0_2\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_3_gate [label="Expert 3 Gate\nGPU: 0_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_3_up [label="Expert 3 Up\nGPU: 0_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_3_act [label="Expert 3 Activation\nGPU: 0_3\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_3_mul [label="Expert 3 Gate Mul\nGPU: 0_3\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_3_down [label="Expert 3 Down\nGPU: 0_3\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_4_gate [label="Expert 4 Gate\nGPU: 1_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_4_up [label="Expert 4 Up\nGPU: 1_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_4_act [label="Expert 4 Activation\nGPU: 1_0\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_4_mul [label="Expert 4 Gate Mul\nGPU: 1_0\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_4_down [label="Expert 4 Down\nGPU: 1_0\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_5_gate [label="Expert 5 Gate\nGPU: 1_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_5_up [label="Expert 5 Up\nGPU: 1_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_5_act [label="Expert 5 Activation\nGPU: 1_1\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_5_mul [label="Expert 5 Gate Mul\nGPU: 1_1\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_5_down [label="Expert 5 Down\nGPU: 1_1\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_6_gate [label="Expert 6 Gate\nGPU: 1_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_6_up [label="Expert 6 Up\nGPU: 1_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_6_act [label="Expert 6 Activation\nGPU: 1_2\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_6_mul [label="Expert 6 Gate Mul\nGPU: 1_2\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_6_down [label="Expert 6 Down\nGPU: 1_2\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_7_gate [label="Expert 7 Gate\nGPU: 1_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_7_up [label="Expert 7 Up\nGPU: 1_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_7_act [label="Expert 7 Activation\nGPU: 1_3\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_7_mul [label="Expert 7 Gate Mul\nGPU: 1_3\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_7_down [label="Expert 7 Down\nGPU: 1_3\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_8_gate [label="Expert 8 Gate\nGPU: 2_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_8_up [label="Expert 8 Up\nGPU: 2_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_8_act [label="Expert 8 Activation\nGPU: 2_0\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_8_mul [label="Expert 8 Gate Mul\nGPU: 2_0\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_8_down [label="Expert 8 Down\nGPU: 2_0\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_9_gate [label="Expert 9 Gate\nGPU: 2_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_9_up [label="Expert 9 Up\nGPU: 2_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_9_act [label="Expert 9 Activation\nGPU: 2_1\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_9_mul [label="Expert 9 Gate Mul\nGPU: 2_1\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_9_down [label="Expert 9 Down\nGPU: 2_1\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_10_gate [label="Expert 10 Gate\nGPU: 2_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_10_up [label="Expert 10 Up\nGPU: 2_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_10_act [label="Expert 10 Activation\nGPU: 2_2\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_10_mul [label="Expert 10 Gate Mul\nGPU: 2_2\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_10_down [label="Expert 10 Down\nGPU: 2_2\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_11_gate [label="Expert 11 Gate\nGPU: 2_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_11_up [label="Expert 11 Up\nGPU: 2_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_11_act [label="Expert 11 Activation\nGPU: 2_3\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_11_mul [label="Expert 11 Gate Mul\nGPU: 2_3\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_11_down [label="Expert 11 Down\nGPU: 2_3\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_12_gate [label="Expert 12 Gate\nGPU: 3_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_12_up [label="Expert 12 Up\nGPU: 3_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_12_act [label="Expert 12 Activation\nGPU: 3_0\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_12_mul [label="Expert 12 Gate Mul\nGPU: 3_0\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_12_down [label="Expert 12 Down\nGPU: 3_0\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_13_gate [label="Expert 13 Gate\nGPU: 3_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_13_up [label="Expert 13 Up\nGPU: 3_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_13_act [label="Expert 13 Activation\nGPU: 3_1\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_13_mul [label="Expert 13 Gate Mul\nGPU: 3_1\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_13_down [label="Expert 13 Down\nGPU: 3_1\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_14_gate [label="Expert 14 Gate\nGPU: 3_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_14_up [label="Expert 14 Up\nGPU: 3_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_14_act [label="Expert 14 Activation\nGPU: 3_2\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_14_mul [label="Expert 14 Gate Mul\nGPU: 3_2\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_14_down [label="Expert 14 Down\nGPU: 3_2\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	expert_15_gate [label="Expert 15 Gate\nGPU: 3_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_15_up [label="Expert 15 Up\nGPU: 3_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_15_act [label="Expert 15 Activation\nGPU: 3_3\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_15_mul [label="Expert 15 Gate Mul\nGPU: 3_3\nInput1: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nInput2: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+	expert_15_down [label="Expert 15 Down\nGPU: 3_3\nInput: [dynamic_batch, dynamic_seq, mlp_hidden=2048]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightblue style=filled]
+	split_0 [label="Token Split 0\nGPU: 0_0\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_0 [label="Token Aggregate 0\nGPU: 0_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_1 [label="Token Split 1\nGPU: 0_1\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_1 [label="Token Aggregate 1\nGPU: 0_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_2 [label="Token Split 2\nGPU: 0_2\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_2 [label="Token Aggregate 2\nGPU: 0_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_3 [label="Token Split 3\nGPU: 0_3\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_3 [label="Token Aggregate 3\nGPU: 0_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_4 [label="Token Split 4\nGPU: 1_0\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_4 [label="Token Aggregate 4\nGPU: 1_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_5 [label="Token Split 5\nGPU: 1_1\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_5 [label="Token Aggregate 5\nGPU: 1_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_6 [label="Token Split 6\nGPU: 1_2\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_6 [label="Token Aggregate 6\nGPU: 1_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_7 [label="Token Split 7\nGPU: 1_3\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_7 [label="Token Aggregate 7\nGPU: 1_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_8 [label="Token Split 8\nGPU: 2_0\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_8 [label="Token Aggregate 8\nGPU: 2_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_9 [label="Token Split 9\nGPU: 2_1\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_9 [label="Token Aggregate 9\nGPU: 2_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_10 [label="Token Split 10\nGPU: 2_2\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_10 [label="Token Aggregate 10\nGPU: 2_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_11 [label="Token Split 11\nGPU: 2_3\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_11 [label="Token Aggregate 11\nGPU: 2_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_12 [label="Token Split 12\nGPU: 3_0\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_12 [label="Token Aggregate 12\nGPU: 3_0\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_13 [label="Token Split 13\nGPU: 3_1\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_13 [label="Token Aggregate 13\nGPU: 3_1\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_14 [label="Token Split 14\nGPU: 3_2\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_14 [label="Token Aggregate 14\nGPU: 3_2\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	split_15 [label="Token Split 15\nGPU: 3_3\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [dynamic_batch, dynamic_seq, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	agg_15 [label="Token Aggregate 15\nGPU: 3_3\nInput: [dynamic_batch, dynamic_seq, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	moe_agg [label="MoE Aggregation\nGPU: All\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+	moe_res [label="MoE Residual\nGPU: All\nInput1: [batch_size=4, seq_len=2048, token_dim=7168]\nInput2: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightblue style=filled]
+	layer_output [label="Layer Output\nGPU: All\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightcyan shape=ellipse style=filled]
+	layer_input -> mha_ln
+	mha_ln -> mha_qkv
+	mha_qkv -> mha_attn
+	mha_attn -> mha_res
+	layer_input -> mha_res
+	mha_res -> moe_ln
+	moe_ln -> gate
+	gate -> split_0 [style=dashed]
+	split_0 -> expert_0_gate
+	split_0 -> expert_0_up
+	expert_0_gate -> expert_0_act
+	expert_0_up -> expert_0_down
+	expert_0_act -> expert_0_mul
+	expert_0_down -> expert_0_mul
+	expert_0_mul -> agg_0
+	agg_0 -> moe_agg
+	gate -> split_1 [style=dashed]
+	split_1 -> expert_1_gate
+	split_1 -> expert_1_up
+	expert_1_gate -> expert_1_act
+	expert_1_up -> expert_1_down
+	expert_1_act -> expert_1_mul
+	expert_1_down -> expert_1_mul
+	expert_1_mul -> agg_1
+	agg_1 -> moe_agg
+	gate -> split_2 [style=dashed]
+	split_2 -> expert_2_gate
+	split_2 -> expert_2_up
+	expert_2_gate -> expert_2_act
+	expert_2_up -> expert_2_down
+	expert_2_act -> expert_2_mul
+	expert_2_down -> expert_2_mul
+	expert_2_mul -> agg_2
+	agg_2 -> moe_agg
+	gate -> split_3 [style=dashed]
+	split_3 -> expert_3_gate
+	split_3 -> expert_3_up
+	expert_3_gate -> expert_3_act
+	expert_3_up -> expert_3_down
+	expert_3_act -> expert_3_mul
+	expert_3_down -> expert_3_mul
+	expert_3_mul -> agg_3
+	agg_3 -> moe_agg
+	gate -> split_4 [style=dashed]
+	split_4 -> expert_4_gate
+	split_4 -> expert_4_up
+	expert_4_gate -> expert_4_act
+	expert_4_up -> expert_4_down
+	expert_4_act -> expert_4_mul
+	expert_4_down -> expert_4_mul
+	expert_4_mul -> agg_4
+	agg_4 -> moe_agg
+	gate -> split_5 [style=dashed]
+	split_5 -> expert_5_gate
+	split_5 -> expert_5_up
+	expert_5_gate -> expert_5_act
+	expert_5_up -> expert_5_down
+	expert_5_act -> expert_5_mul
+	expert_5_down -> expert_5_mul
+	expert_5_mul -> agg_5
+	agg_5 -> moe_agg
+	gate -> split_6 [style=dashed]
+	split_6 -> expert_6_gate
+	split_6 -> expert_6_up
+	expert_6_gate -> expert_6_act
+	expert_6_up -> expert_6_down
+	expert_6_act -> expert_6_mul
+	expert_6_down -> expert_6_mul
+	expert_6_mul -> agg_6
+	agg_6 -> moe_agg
+	gate -> split_7 [style=dashed]
+	split_7 -> expert_7_gate
+	split_7 -> expert_7_up
+	expert_7_gate -> expert_7_act
+	expert_7_up -> expert_7_down
+	expert_7_act -> expert_7_mul
+	expert_7_down -> expert_7_mul
+	expert_7_mul -> agg_7
+	agg_7 -> moe_agg
+	gate -> split_8 [style=dashed]
+	split_8 -> expert_8_gate
+	split_8 -> expert_8_up
+	expert_8_gate -> expert_8_act
+	expert_8_up -> expert_8_down
+	expert_8_act -> expert_8_mul
+	expert_8_down -> expert_8_mul
+	expert_8_mul -> agg_8
+	agg_8 -> moe_agg
+	gate -> split_9 [style=dashed]
+	split_9 -> expert_9_gate
+	split_9 -> expert_9_up
+	expert_9_gate -> expert_9_act
+	expert_9_up -> expert_9_down
+	expert_9_act -> expert_9_mul
+	expert_9_down -> expert_9_mul
+	expert_9_mul -> agg_9
+	agg_9 -> moe_agg
+	gate -> split_10 [style=dashed]
+	split_10 -> expert_10_gate
+	split_10 -> expert_10_up
+	expert_10_gate -> expert_10_act
+	expert_10_up -> expert_10_down
+	expert_10_act -> expert_10_mul
+	expert_10_down -> expert_10_mul
+	expert_10_mul -> agg_10
+	agg_10 -> moe_agg
+	gate -> split_11 [style=dashed]
+	split_11 -> expert_11_gate
+	split_11 -> expert_11_up
+	expert_11_gate -> expert_11_act
+	expert_11_up -> expert_11_down
+	expert_11_act -> expert_11_mul
+	expert_11_down -> expert_11_mul
+	expert_11_mul -> agg_11
+	agg_11 -> moe_agg
+	gate -> split_12 [style=dashed]
+	split_12 -> expert_12_gate
+	split_12 -> expert_12_up
+	expert_12_gate -> expert_12_act
+	expert_12_up -> expert_12_down
+	expert_12_act -> expert_12_mul
+	expert_12_down -> expert_12_mul
+	expert_12_mul -> agg_12
+	agg_12 -> moe_agg
+	gate -> split_13 [style=dashed]
+	split_13 -> expert_13_gate
+	split_13 -> expert_13_up
+	expert_13_gate -> expert_13_act
+	expert_13_up -> expert_13_down
+	expert_13_act -> expert_13_mul
+	expert_13_down -> expert_13_mul
+	expert_13_mul -> agg_13
+	agg_13 -> moe_agg
+	gate -> split_14 [style=dashed]
+	split_14 -> expert_14_gate
+	split_14 -> expert_14_up
+	expert_14_gate -> expert_14_act
+	expert_14_up -> expert_14_down
+	expert_14_act -> expert_14_mul
+	expert_14_down -> expert_14_mul
+	expert_14_mul -> agg_14
+	agg_14 -> moe_agg
+	gate -> split_15 [style=dashed]
+	split_15 -> expert_15_gate
+	split_15 -> expert_15_up
+	expert_15_gate -> expert_15_act
+	expert_15_up -> expert_15_down
+	expert_15_act -> expert_15_mul
+	expert_15_down -> expert_15_mul
+	expert_15_mul -> agg_15
+	agg_15 -> moe_agg
+	moe_agg -> moe_res
+	mha_res -> moe_res
+	moe_res -> layer_output
+}

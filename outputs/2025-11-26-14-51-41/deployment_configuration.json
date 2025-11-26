@@ -1,0 +1,249 @@
+{
+  "deployment_configurations": {
+    "proposed_large_ep_method": {
+      "name": "Large-Scale Cross-Node Expert Parallelism",
+      "description": "Deploys at most one expert per GPU with EP ≥ 16 for maximum parallelism",
+      "parallel_strategy": {
+        "type": "Expert_Parallelism",
+        "ep_degree": 16,
+        "definition": "Large_EP",
+        "min_ep_threshold": 16,
+        "experts_per_gpu": 1,
+        "placement_strategy": "single_expert_per_gpu"
+      },
+      "model_architecture": {
+        "total_layers": 61,
+        "layer_distribution": {
+          "dense_layers": 3,
+          "moe_layers": 58,
+          "placement": "first_3_dense_then_moe"
+        },
+        "expert_specifications": {
+          "type": "MLP",
+          "token_dimension": 7168,
+          "mha_heads": 128,
+          "mha_head_dimension": 128,
+          "mlp_hidden_size": 2048,
+          "precision": "BF16"
+        }
+      },
+      "hardware_configuration": {
+        "gpu_model": "H100",
+        "gpu_compute_power": "400TFLOPS",
+        "gpu_memory": "64GB",
+        "gpu_memory_bandwidth": "1.8TB/s",
+        "interconnect": {
+          "nvlink_bandwidth": "900GB/s",
+          "infiniband_bandwidth": "400Gbps",
+          "topology": "NVSwitch_fabric"
+        }
+      },
+      "performance_targets": {
+        "mfu_utilization": 0.6,
+        "bandwidth_utilization": 0.8,
+        "deployment_mode": "inference_only"
+      },
+      "routing_configuration": {
+        "strategy": "dynamic_async_routing",
+        "token_batching": {
+          "enabled": true,
+          "group_by_destination": true,
+          "batch_formation": "min(available_tokens, GPU_memory_limit/token_size)"
+        },
+        "load_balancing": {
+          "algorithm": "adaptive_gating_adjustment",
+          "balancing_factor": 0.2,
+          "monitoring_interval": "per_batch"
+        }
+      },
+      "communication_settings": {
+        "overlap_strategy": "compute_communication_interleave",
+        "cuda_streams": {
+          "compute_stream": "primary_computation",
+          "send_stream": "token_transmission",
+          "receive_stream": "token_reception"
+        },
+        "pipeline_scheduling": "fine_grained_overlap",
+        "libraries": ["NCCL", "MPI"]
+      },
+      "expert_placement": {
+        "algorithm": "topology_aware_placement",
+        "mathematical_formulation": {
+          "case_1_E_leq_G": "GPU_assignment[i] = GPU_i for expert_i",
+          "case_2_E_gt_G": "GPU_assignment[i] = GPU_(i mod G) for expert_i"
+        },
+        "optimization_objective": "minimize_maximum_link_load",
+        "constraints": [
+          "1_expert_per_GPU",
+          "memory_capacity_per_GPU"
+        ]
+      },
+      "scalability": {
+        "large_ep_regime": true,
+        "optimal_ep_range": [16, 64],
+        "primary_limiting_factor": "network_bandwidth",
+        "integration": {
+          "tensor_parallelism": "available_when_expert_exceeds_gpu_memory",
+          "data_parallelism": "across_moe_replicas"
+        }
+      },
+      "device_mapping": {
+        "mapping_strategy": "one_expert_per_device",
+        "example_16_experts": {
+          "expert_0": "GPU_0_node_0",
+          "expert_1": "GPU_1_node_0",
+          "expert_2": "GPU_2_node_0",
+          "expert_3": "GPU_3_node_0",
+          "expert_4": "GPU_0_node_1",
+          "expert_5": "GPU_1_node_1",
+          "expert_6": "GPU_2_node_1",
+          "expert_7": "GPU_3_node_1",
+          "expert_8": "GPU_0_node_2",
+          "expert_9": "GPU_1_node_2",
+          "expert_10": "GPU_2_node_2",
+          "expert_11": "GPU_3_node_2",
+          "expert_12": "GPU_0_node_3",
+          "expert_13": "GPU_1_node_3",
+          "expert_14": "GPU_2_node_3",
+          "expert_15": "GPU_3_node_3"
+        }
+      }
+    },
+    "traditional_baseline": {
+      "name": "Traditional Expert Colocation Method",
+      "description": "Conventional approach with multiple experts per GPU to minimize communication",
+      "parallel_strategy": {
+        "type": "Expert_Parallelism",
+        "ep_degree": 8,
+        "definition": "Moderate_EP",
+        "experts_per_gpu": 4,
+        "placement_strategy": "expert_colocation"
+      },
+      "model_architecture": {
+        "total_layers": 61,
+        "layer_distribution": {
+          "dense_layers": 3,
+          "moe_layers": 58,
+          "placement": "first_3_dense_then_moe"
+        },
+        "expert_specifications": {
+          "type": "MLP",
+          "token_dimension": 7168,
+          "mha_heads": 128,
+          "mha_head_dimension": 128,
+          "mlp_hidden_size": 2048,
+          "precision": "BF16"
+        }
+      },
+      "hardware_configuration": {
+        "gpu_model": "H100",
+        "gpu_compute_power": "400TFLOPS",
+        "gpu_memory": "64GB",
+        "gpu_memory_bandwidth": "1.8TB/s",
+        "interconnect": {
+          "nvlink_bandwidth": "900GB/s",
+          "infiniband_bandwidth": "400Gbps",
+          "topology": "NVSwitch_fabric"
+        }
+      },
+      "performance_targets": {
+        "mfu_utilization": 0.45,
+        "bandwidth_utilization": 0.4,
+        "deployment_mode": "inference_only"
+      },
+      "routing_configuration": {
+        "strategy": "local_preferred_routing",
+        "token_batching": {
+          "enabled": true,
+          "local_priority": true,
+          "batch_formation": "local_experts_first"
+        },
+        "load_balancing": {
+          "algorithm": "static_distribution",
+          "balancing_factor": 0.1,
+          "monitoring_interval": "per_epoch"
+        }
+      },
+      "communication_settings": {
+        "overlap_strategy": "minimal_communication",
+        "cuda_streams": {
+          "primary_stream": "combined_compute_communication"
+        },
+        "pipeline_scheduling": "sequential_processing",
+        "libraries": ["NCCL"]
+      },
+      "expert_placement": {
+        "algorithm": "memory_optimized_colocation",
+        "mathematical_formulation": {
+          "experts_per_gpu": "E/G where G is number of GPUs",
+          "memory_constraint": "sum(expert_sizes) <= GPU_memory"
+        },
+        "optimization_objective": "minimize_network_communication",
+        "constraints": [
+          "multiple_experts_per_GPU",
+          "memory_capacity_per_GPU"
+        ]
+      },
+      "scalability": {
+        "large_ep_regime": false,
+        "typical_ep_range": [4, 8],
+        "primary_limiting_factor": "intra_gpu_contention",
+        "integration": {
+          "tensor_parallelism": "standard_for_large_models",
+          "data_parallelism": "conventional_dp"
+        }
+      },
+      "device_mapping": {
+        "mapping_strategy": "multiple_experts_per_device",
+        "example_16_experts_4_GPUs": {
+          "GPU_0_node_0": ["expert_0", "expert_1", "expert_2", "expert_3"],
+          "GPU_1_node_0": ["expert_4", "expert_5", "expert_6", "expert_7"],
+          "GPU_2_node_0": ["expert_8", "expert_9", "expert_10", "expert_11"],
+          "GPU_3_node_0": ["expert_12", "expert_13", "expert_14", "expert_15"]
+        },
+        "memory_distribution": {
+          "per_gpu_expert_count": 4,
+          "expert_memory_usage": "16GB_per_expert",
+          "total_expert_memory_per_gpu": "64GB"
+        }
+      }
+    }
+  },
+  "comparison_framework": {
+    "evaluation_metrics": [
+      "throughput_tokens_per_second",
+      "latency_per_token_ms",
+      "scalability_experts_vs_performance",
+      "resource_utilization_gpu_network"
+    ],
+    "performance_expectations": {
+      "proposed_method": {
+        "throughput_advantage": "2-4x_higher_than_baseline",
+        "latency_reduction": "50-70%_vs_baseline",
+        "scalability": "linear_up_to_64_experts",
+        "resource_efficiency": "60%_MFU_80%_bandwidth"
+      },
+      "traditional_baseline": {
+        "throughput": "limited_by_contention",
+        "latency": "higher_due_to_expert_sharing",
+        "scalability": "diminishing_returns_after_8_experts",
+        "resource_efficiency": "45%_MFU_40%_bandwidth"
+      }
+    }
+  },
+  "deployment_requirements": {
+    "minimum_cluster_size": "4_nodes_16_GPUs",
+    "recommended_cluster_size": "8_nodes_32_GPUs",
+    "network_requirements": {
+      "intra_node_bandwidth": "900GB/s_NVLink",
+      "inter_node_bandwidth": "400Gbps_InfiniBand",
+      "topology": "fat_tree_or_dragonfly"
+    },
+    "software_stack": [
+      "CUDA_12.x",
+      "NCCL_2.x",
+      "PyTorch_2.x_or_tensorflow",
+      "Custom_MoE_implementation"
+    ]
+  }
+}

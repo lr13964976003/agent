@@ -1,0 +1,87 @@
+// Large-Scale Cross-Node Expert Parallelism DAG - Corrected Version
+digraph {
+    fontname=Arial rankdir=TB size="30,40"
+    
+    // Input and Output nodes
+    input [label="INPUT\nGPU: N/A\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightcyan shape=ellipse style=filled]
+    output [label="OUTPUT\nGPU: N/A\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightcyan shape=ellipse style=filled]
+    
+    // Multi-Head Attention Components (Tensor Parallel across GPUs 0-7)
+    ln1 [label="LayerNorm\nGPU: All\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightblue style=filled]
+    
+    q_proj [label="Q Projection (Column Parallel)\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, num_heads=16, head_dim=128]" fillcolor=lightblue style=filled]
+    k_proj [label="K Projection (Column Parallel)\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, num_heads=16, head_dim=128]" fillcolor=lightblue style=filled]
+    v_proj [label="V Projection (Column Parallel)\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, num_heads=16, head_dim=128]" fillcolor=lightblue style=filled]
+    
+    // Communication nodes for tensor parallelism
+    comm_q [label="All-Gather Q\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, num_heads=16, head_dim=128]\nOutput: [batch_size=4, seq_len=2048, num_heads=128, head_dim=128]" fillcolor=lightyellow shape=ellipse style=filled]
+    comm_k [label="All-Gather K\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, num_heads=16, head_dim=128]\nOutput: [batch_size=4, seq_len=2048, num_heads=128, head_dim=128]" fillcolor=lightyellow shape=ellipse style=filled]
+    comm_v [label="All-Gather V\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, num_heads=16, head_dim=128]\nOutput: [batch_size=4, seq_len=2048, num_heads=128, head_dim=128]" fillcolor=lightyellow shape=ellipse style=filled]
+    
+    // Attention computation
+    attn_score [label="Attention Score\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, seq_len=2048, num_heads=128]\nOutput: [batch_size=4, seq_len=2048, seq_len=2048, num_heads=128]" fillcolor=lightblue style=filled]
+    attn_softmax [label="Softmax\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, seq_len=2048, num_heads=128]\nOutput: [batch_size=4, seq_len=2048, seq_len=2048, num_heads=128]" fillcolor=lightblue style=filled]
+    attn_weight [label="Weighted Values\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, seq_len=2048, num_heads=128]\nOutput: [batch_size=4, seq_len=2048, num_heads=128, head_dim=128]" fillcolor=lightblue style=filled]
+    
+    o_proj [label="O Projection (Row Parallel)\nGPU: 0-7\nInput: [batch_size=4, seq_len=2048, num_heads=128, head_dim=128]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightblue style=filled]
+    
+    // Residual connection
+    res1 [label="Residual Add 1\nGPU: All\nInput1: [batch_size=4, seq_len=2048, token_dim=7168]\nInput2: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightblue style=filled]
+    
+    // MoE Components - Expert Parallelism with 16 experts across 16 GPUs
+    gate [label="Gate Network\nGPU: Routing Node\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, top_k=2]" fillcolor=lightgreen shape=parallelogram style=filled]
+    
+    // Token routing - single split node with parameterized GPU mapping
+    token_split [label="Token Split\nGPU: 0_0,0_1,0_2,0_3,1_0,1_1,1_2,1_3,2_0,2_1,2_2,2_3,3_0,3_1,3_2,3_3\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, dynamic_seq_len, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+    
+    // Expert computation subgraph - parameterized for all 16 experts
+    expert_gate [label="Expert Gate (Parameterized)\nGPU: GPU_i for expert_i\nInput: [batch_size=4, dynamic_seq_len, token_dim=7168]\nOutput: [batch_size=4, dynamic_seq_len, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+    expert_up [label="Expert Up Projection\nGPU: GPU_i for expert_i\nInput: [batch_size=4, dynamic_seq_len, token_dim=7168]\nOutput: [batch_size=4, dynamic_seq_len, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+    expert_act [label="Expert Activation (SiLU)\nGPU: GPU_i for expert_i\nInput: [batch_size=4, dynamic_seq_len, mlp_hidden=2048]\nOutput: [batch_size=4, dynamic_seq_len, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+    expert_down [label="Expert Down Projection\nGPU: GPU_i for expert_i\nInput: [batch_size=4, dynamic_seq_len, mlp_hidden=2048]\nOutput: [batch_size=4, dynamic_seq_len, token_dim=7168]" fillcolor=lightblue style=filled]
+    expert_mul [label="Expert Gate Multiply\nGPU: GPU_i for expert_i\nInput1: [batch_size=4, dynamic_seq_len, mlp_hidden=2048]\nInput2: [batch_size=4, dynamic_seq_len, mlp_hidden=2048]\nOutput: [batch_size=4, dynamic_seq_len, mlp_hidden=2048]" fillcolor=lightblue style=filled]
+    
+    // Token aggregation - single aggregate node with parameterized GPU mapping
+    token_aggregate [label="Token Aggregate\nGPU: 0_0,0_1,0_2,0_3,1_0,1_1,1_2,1_3,2_0,2_1,2_2,2_3,3_0,3_1,3_2,3_3\nInput: [batch_size=4, dynamic_seq_len, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+    
+    final_agg [label="Final Expert Aggregation\nGPU: All\nInput: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightgreen shape=parallelogram style=filled]
+    
+    // Final residual and output
+    res2 [label="Residual Add 2\nGPU: All\nInput1: [batch_size=4, seq_len=2048, token_dim=7168]\nInput2: [batch_size=4, seq_len=2048, token_dim=7168]\nOutput: [batch_size=4, seq_len=2048, token_dim=7168]" fillcolor=lightblue style=filled]
+    
+    // Connections
+    input -> ln1
+    ln1 -> q_proj
+    ln1 -> k_proj  
+    ln1 -> v_proj
+    
+    q_proj -> comm_q
+    k_proj -> comm_k
+    v_proj -> comm_v
+    
+    comm_q -> attn_score
+    comm_k -> attn_score
+    attn_score -> attn_softmax
+    attn_softmax -> attn_weight
+    comm_v -> attn_weight
+    attn_weight -> o_proj
+    o_proj -> res1
+    input -> res1
+    res1 -> gate
+    
+    // MoE routing and computation
+    gate -> token_split [style=dashed]
+    token_split -> expert_gate
+    token_split -> expert_up
+    
+    expert_gate -> expert_act
+    expert_up -> expert_mul
+    expert_act -> expert_mul
+    expert_mul -> expert_down
+    expert_down -> token_aggregate
+    
+    token_aggregate -> final_agg
+    final_agg -> res2
+    res1 -> res2
+    res2 -> output
+}
