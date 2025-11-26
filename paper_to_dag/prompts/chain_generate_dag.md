@@ -46,7 +46,7 @@ One layer in the model consists of a Multi-Head Attention along with an FFN(Gate
 
 Both MHA and MLP need to be expanded into single operators; they cannot be written as a single entity. <<<MHA和MLP都要展开成单算子，不能写成一个整体>>>
 
-If combined with other strategies such as DP, TP, PP, SP, ring attention, etc., it is required to fully demonstrate the deployment of parallel strategies. <<<如果结合了DP,TP, PP,SP,ring attention等其他策略，要求必须将并行策略的部署情况完整展示出来>>
+If combined with other strategies such as DP, TP, PP, SP, ring attention, etc., it is required to fully demonstrate the deployment of parallel strategies in DAG. <<<如果结合了DP,TP, PP,SP,ring attention等其他策略，要求必须将并行策略的部署情况在DAG图中完整展示出来，>>
 
 The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意DAG中不能漏残差的边>>>
 
@@ -108,6 +108,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
 Result: We will evaluate whether the deployment plan you generated is the optimal strategy.
+
 
 
 
