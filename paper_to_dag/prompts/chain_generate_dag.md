@@ -40,6 +40,8 @@ Information from different dimensions must be separated by commas.<<<不同维�
 
 Require that the information within each node in DAG must include the shapes of the input and output tensors, as well as the GPU ID. <<<要求每个节点内的信息必须包含输入输出张量的形状，所在GPU序号>>>
 
+In the DAG diagram, the GPU numbers must be clearly specified; it is not allowed to use abbreviations such as GPU: ALL or GPU: Shared. <<<DAG图中GPU的序号要明确写出来，不能使用 GPU：ALL或者GPU: Shared 省略表示>>>
+
 Nodes in DAG containing multiple operators must be split. <<<包含多个算子的DAG图节点必须拆分>>>
 
 One layer in the model consists of a Multi-Head Attention along with an FFN(Gate and Experts). <<<模型中的一层由多头注意力机制以及前馈神经网络（包括门控和专家模块）组成>>>
@@ -55,6 +57,8 @@ Please analyze how the dimensions of the tensor on each node will change. Engine
 The aggregation and split of tensor need to be represented by nodes. <<<显示张量的聚合与分割>>>
 
 Communication between nodes in DAG needs to be demonstrated. <<<DAG图上的节点间的通信要体现出来>>>
+
+In the DAG diagram, the communication between the MHA phase and the MOE phase should be fully represented using dashed lines. <<<DAG图中MHA阶段和MOE阶段的通信都要用虚线完整表示出来>>>
 
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
@@ -108,6 +112,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
 Result: We will evaluate whether the deployment plan you generated is the optimal strategy.
+
 
 
 
