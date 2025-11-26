@@ -52,6 +52,8 @@ In such regimes, distributing experts across as many devices as possible—ideal
 Our proposed method addresses this challenge by exploiting large EP setups, carefully aligning expert placement with the cluster topology, and overlapping communication with computation to achieve near-linear scaling in large MoE deployments.
 
 
+---
+
 
 ## **Methods**
 
@@ -82,7 +84,7 @@ The method consists of three key components:
 In conventional MoE implementations, multiple experts are colocated on a single GPU to reduce cross-node communication. However, this limits the parallelism achievable at the expert level. In contrast, our method deploys at most one expert per GPU:
 
 
-* For a MoE layer with $E$ experts and a cluster of $G$ GPUs, we ensure that each expert is assigned to a distinct GPU if $E leq G$.
+* For a MoE layer with $E$ experts and a cluster of $G$ GPUs, we ensure that each expert is assigned to a distinct GPU if $E <= G$.
 * If $E > G$, we replicate experts across GPUs in a manner that maximizes the concurrency of independent experts while balancing memory usage.
 
 
@@ -151,7 +153,7 @@ To mitigate the latency of cross-node token transfers, we interleave expert comp
 In multi-layer MoE networks, the scheduling ensures that:
 
 
-* Token outputs from the previous MoE layer are immediately routed to the next layer’s experts.
+* Token outputs from the previous MoE layer are immediately routed to the next layer.
 * Experts in subsequent layers start processing as soon as a partial batch arrives, rather than waiting for the full batch.
 
 
@@ -171,7 +173,7 @@ Our method is optimized for large EP setups, defined as having 16 or more expert
 
 
 * Network bandwidth becomes the primary limiting factor. We mitigate this by topology-aware routing and token batching.
-* The one-expert-per-GPU policy ensures that all GPUs are fully utilized for compute, while communication costs are amortized across many tokens.
+* The one-expert-per-GPU policy ensures that all GPUs are fully utilized for compute, while communication costs are masked by the calculation process..
 
 
 #### **5.2 Memory and Model Parallelism Integration**
@@ -199,6 +201,9 @@ Our method provides:
 4. **Compatibility with Large Models:** Integrates seamlessly with TP and DP for models exceeding single-GPU memory.
 
 
+---
+
+
 ## **Experiments**
 
 
@@ -208,18 +213,18 @@ Our method provides:
 We evaluate the proposed large-scale cross-node expert parallelism method in an **inference-only** setting using adequate H100 GPUs. The model and configuration are as follows:
 
 
-* **Model**: 16-layer Mixture-of-Experts (MoE), each expert is a MLP
+* **Model**: 61-layer Mixture-of-Experts (MoE), each expert is a MLP，The first three layers are dense, followed by MoE.
 * **Precision**: BF16
-* **Batch size**: Each batch consists of 128 sequences.
-* **Sequence Length**: 10000 tokens per sequence.
-* **Token Dimension**: The dimension of each token is 4096.
-* **Dimension of MHA**: The number of heads is 32 and the dimension of each heads is 128.
-* **Hidden size of MLP**: The hidden is of MLP is 16384.
+* **Batch size**: variable batch size
+* **Sequence Length**: variable sequence length.
+* **Token Dimension**: The dimension of each token is 7168.
+* **Dimension of MHA**: The number of heads is 128 and the dimension of each heads is 128.
+* **Hidden size of MLP**: The hidden is of MLP is 2048.
 
 We evaluated the hardware environment for the baseline and the new parallel strategy proposed in this paper as follows:
 
 
-* **GPUs**:  Ample GPU resources, no limits.
+* **GPUs**:  Ample H100 GPU resources, no limits.
 * **Single-card computing power**: 400TFlops.
 * **MFU utilization**: 60%.
 * **VRAM Bandwidth**: 1.8TBps.
@@ -227,29 +232,10 @@ We evaluated the hardware environment for the baseline and the new parallel stra
 * **Single-card video memory capacity**: 64GB.
 
 
-**Metrics:**
-
-* **TPS (Tokens per Second)**: Measures throughput
-* **TPOT (Time per Output Token)**: Measures latency per token
-
----
-
-
 ### **2. Parallel Deployment Details**
 
 
-#### **2.1 Baseline Deployment (TP=8, PP=2)**
-
-
-* **GPUs Used**: adequate H100 GPUs
-* **Per-GPU Allocation**:
-
-  * Each GPU holds tensor-parallel shard for all layers.
-  * Experts are colocated on GPUs.
-* **Processing**: Tokens flow sequentially through the pipeline stages, and multiple experts per GPU share compute resources.
-
-
-#### **2.2 Proposed Cross-Node Expert Parallelism**
+#### **2.1 Proposed Cross-Node Expert Parallelism**
 
 
 * **GPUs Used**: adequate GPUs (one GPU per expert per layer)
@@ -267,44 +253,10 @@ This deployment ensures **all experts per layer compute in parallel**, maximizin
 ---
 
 
-### **3. Results**
-
-
-| Method                                 | GPUs Used | Per-GPU Deployment           | TPS (Tokens/s) | TPOT (ms) |
-| -------------------------------------- | --------- | ---------------------------- | -------------- | --------- |
-| Baseline (TP=8, PP=2)                  | adequate  | TP shard per GPU             | 120,000        | 8.3       |
-| Proposed Cross-Node Expert Parallelism | adequate  | 1 expert each layer per GPU  | 450,000        | 2.2       |
-
-
-**Notes:**
-
-
-* Baseline GPUs are shared among multiple experts, causing intra-GPU contention and pipeline stalls.
-* Our method dedicates one expert per GPU, enabling **maximal expert-level parallelism**.
-* Throughput (TPS) is ~3.75× higher, and latency (TPOT) is ~3.8× lower than the baseline.
-
-
----
-
-
-### **4. Discussion**
-
-
-* Deploying **one expert per GPU** allows full utilization of GPU compute and memory.
-* Asynchronous token routing ensures minimal waiting, even across nodes.
-* With 16 GPUs (unlimited H100s), the system scales near-linearly in the large EP regime.
-
-
-
-
 ## **Conclusion**
 
 
 In this work, we proposed a **large-scale cross-node expert parallelism** method for Mixture-of-Experts (MoE) models, designed to **maximize expert-level parallelism** by deploying at most one expert per GPU. Our approach shifts the computational bottleneck from intra-GPU contention to communication, which is effectively mitigated through **asynchronous token routing**, topology-aware expert placement, and overlap of computation with communication.
-
-
-We demonstrated the effectiveness of our method in an **inference-only setting** on a 4-layer, 16-expert-per-layer MoE model using FP16 precision and a batch size of 1024. Compared to a baseline configuration with TP=8 and PP=2, our approach achieved **~3.75× higher throughput** and **~3.8× lower latency** by fully utilizing all 16 GPUs and enabling large Expert Parallelism. The results confirm that distributing experts across GPUs and overlapping communication and computation can dramatically improve performance for large-scale MoE deployments.
-S
 
 Our method provides a **scalable blueprint** for future high-performance MoE inference, particularly in environments with abundant GPU resources such as H100 clusters. Future work may explore extending this approach to **training scenarios**, integrating **dynamic expert routing** for adaptive load balancing, and optimizing communication strategies for **even larger models with thousands of experts**.
 ```
