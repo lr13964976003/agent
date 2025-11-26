@@ -1,7 +1,6 @@
 You are tasked with some tasks. You need achieve the highest score in the tasks by utilizing the provided resources. Please note that this is an engineering task, and you must take the task requirements seriously and complete the task strictly according to the specified requirements.
 
 
-
 RESOURCES
 
 ---
@@ -9,7 +8,6 @@ RESOURCES
 You have been provided with a concise research paper by the previous agent.  
 
 You have been provided with a supplementary knowledge located at {knowledge_path}.<<<提供知识路径>>>
-
 
 
 TASK
@@ -20,28 +18,37 @@ You are tested to completed the following tasks:
 
 Gain a deep understanding of the methods proposed in the paper. <<<要求理解论文>>> 
 
-Determine how to deploy the model onto GPUs by according to the paper. <<<要求按论文提出方法提出部署方案>>>
+Request to propose a deployment plan that aligns with the current hardware environment based on the methods outlined in the paper.. <<<要求按论文提出方法提出符合当前硬件环境的部署方案>>>
 
-The provided GPU resources are sufficient. The proposed deployment solution should aim to minimize latency and maximize throughput for a single GPU. <<<提供的GPU的资源是充足的，要求提出的部署方案尽可能使单GPU的时延小和吞吐量大>>>
+The deployment scheme can be combined with other parallel strategies such as DP, TP, PP, SP, ring attention, etc. <<<部署方案可以结合其他并行策略如DP,TP,PP,SP,ring attention等等>>>
 
-Require reflection on whether the deployment plan is practical.  <<<要求反思部署方案是否符合实际>>>
+The deployment plan should aim to minimize latency and increase throughput. <<<要求部署方案尽量减少时延，增大吞吐量>>>
 
-Please analyze how the dimensions of the module will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析维度变化是否正确>>>
+Request an evaluation of whether the deployment plan is the optimal strategy. <<<要求评估部署方案是否是最优策略>>>
 
-Generate complete model deployment DAGs(directed acyclic graph) according to you deployment plan and the baseline in the paper by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
+Generate complete model deployment DAGs(directed acyclic graph) according to your deployment plan by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
 
 Card Boundary Division (specify which GPU each node is on) <<<按不同GPU划分边界>>>
 
-Each node can only contain one GPU. If a node contains multiple GPUs, it should be split. <<<每个节点的只能包含一个GPU，如果有节点包含多个GPU，则把它拆分>>>
+Each node in DAG needs to be detailed down to the operator level.<<<要求dag的节点详细到算子级别>>>
 
-Label the communication between GPUs and the content of the communication in a concise and intuitive manner in the DAG diagram. <<<把GPU之间的通信，以及通信的内容，用简洁直观的方式在DAG图中标注出来>>>
+Use ellipses to represent communication, rectangles for computation, and parallelograms for routing/aggregation.<<<指定节点形状>>>
 
-The aggregation and split of data need to be represented by nodes. <<<显示数据聚合与分割>>>
+Each nodes must have the attributions: INPUT DIMENSION and OUTPUT DIMENSION. Sample: Input: \[batch\_size=?, seq\_len=?, heads=?, d\_k=?],Output:\[batch\_size=?, seq\_len=?, heads=?, d\_k=?]<<<每个节点必须注明输入维度和输出维度>>>
 
-Ensure no loss of dimensional information, modules structure, and the model's input and output. Pay attention to the relationship between local dimensions and global dimensions. <<<保障维度正确>>>
+Information from different dimensions must be separated by commas.<<<不同维度信息用,隔开>>>
+
+Require that the information within each node must include the shapes of the input and output tensors, as well as the GPU ID. <<<要求每个节点内的信息必须包含输入输出张量的形状，所在GPU序号>>>
+
+Please analyze how the dimensions of the tensor on each node will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析张量维度变化是否正确>>>
+
+The aggregation and split of tensor need to be represented by nodes. <<<显示张量的聚合与分割>>>
+
+Communication between nodes needs to be demonstrated. <<<节点间的通信要体现出来>>>
 
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
+This will be a task with many steps. Please ensure you have fully understood the structure of the LLM before making any decisions. <<<这是一个多步任务，不要急于求成>>>
 
 
 NOTE
@@ -50,29 +57,13 @@ NOTE
 
 You need to follow the following constraints:
 
-If multiple models are used in the paper, all the DAGs of them need to be generated.<<<提醒要生成多个dag而不是合并模型>>>
-
-Two DAG graphs are required to be generated: one representing the baseline, and the other representing the optimal solution of the parallel strategy proposed in this paper. <<<要求生成两个DAG图，一个是baseline的，一个是本论文提出的并行策略的最优解>>>
-
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
 
-Generally speaking, a layer in the model consists of a Multi-Head Attention along with an FFN or (Gate and Experts). <<<提供模型一层的组成信息>>>
+One layer in the model consists of a Multi-Head Attention along with an FFN(Gate and Experts). <<<模型中的一层由多头注意力机制以及前馈神经网络（包括门控和专家模块）组成>>>
 
-Each node is labeled with which attention head it corresponds to, especially when performing parallel processing by attention head. <<<每个节点标注计算的是哪一个注意力头，尤其是在进行按注意力头并行的时候>>>
+Nodes containing multiple operators must be split. <<<包含多个算子的节点必须拆分>>>
 
-A complete DAG must include a total input and output.<<<提醒要包含完整输入输出>>>
-
-Modules containing multiple operators should be split in a concise and clear manner.<<<包含多个operator的模块尽量简洁明晰的拆分>>>
-
-Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
-
-Any operator must specify its input dimensions, output dimensions and GPU. If the operator exists across all GPUs, it should be noted as "all GPUs." <<<要求每个算子注明维度与GPU>>>
-
-Each nodes must have the attributions: INPUT DIMENSION and OUTPUT DIMENSION. Sample: Input: \[batch\_size=?, seq\_len=?, heads=?, d\_k=?],Output:\[batch\_size=?, seq\_len=?, heads=?, d\_k=?]<<<每个计算节点必须注明输入维度和输出维度>>>
-
-Information from different dimensions must be separated by commas.<<<不同维度信息用,隔开>>>
-
-In a batch, there are a total of batch\_size independent data points.<<<batch中数据是独立的>>>
+In a batch, there are a total of batch size independent data points.<<<batch中数据是独立的>>>
 
 The generated DAG must not contain any cycles.<<<禁止有环>>>
 
@@ -82,19 +73,9 @@ The residual add has at least two inputs. Please ensure not to omit its input co
 
 The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
 
-Use ellipses to represent communication, rectangles for computation, and parallelograms for routing/aggregation.<<<指定节点形状>>>
-
-Extract the important components of the DAG graph as much as possible, and omit unnecessary parts. <<<尽量提取DAG图中重要的组成部分，省略不必要的部分>>>
-
-Omit layers with high similarity or repetition in the DAG graph, retaining only representative layers. Repeated modules can be labeled with the number of repetitions. <<<省略DAG图中相似度很高或者重复的层，只保留具有代表性的层，重复的模块可以标定重复次数>>>
-
-Ensure that each node you create is connected to at least one other node. <<<不允许生成无用节点>>>
-
 Sometimes, a complete DAG can be very large and contain a lot of similar content. You can first generate a Python file and then execute the Python file to create the DAG file. <<<提醒可以生成python文件来生成dag>>>
 
 By executing Python, you need to generate images and .dot files.<<<图像和dot文件都需要生成>>>
-
-This will be a task with many steps. Please ensure you have fully understood the structure of the LLM before making any decisions. <<<这是一个多步任务，不要急于求成>>>
 
 
 
@@ -120,9 +101,10 @@ Understand: We will check whether you have read and understood ALL the sections 
 
 Attitude: We will check whether you have engaged in perfunctory behavior by only a partial DAG was generated and whether you have strictly adhered to the restrictions in the Note.
 
-Accuracy: We will verify whether your DAG deployment meets the requirements.
+Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
-Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+Result: We will evaluate whether the deployment plan you generated is the optimal strategy.
+
 
 
 
