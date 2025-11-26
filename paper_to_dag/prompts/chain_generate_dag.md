@@ -79,6 +79,8 @@ Do not make any changes to the original file. <<<禁止修改原始文件>>>
 
 In a batch, there are a total of batch size independent data points.<<<batch中数据是独立的>>>
 
+The communication part of MHA must be represented with dashed lines in the DAG diagram. <<<MHA的通信部分必须用虚线展现在DAG图中>>>
+
 The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
 
 Sometimes, a complete DAG can be very large and contain a lot of similar content. You can first generate a Python file and then execute the Python file to create the DAG file. <<<提醒可以生成python文件来生成dag>>>
@@ -112,6 +114,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
 Result: We will evaluate whether the deployment plan you generated is the optimal strategy.
+
 
 
 
