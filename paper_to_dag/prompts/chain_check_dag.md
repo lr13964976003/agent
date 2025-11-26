@@ -20,6 +20,8 @@ Check whether the deployment plan is the optimal parallel strategy for the curre
 
 Check if the DAG contains a cycle. <<<检查dag中是否包含环>>>
 
+Check if except for the input node, each node in DAG must have a preceding input node; except for the output node, each node must output to another node. <<<检查DAG中是否有空悬的节点>>>
+
 Check whether the DAG graph includes three main components: communication, computation, and data aggregation. <<<检查DAG图是否包含了通信，计算和数据聚合三大部分>>>
 
 Check whether the DAG diagram is concise and clear, with no highly similar repeated modules.<<<检查DAG图是否做到简洁明晰，没有相似度很高的重复模块>>>
@@ -57,6 +59,7 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
+
 
 
 
