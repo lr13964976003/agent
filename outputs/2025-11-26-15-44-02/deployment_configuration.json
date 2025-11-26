@@ -1,0 +1,124 @@
+{
+  "deployment_configuration": {
+    "model_info": {
+      "model_type": "Mixture-of-Experts (MoE)",
+      "total_layers": 61,
+      "dense_layers": 3,
+      "moe_layers": 58,
+      "expert_type": "MLP",
+      "token_dimension": 7168,
+      "mha_heads": 128,
+      "mha_head_dimension": 128,
+      "mlp_hidden_size": 2048,
+      "precision": "BF16",
+      "batch_processing": "variable",
+      "sequence_length": "variable"
+    },
+    "parallel_strategy": {
+      "primary_strategy": "Expert Parallelism (EP)",
+      "ep_degree": ">=16",
+      "description": "Large-scale cross-node expert parallelism",
+      "expert_per_gpu_policy": "at most one expert per GPU per layer",
+      "additional_parallelisms": ["Data Parallelism (DP)", "Tensor Parallelism (TP)"],
+      "parallel_hierarchy": "DP -> EP -> TP"
+    },
+    "expert_placement": {
+      "placement_strategy": "single_expert_per_gpu",
+      "distribution_method": "cross_node_with_topology_awareness",
+      "placement_constraints": {
+        "expert_gpu_ratio": "E <= G for full distribution",
+        "replication_policy": "when E > G, replicate experts balancing memory usage",
+        "topology_factors": ["node_to_node_bandwidth", "node_to_node_latency", "gpu_memory_capacity", "token_routing_patterns"]
+      }
+    },
+    "routing_configuration": {
+      "gating_mechanism": "top_k_scoring",
+      "token_batching": true,
+      "routing_type": "asynchronous",
+      "load_balancing": "dynamic_probability_adjustment",
+      "communication_overlap": true
+    },
+    "communication_configuration": {
+      "overlap_strategy": "compute_communication_interleaving",
+      "async_libraries": ["CUDA_streams", "NCCL", "MPI"],
+      "pipeline_scheduling": {
+        "inter_layer_routing": "immediate",
+        "batch_processing": "partial_batch_processing"
+      },
+      "token_batching": {
+        "enabled": true,
+        "grouping_method": "by_destination_expert"
+      }
+    },
+    "hardware_specifications": {
+      "gpu_type": "H100",
+      "computing_power_per_gpu": "400TFlops",
+      "mfu_utilization": "60%",
+      "vram_bandwidth": "1.8TBps",
+      "bandwidth_utilization": "80%",
+      "memory_per_gpu": "64GB",
+      "network_requirements": ["NVLink", "InfiniBand", "H100_class_NVSwitch"]
+    },
+    "module_divisions": {
+      "expert_modules": {
+        "type": "MLP_expert",
+        "dimension": 2048,
+        "placement": "one_per_gpu",
+        "parallelism_support": {
+          "tensor_parallelism": "supported_within_expert_if_needed",
+          "data_parallelism": "supported_across_replicas"
+        }
+      },
+      "dense_layers": {
+        "count": 3,
+        "location": "first_three_layers",
+        "type": "standard_transformer_layers"
+      },
+      "attention_modules": {
+        "heads": 128,
+        "head_dimension": 128,
+        "token_dimension": 7168
+      }
+    },
+    "device_mapping": {
+      "expert_distribution": {
+        "principle": "one_expert_per_gpu_per_layer",
+        "gpu_assignment": "dedicated_gpu_per_expert",
+        "layer_processing": "all_experts_per_layer_compute_in_parallel"
+      },
+      "memory_mapping": {
+        "expert_memory": "accommodated_within_64GB_per_gpu",
+        "tensor_parallelism_fallback": "use_TP_when_exceeds_single_GPU_memory",
+        "replication_balance": "maintain_memory_balance_across_gpus"
+      }
+    },
+    "scalability_parameters": {
+      "large_ep_threshold": 16,
+      "network_optimization": {
+        "primary_limitation": "network_bandwidth",
+        "mitigation": "topology_aware_routing_plus_token_batching"
+      },
+      "compute_optimization": {
+        "utilization_target": "full_gpu_utilization_through_one_expert_per_gpu",
+        "communication_masking": "overlapped_by_calculation_process"
+      }
+    },
+    "baseline_comparison": {
+      "traditional_approach": {
+        "description": "multiple_experts_per_gpu_to_reduce_communication",
+        "limitation": "creates_computational_bottlenecks_and_limits_parallelism"
+      },
+      "proposed_approach": {
+        "description": "single_expert_per_gpu_to_maximize_parallelism",
+        "advantage": "minimal_expert_contention_and_maximized_compute_efficiency"
+      }
+    },
+    "deployment_requirements": {
+      "minimum_gpus": "equal_to_expert_count_per_layer",
+      "recommended_ep_degree": ">=16",
+      "network_specifications": "high_bandwidth_low_latency_interconnects",
+      "memory_requirement": "64GB_per_GPU_minimum",
+      "compute_requirement": "400TFlops_per_GPU_recommended"
+    }
+  }
+}
