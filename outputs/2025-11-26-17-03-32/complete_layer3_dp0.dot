@@ -1,0 +1,101 @@
+digraph complete_layer3_dp0 {
+	graph [bb="0,0,858,699.17",
+		compound=true,
+		rankdir=TB
+	];
+	node [label="\N"];
+	subgraph cluster_attention {
+		graph [bb="140,452,718,691.17",
+			label="Multi-Head Attention Phase",
+			lheight=0.21,
+			lp="429,679.67",
+			lwidth=2.76,
+			style=rounded
+		];
+		attn_input	[fillcolor=lightblue,
+			height=1.3356,
+			label="Layer Input\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]",
+			pos="429,612.08",
+			shape=ellipse,
+			style=filled,
+			width=7.8175];
+		mha	[fillcolor=lightgreen,
+			height=0.94444,
+			label="MHA Complete\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]",
+			pos="429,494",
+			shape=rectangle,
+			style=filled,
+			width=5.5278];
+		attn_input -> mha	[pos="e,429,528.3 429,563.87 429,555.48 429,546.78 429,538.51"];
+	}
+	subgraph cluster_experts {
+		graph [bb="8,8,850,444",
+			label="Expert Parallel MoE Phase",
+			lheight=0.21,
+			lp="429,432.5",
+			lwidth=2.68,
+			style=rounded
+		];
+		distribute	[fillcolor=gold,
+			height=1.8889,
+			label="Token Distribution\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]",
+			pos="429,345",
+			shape=parallelogram,
+			style=filled,
+			width=11.462];
+		expert_0_comp	[fillcolor=lightcoral,
+			height=0.73611,
+			label="Expert 0 MLP\nGPU:0\nNode:0",
+			pos="228,214.5",
+			shape=rectangle,
+			style=filled,
+			width=1.6111];
+		distribute -> expert_0_comp	[pos="e,267.99,241.06 324.08,276.93 307.53,266.34 291.14,255.86 276.7,246.64",
+			style=dashed];
+		expert_1_comp	[fillcolor=lightcoral,
+			height=0.73611,
+			label="Expert 1 MLP\nGPU:1\nNode:0",
+			pos="362,214.5",
+			shape=rectangle,
+			style=filled,
+			width=1.6111];
+		distribute -> expert_1_comp	[pos="e,375.44,241.27 393.93,276.74 389.15,267.56 384.4,258.47 380.1,250.21",
+			style=dashed];
+		expert_2_comp	[fillcolor=lightcoral,
+			height=0.73611,
+			label="Expert 2 MLP\nGPU:2\nNode:0",
+			pos="496,214.5",
+			shape=rectangle,
+			style=filled,
+			width=1.6111];
+		distribute -> expert_2_comp	[pos="e,482.56,241.27 464.07,276.74 468.85,267.56 473.6,258.47 477.9,250.21",
+			style=dashed];
+		expert_3_comp	[fillcolor=lightcoral,
+			height=0.73611,
+			label="Expert 3 MLP\nGPU:3\nNode:0",
+			pos="630,214.5",
+			shape=rectangle,
+			style=filled,
+			width=1.6111];
+		distribute -> expert_3_comp	[pos="e,590.01,241.06 533.92,276.93 550.47,266.34 566.86,255.86 581.3,246.64",
+			style=dashed];
+		aggregate	[fillcolor=lightgrey,
+			height=1.8889,
+			label="Expert Aggregation\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]",
+			pos="429,84",
+			shape=parallelogram,
+			style=filled,
+			width=11.462];
+		expert_0_comp -> aggregate	[pos="e,323.93,152.17 268.19,187.8 282.05,178.95 298.32,168.54 315.11,157.81",
+			style=dashed];
+		expert_1_comp -> aggregate	[pos="e,393.98,152.17 375.4,187.8 379.55,179.84 384.35,170.63 389.35,161.05",
+			style=dashed];
+		expert_2_comp -> aggregate	[pos="e,464.02,152.17 482.6,187.8 478.45,179.84 473.65,170.63 468.65,161.05",
+			style=dashed];
+		expert_3_comp -> aggregate	[pos="e,534.07,152.17 589.81,187.8 575.95,178.95 559.68,168.54 542.89,157.81",
+			style=dashed];
+	}
+	mha -> distribute	[lhead=cluster_experts,
+		ltail=cluster_attention,
+		pos="e,429,444 429,452 429,450 429,448 429,446"];
+}

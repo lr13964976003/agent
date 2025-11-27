@@ -1,0 +1,39 @@
+digraph Tensor_Parallel_Expert {
+	graph [concentrate=true rankdir=LR splines=ortho]
+	label="Tensor Parallelism Within Expert (2-way TP)"
+	tp_input [label="Expert Input
+[bs=?, seq=?, dim=7168]" fillcolor=lightgrey shape=ellipse style=filled]
+	tp_linear1_0 [label="Linear 1 Col-Parallel
+GPU: {expert_gpu}_0
+[bs=?, seq=?, dim=7168] → [bs=?, seq=?, dim=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	tp_linear1_1 [label="Linear 1 Col-Parallel
+GPU: {expert_gpu}_1
+[bs=?, seq=?, dim=7168] → [bs=?, seq=?, dim=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	tp_concat [label="Concatenation
+GPU: Both
+[bs=?, seq=?, dim=2048]" fillcolor=orange shape=parallelogram style=filled]
+	tp_gelu [label="GELU Activation
+GPU: Both
+[bs=?, seq=?, dim=2048]" fillcolor=lightblue shape=rectangle style=filled]
+	tp_linear2_0 [label="Linear 2 Row-Parallel
+GPU: {expert_gpu}_0
+[bs=?, seq=?, dim=1024] → [bs=?, seq=?, dim=7168]" fillcolor=lightblue shape=rectangle style=filled]
+	tp_linear2_1 [label="Linear 2 Row-Parallel
+GPU: {expert_gpu}_1
+[bs=?, seq=?, dim=1024] → [bs=?, seq=?, dim=7168]" fillcolor=lightblue shape=rectangle style=filled]
+	tp_allreduce [label="All-Reduce Sum
+GPU: Both
+[bs=?, seq=?, dim=7168]" fillcolor=orange shape=parallelogram style=filled]
+	tp_output [label="Expert Output
+[bs=?, seq=?, dim=7168]" fillcolor=lightgrey shape=ellipse style=filled]
+	tp_input -> tp_linear1_0
+	tp_input -> tp_linear1_1
+	tp_linear1_0 -> tp_concat
+	tp_linear1_1 -> tp_concat
+	tp_concat -> tp_gelu
+	tp_gelu -> tp_linear2_0
+	tp_gelu -> tp_linear2_1
+	tp_linear2_0 -> tp_allreduce
+	tp_linear2_1 -> tp_allreduce
+	tp_allreduce -> tp_output
+}

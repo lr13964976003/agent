@@ -1,0 +1,24 @@
+digraph detailed_attention {
+	rankdir=TB
+	ln [label="LayerNorm\nGPU:0\nInput: [batch_size=4, seq_len=2048, heads=128, d_k=128]\nOutput: [batch_size=4, seq_len=2048, heads=128, d_k=128]" fillcolor=lightblue shape=rectangle style=filled]
+	q_proj [label="Q Projection\nGPU:0\nInput: [batch_size=4, seq_len=2048, heads=128, d_k=128]\nOutput: [batch_size=4, seq_len=2048, heads=128, d_k=128]" fillcolor=lightgreen shape=rectangle style=filled]
+	k_proj [label="K Projection\nGPU:0\nInput: [batch_size=4, seq_len=2048, heads=128, d_k=128]\nOutput: [batch_size=4, seq_len=2048, heads=128, d_k=128]" fillcolor=lightgreen shape=rectangle style=filled]
+	v_proj [label="V Projection\nGPU:0\nInput: [batch_size=4, seq_len=2048, heads=128, d_k=128]\nOutput: [batch_size=4, seq_len=2048, heads=128, d_k=128]" fillcolor=lightgreen shape=rectangle style=filled]
+	scale [label="Scale\nGPU:0\nInput: [batch_size=4, seq_len=2048, heads=128, d_k=128]\nOutput: [batch_size=4, seq_len=2048, heads=128, d_k=128]" fillcolor=yellow shape=rectangle style=filled]
+	matmul1 [label="QK^T MatMul\nGPU:0\nInput: [batch_size=4, seq_len=2048, heads=128, d_k=128]\nOutput: [batch_size=4,seq_len=2048,seq_len=2048]" fillcolor=yellow shape=rectangle style=filled]
+	softmax [label="Softmax\nGPU:0\nInput: [batch_size=4,seq_len=2048,seq_len=2048]\nOutput: [batch_size=4,seq_len=2048,seq_len=2048]" fillcolor=yellow shape=rectangle style=filled]
+	matmul2 [label="Attention V MatMul\nGPU:0\nInput: [batch_size=4,seq_len=2048,seq_len=2048]\nOutput: [batch_size=4, seq_len=2048, heads=128, d_k=128]" fillcolor=yellow shape=rectangle style=filled]
+	out_proj [label="Output Projection\nGPU:0\nInput: [batch_size=4, seq_len=2048, heads=128, d_k=128]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+	residual [label="Residual Add\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]" fillcolor=lightgrey shape=rectangle style=filled]
+	ln -> q_proj
+	ln -> k_proj
+	ln -> v_proj
+	q_proj -> scale
+	k_proj -> matmul1
+	scale -> matmul1
+	matmul1 -> softmax
+	softmax -> matmul2
+	v_proj -> matmul2
+	matmul2 -> out_proj
+	out_proj -> residual
+}

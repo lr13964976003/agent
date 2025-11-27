@@ -1,0 +1,211 @@
+{
+  "deployment_config": {
+    "model_name": "Large-Scale Cross-Node MoE",
+    "baseline_comparison": {
+      "name": "Traditional MoE Parallelism",
+      "description": "Multiple experts per GPU",
+      "experts_per_gpu": ">1",
+      "parallel_strategy": {
+        "type": "Expert Parallelism with Expert Colocation",
+        "ep_degree": "4-8",
+        "communication_priority": "minimize",
+        "contention": "high"
+      }
+    },
+    "proposed_method": {
+      "name": "Large EP Cross-Node Expert Parallelism",
+      "description": "At most one expert per GPU",
+      "experts_per_gpu": "<=1",
+      "ep_threshold": ">=16",
+      "key_principles": [
+        "Maximize expert-level parallelism",
+        "Shift bottleneck from contention to communication",
+        "Leverage modern HPC networking"
+      ]
+    }
+  },
+  
+  "model_architecture": {
+    "total_layers": 61,
+    "layer_distribution": {
+      "dense_layers": {
+        "count": 3,
+        "positions": [0, 1, 2]
+      },
+      "moe_layers": {
+        "count": 58,
+        "positions": "3-60"
+      }
+    },
+    "dimensions": {
+      "token_dimension": 7168,
+      "mha_heads": 128,
+      "head_dimension": 128,
+      "mlp_hidden_size": 2048,
+      "precision": "BF16"
+    },
+    "expert_configuration": {
+      "expert_type": "MLP",
+      "experts_per_layer": "E (variable)",
+      "activation_function": "GELU",
+      "gating_mechanism": "Top-K selection"
+    }
+  },
+  
+  "parallel_strategies": {
+    "expert_parallelism": {
+      "degree": "E (total experts)",
+      "min_ep_threshold": 16,
+      "expert_placement": "one_per_gpu",
+      "topology_aware": true,
+      "communication_overlap": true
+    },
+    "tensor_parallelism": {
+      "applicability": "within_expert_when_needed",
+      "degree": "TP_degree (if E > memory_limit)",
+      "partitioning": "row_and_column_parallel"
+    },
+    "data_parallelism": {
+      "applicability": "across_model_replicas",
+      "degree": "DP_degree",
+      "synchronization": "weight_updates"
+    },
+    "pipeline_parallelism": {
+      "implicit_in_scheduling": true,
+      "layer_pipelining": "immediate_routing"
+    }
+  },
+  
+  "hardware_specifications": {
+    "gpu_type": "H100",
+    "single_gpu": {
+      "computing_power": "400TFlops",
+      "memory_capacity": "64GB",
+      "memory_bandwidth": "1.8TBps",
+      "bandwidth_utilization": "80%",
+      "mfu_target": "60%"
+    },
+    "networking": {
+      "technologies": ["NVLink", "InfiniBand", "NVSwitch"],
+      "topology": "fat_tree_or_equivalent",
+      "bandwidth_priority": "high"
+    }
+  },
+  
+  "module_division": {
+    "layer_modules": {
+      "dense_layers": {
+        "modules": ["attention", "mlp", "layer_norm"],
+        "parallel_strategy": "data_parallelism",
+        "device_mapping": "evenly_distributed"
+      },
+      "moe_layers": {
+        "modules": {
+          "shared_components": ["attention", "layer_norm", "gating_network"],
+          "expert_components": {
+            "experts": "E total",
+            "expert_modules": ["mlp_layer1", "activation", "mlp_layer2"],
+            "parallel_strategy": "expert_parallelism"
+          }
+        }
+      }
+    },
+    "expert_placement_algorithm": {
+      "input": {
+        "experts_per_layer": "E",
+        "total_gpus": "G",
+        "node_topology": "bandwidth_matrix"
+      },
+      "constraints": [
+        "experts_per_gpu <= 1",
+        "minimize_max_link_utilization",
+        "balance_memory_usage"
+      ],
+      "output": "expert_to_gpu_mapping"
+    }
+  },
+  
+  "device_mapping": {
+    "mapping_strategy": "topology_aware_expert_placement",
+    "example_configuration": {
+      "description": "Example with 64 experts and 128 GPUs",
+      "experts": 64,
+      "gpus": 128,
+      "nodes": 16,
+      "gpus_per_node": 8,
+      "mapping": {
+        "layer_3_to_60": {
+          "expert_0": "gpu_0_node_0",
+          "expert_1": "gpu_1_node_0",
+          "expert_2": "gpu_2_node_0",
+          "expert_3": "gpu_3_node_0",
+          "expert_4": "gpu_4_node_0",
+          "expert_5": "gpu_5_node_0",
+          "expert_6": "gpu_6_node_0",
+          "expert_7": "gpu_7_node_0",
+          "expert_8": "gpu_0_node_1",
+          "expert_9": "gpu_1_node_1",
+          "...": "continue_pattern",
+          "expert_63": "gpu_7_node_7"
+        }
+      },
+      "gpu_utilization": "50% (64 experts on 128 GPUs)"
+    }
+  },
+  
+  "communication_strategy": {
+    "token_routing": {
+      "mechanism": "asynchronous_batching",
+      "batching_criteria": "destination_expert",
+      "overlap": "computation_and_communication",
+      "libraries": ["NCCL", "MPI"]
+    },
+    "pipeline_scheduling": {
+      "inter_layer_routing": "immediate",
+      "partial_batch_processing": true,
+      "stream_usage": "multiple_cuda_streams"
+    },
+    "load_balancing": {
+      "monitoring": "per_expert_utilization",
+      "adjustment": "dynamic_gating_probabilities",
+      "objective": "prevent_stragglers"
+    }
+  },
+  
+  "deployment_parameters": {
+    "batch_configuration": {
+      "batch_size": "variable",
+      "sequence_length": "variable",
+      "token_grouping": "by_destination_expert"
+    },
+    "memory_management": {
+      "expert_memory_limit": "64GB_per_gpu",
+      "activation_buffering": "efficient_reuse",
+      "weight_storage": "duplicated_across_dp_replicas"
+    },
+    "performance_targets": {
+      "throughput": "maximize_tokens_per_second",
+      "latency": "minimize_per_token",
+      "scalability": "linear_with_experts",
+      "utilization": {
+        "compute": "60%_MFU",
+        "memory_bandwidth": "80%",
+        "network": "topology_dependent"
+      }
+    }
+  },
+  
+  "scalability_configuration": {
+    "large_ep_regime": {
+      "minimum_ep": 16,
+      "optimal_ep": "E (total experts)",
+      "scaling_factor": "linear_with_gpus",
+      "network_limitation": "bandwidth_becomes_primary_factor"
+    },
+    "scaling_strategies": {
+      "expert_scaling": "add_more_gpus",
+      "model_scaling": "integrate_TP_and_DP",
+      "cluster_scaling": "topology_aware_placement"
+    }
+  }
+}

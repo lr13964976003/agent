@@ -1,0 +1,27 @@
+digraph complete_layer3_dp0 {
+	compound=true rankdir=TB
+	subgraph cluster_attention {
+		label="Multi-Head Attention Phase" style=rounded
+		attn_input [label="Layer Input\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]" fillcolor=lightblue shape=ellipse style=filled]
+		mha [label="MHA Complete\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]" fillcolor=lightgreen shape=rectangle style=filled]
+		attn_input -> mha
+	}
+	subgraph cluster_experts {
+		label="Expert Parallel MoE Phase" style=rounded
+		distribute [label="Token Distribution\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]" fillcolor=gold shape=parallelogram style=filled]
+		expert_0_comp [label="Expert 0 MLP\nGPU:0\nNode:0" fillcolor=lightcoral shape=rectangle style=filled]
+		expert_1_comp [label="Expert 1 MLP\nGPU:1\nNode:0" fillcolor=lightcoral shape=rectangle style=filled]
+		expert_2_comp [label="Expert 2 MLP\nGPU:2\nNode:0" fillcolor=lightcoral shape=rectangle style=filled]
+		expert_3_comp [label="Expert 3 MLP\nGPU:3\nNode:0" fillcolor=lightcoral shape=rectangle style=filled]
+		aggregate [label="Expert Aggregation\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]" fillcolor=lightgrey shape=parallelogram style=filled]
+	}
+	mha -> distribute [lhead=cluster_experts ltail=cluster_attention]
+	distribute -> expert_0_comp [style=dashed]
+	expert_0_comp -> aggregate [style=dashed]
+	distribute -> expert_1_comp [style=dashed]
+	expert_1_comp -> aggregate [style=dashed]
+	distribute -> expert_2_comp [style=dashed]
+	expert_2_comp -> aggregate [style=dashed]
+	distribute -> expert_3_comp [style=dashed]
+	expert_3_comp -> aggregate [style=dashed]
+}

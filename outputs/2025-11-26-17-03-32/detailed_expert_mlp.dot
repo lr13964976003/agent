@@ -1,0 +1,69 @@
+digraph detailed_expert_mlp {
+	graph [bb="0,0,1429.8,856.17",
+		rankdir=TB
+	];
+	node [label="\N"];
+	input	[fillcolor=lightblue,
+		height=1.3356,
+		label="Expert Input\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]",
+		pos="708.19,808.08",
+		shape=ellipse,
+		style=filled,
+		width=7.8175];
+	ln2	[fillcolor=lightblue,
+		height=0.94444,
+		label="LayerNorm\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]",
+		pos="708.19,690",
+		shape=rectangle,
+		style=filled,
+		width=5.5278];
+	input -> ln2	[pos="e,708.19,724.3 708.19,759.87 708.19,751.48 708.19,742.78 708.19,734.51"];
+	gate	[fillcolor=orange,
+		height=1.8889,
+		label="Gating Network\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, experts=64]",
+		pos="400.19,552",
+		shape=parallelogram,
+		style=filled,
+		width=11.116];
+	ln2 -> gate	[pos="e,551.93,620 633.24,655.9 611.27,646.21 586.36,635.21 561.2,624.1"];
+	fc1	[fillcolor=lightcoral,
+		height=0.94444,
+		label="FC1 (Up-project)\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=2048]",
+		pos="1017.2,552",
+		shape=rectangle,
+		style=filled,
+		width=5.5278];
+	ln2 -> fc1	[pos="e,942.19,586.01 783.38,655.9 828.6,636 886.25,610.63 933,590.06"];
+	gelu	[fillcolor=lightcoral,
+		height=0.94444,
+		label="GELU Activation\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=2048]\nOutput: [batch_size=4, seq_len=2048, hidden=2048]",
+		pos="1017.2,414",
+		shape=rectangle,
+		style=filled,
+		width=5.5278];
+	fc1 -> gelu	[pos="e,1017.2,448.4 1017.2,517.73 1017.2,499.87 1017.2,477.63 1017.2,458.42"];
+	fc2	[fillcolor=lightcoral,
+		height=0.94444,
+		label="FC2 (Down-project)\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=2048]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]",
+		pos="1017.2,310",
+		shape=rectangle,
+		style=filled,
+		width=5.5278];
+	gelu -> fc2	[pos="e,1017.2,344.3 1017.2,379.88 1017.2,371.78 1017.2,362.98 1017.2,354.47"];
+	agg	[fillcolor=lightgrey,
+		height=1.8889,
+		label="Expert Aggregation\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]",
+		pos="1017.2,172",
+		shape=parallelogram,
+		style=filled,
+		width=11.462];
+	fc2 -> agg	[pos="e,1017.2,240.26 1017.2,275.73 1017.2,267.9 1017.2,259.24 1017.2,250.35"];
+	residual2	[fillcolor=lightgrey,
+		height=0.94444,
+		label="Residual Add\nGPU:0\nInput: [batch_size=4, seq_len=2048, hidden=7168]\nOutput: [batch_size=4, seq_len=2048, hidden=7168]",
+		pos="1017.2,34",
+		shape=rectangle,
+		style=filled,
+		width=5.5278];
+	agg -> residual2	[pos="e,1017.2,68.017 1017.2,103.8 1017.2,95.045 1017.2,86.275 1017.2,78.068"];
+}
