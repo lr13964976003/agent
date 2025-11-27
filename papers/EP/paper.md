@@ -233,8 +233,8 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 * **Batch size**: variable batch size
 * **Sequence Length**: variable sequence length.
 * **Token Dimension**: The dimension of each token is 7168.
-* **Dimension of MLA**: The number of heads is 128 and the dimension of each heads is 128.
-* **Hidden size of MLP**: The hidden is of MLP is 2048.
+* **Dimension of MLA**: The number of heads is 128 and the dimension of each heads is 56.
+* **Hidden size of MLP**: The hidden is of MLP is 18432.
 
 We evaluated the hardware environment for the baseline and the new parallel strategy proposed in this paper as follows:
 
