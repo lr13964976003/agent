@@ -81,6 +81,8 @@ Except for the input node, each node in DAG must have a preceding input node; ex
 
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
 
+The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意DAG中不能漏残差的边>>>
+
 In a batch, there are a total of batch size independent data points.<<<batch中数据是独立的>>>
 
 The communication part of MHA must be represented with dashed lines in the DAG diagram. <<<MHA的通信部分必须用虚线展现在DAG图中>>>
@@ -118,6 +120,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
 Result: We will evaluate whether the deployment plan you generated is the optimal strategy.
+
 
 
 
