@@ -1,0 +1,217 @@
+digraph Integrated_MoE_DP_TP_PP_EP {
+    rankdir = TB;
+    node [fontname="Monospace" fontsize=10];
+
+    // -----------------------------------------------------
+    // 1. GLOBAL INPUT  (Meta GPU)
+    // -----------------------------------------------------
+    INPUT [shape=ellipse, label=<<B>INPUT</B><br/>GPU: META<br/>Input:[batch_size=4,seq_len=2048,vocab_size=128256]<br/>Output:[batch_size=4,seq_len=2048,vocab_size=128256>>];
+
+    // -----------------------------------------------------
+    // 2. DATA PARALLELISM SPLIT  (Meta GPU)
+    // -----------------------------------------------------
+    DP_SPLIT [shape=parallelogram, label=<<B>DP_SPLIT</B><br/>GPU: META<br/>Input:[batch_size=4,seq_len=2048,vocab_size=128256]<br/>Output:[batch_size=1,seq_len=2048,vocab_size=128256>>];
+
+    // -----------------------------------------------------
+    // 3. PIPELINE STAGE 1  (Embedding with TP=2)  GPUs 0-1
+    // -----------------------------------------------------
+    EMB_0 [shape=rectangle, label=<<B>EMB_0</B><br/>GPU: 0<br/>Input:[batch_size=1,seq_len=2048,vocab_size=128256]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=3584]>>];
+    EMB_1 [shape=rectangle, label=<<B>EMB_1</B><br/>GPU: 1<br/>Input:[batch_size=1,seq_len=2048,vocab_size=128256]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=3584]>>];
+    TP_CONCAT_0 [shape=parallelogram, label=<<B>TP_CONCAT_0</B><br/>GPU: 0-1<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=3584]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+
+    // -----------------------------------------------------
+    // 4. PIPELINE STAGE 2  (MHA + FFN)  GPUs 2-10
+    // -----------------------------------------------------
+    LN_0        [shape=rectangle, label=<<B>LN_0</B><br/>GPU: 2<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+    Q_PROJ_0    [shape=rectangle, label=<<B>Q_PROJ_0</B><br/>GPU: 2<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,num_heads=128,head_dim=56]>>];
+    K_PROJ_0    [shape=rectangle, label=<<B>K_PROJ_0</B><br/>GPU: 3<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,num_heads=128,head_dim=56]>>];
+    V_PROJ_0    [shape=rectangle, label=<<B>V_PROJ_0</B><br/>GPU: 4<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,num_heads=128,head_dim=56]>>];
+    
+    // TP=2 split across 4 heads per GPU (128 heads total)
+    MHA_0 [shape=rectangle, label=<<B>MHA_0</B><br/>GPU: 5<br/>Input:[batch_size=1,seq_len=2048,num_heads=32,head_dim=56]<br/>Output:[batch_size=1,seq_len=2048,num_heads=32,head_dim=56]>>];
+    MHA_1 [shape=rectangle, label=<<B>MHA_1</B><br/>GPU: 6<br/>Input:[batch_size=1,seq_len=2048,num_heads=32,head_dim=56]<br/>Output:[batch_size=1,seq_len=2048,num_heads=32,head_dim=56]>>];
+    MHA_2 [shape=rectangle, label=<<B>MHA_2</B><br/>GPU: 7<br/>Input:[batch_size=1,seq_len=2048,num_heads=32,head_dim=56]<br/>Output:[batch_size=1,seq_len=2048,num_heads=32,head_dim=56]>>];
+    MHA_3 [shape=rectangle, label=<<B>MHA_3</B><br/>GPU: 8<br/>Input:[batch_size=1,seq_len=2048,num_heads=32,head_dim=56]<br/>Output:[batch_size=1,seq_len=2048,num_heads=32,head_dim=56]>>];
+    
+    TP_CONCAT_MHA [shape=parallelogram, label=<<B>TP_CONCAT_MHA</B><br/>GPU: 5-8<br/>Input:[batch_size=1,seq_len=2048,num_heads=32,head_dim=56]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+    OUT_PROJ_MHA [shape=rectangle, label=<<B>OUT_PROJ_MHA</B><br/>GPU: 9<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+    RESIDUAL_MHA [shape=rectangle, label=<<B>RESIDUAL_MHA</B><br/>GPU: 9<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+
+    FFN_0 [shape=rectangle, label=<<B>FFN_0</B><br/>GPU: 10<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+
+    // -----------------------------------------------------
+    // 5. PIPELINE STAGE 3  (MoE-1 + MoE-2)  GPUs 11-42
+    // -----------------------------------------------------
+    LN_MOE1     [shape=rectangle, label=<<B>LN_MOE1</B><br/>GPU: 11<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+    GATE_MOE1   [shape=rectangle, label=<<B>GATE_MOE1</B><br/>GPU: 11<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,num_experts=16]>>];
+    EXPERT_SELECT_MOE1 [shape=parallelogram, label=<<B>EXPERT_SELECT_MOE1</B><br/>GPU: 11<br/>Input:[batch_size=1,seq_len=2048,num_experts=16]<br/>Output:[batch_size=1,seq_len=2048,expert_idx,top_k=2]>>];
+    
+    // EP=16: 16 experts spread over GPUs 12-27
+    EXPERT_0_MOE1 [shape=rectangle, label=<<B>EXPERT_0_MOE1</B><br/>GPU: 12<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_1_MOE1 [shape=rectangle, label=<<B>EXPERT_1_MOE1</B><br/>GPU: 13<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_2_MOE1 [shape=rectangle, label=<<B>EXPERT_2_MOE1</B><br/>GPU: 14<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_3_MOE1 [shape=rectangle, label=<<B>EXPERT_3_MOE1</B><br/>GPU: 15<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_4_MOE1 [shape=rectangle, label=<<B>EXPERT_4_MOE1</B><br/>GPU: 16<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_5_MOE1 [shape=rectangle, label=<<B>EXPERT_5_MOE1</B><br/>GPU: 17<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_6_MOE1 [shape=rectangle, label=<<B>EXPERT_6_MOE1</B><br/>GPU: 18<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_7_MOE1 [shape=rectangle, label=<<B>EXPERT_7_MOE1</B><br/>GPU: 19<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_8_MOE1 [shape=rectangle, label=<<B>EXPERT_8_MOE1</B><br/>GPU: 20<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_9_MOE1 [shape=rectangle, label=<<B>EXPERT_9_MOE1</B><br/>GPU: 21<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_10_MOE1 [shape=rectangle, label=<<B>EXPERT_10_MOE1</B><br/>GPU: 22<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_11_MOE1 [shape=rectangle, label=<<B>EXPERT_11_MOE1</B><br/>GPU: 23<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_12_MOE1 [shape=rectangle, label=<<B>EXPERT_12_MOE1</B><br/>GPU: 24<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_13_MOE1 [shape=rectangle, label=<<B>EXPERT_13_MOE1</B><br/>GPU: 25<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_14_MOE1 [shape=rectangle, label=<<B>EXPERT_14_MOE1</B><br/>GPU: 26<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_15_MOE1 [shape=rectangle, label=<<B>EXPERT_15_MOE1</B><br/>GPU: 27<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+
+    AGG_MOE1 [shape=parallelogram, label=<<B>AGG_MOE1</B><br/>GPU: 28<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+    RESIDUAL_MOE1 [shape=rectangle, label=<<B>RESIDUAL_MOE1</B><br/>GPU: 28<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+
+    // Second MoE layer (identical structure, GPUs 29-42)
+    LN_MOE2     [shape=rectangle, label=<<B>LN_MOE2</B><br/>GPU: 29<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+    GATE_MOE2   [shape=rectangle, label=<<B>GATE_MOE2</B><br/>GPU: 29<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,num_experts=16]>>];
+    EXPERT_SELECT_MOE2 [shape=parallelogram, label=<<B>EXPERT_SELECT_MOE2</B><br/>GPU: 29<br/>Input:[batch_size=1,seq_len=2048,num_experts=16]<br/>Output:[batch_size=1,seq_len=2048,expert_idx,top_k=2]>>];
+
+    // EP=16: 16 experts spread over GPUs 30-42
+    EXPERT_0_MOE2 [shape=rectangle, label=<<B>EXPERT_0_MOE2</B><br/>GPU: 30<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_1_MOE2 [shape=rectangle, label=<<B>EXPERT_1_MOE2</B><br/>GPU: 31<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_2_MOE2 [shape=rectangle, label=<<B>EXPERT_2_MOE2</B><br/>GPU: 32<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_3_MOE2 [shape=rectangle, label=<<B>EXPERT_3_MOE2</B><br/>GPU: 33<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_4_MOE2 [shape=rectangle, label=<<B>EXPERT_4_MOE2</B><br/>GPU: 34<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_5_MOE2 [shape=rectangle, label=<<B>EXPERT_5_MOE2</B><br/>GPU: 35<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_6_MOE2 [shape=rectangle, label=<<B>EXPERT_6_MOE2</B><br/>GPU: 36<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_7_MOE2 [shape=rectangle, label=<<B>EXPERT_7_MOE2</B><br/>GPU: 37<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_8_MOE2 [shape=rectangle, label=<<B>EXPERT_8_MOE2</B><br/>GPU: 38<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_9_MOE2 [shape=rectangle, label=<<B>EXPERT_9_MOE2</B><br/>GPU: 39<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_10_MOE2 [shape=rectangle, label=<<B>EXPERT_10_MOE2</B><br/>GPU: 40<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_11_MOE2 [shape=rectangle, label=<<B>EXPERT_11_MOE2</B><br/>GPU: 41<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_12_MOE2 [shape=rectangle, label=<<B>EXPERT_12_MOE2</B><br/>GPU: 42<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_13_MOE2 [shape=rectangle, label=<<B>EXPERT_13_MOE2</B><br/>GPU: 43<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_14_MOE2 [shape=rectangle, label=<<B>EXPERT_14_MOE2</B><br/>GPU: 44<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+    EXPERT_15_MOE2 [shape=rectangle, label=<<B>EXPERT_15_MOE2</B><br/>GPU: 45<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]>>];
+
+    AGG_MOE2 [shape=parallelogram, label=<<B>AGG_MOE2</B><br/>GPU: 46<br/>Input:[batch_size=1,tokens_per_expert=256,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+    RESIDUAL_MOE2 [shape=rectangle, label=<<B>RESIDUAL_MOE2</B><br/>GPU: 46<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+
+    // -----------------------------------------------------
+    // 6. COLLAPSED REMAINING 58 LAYERS (placeholder)
+    // -----------------------------------------------------
+    REMAINING_LAYERS [shape=ellipse, style=dashed, label=<<B>REMAINING_LAYERS</B><br/>GPU: 46<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=1,seq_len=2048,hidden_dim=7168]>>];
+
+    // -----------------------------------------------------
+    // 7. DATA PARALLELISM AGGREGATION  (Meta GPU)
+    // -----------------------------------------------------
+    DP_AGG [shape=parallelogram, label=<<B>DP_AGG</B><br/>GPU: META<br/>Input:[batch_size=1,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=4,seq_len=2048,hidden_dim=7168]>>];
+
+    // -----------------------------------------------------
+    // 8. GLOBAL OUTPUT  (Meta GPU)
+    // -----------------------------------------------------
+    OUTPUT [shape=ellipse, label=<<B>OUTPUT</B><br/>GPU: META<br/>Input:[batch_size=4,seq_len=2048,hidden_dim=7168]<br/>Output:[batch_size=4,seq_len=2048,vocab_size=128256]>>];
+
+    // -----------------------------------------------------
+    // EDGES
+    // -----------------------------------------------------
+    INPUT -> DP_SPLIT;
+    DP_SPLIT -> EMB_0;
+    DP_SPLIT -> EMB_1;
+    EMB_0 -> TP_CONCAT_0;
+    EMB_1 -> TP_CONCAT_0;
+    TP_CONCAT_0 -> LN_0;
+    LN_0 -> Q_PROJ_0;
+    LN_0 -> K_PROJ_0;
+    LN_0 -> V_PROJ_0;
+    Q_PROJ_0 -> MHA_0;
+    K_PROJ_0 -> MHA_0;
+    V_PROJ_0 -> MHA_0;
+    Q_PROJ_0 -> MHA_1 [style=dashed];
+    K_PROJ_0 -> MHA_1 [style=dashed];
+    V_PROJ_0 -> MHA_1 [style=dashed];
+    Q_PROJ_0 -> MHA_2 [style=dashed];
+    K_PROJ_0 -> MHA_2 [style=dashed];
+    V_PROJ_0 -> MHA_2 [style=dashed];
+    Q_PROJ_0 -> MHA_3 [style=dashed];
+    K_PROJ_0 -> MHA_3 [style=dashed];
+    V_PROJ_0 -> MHA_3 [style=dashed];
+    MHA_0 -> TP_CONCAT_MHA;
+    MHA_1 -> TP_CONCAT_MHA;
+    MHA_2 -> TP_CONCAT_MHA;
+    MHA_3 -> TP_CONCAT_MHA;
+    TP_CONCAT_MHA -> OUT_PROJ_MHA;
+    OUT_PROJ_MHA -> RESIDUAL_MHA;
+    RESIDUAL_MHA -> FFN_0;
+    FFN_0 -> LN_MOE1;
+    LN_MOE1 -> GATE_MOE1;
+    GATE_MOE1 -> EXPERT_SELECT_MOE1;
+    EXPERT_SELECT_MOE1 -> EXPERT_0_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_1_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_2_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_3_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_4_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_5_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_6_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_7_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_8_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_9_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_10_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_11_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_12_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_13_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_14_MOE1 [style=dashed];
+    EXPERT_SELECT_MOE1 -> EXPERT_15_MOE1 [style=dashed];
+    EXPERT_0_MOE1 -> AGG_MOE1;
+    EXPERT_1_MOE1 -> AGG_MOE1;
+    EXPERT_2_MOE1 -> AGG_MOE1;
+    EXPERT_3_MOE1 -> AGG_MOE1;
+    EXPERT_4_MOE1 -> AGG_MOE1;
+    EXPERT_5_MOE1 -> AGG_MOE1;
+    EXPERT_6_MOE1 -> AGG_MOE1;
+    EXPERT_7_MOE1 -> AGG_MOE1;
+    EXPERT_8_MOE1 -> AGG_MOE1;
+    EXPERT_9_MOE1 -> AGG_MOE1;
+    EXPERT_10_MOE1 -> AGG_MOE1;
+    EXPERT_11_MOE1 -> AGG_MOE1;
+    EXPERT_12_MOE1 -> AGG_MOE1;
+    EXPERT_13_MOE1 -> AGG_MOE1;
+    EXPERT_14_MOE1 -> AGG_MOE1;
+    EXPERT_15_MOE1 -> AGG_MOE1;
+    AGG_MOE1 -> RESIDUAL_MOE1;
+    RESIDUAL_MOE1 -> LN_MOE2;
+    LN_MOE2 -> GATE_MOE2;
+    GATE_MOE2 -> EXPERT_SELECT_MOE2;
+    EXPERT_SELECT_MOE2 -> EXPERT_0_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_1_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_2_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_3_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_4_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_5_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_6_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_7_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_8_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_9_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_10_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_11_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_12_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_13_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_14_MOE2 [style=dashed];
+    EXPERT_SELECT_MOE2 -> EXPERT_15_MOE2 [style=dashed];
+    EXPERT_0_MOE2 -> AGG_MOE2;
+    EXPERT_1_MOE2 -> AGG_MOE2;
+    EXPERT_2_MOE2 -> AGG_MOE2;
+    EXPERT_3_MOE2 -> AGG_MOE2;
+    EXPERT_4_MOE2 -> AGG_MOE2;
+    EXPERT_5_MOE2 -> AGG_MOE2;
+    EXPERT_6_MOE2 -> AGG_MOE2;
+    EXPERT_7_MOE2 -> AGG_MOE2;
+    EXPERT_8_MOE2 -> AGG_MOE2;
+    EXPERT_9_MOE2 -> AGG_MOE2;
+    EXPERT_10_MOE2 -> AGG_MOE2;
+    EXPERT_11_MOE2 -> AGG_MOE2;
+    EXPERT_12_MOE2 -> AGG_MOE2;
+    EXPERT_13_MOE2 -> AGG_MOE2;
+    EXPERT_14_MOE2 -> AGG_MOE2;
+    EXPERT_15_MOE2 -> AGG_MOE2;
+    AGG_MOE2 -> RESIDUAL_MOE2;
+    RESIDUAL_MOE2 -> REMAINING_LAYERS;
+    REMAINING_LAYERS -> DP_AGG;
+    DP_AGG -> OUTPUT;
+}

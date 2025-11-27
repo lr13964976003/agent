@@ -1,396 +1,380 @@
+// Large-Scale MoE Cross-Node Expert Parallelism DAG
 digraph {
-    rankdir=false
-    node [fillcolor=lightblue shape=rectangle style=filled]
-    edge [style=solid]
-    
-    // Input layer
-    input [label="Input Layer
+	rankdir=false
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	edge [style=solid]
+	input [label="Input Layer
 GPU: META
 Input: [batch_size=4, seq_len=2048, vocab_size=128256]
-Output: [batch_size=4, seq_len=2048, vocab_size=128256]" fillcolor=lightgreen shape=ellipse]
-    
-    // Data Parallelism Split
-    dense1_dp_split [label="DP Split (4-way)
+Output: [batch_size=4, seq_len=2048, hidden_dim=7168]" fillcolor=lightgreen shape=ellipse]
+	dense1_dp_split [label="DP Split
 GPU: META
 Input: [batch_size=4, seq_len=2048, vocab_size=128256]
 Output: [batch_size=1, seq_len=2048, vocab_size=128256]" fillcolor=yellow shape=parallelogram]
-    
-    // Dense Embedding with Tensor Parallelism
-    embed_gpu0 [label="Embedding
+	embed_gpu0 [label="Embedding
 GPU: 0
 Input: [batch_size=1, seq_len=2048, vocab_size=128256]
 Output: [batch_size=1, seq_len=2048, hidden_dim=3584]" fillcolor=lightblue shape=rectangle]
-    
-    embed_gpu1 [label="Embedding
+	embed_gpu1 [label="Embedding
 GPU: 1
 Input: [batch_size=1, seq_len=2048, vocab_size=128256]
 Output: [batch_size=1, seq_len=2048, hidden_dim=3584]" fillcolor=lightblue shape=rectangle]
-    
-    embed_concat [label="TP Concat (2-way)
+	embed_concat [label="TP Concat
 GPU: 0-1
 Input: [batch_size=1, seq_len=2048, hidden_dim=3584]
 Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=yellow shape=parallelogram]
-    
-    // First Layer: Multi-Head Attention with FFN
-    ln1_gpu0 [label="LayerNorm 1
+	ln1_gpu0 [label="LayerNorm
 GPU: 0
 Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    
-    qkv_proj_gpu0 [label="QKV Projection
+	qkv_proj_gpu0 [label="QKV Projection
 GPU: 0
 Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, num_heads=128, head_dim=168]" fillcolor=lightblue shape=rectangle]
-    
-    mla_split [label="Head Split (8-way)
+	mla_split [label="Head Split
 GPU: 0-7
 Input: [batch_size=1, seq_len=2048, num_heads=128, head_dim=168]
 Output: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=168]" fillcolor=yellow shape=parallelogram]
-    
-    // MHA computation across 8 GPUs
-    mha_gpu0 [label="MHA Head Group
+	mha_gpu0 [label="MHA Head Group
 GPU: 0
 Input: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=168]
 Output: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=56]" fillcolor=lightblue shape=rectangle]
-    mha_gpu1 [label="MHA Head Group
+	mha_gpu1 [label="MHA Head Group
 GPU: 1
 Input: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=168]
 Output: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=56]" fillcolor=lightblue shape=rectangle]
-    mha_gpu2 [label="MHA Head Group
+	mha_gpu2 [label="MHA Head Group
 GPU: 2
 Input: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=168]
 Output: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=56]" fillcolor=lightblue shape=rectangle]
-    mha_gpu3 [label="MHA Head Group
+	mha_gpu3 [label="MHA Head Group
 GPU: 3
 Input: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=168]
 Output: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=56]" fillcolor=lightblue shape=rectangle]
-    mha_gpu4 [label="MHA Head Group
+	mha_gpu4 [label="MHA Head Group
 GPU: 4
 Input: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=168]
 Output: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=56]" fillcolor=lightblue shape=rectangle]
-    mha_gpu5 [label="MHA Head Group
+	mha_gpu5 [label="MHA Head Group
 GPU: 5
 Input: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=168]
 Output: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=56]" fillcolor=lightblue shape=rectangle]
-    mha_gpu6 [label="MHA Head Group
+	mha_gpu6 [label="MHA Head Group
 GPU: 6
 Input: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=168]
 Output: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=56]" fillcolor=lightblue shape=rectangle]
-    mha_gpu7 [label="MHA Head Group
+	mha_gpu7 [label="MHA Head Group
 GPU: 7
 Input: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=168]
 Output: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=56]" fillcolor=lightblue shape=rectangle]
-    
-    attn_concat [label="Attention Concat (8-way)
+	attn_concat [label="Attention Concat
 GPU: 0-7
 Input: [batch_size=1, seq_len=2048, heads_per_gpu=16, head_dim=56]
 Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=yellow shape=parallelogram]
-    
-    out_proj_gpu0 [label="Output Projection
+	out_proj_gpu0 [label="Output Projection
 GPU: 0
 Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    
-    residual1 [label="Residual Add 1
+	residual1 [label="Residual Add
 GPU: 0
 Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    
-    // Second Layer: First MoE Layer (Experts 0-15)
-    moe_ln1 [label="Pre-MoE1 LayerNorm
+	moe_ln1 [label="Pre-MoE LayerNorm
 GPU: 0
 Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    
-    gate_gpu0 [label="Expert Gate 1
+	gate_gpu0 [label="Expert Gate
 GPU: 0
 Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, num_experts=16]" fillcolor=lightblue shape=rectangle]
-    
-    expert_select [label="Expert Selection 1
+	expert_select [label="Expert Selection
 GPU: 0
 Input: [batch_size=1, seq_len=2048, num_experts=16]
 Output: [batch_size=1, seq_len=2048, selected_experts=2]" fillcolor=yellow shape=parallelogram]
-    
-    // 16 Expert MLPs for first MoE layer
-    expert_0 [label="Expert 0 MLP
+	expert_0 [label="Expert 0 MLP
 GPU: 100
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_1 [label="Expert 1 MLP
+	expert_1 [label="Expert 1 MLP
 GPU: 101
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_2 [label="Expert 2 MLP
+	expert_2 [label="Expert 2 MLP
 GPU: 102
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_3 [label="Expert 3 MLP
+	expert_3 [label="Expert 3 MLP
 GPU: 103
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_4 [label="Expert 4 MLP
+	expert_4 [label="Expert 4 MLP
 GPU: 104
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_5 [label="Expert 5 MLP
+	expert_5 [label="Expert 5 MLP
 GPU: 105
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_6 [label="Expert 6 MLP
+	expert_6 [label="Expert 6 MLP
 GPU: 106
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_7 [label="Expert 7 MLP
+	expert_7 [label="Expert 7 MLP
 GPU: 107
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_8 [label="Expert 8 MLP
+	expert_8 [label="Expert 8 MLP
 GPU: 108
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_9 [label="Expert 9 MLP
+	expert_9 [label="Expert 9 MLP
 GPU: 109
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_10 [label="Expert 10 MLP
+	expert_10 [label="Expert 10 MLP
 GPU: 110
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_11 [label="Expert 11 MLP
+	expert_11 [label="Expert 11 MLP
 GPU: 111
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_12 [label="Expert 12 MLP
+	expert_12 [label="Expert 12 MLP
 GPU: 112
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_13 [label="Expert 13 MLP
+	expert_13 [label="Expert 13 MLP
 GPU: 113
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_14 [label="Expert 14 MLP
+	expert_14 [label="Expert 14 MLP
 GPU: 114
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert_15 [label="Expert 15 MLP
+	expert_15 [label="Expert 15 MLP
 GPU: 115
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    
-    expert_agg [label="Expert Output Aggregation 1
-GPU: 0
+	expert_select -> expert_0 [label="route tokens to expert 0" style=dashed]
+	expert_select -> expert_1 [label="route tokens to expert 1" style=dashed]
+	expert_select -> expert_2 [label="route tokens to expert 2" style=dashed]
+	expert_select -> expert_3 [label="route tokens to expert 3" style=dashed]
+	expert_select -> expert_4 [label="route tokens to expert 4" style=dashed]
+	expert_select -> expert_5 [label="route tokens to expert 5" style=dashed]
+	expert_select -> expert_6 [label="route tokens to expert 6" style=dashed]
+	expert_select -> expert_7 [label="route tokens to expert 7" style=dashed]
+	expert_select -> expert_8 [label="route tokens to expert 8" style=dashed]
+	expert_select -> expert_9 [label="route tokens to expert 9" style=dashed]
+	expert_select -> expert_10 [label="route tokens to expert 10" style=dashed]
+	expert_select -> expert_11 [label="route tokens to expert 11" style=dashed]
+	expert_select -> expert_12 [label="route tokens to expert 12" style=dashed]
+	expert_select -> expert_13 [label="route tokens to expert 13" style=dashed]
+	expert_select -> expert_14 [label="route tokens to expert 14" style=dashed]
+	expert_select -> expert_15 [label="route tokens to expert 15" style=dashed]
+	expert_agg [label="Expert Output Aggregation
+GPU: 116
 Input: [tokens_from_experts=variable, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=yellow shape=parallelogram]
-    
-    residual2 [label="Residual Add 2
-GPU: 0
+	moe2_ln1 [label="Pre-MoE2 LayerNorm
+GPU: 116
 Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    
-    // Third Layer: Second MoE Layer (Experts 0-15)
-    moe2_ln1 [label="Pre-MoE2 LayerNorm
-GPU: 0
-Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
-Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    
-    gate2_gpu0 [label="Expert Gate 2
-GPU: 0
+	gate2_gpu116 [label="Expert Gate 2
+GPU: 116
 Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, num_experts=16]" fillcolor=lightblue shape=rectangle]
-    
-    expert2_select [label="Expert Selection 2
-GPU: 0
+	expert2_select [label="Expert Selection 2
+GPU: 116
 Input: [batch_size=1, seq_len=2048, num_experts=16]
 Output: [batch_size=1, seq_len=2048, selected_experts=2]" fillcolor=yellow shape=parallelogram]
-    
-    // 16 Expert MLPs for second MoE layer
-    expert2_0 [label="Expert 0 MLP 2
+	expert2_0 [label="Expert 0 MLP 2
 GPU: 200
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_1 [label="Expert 1 MLP 2
+	expert2_1 [label="Expert 1 MLP 2
 GPU: 201
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_2 [label="Expert 2 MLP 2
+	expert2_2 [label="Expert 2 MLP 2
 GPU: 202
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_3 [label="Expert 3 MLP 2
+	expert2_3 [label="Expert 3 MLP 2
 GPU: 203
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_4 [label="Expert 4 MLP 2
+	expert2_4 [label="Expert 4 MLP 2
 GPU: 204
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_5 [label="Expert 5 MLP 2
+	expert2_5 [label="Expert 5 MLP 2
 GPU: 205
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_6 [label="Expert 6 MLP 2
+	expert2_6 [label="Expert 6 MLP 2
 GPU: 206
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_7 [label="Expert 7 MLP 2
+	expert2_7 [label="Expert 7 MLP 2
 GPU: 207
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_8 [label="Expert 8 MLP 2
+	expert2_8 [label="Expert 8 MLP 2
 GPU: 208
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_9 [label="Expert 9 MLP 2
+	expert2_9 [label="Expert 9 MLP 2
 GPU: 209
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_10 [label="Expert 10 MLP 2
+	expert2_10 [label="Expert 10 MLP 2
 GPU: 210
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_11 [label="Expert 11 MLP 2
+	expert2_11 [label="Expert 11 MLP 2
 GPU: 211
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_12 [label="Expert 12 MLP 2
+	expert2_12 [label="Expert 12 MLP 2
 GPU: 212
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_13 [label="Expert 13 MLP 2
+	expert2_13 [label="Expert 13 MLP 2
 GPU: 213
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_14 [label="Expert 14 MLP 2
+	expert2_14 [label="Expert 14 MLP 2
 GPU: 214
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    expert2_15 [label="Expert 15 MLP 2
+	expert2_15 [label="Expert 15 MLP 2
 GPU: 215
 Input: [tokens_per_expert=variable, hidden_dim=7168]
 Output: [tokens_per_expert=variable, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    
-    expert2_agg [label="Expert Output Aggregation 2
-GPU: 0
+	expert2_select -> expert2_0 [label="route tokens to expert2 0" style=dashed]
+	expert2_select -> expert2_1 [label="route tokens to expert2 1" style=dashed]
+	expert2_select -> expert2_2 [label="route tokens to expert2 2" style=dashed]
+	expert2_select -> expert2_3 [label="route tokens to expert2 3" style=dashed]
+	expert2_select -> expert2_4 [label="route tokens to expert2 4" style=dashed]
+	expert2_select -> expert2_5 [label="route tokens to expert2 5" style=dashed]
+	expert2_select -> expert2_6 [label="route tokens to expert2 6" style=dashed]
+	expert2_select -> expert2_7 [label="route tokens to expert2 7" style=dashed]
+	expert2_select -> expert2_8 [label="route tokens to expert2 8" style=dashed]
+	expert2_select -> expert2_9 [label="route tokens to expert2 9" style=dashed]
+	expert2_select -> expert2_10 [label="route tokens to expert2 10" style=dashed]
+	expert2_select -> expert2_11 [label="route tokens to expert2 11" style=dashed]
+	expert2_select -> expert2_12 [label="route tokens to expert2 12" style=dashed]
+	expert2_select -> expert2_13 [label="route tokens to expert2 13" style=dashed]
+	expert2_select -> expert2_14 [label="route tokens to expert2 14" style=dashed]
+	expert2_select -> expert2_15 [label="route tokens to expert2 15" style=dashed]
+	expert2_agg [label="Expert Output Aggregation 2
+GPU: 216
 Input: [tokens_from_experts=variable, hidden_dim=7168]
 Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=yellow shape=parallelogram]
-    
-    residual3 [label="Residual Add 3
-GPU: 0
-Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
-Output: [batch_size=1, seq_len=2048, hidden_dim=7168]" fillcolor=lightblue shape=rectangle]
-    
-    // Data Parallelism Aggregation
-    dp_agg [label="DP Aggregation (4-way)
+	dp_agg [label="DP Aggregation
 GPU: META
 Input: [batch_size=1, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=4, seq_len=2048, hidden_dim=7168]" fillcolor=yellow shape=parallelogram]
-    
-    // Output layer
-    output [label="Output Layer
+	output [label="Output Layer
 GPU: META
 Input: [batch_size=4, seq_len=2048, hidden_dim=7168]
 Output: [batch_size=4, seq_len=2048, vocab_size=128256]" fillcolor=lightgreen shape=ellipse]
-    
-    // Connections
-    input -> dense1_dp_split
-    dense1_dp_split -> embed_gpu0
-    dense1_dp_split -> embed_gpu1
-    embed_gpu0 -> embed_concat
-    embed_gpu1 -> embed_concat
-    embed_concat -> ln1_gpu0
-    ln1_gpu0 -> qkv_proj_gpu0
-    qkv_proj_gpu0 -> mla_split
-    mla_split -> mha_gpu0
-    mla_split -> mha_gpu1
-    mla_split -> mha_gpu2
-    mla_split -> mha_gpu3
-    mla_split -> mha_gpu4
-    mla_split -> mha_gpu5
-    mla_split -> mha_gpu6
-    mla_split -> mha_gpu7
-    mha_gpu0 -> attn_concat [style=dashed]
-    mha_gpu1 -> attn_concat [style=dashed]
-    mha_gpu2 -> attn_concat [style=dashed]
-    mha_gpu3 -> attn_concat [style=dashed]
-    mha_gpu4 -> attn_concat [style=dashed]
-    mha_gpu5 -> attn_concat [style=dashed]
-    mha_gpu6 -> attn_concat [style=dashed]
-    mha_gpu7 -> attn_concat [style=dashed]
-    attn_concat -> out_proj_gpu0
-    out_proj_gpu0 -> residual1
-    residual1 -> moe_ln1
-    moe_ln1 -> gate_gpu0
-    gate_gpu0 -> expert_select
-    expert_select -> expert_0 [style=dashed]
-    expert_select -> expert_1 [style=dashed]
-    expert_select -> expert_2 [style=dashed]
-    expert_select -> expert_3 [style=dashed]
-    expert_select -> expert_4 [style=dashed]
-    expert_select -> expert_5 [style=dashed]
-    expert_select -> expert_6 [style=dashed]
-    expert_select -> expert_7 [style=dashed]
-    expert_select -> expert_8 [style=dashed]
-    expert_select -> expert_9 [style=dashed]
-    expert_select -> expert_10 [style=dashed]
-    expert_select -> expert_11 [style=dashed]
-    expert_select -> expert_12 [style=dashed]
-    expert_select -> expert_13 [style=dashed]
-    expert_select -> expert_14 [style=dashed]
-    expert_select -> expert_15 [style=dashed]
-    expert_0 -> expert_agg
-    expert_1 -> expert_agg
-    expert_2 -> expert_agg
-    expert_3 -> expert_agg
-    expert_4 -> expert_agg
-    expert_5 -> expert_agg
-    expert_6 -> expert_agg
-    expert_7 -> expert_agg
-    expert_8 -> expert_agg
-    expert_9 -> expert_agg
-    expert_10 -> expert_agg
-    expert_11 -> expert_agg
-    expert_12 -> expert_agg
-    expert_13 -> expert_agg
-    expert_14 -> expert_agg
-    expert_15 -> expert_agg
-    expert_agg -> residual2
-    residual2 -> moe2_ln1
-    moe2_ln1 -> gate2_gpu0
-    gate2_gpu0 -> expert2_select
-    expert2_select -> expert2_0 [style=dashed]
-    expert2_select -> expert2_1 [style=dashed]
-    expert2_select -> expert2_2 [style=dashed]
-    expert2_select -> expert2_3 [style=dashed]
-    expert2_select -> expert2_4 [style=dashed]
-    expert2_select -> expert2_5 [style=dashed]
-    expert2_select -> expert2_6 [style=dashed]
-    expert2_select -> expert2_7 [style=dashed]
-    expert2_select -> expert2_8 [style=dashed]
-    expert2_select -> expert2_9 [style=dashed]
-    expert2_select -> expert2_10 [style=dashed]
-    expert2_select -> expert2_11 [style=dashed]
-    expert2_select -> expert2_12 [style=dashed]
-    expert2_select -> expert2_13 [style=dashed]
-    expert2_select -> expert2_14 [style=dashed]
-    expert2_select -> expert2_15 [style=dashed]
-    expert2_0 -> expert2_agg
-    expert2_1 -> expert2_agg
-    expert2_2 -> expert2_agg
-    expert2_3 -> expert2_agg
-    expert2_4 -> expert2_agg
-    expert2_5 -> expert2_agg
-    expert2_6 -> expert2_agg
-    expert2_7 -> expert2_agg
-    expert2_8 -> expert2_agg
-    expert2_9 -> expert2_agg
-    expert2_10 -> expert2_agg
-    expert2_11 -> expert2_agg
-    expert2_12 -> expert2_agg
-    expert2_13 -> expert2_agg
-    expert2_14 -> expert2_agg
-    expert2_15 -> expert2_agg
-    expert2_agg -> residual3
-    residual3 -> dp_agg
-    dp_agg -> output
+	input -> dense1_dp_split
+	dense1_dp_split -> embed_gpu0
+	dense1_dp_split -> embed_gpu1
+	embed_gpu0 -> embed_concat
+	embed_gpu1 -> embed_concat
+	embed_concat -> ln1_gpu0
+	ln1_gpu0 -> qkv_proj_gpu0
+	qkv_proj_gpu0 -> mla_split
+	mla_split -> mha_gpu0
+	mla_split -> mha_gpu1
+	mla_split -> mha_gpu2
+	mla_split -> mha_gpu3
+	mla_split -> mha_gpu4
+	mla_split -> mha_gpu5
+	mla_split -> mha_gpu6
+	mla_split -> mha_gpu7
+	mha_gpu0 -> attn_concat
+	mha_gpu1 -> attn_concat
+	mha_gpu2 -> attn_concat
+	mha_gpu3 -> attn_concat
+	mha_gpu4 -> attn_concat
+	mha_gpu5 -> attn_concat
+	mha_gpu6 -> attn_concat
+	mha_gpu7 -> attn_concat
+	attn_concat -> out_proj_gpu0
+	out_proj_gpu0 -> residual1
+	residual1 -> moe_ln1
+	moe_ln1 -> gate_gpu0
+	gate_gpu0 -> expert_select
+	expert_select -> expert_0
+	expert_0 -> expert_agg
+	expert_select -> expert_1
+	expert_1 -> expert_agg
+	expert_select -> expert_2
+	expert_2 -> expert_agg
+	expert_select -> expert_3
+	expert_3 -> expert_agg
+	expert_select -> expert_4
+	expert_4 -> expert_agg
+	expert_select -> expert_5
+	expert_5 -> expert_agg
+	expert_select -> expert_6
+	expert_6 -> expert_agg
+	expert_select -> expert_7
+	expert_7 -> expert_agg
+	expert_select -> expert_8
+	expert_8 -> expert_agg
+	expert_select -> expert_9
+	expert_9 -> expert_agg
+	expert_select -> expert_10
+	expert_10 -> expert_agg
+	expert_select -> expert_11
+	expert_11 -> expert_agg
+	expert_select -> expert_12
+	expert_12 -> expert_agg
+	expert_select -> expert_13
+	expert_13 -> expert_agg
+	expert_select -> expert_14
+	expert_14 -> expert_agg
+	expert_select -> expert_15
+	expert_15 -> expert_agg
+	expert_agg -> moe2_ln1
+	moe2_ln1 -> gate2_gpu116
+	gate2_gpu116 -> expert2_select
+	expert2_select -> expert2_0
+	expert2_0 -> expert2_agg
+	expert2_select -> expert2_1
+	expert2_1 -> expert2_agg
+	expert2_select -> expert2_2
+	expert2_2 -> expert2_agg
+	expert2_select -> expert2_3
+	expert2_3 -> expert2_agg
+	expert2_select -> expert2_4
+	expert2_4 -> expert2_agg
+	expert2_select -> expert2_5
+	expert2_5 -> expert2_agg
+	expert2_select -> expert2_6
+	expert2_6 -> expert2_agg
+	expert2_select -> expert2_7
+	expert2_7 -> expert2_agg
+	expert2_select -> expert2_8
+	expert2_8 -> expert2_agg
+	expert2_select -> expert2_9
+	expert2_9 -> expert2_agg
+	expert2_select -> expert2_10
+	expert2_10 -> expert2_agg
+	expert2_select -> expert2_11
+	expert2_11 -> expert2_agg
+	expert2_select -> expert2_12
+	expert2_12 -> expert2_agg
+	expert2_select -> expert2_13
+	expert2_13 -> expert2_agg
+	expert2_select -> expert2_14
+	expert2_14 -> expert2_agg
+	expert2_select -> expert2_15
+	expert2_15 -> expert2_agg
+	expert2_agg -> dp_agg
+	dp_agg -> output
 }
