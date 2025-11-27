@@ -18,13 +18,7 @@ You are tested to completed the following tasks:
 
 Gain a deep understanding of the methods proposed in the paper. <<<要求理解论文>>> 
 
-Request to propose a deployment plan that aligns with the current hardware environment based on the methods outlined in the paper.. <<<要求按论文提出方法提出符合当前硬件环境的部署方案>>>
-
-The deployment plan must be integrated with other parallel strategies: DP, TP, and PP. <<<部署方案必须结合其他并行策略DP,TP,PP>>>
-
-The deployment plan should aim to minimize latency and increase throughput. <<<要求部署方案尽量减少时延，增大吞吐量>>>
-
-Request an evaluation of whether the deployment plan is the optimal strategy. <<<要求评估部署方案是否是最优策略>>>
+Propose a corresponding deployment plan based on the parallel strategy of the paper and the hardware environment. <<<要求按论文的并行策略和硬件环境，提出对应的部署方案>>>
 
 Generate complete model deployment DAGs(directed acyclic graph) according to your deployment plan by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
 
@@ -44,27 +38,17 @@ Information from different dimensions must be separated by commas.<<<不同维�
 
 Require that the information within each node in DAG must include the shapes of the input and output tensors, as well as the GPU ID. <<<要求每个节点内的信息必须包含输入输出张量的形状，所在GPU序号>>>
 
+Communication between nodes in DAG needs to be demonstrated. <<<DAG图上的节点间的通信要体现出来>>>
+
 In the DAG diagram, the GPU numbers must be clearly specified; it is not allowed to use abbreviations such as GPU: ALL or GPU: Shared. <<<DAG图中GPU的序号要明确写出来，不能使用 GPU：ALL或者GPU: Shared 省略表示>>>
 
 Nodes in DAG containing multiple operators must be split. <<<包含多个算子的DAG图节点必须拆分>>>
 
 One layer in the model consists of a Multi-Head Attention along with an FFN(Gate and Experts). <<<模型中的一层由多头注意力机制以及前馈神经网络（包括门控和专家模块）组成>>>
 
-Both MLA and MLP need to be expanded into single operators; they cannot be written as a single entity. <<<MLA和MLP都要展开成单算子，不能写成一个整体>>>
-
-If other strategies such as DP, TP, PP, SP, ring attention, etc., are combined, it is required to fully display the deployment of parallel strategies in the original DAG graph, rather than generating a new DAG graph separately. <<<如果结合了DP,TP, PP,SP,ring attention等其他策略，要求必须将并行策略的部署情况在一个DAG图中完整展示出来，而不是单独生成一个新的DAG图>>
-
 The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意DAG中不能漏残差的边>>>
 
-Please analyze how the dimensions of the tensor on each node will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析张量维度变化是否正确>>>
-
 The aggregation and split of tensor need to be represented by nodes. <<<显示张量的聚合与分割>>>
-
-Communication between nodes in DAG needs to be demonstrated. <<<DAG图上的节点间的通信要体现出来>>>
-
-In the DAG diagram, the communication between the MLA phase and the MOE phase should be fully represented using dashed lines. <<<DAG图中MLA阶段和MOE阶段的通信都要用虚线完整表示出来>>>
-
-Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
 This will be a task with many steps. Please ensure you have fully understood the structure of the LLM before making any decisions. <<<这是一个多步任务，不要急于求成>>>
 
@@ -81,11 +65,8 @@ Except for the input node, each node in DAG must have a preceding input node; ex
 
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
 
-The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意DAG中不能漏残差的边>>>
-
 In a batch, there are a total of batch size independent data points.<<<batch中数据是独立的>>>
 
-The communication part of MHA must be represented with dashed lines in the DAG diagram. <<<MHA的通信部分必须用虚线展现在DAG图中>>>
 
 The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
 
@@ -119,7 +100,8 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 
 Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
-Result: We will evaluate whether the deployment plan you generated is the optimal strategy.
+Result: We will evaluate whether your deployment plan is practical.
+
 
 
 
