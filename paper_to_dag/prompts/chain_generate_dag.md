@@ -20,13 +20,17 @@ Gain a deep understanding of the methods proposed in the paper. <<<要求理解�
 
 Request to propose a deployment plan that aligns with the current hardware environment based on the methods outlined in the paper.. <<<要求按论文提出方法提出符合当前硬件环境的部署方案>>>
 
-The deployment scheme can be combined with other parallel strategies such as DP, TP, PP, SP, ring attention, etc. <<<部署方案可以结合其他并行策略如DP,TP,PP,SP,ring attention等等>>>
+The deployment plan must be integrated with other parallel strategies: DP, TP, and PP. <<<部署方案必须结合其他并行策略DP,TP,PP>>>
 
 The deployment plan should aim to minimize latency and increase throughput. <<<要求部署方案尽量减少时延，增大吞吐量>>>
 
 Request an evaluation of whether the deployment plan is the optimal strategy. <<<要求评估部署方案是否是最优策略>>>
 
 Generate complete model deployment DAGs(directed acyclic graph) according to your deployment plan by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
+
+Request to generate only one DAG graph, consolidating the content together. <<<要求只生成一张DAG图，将内容聚合到一起>>>
+
+If the model has multiple layers, it is required to retain only the three most representative layers, and the rest of the similar structures can be simplified. <<<若模型有多层，要求只保留具有代表性的3层，其余的相似结构可以精简>>>
 
 Divide the boundary according to GPUs, where each node in the DAG graph represents a GPU. <<<按照GPU划分边界，每个DAG图的节点都是一个GPU>>>
 
@@ -46,7 +50,7 @@ Nodes in DAG containing multiple operators must be split. <<<包含多个算子�
 
 One layer in the model consists of a Multi-Head Attention along with an FFN(Gate and Experts). <<<模型中的一层由多头注意力机制以及前馈神经网络（包括门控和专家模块）组成>>>
 
-Both MHA and MLP need to be expanded into single operators; they cannot be written as a single entity. <<<MHA和MLP都要展开成单算子，不能写成一个整体>>>
+Both MLA and MLP need to be expanded into single operators; they cannot be written as a single entity. <<<MLA和MLP都要展开成单算子，不能写成一个整体>>>
 
 If other strategies such as DP, TP, PP, SP, ring attention, etc., are combined, it is required to fully display the deployment of parallel strategies in the original DAG graph, rather than generating a new DAG graph separately. <<<如果结合了DP,TP, PP,SP,ring attention等其他策略，要求必须将并行策略的部署情况在一个DAG图中完整展示出来，而不是单独生成一个新的DAG图>>
 
@@ -58,9 +62,7 @@ The aggregation and split of tensor need to be represented by nodes. <<<显示�
 
 Communication between nodes in DAG needs to be demonstrated. <<<DAG图上的节点间的通信要体现出来>>>
 
-In the DAG diagram, the communication between the MHA phase and the MOE phase should be fully represented using dashed lines. <<<DAG图中MHA阶段和MOE阶段的通信都要用虚线完整表示出来>>>
-
-If the model has multiple layers, it is required to retain only the three most representative layers, and the rest of the similar structures can be simplified. <<<若模型有多层，要求只保留具有代表性的3层，其余的相似结构可以精简>>>
+In the DAG diagram, the communication between the MLA phase and the MOE phase should be fully represented using dashed lines. <<<DAG图中MLA阶段和MOE阶段的通信都要用虚线完整表示出来>>>
 
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
@@ -78,8 +80,6 @@ The generated DAG must not contain any cycles.<<<禁止有环>>>
 Except for the input node, each node in DAG must have a preceding input node; except for the output node, each node must output to another node. <<<禁止有空悬的节点>>>
 
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
-
-Request to generate only one DAG graph, consolidating the content together. <<<要求只生成一张DAG图，将内容聚合到一起>>>
 
 In a batch, there are a total of batch size independent data points.<<<batch中数据是独立的>>>
 
@@ -118,6 +118,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
 Result: We will evaluate whether the deployment plan you generated is the optimal strategy.
+
 
 
 
