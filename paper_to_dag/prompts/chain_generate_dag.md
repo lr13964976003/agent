@@ -48,7 +48,7 @@ One layer in the model consists of a Multi-Head Attention along with an FFN(Gate
 
 Both MHA and MLP need to be expanded into single operators; they cannot be written as a single entity. <<<MHA和MLP都要展开成单算子，不能写成一个整体>>>
 
-If other strategies such as DP, TP, PP, SP, ring attention, etc., are combined, it is required to fully display the deployment of parallel strategies in the original DAG graph, rather than generating a new DAG graph separately. <<<如果结合了DP,TP, PP,SP,ring attention等其他策略，要求必须将并行策略的部署情况在原来的DAG图中完整展示出来，而不是单独生成一个新的DAG图>>
+If other strategies such as DP, TP, PP, SP, ring attention, etc., are combined, it is required to fully display the deployment of parallel strategies in the original DAG graph, rather than generating a new DAG graph separately. <<<如果结合了DP,TP, PP,SP,ring attention等其他策略，要求必须将并行策略的部署情况在一个DAG图中完整展示出来，而不是单独生成一个新的DAG图>>
 
 The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意DAG中不能漏残差的边>>>
 
@@ -59,6 +59,8 @@ The aggregation and split of tensor need to be represented by nodes. <<<显示�
 Communication between nodes in DAG needs to be demonstrated. <<<DAG图上的节点间的通信要体现出来>>>
 
 In the DAG diagram, the communication between the MHA phase and the MOE phase should be fully represented using dashed lines. <<<DAG图中MHA阶段和MOE阶段的通信都要用虚线完整表示出来>>>
+
+If the model has multiple layers, it is required to retain only the three most representative layers, and the rest of the similar structures can be simplified. <<<若模型有多层，要求只保留具有代表性的3层，其余的相似结构可以精简>>>
 
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
@@ -76,6 +78,8 @@ The generated DAG must not contain any cycles.<<<禁止有环>>>
 Except for the input node, each node in DAG must have a preceding input node; except for the output node, each node must output to another node. <<<禁止有空悬的节点>>>
 
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
+
+Request to generate only one DAG graph, consolidating the content together. <<<要求只生成一张DAG图，将内容聚合到一起>>>
 
 In a batch, there are a total of batch size independent data points.<<<batch中数据是独立的>>>
 
@@ -114,6 +118,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
 Result: We will evaluate whether the deployment plan you generated is the optimal strategy.
+
 
 
 
