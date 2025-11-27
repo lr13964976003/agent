@@ -1,0 +1,152 @@
+digraph LargeScaleMoEDeployment {
+    rankdir=TB;
+    compound=true;
+    node [fontname="Courier New", fontsize=10];
+    graph [bgcolor=white, margin=0.2];
+    
+    // Input node
+    input_node [shape=rectangle, style=filled, fillcolor=lightblue,
+                label="GPU: INPUT\nInput Layer\nInput: [batch_size=32, seq_len=2048, hidden=7168]\nOutput: [batch_size=32, seq_len=2048, hidden=7168]"];
+    
+    // Layer 1 - Dense Layer (DP=4, TP=8)
+    subgraph cluster_layer1_dense {
+        label="Layer 1 - Dense (DP=4, TP=8)";
+        style=dashed;
+        color=blue;
+        
+        // MLA attention components
+        mla_q_dense1_0 [shape=ellipse, style=filled, fillcolor=lightyellow,
+                       label="GPU: 0\nQ Proj (1/8)\nInput: [batch_size=32, seq_len=2048, hidden=7168]\nOutput: [batch_size=32, seq_len=2048, heads=16, d_k=56]"];
+        mla_kv_dense1_0 [shape=ellipse, style=filled, fillcolor=lightcoral,
+                        label="GPU: 0\nK/V Proj (1/8)\nInput: [batch_size=32, seq_len=2048, hidden=7168]\nOutput: [batch_size=32, seq_len=2048, heads=16, d_k=56, kv_compressed=512]"];
+        attn_dense1_0 [shape=rectangle, style=filled, fillcolor=lightgreen,
+                      label="GPU: 0\nAttention Compute\nInput: [batch_size=32, seq_len=2048, heads=16, d_k=56]\nOutput: [batch_size=32, seq_len=2048, heads=16, d_k=56]"];
+        out_proj_dense1_0 [shape=parallelogram, style=filled, fillcolor=lightblue,
+                          label="GPU: 0\nOutput Proj (1/8)\nInput: [batch_size=32, seq_len=2048, heads=16, d_k=56]\nOutput: [batch_size=32, seq_len=2048, hidden=896]"];
+        attn_allreduce_dense1 [shape=parallelogram, style=filled, fillcolor=orange,
+                             label="GPU: ALL\nAll-Reduce Attention\nInput: [batch_size=32, seq_len=2048, hidden=896]\nOutput: [batch_size=32, seq_len=2048, hidden=7168]"];
+        
+        // MLP components
+        mlp_linear1_dense1_0 [shape=ellipse, style=filled, fillcolor=lightyellow,
+                           label="GPU: 0\nMLP Linear1 (1/8)\nInput: [batch_size=32, seq_len=2048, hidden=7168]\nOutput: [batch_size=32, seq_len=2048, ffn_hidden=2304]"];
+        mlp_gelu_dense1_0 [shape=rectangle, style=filled, fillcolor=lightgreen,
+                         label="GPU: 0\nGELU\nInput: [batch_size=32, seq_len=2048, ffn_hidden=2304]\nOutput: [batch_size=32, seq_len=2048, ffn_hidden=2304]"];
+        mlp_linear2_dense1_0 [shape=parallelogram, style=filled, fillcolor=lightblue,
+                           label="GPU: 0\nMLP Linear2 (1/8)\nInput: [batch_size=32, seq_len=2048, ffn_hidden=2304]\nOutput: [batch_size=32, seq_len=2048, hidden=896]"];
+        mlp_allreduce_dense1 [shape=parallelogram, style=filled, fillcolor=orange,
+                           label="GPU: ALL\nAll-Reduce MLP\nInput: [batch_size=32, seq_len=2048, hidden=896]\nOutput: [batch_size=32, seq_len=2048, hidden=7168]"];
+    }
+    
+    // Layer 4 - MoE Layer (EP=16, TP=8, DP=4)
+    subgraph cluster_layer4_moe {
+        label="Layer 4 - MoE Layer (EP=16, TP=8, DP=4)";
+        style=dashed;
+        color=red;
+        
+        // Gating mechanism
+        gating_moe4 [shape=parallelogram, style=filled, fillcolor=gold,
+                    label="GPU: GATING\nExpert Gating\nInput: [batch_size=32, seq_len=2048, hidden=7168]\nOutput: [expert_id=128, tokens_per_expert=varies]"];
+        
+        // Token routing
+        token_routing_moe4 [shape=parallelogram, style=filled, fillcolor=lightcyan,
+                           label="GPU: ROUTER\nToken Router\nInput: [batch_size=32, seq_len=2048, hidden=7168]\nOutput: [distributed to 128 experts]"];
+        
+        // Expert 0 computation
+        expert0_moe4_gate [shape=ellipse, style=filled, fillcolor=pink,
+                         label="GPU: 0\nExpert 0 Gate\nInput: [tokens=varies, hidden=7168]\nOutput: [tokens=varies, hidden=7168, gate_weights=varies]"];
+        expert0_moe4_up_proj [shape=ellipse, style=filled, fillcolor=pink,
+                            label="GPU: 0\nExpert 0 Up-Proj\nInput: [tokens=varies, hidden=7168]\nOutput: [tokens=varies, ffn_hidden=18432]"];
+        expert0_moe4_gate_proj [shape=ellipse, style=filled, fillcolor=pink,
+                              label="GPU: 0\nExpert 0 Gate-Proj\nInput: [tokens=varies, hidden=7168]\nOutput: [tokens=varies, ffn_hidden=18432]"];
+        expert0_moe4_silu [shape=rectangle, style=filled, fillcolor=pink,
+                         label="GPU: 0\nExpert 0 SiLU\nInput: [tokens=varies, ffn_hidden=18432]\nOutput: [tokens=varies, ffn_hidden=18432]"];
+        expert0_moe4_mul [shape=rectangle, style=filled, fillcolor=pink,
+                        label="GPU: 0\nExpert 0 Element-wise Mul\nInput: [tokens=varies, ffn_hidden=18432]\nOutput: [tokens=varies, ffn_hidden=18432]"];
+        expert0_moe4_down_proj [shape=parallelogram, style=filled, fillcolor=pink,
+                              label="GPU: 0\nExpert 0 Down-Proj\nInput: [tokens=varies, ffn_hidden=18432]\nOutput: [tokens=varies, hidden=7168]"];
+        
+        // Expert 1 computation
+        expert1_moe4_gate [shape=ellipse, style=filled, fillcolor=lightpink,
+                         label="GPU: 1\nExpert 1 Gate\nInput: [tokens=varies, hidden=7168]\nOutput: [tokens=varies, hidden=7168, gate_weights=varies]"];
+        expert1_moe4_up_proj [shape=ellipse, style=filled, fillcolor=lightpink,
+                            label="GPU: 1\nExpert 1 Up-Proj\nInput: [tokens=varies, hidden=7168]\nOutput: [tokens=varies, ffn_hidden=18432]"];
+        expert1_moe4_gate_proj [shape=ellipse, style=filled, fillcolor=lightpink,
+                              label="GPU: 1\nExpert 1 Gate-Proj\nInput: [tokens=varies, hidden=7168]\nOutput: [tokens=varies, ffn_hidden=18432]"];
+        expert1_moe4_silu [shape=rectangle, style=filled, fillcolor=lightpink,
+                         label="GPU: 1\nExpert 1 SiLU\nInput: [tokens=varies, ffn_hidden=18432]\nOutput: [tokens=varies, ffn_hidden=18432]"];
+        expert1_moe4_mul [shape=rectangle, style=filled, fillcolor=lightpink,
+                        label="GPU: 1\nExpert 1 Element-wise Mul\nInput: [tokens=varies, ffn_hidden=18432]\nOutput: [tokens=varies, ffn_hidden=18432]"];
+        expert1_moe4_down_proj [shape=parallelogram, style=filled, fillcolor=lightpink,
+                              label="GPU: 1\nExpert 1 Down-Proj\nInput: [tokens=varies, ffn_hidden=18432]\nOutput: [tokens=varies, hidden=7168]"];
+        
+        // Expert aggregation
+        expert_aggregation_moe4 [shape=parallelogram, style=filled, fillcolor=gold,
+                               label="GPU: AGGREGATOR\nExpert Aggregation\nInput: [from 128 experts, hidden=7168]\nOutput: [batch_size=32, seq_len=2048, hidden=7168]"];
+    }
+    
+    // Simplified Layer 5 and 6 representations
+    layer5_moe [shape=rectangle, style=filled, fillcolor=lightgray,
+               label="Layer 5 - MoE Layer\nGPU: 0-127\nParallel execution across all GPUs\nInput: [batch_size=32, seq_len=2048, hidden=7168]\nOutput: [batch_size=32, seq_len=2048, hidden=7168]"];
+    
+    layer6_moe [shape=rectangle, style=filled, fillcolor=lightgray,
+               label="Layer 6 - MoE Layer\nGPU: 0-127\nParallel execution across all GPUs\nInput: [batch_size=32, seq_len=2048, hidden=7168]\nOutput: [batch_size=32, seq_len=2048, hidden=7168]"];
+    
+    // Output node
+    output_node [shape=rectangle, style=filled, fillcolor=lightcoral,
+                label="GPU: OUTPUT\nOutput Layer\nInput: [batch_size=32, seq_len=2048, hidden=7168]\nOutput: [batch_size=32, seq_len=2048, vocab_size]"];
+    
+    // Edges - connecting the computation flow
+    // Input to Layer 1
+    input_node -> mla_q_dense1_0 [style=solid];
+    input_node -> mla_kv_dense1_0 [style=solid];
+    
+    // MLA connections
+    mla_q_dense1_0 -> attn_dense1_0 [style=solid];
+    mla_kv_dense1_0 -> attn_dense1_0 [style=solid];
+    attn_dense1_0 -> out_proj_dense1_0 [style=solid];
+    out_proj_dense1_0 -> attn_allreduce_dense1 [style=solid];
+    
+    // MLP connections
+    attn_allreduce_dense1 -> mlp_linear1_dense1_0 [style=solid];
+    mlp_linear1_dense1_0 -> mlp_gelu_dense1_0 [style=solid];
+    mlp_gelu_dense1_0 -> mlp_linear2_dense1_0 [style=solid];
+    mlp_linear2_dense1_0 -> mlp_allreduce_dense1 [style=solid];
+    
+    // Layer 1 to Layer 4 (MoE)
+    mlp_allreduce_dense1 -> gating_moe4 [style=solid];
+    
+    // Gating to routing (dashed for communication)
+    gating_moe4 -> token_routing_moe4 [style=dashed];
+    
+    // Routing to experts (dashed for communication)
+    token_routing_moe4 -> expert0_moe4_gate [style=dashed, label="Token routing"];
+    token_routing_moe4 -> expert1_moe4_gate [style=dashed, label="Token routing"];
+    
+    // Expert computation flow
+    expert0_moe4_gate -> expert0_moe4_up_proj [style=solid];
+    expert0_moe4_gate -> expert0_moe4_gate_proj [style=solid];
+    expert0_moe4_up_proj -> expert0_moe4_mul [style=solid];
+    expert0_moe4_gate_proj -> expert0_moe4_silu [style=solid];
+    expert0_moe4_silu -> expert0_moe4_mul [style=solid];
+    expert0_moe4_mul -> expert0_moe4_down_proj [style=solid];
+    
+    expert1_moe4_gate -> expert1_moe4_up_proj [style=solid];
+    expert1_moe4_gate -> expert1_moe4_gate_proj [style=solid];
+    expert1_moe4_up_proj -> expert1_moe4_mul [style=solid];
+    expert1_moe4_gate_proj -> expert1_moe4_silu [style=solid];
+    expert1_moe4_silu -> expert1_moe4_mul [style=solid];
+    expert1_moe4_mul -> expert1_moe4_down_proj [style=solid];
+    
+    // Experts to aggregation (dashed for communication)
+    expert0_moe4_down_proj -> expert_aggregation_moe4 [style=dashed, label="Expert result"];
+    expert1_moe4_down_proj -> expert_aggregation_moe4 [style=dashed, label="Expert result"];
+    
+    // Layer connections
+    expert_aggregation_moe4 -> layer5_moe [style=solid];
+    layer5_moe -> layer6_moe [style=solid];
+    layer6_moe -> output_node [style=solid];
+    
+    // Residual connections
+    attn_allreduce_dense1 -> mlp_linear1_dense1_0 [style=dashed, label="Residual", constraint=false];
+    expert_aggregation_moe4 -> layer5_moe [style=dashed, label="Residual", constraint=false];
+}
