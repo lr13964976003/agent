@@ -52,6 +52,21 @@ In such regimes, distributing experts across as many devices as possible—ideal
 Our proposed method addresses this challenge by exploiting large EP setups, carefully aligning expert placement with the cluster topology, and overlapping communication with computation to achieve near-linear scaling in large MoE deployments.
 
 
+### **Multi-Head Latent Attention**
+
+To reduce the memory overhead of attention, a multi-head attention mechanism that performs "latent projection" on the Q/K/V of attention. It is not simply a variant of the standard Attention mechanism, but rather a structure designed to reduce the dimensions of KV, lower storage/bandwidth requirements, and improve efficiency for long sequences. In short: MLA stores the Key/Value in low-dimensional latent representations instead of matching the size of the Hidden layer, thereby significantly reducing the size of the KV cache.
+
+Traditional Attention:
+
+Q/K/V all have the dimension of hidden_dim (e.g., 7168).
+All heads independently generate K/V → leading to memory explosion.
+
+MLA:
+
+First, compress X → K_latent (with a dimension much smaller than hidden_dim).
+Each head then projects from the latent space to its own K_head.
+This way, the heaviest part is moved outside the heads and shared among them.
+
 ---
 
 
@@ -218,7 +233,7 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 * **Batch size**: variable batch size
 * **Sequence Length**: variable sequence length.
 * **Token Dimension**: The dimension of each token is 7168.
-* **Dimension of MHA**: The number of heads is 128 and the dimension of each heads is 128.
+* **Dimension of MLA**: The number of heads is 128 and the dimension of each heads is 128.
 * **Hidden size of MLP**: The hidden is of MLP is 2048.
 
 We evaluated the hardware environment for the baseline and the new parallel strategy proposed in this paper as follows:
