@@ -229,7 +229,7 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 
 
 * **Model**: 61-layer Mixture-of-Experts (MoE), each expert is a MLP，The first three layers are dense, followed by MoE.
-* **Precision**: BF16
+* **Precision**: FP8
 * **Batch size**: variable batch size
 * **Sequence Length**: variable sequence length.
 * **Token Dimension**: The dimension of each token is 7168.
