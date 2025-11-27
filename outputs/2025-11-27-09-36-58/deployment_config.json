@@ -1,0 +1,178 @@
+{
+  "model_deployment": {
+    "model_name": "61_layer_moe",
+    "precision": "BF16",
+    "architecture": {
+      "total_layers": 61,
+      "dense_layers": 3,
+      "moe_layers": 58,
+      "token_dimension": 7168,
+      "mlp_hidden_size": 2048,
+      "attention_heads": 128,
+      "head_dimension": 128
+    },
+    "parallel_strategy": {
+      "expert_parallelism": {
+        "degree": 64,
+        "type": "large_ep",
+        "min_experts": 16,
+        "placement_policy": "one_expert_per_gpu",
+        "distribution": "cross_node_topology_aware"
+      },
+      "tensor_parallelism": {
+        "enabled": false,
+        "degree": 1,
+        "description": "Available within expert if memory exceeds GPU capacity"
+      },
+      "data_parallelism": {
+        "enabled": true,
+        "degree": 1,
+        "description": "For model replicas during training/inference scaling"
+      }
+    },
+    "expert_placement": {
+      "placement_algorithm": {
+        "constraint": "max_one_expert_per_gpu",
+        "optimization": "minimize_max_tokens_per_link",
+        "topology_consideration": ["node_bandwidth", "node_latency", "gpu_memory"]
+      },
+      "expert_distribution": {
+        "total_experts": 64,
+        "gpus_per_expert": 1,
+        "gpu_memory_per_expert_mb": 58.72,
+        "expert_memory_breakdown": {
+          "input_projection": "7168 x 2048 x 2 bytes = 29.36MB",
+          "output_projection": "2048 x 7168 x 2 bytes = 29.36MB"
+        }
+      }
+    },
+    "routing_configuration": {
+      "gating_mechanism": {
+        "type": "top_k",
+        "k": 2,
+        "activation_function": "softmax",
+        "input_dimension": 7168
+      },
+      "token_sharding": {
+        "batching_strategy": "group_by_destination_expert",
+        "transfer_mode": "asynchronous",
+        "communication_library": "NCCL_MPI"
+      },
+      "load_balancing": {
+        "monitoring": "real_time_per_expert_load",
+        "adjustment": "dynamic_gating_probabilities",
+        "overload_prevention": true
+      }
+    },
+    "communication_overlap": {
+      "compute_communication_overlap": {
+        "mechanism": "cuda_streams_asynchronous",
+        "overlap_efficiency": ">90%",
+        "batch_processing": "interleaved_compute_transfer"
+      },
+      "pipeline_scheduling": {
+        "layer_wise_routing": "immediate_expert_to_expert",
+        "partial_batch_processing": true,
+        "fine_grained_stages": true
+      }
+    },
+    "hardware_specifications": {
+      "gpu_configuration": {
+        "model": "H100",
+        "count": 64,
+        "memory_per_gpu_gb": 64,
+        "compute_power_tflops": 400,
+        "memory_bandwidth_tbps": 1.8,
+        "mfu_target": 60,
+        "bandwidth_utilization": 80
+      },
+      "network_topology": {
+        "interconnect": "NVLink_InfiniBand",
+        "bandwidth_tbps": 1.8,
+        "latency_tolerance_us": 100,
+        "topology_type": "fat_tree_or_direct_connect"
+      }
+    },
+    "performance_targets": {
+      "compute_efficiency": {
+        "theoretical_peak_tflops_per_gpu": 400,
+        "achieved_utilization_percent": 60,
+        "practical_performance_tflops": 240
+      },
+      "memory_utilization": {
+        "peak_memory_usage_gb": "≤64",
+        "memory_efficiency_percent": ">95"
+      },
+      "network_performance": {
+        "communication_overhead_percent": "<5",
+        "effective_bandwidth_tbps": 1.44,
+        "token_transfer_optimized_for_dimension": 7168
+      }
+    },
+    "device_mapping": {
+      "expert_to_device_mapping": [
+        {
+          "expert_id": 0,
+          "layer": "moe_4",
+          "device_id": "gpu_0",
+          "node_id": "node_0",
+          "memory_allocation_mb": 58.72
+        },
+        {
+          "expert_id": 1,
+          "layer": "moe_4",
+          "device_id": "gpu_1",
+          "node_id": "node_0",
+          "memory_allocation_mb": 58.72
+        },
+        {
+          "expert_id": 2,
+          "layer": "moe_4",
+          "device_id": "gpu_2",
+          "node_id": "node_0",
+          "memory_allocation_mb": 58.72
+        },
+        {
+          "expert_id": 3,
+          "layer": "moe_4",
+          "device_id": "gpu_3",
+          "node_id": "node_0",
+          "memory_allocation_mb": 58.72
+        },
+        {
+          "expert_id": 4,
+          "layer": "moe_4",
+          "device_id": "gpu_4",
+          "node_id": "node_1",
+          "memory_allocation_mb": 58.72
+        },
+        {
+          "expert_id": 5,
+          "layer": "moe_4",
+          "device_id": "gpu_5",
+          "node_id": "node_1",
+          "memory_allocation_mb": 58.72
+        }
+      ],
+      "scalable_pattern": {
+        "description": "Each expert mapped to unique GPU across 64 GPUs",
+        "replication_rule": "expert_id = (global_expert_number) % total_gpus",
+        "node_distribution": "topology_aware_minimizing_inter_node_traffic"
+      }
+    },
+    "baseline_configuration": {
+      "traditional_expert_placement": {
+        "strategy": "multiple_experts_per_gpu",
+        "experts_per_gpu": "4-8",
+        "limitation": "compute_contention_between_experts",
+        "scaling_issues": "diminishing_returns_beyond_8_experts_per_gpu"
+      },
+      "comparison_advantages": {
+        "compute_isolation": "no_expert_contention_on_gpu",
+        "scalability": "linear_scaling_with_cluster_size",
+        "communication": "overlapped_with_computation",
+        "gpu_utilization": ">95_percent"
+      }
+    }
+  }
+}

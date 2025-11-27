@@ -1,0 +1,82 @@
+digraph "Large-Scale Cross-Node Expert Parallelism DAG" {
+    rankdir=TB;
+    splines=ortho;
+    compound=true;
+
+    // Input node
+    input [label="Input\n[batch_size=8, seq_len=1024, token_dim=7168]", shape=ellipse, style=filled, fillcolor=lightgreen];
+
+    // Dense Layers (3 representative layers)
+    // Layer 0
+    dense_0_ln [label="LayerNorm\nGPU: 0-3\n[8,1024,7168]", shape=rectangle, style=filled, fillcolor=lightyellow];
+    dense_0_mha [label="MHA\nGPU: 0-3\n[8,1024,128,128]", shape=rectangle, style=filled, fillcolor=coral];
+    dense_0_ffn [label="FFN\nGPU: 0-3\n[8,1024,7168]", shape=rectangle, style=filled, fillcolor=lightblue];
+    dense_0_allreduce [label="AllReduce\nGPU: 0-3\n[8,1024,7168]", shape=parallelogram, style=filled, fillcolor=orange];
+
+    // Layer 1
+    dense_1_ln [label="LayerNorm\nGPU: 0-3\n[8,1024,7168]", shape=rectangle, style=filled, fillcolor=lightyellow];
+    dense_1_mha [label="MHA\nGPU: 0-3\n[8,1024,128,128]", shape=rectangle, style=filled, fillcolor=coral];
+    dense_1_ffn [label="FFN\nGPU: 0-3\n[8,1024,7168]", shape=rectangle, style=filled, fillcolor=lightblue];
+    dense_1_allreduce [label="AllReduce\nGPU: 0-3\n[8,1024,7168]", shape=parallelogram, style=filled, fillcolor=orange];
+
+    // Layer 2
+    dense_2_ln [label="LayerNorm\nGPU: 0-3\n[8,1024,7168]", shape=rectangle, style=filled, fillcolor=lightyellow];
+    dense_2_mha [label="MHA\nGPU: 0-3\n[8,1024,128,128]", shape=rectangle, style=filled, fillcolor=coral];
+    dense_2_ffn [label="FFN\nGPU: 0-3\n[8,1024,7168]", shape=rectangle, style=filled, fillcolor=lightblue];
+    dense_2_allreduce [label="AllReduce\nGPU: 0-3\n[8,1024,7168]", shape=parallelogram, style=filled, fillcolor=orange];
+
+    // MoE Layers (3 representative layers)
+    // Layer 30
+    moe_30_gate [label="Gate\nGPU: 0\n[8,1024,7168]", shape=parallelogram, style=filled, fillcolor=yellow];
+    moe_30_comm [label="Token Routing\nCross-GPU\n[8,1024,7168]", shape=ellipse, style=filled, fillcolor=purple, style=dashed];
+    moe_30_experts [label="Experts (64)\nGPU: 0-63\n[1,1024,7168] each", shape=rectangle, style=filled, fillcolor=lightblue];
+    moe_30_agg [label="Aggregate\nGPU: 0-63\n[8,1024,7168]", shape=parallelogram, style=filled, fillcolor=orange];
+
+    // Layer 31
+    moe_31_gate [label="Gate\nGPU: 0\n[8,1024,7168]", shape=parallelogram, style=filled, fillcolor=yellow];
+    moe_31_comm [label="Token Routing\nCross-GPU\n[8,1024,7168]", shape=ellipse, style=filled, fillcolor=purple, style=dashed];
+    moe_31_experts [label="Experts (64)\nGPU: 0-63\n[1,1024,7168] each", shape=rectangle, style=filled, fillcolor=lightblue];
+    moe_31_agg [label="Aggregate\nGPU: 0-63\n[8,1024,7168]", shape=parallelogram, style=filled, fillcolor=orange];
+
+    // Layer 60
+    moe_60_gate [label="Gate\nGPU: 0\n[8,1024,7168]", shape=parallelogram, style=filled, fillcolor=yellow];
+    moe_60_comm [label="Token Routing\nCross-GPU\n[8,1024,7168]", shape=ellipse, style=filled, fillcolor=purple, style=dashed];
+    moe_60_experts [label="Experts (64)\nGPU: 0-63\n[1,1024,7168] each", shape=rectangle, style=filled, fillcolor=lightblue];
+    moe_60_agg [label="Aggregate\nGPU: 0-63\n[8,1024,7168]", shape=parallelogram, style=filled, fillcolor=orange];
+
+    // Output node
+    output [label="Output\n[8,1024,7168]", shape=ellipse, style=filled, fillcolor=lightgreen];
+
+    // Connections
+    input -> dense_0_ln;
+    dense_0_ln -> dense_0_mha;
+    dense_0_mha -> dense_0_ffn;
+    dense_0_ffn -> dense_0_allreduce;
+    
+    dense_0_allreduce -> dense_1_ln;
+    dense_1_ln -> dense_1_mha;
+    dense_1_mha -> dense_1_ffn;
+    dense_1_ffn -> dense_1_allreduce;
+    
+    dense_1_allreduce -> dense_2_ln;
+    dense_2_ln -> dense_2_mha;
+    dense_2_mha -> dense_2_ffn;
+    dense_2_ffn -> dense_2_allreduce;
+    
+    dense_2_allreduce -> moe_30_gate;
+    moe_30_gate -> moe_30_comm [style=dashed, color=red];
+    moe_30_comm -> moe_30_experts [style=dashed, color=red];
+    moe_30_experts -> moe_30_agg;
+    
+    moe_30_agg -> moe_31_gate;
+    moe_31_gate -> moe_31_comm [style=dashed, color=red];
+    moe_31_comm -> moe_31_experts [style=dashed, color=red];
+    moe_31_experts -> moe_31_agg;
+    
+    moe_31_agg -> moe_60_gate;
+    moe_60_gate -> moe_60_comm [style=dashed, color=red];
+    moe_60_comm -> moe_60_experts [style=dashed, color=red];
+    moe_60_experts -> moe_60_agg;
+    
+    moe_60_agg -> output;
+}
