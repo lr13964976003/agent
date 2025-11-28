@@ -235,6 +235,7 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 * **Token Dimension**: The dimension of each token is 7168.
 * **Dimension of MLA**: The number of heads is 128 and the dimension of each heads is 56.
 * **Hidden size of MLP**: The hidden is of MLP is 18432.
+* **Experts**: The number of experts at each layer is 256.
 
 We evaluated the hardware environment for the baseline and the new parallel strategy proposed in this paper as follows:
 
