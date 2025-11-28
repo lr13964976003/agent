@@ -1,0 +1,237 @@
+{
+  "deployment_config": {
+    "models": {
+      "baseline_model": {
+        "name": "Traditional_MoE_Baseline",
+        "description": "Traditional MoE with multiple experts per GPU",
+        "architecture": {
+          "layers": 61,
+          "layer_types": {
+            "dense_layers": 3,
+            "moe_layers": 58
+          },
+          "experts": {
+            "count_per_layer": 256,
+            "type": "MLP",
+            "hidden_size": 18432,
+            "activation": "GELU"
+          },
+          "attention": {
+            "type": "standard",
+            "heads": 128,
+            "head_dimension": 56,
+            "total_dimension": 7168
+          }
+        },
+        "parallel_strategy": {
+          "data_parallelism": {
+            "degree": 1,
+            "placement": "across_nodes"
+          },
+          "tensor_parallelism": {
+            "degree": 1,
+            "placement": "within_gpu"
+          },
+          "expert_parallelism": {
+            "degree": 16,
+            "experts_per_gpu": 16,
+            "placement": "within_gpu"
+          }
+        },
+        "hardware_requirements": {
+          "gpus": 16,
+          "gpu_type": "H100",
+          "memory_per_gpu": "64GB",
+          "compute_per_gpu": "400TFlops"
+        },
+        "deployment": {
+          "per_gpu_experts": 16,
+          "total_gpus": 16,
+          "communication": "reduced_cross_node",
+          "gpu_utilization": "partial"
+        }
+      },
+      "proposed_model": {
+        "name": "Large_EP_Cross_Node_MoE",
+        "description": "Large-scale cross-node expert parallelism with one expert per GPU",
+        "architecture": {
+          "layers": 61,
+          "layer_types": {
+            "dense_layers": 3,
+            "moe_layers": 58
+          },
+          "experts": {
+            "count_per_layer": 256,
+            "type": "MLP",
+            "hidden_size": 18432,
+            "activation": "GELU"
+          },
+          "attention": {
+            "type": "Multi_Head_Latent_Attention",
+            "heads": 128,
+            "head_dimension": 56,
+            "total_dimension": 7168,
+            "kv_cache_optimization": "latent_projection"
+          }
+        },
+        "parallel_strategy": {
+          "data_parallelism": {
+            "degree": 1,
+            "placement": "across_nodes"
+          },
+          "tensor_parallelism": {
+            "degree": 1,
+            "placement": "within_gpu",
+            "condition": "if_exceeds_single_gpu"
+          },
+          "expert_parallelism": {
+            "degree": 256,
+            "experts_per_gpu": 1,
+            "placement": "cross_node",
+            "definition": "large_ep"
+          }
+        },
+        "hardware_requirements": {
+          "gpus": 14848,
+          "gpu_type": "H100",
+          "memory_per_gpu": "64GB",
+          "compute_per_gpu": "400TFlops",
+          "mfu_utilization": "60%",
+          "vram_bandwidth": "1.8TBps",
+          "bandwidth_utilization": "80%"
+        },
+        "deployment": {
+          "per_gpu_experts": 1,
+          "total_gpus": 14848,
+          "communication": "asynchronous_cross_node",
+          "gpu_utilization": "full"
+        }
+      }
+    },
+    "parallel_strategy_details": {
+      "large_ep_strategy": {
+        "name": "Large_Expert_Parallelism",
+        "description": "One expert per GPU across nodes",
+        "parameters": {
+          "ep_degree": 256,
+          "experts_per_gpu": 1,
+          "placement_policy": "topology_aware",
+          "communication_overlap": true,
+          "asynchronous_routing": true
+        },
+        "modules": {
+          "expert_modules": {
+            "type": "MLP",
+            "parameters": {
+              "input_dimension": 7168,
+              "hidden_dimension": 18432,
+              "output_dimension": 7168,
+              "activation": "GELU"
+            },
+            "placement": "one_per_gpu"
+          },
+          "gating_module": {
+            "type": "top_k_gating",
+            "parameters": {
+              "k_value": 2,
+              "num_experts": 256,
+              "load_balancing": "dynamic"
+            },
+            "placement": "coordinated_across_gpus"
+          },
+          "attention_module": {
+            "type": "multi_head_latent_attention",
+            "parameters": {
+              "num_heads": 128,
+              "head_dimension": 56,
+              "total_dimension": 7168,
+              "kv_latent_dimension": "reduced_from_hidden"
+            },
+            "placement": "distributed_across_dense_layers"
+          }
+        }
+      }
+    },
+    "device_mapping": {
+      "layer_0_to_2": {
+        "type": "dense_layers",
+        "devices": [
+          {
+            "gpu_id": "gpu_0",
+            "layer_assignment": [0, 1, 2],
+            "module": "attention_and_mlp",
+            "memory_allocation": "7168_dimensions"
+          }
+        ]
+      },
+      "moe_layers": {
+        "type": "expert_parallel_layers",
+        "layer_range": [3, 60],
+        "expert_placement": {
+          "expert_0": {
+            "gpu_id": "gpu_0",
+            "layer_assignment": "all_moe_layers",
+            "module": "mlp_expert",
+            "parameters": {
+              "input_size": 7168,
+              "hidden_size": 18432,
+              "output_size": 7168
+            }
+          },
+          "expert_1": {
+            "gpu_id": "gpu_1",
+            "layer_assignment": "all_moe_layers",
+            "module": "mlp_expert",
+            "parameters": {
+              "input_size": 7168,
+              "hidden_size": 18432,
+              "output_size": 7168
+            }
+          },
+          "expert_255": {
+            "gpu_id": "gpu_255",
+            "layer_assignment": "all_moe_layers",
+            "module": "mlp_expert",
+            "parameters": {
+              "input_size": 7168,
+              "hidden_size": 18432,
+              "output_size": 7168
+            }
+          }
+        }
+      },
+      "communication_topology": {
+        "intra_node": {
+          "bandwidth": "NVLink",
+          "latency": "low",
+          "usage": "expert_to_expert_within_node"
+        },
+        "inter_node": {
+          "bandwidth": "InfiniBand",
+          "latency": "medium",
+          "usage": "cross_node_token_routing",
+          "optimization": "asynchronous_overlap"
+        }
+      }
+    },
+    "runtime_configuration": {
+      "batch_processing": {
+        "batch_size": "variable",
+        "sequence_length": "variable",
+        "token_routing": "dynamic_top_k",
+        "load_balancing": "real_time_monitoring"
+      },
+      "communication_strategy": {
+        "token_batching": "group_by_destination",
+        "asynchronous_transfer": "nccl_mpi",
+        "overlap_compute": "cuda_streams",
+        "pipeline_scheduling": "layer_to_layer_flow"
+      },
+      "precision_settings": {
+        "model_precision": "FP8",
+        "communication_precision": "FP8",
+        "memory_optimization": "mla_kv_cache"
+      }
+    }
+  }
+}

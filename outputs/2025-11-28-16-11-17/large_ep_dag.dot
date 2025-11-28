@@ -1,0 +1,76 @@
+// Large-Scale Cross-Node Expert Parallelism DAG
+digraph {
+	rankdir=LR
+	node [fontname=Arial fontsize=10]
+	subgraph cluster_input {
+		label="Input Distribution Layer"
+		input_tokens [label="Input Tokens\n[batch_size=?, seq_len=?]\nGPU: N/A" fillcolor=lightgray shape=egg style=filled]
+		token_split [label="Token Split\n[batch_size=?, seq_len=?] → [batch_size=?, seq_len=?/256]\nGPU: 0-255" fillcolor=lightgreen shape=parallelogram style=filled]
+		input_tokens -> token_split [label=broadcast]
+	}
+	subgraph cluster_layer1 {
+		label="Layer 1: MLA + Expert Routing"
+		mla_0 [label="MLA\n[batch_size=?, seq_len=?, heads=128, d_k=56]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 0" fillcolor=lightblue shape=rectangle style=filled]
+		gate_0 [label="Expert Gating\n[batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, top_k=2]\nGPU: 0" fillcolor=lightgreen shape=parallelogram style=filled]
+		residual_add_0 [label="Residual Add\n[batch_size=?, seq_len=?, dim=7168] + [batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 0" fillcolor=lightgreen shape=parallelogram style=filled]
+		token_split -> mla_0 [label="tokens for GPU 0"]
+		mla_0 -> gate_0
+		gate_0 -> residual_add_0
+		token_split -> residual_add_0 [label=residual style=dashed]
+	}
+	subgraph cluster_routing {
+		label="Expert Routing Communication"
+		comm_to_expert_0 [label="Token Routing\n[batch_size=?, seq_len=?, dim=7168]\n→ GPU: 0" fillcolor=lightyellow shape=ellipse style=filled]
+		residual_add_0 -> comm_to_expert_0
+		expert_0 [label="Expert MLP 0\n[batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 0" fillcolor=lightblue shape=rectangle style=filled]
+		comm_to_expert_0 -> expert_0
+		comm_to_expert_64 [label="Token Routing\n[batch_size=?, seq_len=?, dim=7168]\n→ GPU: 64" fillcolor=lightyellow shape=ellipse style=filled]
+		expert_64 [label="Expert MLP 64\n[batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 64" fillcolor=lightblue shape=rectangle style=filled]
+		comm_to_expert_64 -> expert_64
+		comm_to_expert_128 [label="Token Routing\n[batch_size=?, seq_len=?, dim=7168]\n→ GPU: 128" fillcolor=lightyellow shape=ellipse style=filled]
+		expert_128 [label="Expert MLP 128\n[batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 128" fillcolor=lightblue shape=rectangle style=filled]
+		comm_to_expert_128 -> expert_128
+		comm_to_expert_192 [label="Token Routing\n[batch_size=?, seq_len=?, dim=7168]\n→ GPU: 192" fillcolor=lightyellow shape=ellipse style=filled]
+		expert_192 [label="Expert MLP 192\n[batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 192" fillcolor=lightblue shape=rectangle style=filled]
+		comm_to_expert_192 -> expert_192
+		comm_to_expert_255 [label="Token Routing\n[batch_size=?, seq_len=?, dim=7168]\n→ GPU: 255" fillcolor=lightyellow shape=ellipse style=filled]
+		expert_255 [label="Expert MLP 255\n[batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 255" fillcolor=lightblue shape=rectangle style=filled]
+		comm_to_expert_255 -> expert_255
+	}
+	subgraph cluster_layer2 {
+		label="Layer 2: Intermediate Processing"
+		mla_64 [label="MLA\n[batch_size=?, seq_len=?, heads=128, d_k=56]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 64" fillcolor=lightblue shape=rectangle style=filled]
+		gate_64 [label="Expert Gating\n[batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, top_k=2]\nGPU: 64" fillcolor=lightgreen shape=parallelogram style=filled]
+		residual_add_64 [label="Residual Add\n[batch_size=?, seq_len=?, dim=7168] + [batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 64" fillcolor=lightgreen shape=parallelogram style=filled]
+		expert_64 -> mla_64 [label="processed tokens"]
+		mla_64 -> gate_64
+		gate_64 -> residual_add_64
+		expert_64 -> residual_add_64 [label=residual style=dashed]
+	}
+	subgraph cluster_layer3 {
+		label="Layer 3: Output Processing"
+		mla_255 [label="MLA\n[batch_size=?, seq_len=?, heads=128, d_k=56]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 255" fillcolor=lightblue shape=rectangle style=filled]
+		gate_255 [label="Expert Gating\n[batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, top_k=2]\nGPU: 255" fillcolor=lightgreen shape=parallelogram style=filled]
+		residual_add_255 [label="Residual Add\n[batch_size=?, seq_len=?, dim=7168] + [batch_size=?, seq_len=?, dim=7168]\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 255" fillcolor=lightgreen shape=parallelogram style=filled]
+		expert_255 -> mla_255 [label="processed tokens"]
+		mla_255 -> gate_255
+		gate_255 -> residual_add_255
+		expert_255 -> residual_add_255 [label=residual style=dashed]
+	}
+	subgraph cluster_output {
+		label="Output Aggregation"
+		collect_res [label="Gather Results\n[batch_size=?, seq_len=?, dim=7168] from all GPUs\n→ [batch_size=?, seq_len=?, dim=7168]\nGPU: 0-255" fillcolor=lightgreen shape=parallelogram style=filled]
+		final_out [label="Final Output\n[batch_size=?, seq_len=?, dim=7168]\nGPU: 0" fillcolor=lightgray shape=egg style=filled]
+		residual_add_0 -> collect_res [label="from GPU 0"]
+		residual_add_64 -> collect_res [label="from GPU 64"]
+		residual_add_255 -> collect_res [label="from GPU 255"]
+		collect_res -> final_out
+	}
+	subgraph cluster_communication {
+		label="Cross-Node Communication"
+		comm_0_64 [label="Async Transfer\nGPU: 0 ↔ GPU: 64" fillcolor=lightyellow shape=ellipse style=filled]
+		comm_64_255 [label="Async Transfer\nGPU: 64 ↔ GPU: 255" fillcolor=lightyellow shape=ellipse style=filled]
+		gate_0 -> comm_0_64 [label="token routing" style=dashed]
+		gate_64 -> comm_64_255 [label="token routing" style=dashed]
+	}
+}

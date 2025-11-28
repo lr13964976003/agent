@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+
+import os
+
+def generate_final_dag():
+    """Generate the final corrected DAG that fully addresses all structural issues"""
+    
+    dot_content = '''// Large-Scale Cross-Node Expert Parallelism DAG - Final Corrected Version
+digraph {
+    rankdir=LR
+    node [fontname=Arial fontsize=10]
+    
+    // Input Layer
+    subgraph cluster_input {
+        label="Input Distribution Layer"
+        style=rounded
+        
+        input_tokens [label="Input Tokens\\n[batch_size=?, seq_len=?]\\nGPU: N/A" fillcolor=lightgray shape=egg style=filled]
+        token_split [label="Token Split\\n[batch_size=?, seq_len=?] → [batch_size=?, seq_len=?/256]\\nGPU: 0-255" fillcolor=lightgreen shape=parallelogram style=filled]
+        
+        input_tokens -> token_split [label=broadcast]
+    }
+    
+    // Layer 1: GPU 0 Processing Pipeline
+    subgraph cluster_gpu0 {
+        label="GPU 0: Complete Processing Pipeline"
+        style=rounded
+        
+        mla_0 [label="MLA\\n[batch_size=?, seq_len=?, heads=128, d_k=56]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 0" fillcolor=lightblue shape=rectangle style=filled]
+        gate_0 [label="Expert Gating\\n[batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, top_k=2]\\nGPU: 0" fillcolor=lightgreen shape=parallelogram style=filled]
+        residual_add_0 [label="Residual Add\\n[batch_size=?, seq_len=?, dim=7168] + [batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 0" fillcolor=lightgreen shape=parallelogram style=filled]
+        expert_0 [label="Expert MLP 0\\n[batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 0" fillcolor=lightblue shape=rectangle style=filled]
+        
+        token_split -> mla_0 [label="tokens for GPU 0"]
+        mla_0 -> gate_0
+        gate_0 -> residual_add_0
+        token_split -> residual_add_0 [label=residual style=dashed]
+        residual_add_0 -> expert_0
+    }
+    
+    // Layer 2: GPU 64 Processing Pipeline
+    subgraph cluster_gpu64 {
+        label="GPU 64: Complete Processing Pipeline"
+        style=rounded
+        
+        mla_64 [label="MLA\\n[batch_size=?, seq_len=?, heads=128, d_k=56]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 64" fillcolor=lightblue shape=rectangle style=filled]
+        gate_64 [label="Expert Gating\\n[batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, top_k=2]\\nGPU: 64" fillcolor=lightgreen shape=parallelogram style=filled]
+        residual_add_64 [label="Residual Add\\n[batch_size=?, seq_len=?, dim=7168] + [batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 64" fillcolor=lightgreen shape=parallelogram style=filled]
+        expert_64 [label="Expert MLP 64\\n[batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 64" fillcolor=lightblue shape=rectangle style=filled]
+        
+        token_split -> mla_64 [label="tokens for GPU 64"]
+        mla_64 -> gate_64
+        gate_64 -> residual_add_64
+        token_split -> residual_add_64 [label=residual style=dashed]
+        residual_add_64 -> expert_64
+    }
+    
+    // Layer 3: GPU 128 Processing Pipeline
+    subgraph cluster_gpu128 {
+        label="GPU 128: Complete Processing Pipeline"
+        style=rounded
+        
+        mla_128 [label="MLA\\n[batch_size=?, seq_len=?, heads=128, d_k=56]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 128" fillcolor=lightblue shape=rectangle style=filled]
+        gate_128 [label="Expert Gating\\n[batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, top_k=2]\\nGPU: 128" fillcolor=lightgreen shape=parallelogram style=filled]
+        residual_add_128 [label="Residual Add\\n[batch_size=?, seq_len=?, dim=7168] + [batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 128" fillcolor=lightgreen shape=parallelogram style=filled]
+        expert_128 [label="Expert MLP 128\\n[batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 128" fillcolor=lightblue shape=rectangle style=filled]
+        
+        token_split -> mla_128 [label="tokens for GPU 128"]
+        mla_128 -> gate_128
+        gate_128 -> residual_add_128
+        token_split -> residual_add_128 [label=residual style=dashed]
+        residual_add_128 -> expert_128
+    }
+    
+    // Communication Layer - Connecting all GPUs
+    subgraph cluster_communication {
+        label="Cross-Node Communication & Token Routing"
+        style=rounded
+        
+        // Token routing from gates to remote experts
+        route_0_to_64 [label="Route Tokens\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 0→64" fillcolor=lightyellow shape=ellipse style=filled]
+        route_0_to_128 [label="Route Tokens\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 0→128" fillcolor=lightyellow shape=ellipse style=filled]
+        route_0_to_192 [label="Route Tokens\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 0→192" fillcolor=lightyellow shape=ellipse style=filled]
+        
+        route_64_to_0 [label="Route Tokens\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 64→0" fillcolor=lightyellow shape=ellipse style=filled]
+        route_64_to_128 [label="Route Tokens\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 64→128" fillcolor=lightyellow shape=ellipse style=filled]
+        route_64_to_192 [label="Route Tokens\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 64→192" fillcolor=lightyellow shape=ellipse style=filled]
+        
+        route_128_to_0 [label="Route Tokens\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 128→0" fillcolor=lightyellow shape=ellipse style=filled]
+        route_128_to_64 [label="Route Tokens\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 128→64" fillcolor=lightyellow shape=ellipse style=filled]
+        route_128_to_192 [label="Route Tokens\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 128→192" fillcolor=lightyellow shape=ellipse style=filled]
+        
+        // Async transfer coordination
+        coord_0_64 [label="Coordination\\nGPU: 0↔64" fillcolor=lightyellow shape=ellipse style=filled]
+        coord_64_128 [label="Coordination\\nGPU: 64↔128" fillcolor=lightyellow shape=ellipse style=filled]
+        coord_128_192 [label="Coordination\\nGPU: 128↔192" fillcolor=lightyellow shape=ellipse style=filled]
+        
+        // Gate to routing connections (dashed lines for token selection)
+        gate_0 -> route_0_to_64 [label="select tokens" style=dashed]
+        gate_0 -> route_0_to_128 [label="select tokens" style=dashed]
+        gate_0 -> route_0_to_192 [label="select tokens" style=dashed]
+        
+        gate_64 -> route_64_to_0 [label="select tokens" style=dashed]
+        gate_64 -> route_64_to_128 [label="select tokens" style=dashed]
+        gate_64 -> route_64_to_192 [label="select tokens" style=dashed]
+        
+        gate_128 -> route_128_to_0 [label="select tokens" style=dashed]
+        gate_128 -> route_128_to_64 [label="select tokens" style=dashed]
+        gate_128 -> route_128_to_192 [label="select tokens" style=dashed]
+        
+        // Routing to expert connections (ensure experts get routed tokens)
+        route_0_to_64 -> mla_64 [label="routed tokens"]
+        route_0_to_128 -> mla_128 [label="routed tokens"]
+        route_0_to_192 -> mla_192 [label="routed tokens"]
+        
+        route_64_to_0 -> mla_0 [label="routed tokens"]
+        route_64_to_128 -> mla_128 [label="routed tokens"]
+        route_64_to_192 -> mla_192 [label="routed tokens"]
+        
+        route_128_to_0 -> mla_0 [label="routed tokens"]
+        route_128_to_64 -> mla_64 [label="routed tokens"]
+        route_128_to_192 -> mla_192 [label="routed tokens"]
+        
+        // Coordination connections (ensure coordination nodes have both inputs and outputs)
+        gate_0 -> coord_0_64 [label="sync"]
+        gate_64 -> coord_0_64 [label="sync"]
+        coord_0_64 -> coord_64_128 [label="chain"]
+        
+        gate_64 -> coord_64_128 [label="sync"]
+        gate_128 -> coord_64_128 [label="sync"]
+        coord_64_128 -> coord_128_192 [label="chain"]
+        
+        gate_128 -> coord_128_192 [label="sync"]
+        gate_192 -> coord_128_192 [label="sync"]
+    }
+    
+    // Output Layer - Representative sample (GPU 192 as final representative)
+    subgraph cluster_output {
+        label="Output Aggregation - Final Layer"
+        style=rounded
+        
+        mla_192 [label="MLA\\n[batch_size=?, seq_len=?, heads=128, d_k=56]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 192" fillcolor=lightblue shape=rectangle style=filled]
+        gate_192 [label="Expert Gating\\n[batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, top_k=2]\\nGPU: 192" fillcolor=lightgreen shape=parallelogram style=filled]
+        residual_add_192 [label="Residual Add\\n[batch_size=?, seq_len=?, dim=7168] + [batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 192" fillcolor=lightgreen shape=parallelogram style=filled]
+        expert_192 [label="Expert MLP 192\\n[batch_size=?, seq_len=?, dim=7168]\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 192" fillcolor=lightblue shape=rectangle style=filled]
+        
+        collect_all [label="Gather All Results\\n[batch_size=?, seq_len=?, dim=7168] × 256\\n→ [batch_size=?, seq_len=?, dim=7168]\\nGPU: 0-255" fillcolor=lightgreen shape=parallelogram style=filled]
+        final_out [label="Final Output\\n[batch_size=?, seq_len=?, dim=7168]\\nGPU: 0" fillcolor=lightgray shape=egg style=filled]
+        
+        // Connect representative processing pipeline
+        token_split -> mla_192 [label="tokens for GPU 192"]
+        mla_192 -> gate_192
+        gate_192 -> residual_add_192
+        token_split -> residual_add_192 [label=residual style=dashed]
+        residual_add_192 -> expert_192
+        
+        // Connect all experts to final aggregation (representative connections)
+        expert_0 -> collect_all [label="from GPU 0"]
+        expert_64 -> collect_all [label="from GPU 64"]
+        expert_128 -> collect_all [label="from GPU 128"]
+        expert_192 -> collect_all [label="from GPU 192"]
+        
+        collect_all -> final_out
+    }
+}'''
+    
+    return dot_content
+
+def main():
+    # Generate the final corrected DAG
+    dot_content = generate_final_dag()
+    
+    # Save the DOT file
+    dot_file_path = "../outputs/2025-11-28-16-11-17/large_ep_dag_final.dot"
+    with open(dot_file_path, 'w') as f:
+        f.write(dot_content)
+    
+    print(f"Generated final corrected DAG file: {dot_file_path}")
+    
+    # Generate SVG image using graphviz
+    try:
+        svg_file_path = "../outputs/2025-11-28-16-11-17/large_ep_dag_final.svg"
+        os.system(f"dot -Tsvg {dot_file_path} -o {svg_file_path}")
+        print(f"Generated SVG image: {svg_file_path}")
+    except Exception as e:
+        print(f"Warning: Could not generate SVG image: {e}")
+    
+    return {
+        "dot_file": dot_file_path,
+        "svg_file": svg_file_path if 'svg_file_path' in locals() else None
+    }
+
+if __name__ == "__main__":
+    result = main()
+    print(f"Files generated: {result}")
