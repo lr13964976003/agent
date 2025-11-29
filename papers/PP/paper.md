@@ -172,7 +172,7 @@ After partitioning, each group $P_i$ is deployed on a separate accelerator card 
 We evaluate our proposed layer-wise deployment method for large models in the inference stage. The hardware platform consists of 16 NVIDIA H100 GPUs. We use two model types:
 
 
-* **Dense model:** A 16-layer fully connected dense network.
+* **Dense model:** A 4-layer fully connected dense network.
 
 Both models use BF16 precision and the model's weight size is 30B. Calculate the memory usage for weights, activations, and buffers for each layer, and determine the number of layers allocated to each card according to the allocation method.
 
