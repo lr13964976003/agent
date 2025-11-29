@@ -1,0 +1,97 @@
+// Proposed Layer-wise Dense Model DAG (Optimized)
+digraph {
+	bgcolor=white rankdir=TB splines=ortho
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=box style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input
+(batch_size=128, seq_len=10000, hidden_size=4096)" fillcolor=lightcoral shape=box]
+	subgraph cluster_layer1 {
+		bgcolor=lightblue fontcolor=black label="Layer 1 Partition (GPUs 0-1)" style="rounded,dashed"
+		split_l1 [label="Split Input
+for Layer 1" fillcolor=lightyellow shape=parallelogram]
+		layer1_gpu0 [label="Layer 1 Part A
+GPU 0
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		layer1_gpu1 [label="Layer 1 Part B
+GPU 1
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		agg_l1 [label="Aggregate
+Layer 1 Output" fillcolor=lightyellow shape=parallelogram]
+		split_l1 -> layer1_gpu0
+		split_l1 -> layer1_gpu1
+		layer1_gpu0 -> agg_l1
+		layer1_gpu1 -> agg_l1
+	}
+	subgraph cluster_layer2 {
+		bgcolor=lightgreen fontcolor=black label="Layer 2 Partition (GPUs 2-3)" style="rounded,dashed"
+		transfer_l1_l2 [label="Transfer
+Layer1→Layer2" fillcolor=lightblue shape=ellipse]
+		split_l2 [label="Split Input
+for Layer 2" fillcolor=lightyellow shape=parallelogram]
+		layer2_gpu2 [label="Layer 2 Part A
+GPU 2
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		layer2_gpu3 [label="Layer 2 Part B
+GPU 3
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		agg_l2 [label="Aggregate
+Layer 2 Output" fillcolor=lightyellow shape=parallelogram]
+		transfer_l1_l2 -> split_l2
+		split_l2 -> layer2_gpu2
+		split_l2 -> layer2_gpu3
+		layer2_gpu2 -> agg_l2
+		layer2_gpu3 -> agg_l2
+	}
+	subgraph cluster_layer3 {
+		bgcolor=lightyellow fontcolor=black label="Layer 3 Partition (GPUs 4-5)" style="rounded,dashed"
+		transfer_l2_l3 [label="Transfer
+Layer2→Layer3" fillcolor=lightblue shape=ellipse]
+		split_l3 [label="Split Input
+for Layer 3" fillcolor=lightyellow shape=parallelogram]
+		layer3_gpu4 [label="Layer 3 Part A
+GPU 4
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		layer3_gpu5 [label="Layer 3 Part B
+GPU 5
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		agg_l3 [label="Aggregate
+Layer 3 Output" fillcolor=lightyellow shape=parallelogram]
+		transfer_l2_l3 -> split_l3
+		split_l3 -> layer3_gpu4
+		split_l3 -> layer3_gpu5
+		layer3_gpu4 -> agg_l3
+		layer3_gpu5 -> agg_l3
+	}
+	subgraph cluster_layer4 {
+		bgcolor=lightcoral fontcolor=black label="Layer 4 Partition (GPUs 6-7)" style="rounded,dashed"
+		transfer_l3_l4 [label="Transfer
+Layer3→Layer4" fillcolor=lightblue shape=ellipse]
+		split_l4 [label="Split Input
+for Layer 4" fillcolor=lightyellow shape=parallelogram]
+		layer4_gpu6 [label="Layer 4 Part A
+GPU 6
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		layer4_gpu7 [label="Layer 4 Part B
+GPU 7
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		agg_l4 [label="Aggregate
+Layer 4 Output" fillcolor=lightyellow shape=parallelogram]
+		transfer_l3_l4 -> split_l4
+		split_l4 -> layer4_gpu6
+		split_l4 -> layer4_gpu7
+		layer4_gpu6 -> agg_l4
+		layer4_gpu7 -> agg_l4
+	}
+	input -> split_l1
+	agg_l1 -> transfer_l1_l2
+	agg_l2 -> transfer_l2_l3
+	agg_l3 -> transfer_l3_l4
+	output [label="Output
+(batch_size=128, seq_len=10000, hidden_size=4096)" fillcolor=lightcoral shape=box]
+	agg_l4 -> output
+	perf [label="Performance:
+TPS: 17,920 (+40% vs baseline)
+Cache Utilization: 99.2%
+GPUs Used: 8/16" fillcolor=lightgray fontcolor=black shape=note]
+}

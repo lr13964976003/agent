@@ -1,0 +1,116 @@
+// LLM Deployment Optimization Strategies Comparison
+digraph {
+	bgcolor=white rankdir=LR size="20,10" splines=ortho
+	node [fillcolor=lightcoral fontcolor=black shape=box style=filled]
+	node [fillcolor=lightblue fontcolor=black shape=ellipse style=filled]
+	node [fillcolor=lightgreen fontcolor=black shape=box style=filled]
+	node [fillcolor=lightyellow fontcolor=black shape=parallelogram style=filled]
+	title [label="LLM Deployment Optimization Strategies
+4-Layer Dense Model Comparison" fillcolor=darkblue fontcolor=white fontsize=16 shape=box]
+	subgraph cluster_baseline {
+		bgcolor=lightblue fontcolor=black label="Baseline: TP=8, PP=2
+TPS: 12,800 tokens/s" style="rounded,dashed"
+		baseline_input [label="Input
+(128×10000×4096)" fillcolor=lightcoral shape=box]
+		baseline_stage1 [label="Pipeline Stage 1
+GPUs 0-7 (TP=8)
+Layer 1-2" fillcolor=lightgreen shape=box]
+		baseline_transfer [label="Inter-stage Transfer
+High Bandwidth" fillcolor=lightblue shape=ellipse]
+		baseline_stage2 [label="Pipeline Stage 2
+GPUs 8-15 (TP=8)
+Layer 3-4" fillcolor=lightgreen shape=box]
+		baseline_output [label="Output
+(128×10000×4096)" fillcolor=lightcoral shape=box]
+		baseline_input -> baseline_stage1
+		baseline_stage1 -> baseline_transfer
+		baseline_transfer -> baseline_stage2
+		baseline_stage2 -> baseline_output
+	}
+	subgraph cluster_proposed_original {
+		bgcolor=lightgreen fontcolor=black label="Original Proposed: Layer-wise
+TPS: 15,360 tokens/s (+20%)" style="rounded,dashed"
+		prop_orig_input [label="Input
+(128×10000×4096)" fillcolor=lightcoral shape=box]
+		prop_orig_l1 [label="Layer 1
+GPU 0
+(Cache: 15.36GB)" fillcolor=lightgreen shape=box]
+		prop_orig_t12 [label="Transfer
+L1→L2" fillcolor=lightblue shape=ellipse]
+		prop_orig_l2 [label="Layer 2
+GPU 1
+(Cache: 15.36GB)" fillcolor=lightgreen shape=box]
+		prop_orig_t23 [label="Transfer
+L2→L3" fillcolor=lightblue shape=ellipse]
+		prop_orig_l3 [label="Layer 3
+GPU 2
+(Cache: 15.36GB)" fillcolor=lightgreen shape=box]
+		prop_orig_t34 [label="Transfer
+L3→L4" fillcolor=lightblue shape=ellipse]
+		prop_orig_l4 [label="Layer 4
+GPU 3
+(Cache: 15.36GB)" fillcolor=lightgreen shape=box]
+		prop_orig_output [label="Output
+(128×10000×4096)" fillcolor=lightcoral shape=box]
+		prop_orig_input -> prop_orig_l1
+		prop_orig_l1 -> prop_orig_t12
+		prop_orig_t12 -> prop_orig_l2
+		prop_orig_l2 -> prop_orig_t23
+		prop_orig_t23 -> prop_orig_l3
+		prop_orig_l3 -> prop_orig_t34
+		prop_orig_t34 -> prop_orig_l4
+		prop_orig_l4 -> prop_orig_output
+	}
+	subgraph cluster_proposed_optimized {
+		bgcolor=lightyellow fontcolor=black label="Optimized Proposed: Layer-wise + Tensor Parallel
+TPS: 17,920 tokens/s (+40%)" style="rounded,dashed"
+		prop_opt_input [label="Input
+(128×10000×4096)" fillcolor=lightcoral shape=box]
+		prop_opt_l1_split [label="Split Input
+Column-wise" fillcolor=lightyellow shape=parallelogram]
+		prop_opt_l1_gpu0 [label="Layer 1 Part A
+GPU 0
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		prop_opt_l1_gpu1 [label="Layer 1 Part B
+GPU 1
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		prop_opt_l1_agg [label="Aggregate
+L1 Output" fillcolor=lightyellow shape=parallelogram]
+		prop_opt_t12 [label="Transfer
+L1→L2" fillcolor=lightblue shape=ellipse]
+		prop_opt_l2_split [label="Split Input
+Column-wise" fillcolor=lightyellow shape=parallelogram]
+		prop_opt_l2_gpu2 [label="Layer 2 Part A
+GPU 2
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		prop_opt_l2_gpu3 [label="Layer 2 Part B
+GPU 3
+(Cache: 30.5GB)" fillcolor=lightgreen shape=box]
+		prop_opt_l2_agg [label="Aggregate
+L2 Output" fillcolor=lightyellow shape=parallelogram]
+		prop_opt_output [label="Output
+(128×10000×4096)" fillcolor=lightcoral shape=box]
+		prop_opt_input -> prop_opt_l1_split
+		prop_opt_l1_split -> prop_opt_l1_gpu0
+		prop_opt_l1_split -> prop_opt_l1_gpu1
+		prop_opt_l1_gpu0 -> prop_opt_l1_agg
+		prop_opt_l1_gpu1 -> prop_opt_l1_agg
+		prop_opt_l1_agg -> prop_opt_t12
+		prop_opt_t12 -> prop_opt_l2_split
+		prop_opt_l2_split -> prop_opt_l2_gpu2
+		prop_opt_l2_split -> prop_opt_l2_gpu3
+		prop_opt_l2_gpu2 -> prop_opt_l2_agg
+		prop_opt_l2_gpu3 -> prop_opt_l2_agg
+		prop_opt_l2_agg -> prop_opt_output
+	}
+	improvement1 [label="Key Improvements:
+1. Cache-aware partitioning
+2. Tensor parallelism within layers
+3. Better GPU utilization
+4. Reduced communication overhead" fillcolor=lightgray fontcolor=black shape=note]
+	metrics [label="Performance Metrics:
+• Baseline: 12,800 TPS, 0.078ms TPOT
+• Original: 15,360 TPS, 0.065ms TPOT
+• Optimized: 17,920 TPS, 0.056ms TPOT
+• GPU Utilization: 50% → 100%" fillcolor=lightgray fontcolor=black shape=note]
+}

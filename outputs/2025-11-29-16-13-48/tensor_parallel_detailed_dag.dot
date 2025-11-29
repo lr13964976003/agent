@@ -1,0 +1,33 @@
+// Tensor Parallel MLP Layers - Detailed DAG
+digraph {
+	bgcolor=white rankdir=TB splines=ortho
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=box style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input\n(batch=128, seq=10000, hidden=4096)" fillcolor=lightcoral shape=box]
+	subgraph cluster_layer1_detailed {
+		bgcolor=lightblue label="Layer 1 - Tensor Parallel MLP (Detailed)" style="rounded,dashed"
+		l1_input_split [label="Split Input\nColumn-wise\n(hidden_size/2)" fillcolor=lightyellow shape=parallelogram]
+		l1_linear1_gpu0 [label="Linear1 Col-Parallel A\nGPU 0\n(4096→8192)" fillcolor=lightgreen shape=box]
+		l1_linear1_gpu1 [label="Linear1 Col-Parallel B\nGPU 1\n(4096→8192)" fillcolor=lightgreen shape=box]
+		l1_concat1 [label="Concatenate\nFFN Outputs" fillcolor=lightyellow shape=parallelogram]
+		l1_gelu [label="GELU Activation\n(Element-wise)" fillcolor=lightgreen shape=box]
+		l1_split2 [label="Split Intermediate\nRow-wise\n(ffn_hidden_size/2)" fillcolor=lightyellow shape=parallelogram]
+		l1_linear2_gpu0 [label="Linear2 Row-Parallel A\nGPU 0\n(8192→4096)" fillcolor=lightgreen shape=box]
+		l1_linear2_gpu1 [label="Linear2 Row-Parallel B\nGPU 1\n(8192→4096)" fillcolor=lightgreen shape=box]
+		l1_allreduce [label="All-Reduce Sum\nFinal Output" fillcolor=lightblue shape=ellipse]
+		l1_input_split -> l1_linear1_gpu0
+		l1_input_split -> l1_linear1_gpu1
+		l1_linear1_gpu0 -> l1_concat1
+		l1_linear1_gpu1 -> l1_concat1
+		l1_concat1 -> l1_gelu
+		l1_gelu -> l1_split2
+		l1_split2 -> l1_linear2_gpu0
+		l1_split2 -> l1_linear2_gpu1
+		l1_linear2_gpu0 -> l1_allreduce
+		l1_linear2_gpu1 -> l1_allreduce
+	}
+	input -> l1_input_split
+	output [label="Output\n(batch=128, seq=10000, hidden=4096)" fillcolor=lightcoral shape=box]
+	l1_allreduce -> output
+}
