@@ -24,8 +24,6 @@ Generate complete model deployment DAGs(directed acyclic graph) according to you
 
 Request to generate only one DAG graph, consolidating the content together. <<<要求只生成一张DAG图，将内容聚合到一起>>>
 
-If the model has multiple layers, it is required to retain only the three most representative layers, and the rest of the similar structures can be simplified. <<<若模型有多层，要求只保留具有代表性的3层，其余的相似结构可以精简>>>
-
 Divide the boundary according to GPUs, where each node in the DAG graph represents a GPU. <<<按照GPU划分边界，每个DAG图的节点都是一个GPU>>>
 
 Each node in DAG needs to be detailed down to the operator level.<<<要求dag图的节点详细到算子级别>>>
@@ -35,8 +33,6 @@ Use ellipses to represent communication, rectangles for computation, and paralle
 Each nodes in DAG must have the attributions: INPUT DIMENSION and OUTPUT DIMENSION. Sample: Input: \[batch\_size=?, seq\_len=?, heads=?, d\_k=?],Output:\[batch\_size=?, seq\_len=?, heads=?, d\_k=?]<<<每个DAG图节点必须注明输入维度和输出维度>>>
 
 Information from different dimensions must be separated by commas.<<<不同维度信息用,隔开>>>
-
-Require that the information within each node in DAG must include the shapes of the input and output tensors, as well as the GPU ID. <<<要求每个节点内的信息必须包含输入输出张量的形状，所在GPU序号>>>
 
 Communication between nodes in DAG needs to be demonstrated. <<<DAG图上的节点间的通信要体现出来>>>
 
@@ -101,6 +97,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets all the requirements above.
 
 Result: We will evaluate whether your deployment plan is practical.
+
 
 
 
