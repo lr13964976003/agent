@@ -1,0 +1,249 @@
+{
+  "deployment_configurations": {
+    "baseline_tp8_pp2": {
+      "name": "Baseline Tensor Parallelism 8 + Pipeline Parallelism 2",
+      "hardware": {
+        "gpus": 16,
+        "gpu_model": "NVIDIA H100",
+        "memory_per_gpu": "80GB HBM3",
+        "interconnect": "NVLink 4.0",
+        "bandwidth": "900 GB/s bidirectional"
+      },
+      "parallel_strategy": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "method": "row_and_column_parallel",
+          "parameters": {
+            "split_dimension": "hidden_size",
+            "communication_pattern": "all_reduce"
+          }
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "method": "layer_stages",
+          "parameters": {
+            "micro_batch_size": 1,
+            "gradient_accumulation_steps": 1
+          }
+        }
+      },
+      "model_mapping": {
+        "stage_0": {
+          "gpus": [0, 1, 2, 3, 4, 5, 6, 7],
+          "layers": [0, 1, 2, 3, 4, 5, 6, 7],
+          "tensor_parallel_group": {
+            "device_0": [0],
+            "device_1": [1],
+            "device_2": [2],
+            "device_3": [3],
+            "device_4": [4],
+            "device_5": [5],
+            "device_6": [6],
+            "device_7": [7]
+          }
+        },
+        "stage_1": {
+          "gpus": [8, 9, 10, 11, 12, 13, 14, 15],
+          "layers": [8, 9, 10, 11, 12, 13, 14, 15],
+          "tensor_parallel_group": {
+            "device_8": [8],
+            "device_9": [9],
+            "device_10": [10],
+            "device_11": [11],
+            "device_12": [12],
+            "device_13": [13],
+            "device_14": [14],
+            "device_15": [15]
+          }
+        }
+      },
+      "memory_allocation": {
+        "weights_per_gpu": "1.875 GB (30B total / 16 GPUs)",
+        "activations_per_gpu": "Variable based on tensor splits",
+        "communication_buffer": "2GB per GPU"
+      },
+      "performance_target": {
+        "tps": 12800,
+        "tpot": 0.078
+      }
+    },
+    "proposed_layer_wise": {
+      "name": "Proposed Layer-wise Cache-Optimized Deployment",
+      "hardware": {
+        "gpus": 16,
+        "gpu_model": "NVIDIA H100",
+        "memory_per_gpu": "80GB HBM3",
+        "l2_cache_per_gpu": "50MB",
+        "interconnect": "NVLink 4.0",
+        "bandwidth": "900 GB/s bidirectional"
+      },
+      "parallel_strategy": {
+        "layer_wise_partitioning": {
+          "method": "cache_constrained_greedy_aggregation",
+          "cache_capacity": "50MB",
+          "optimization_target": "minimize_offchip_access",
+          "parameters": {
+            "partitioning_algorithm": "greedy_layer_aggregation",
+            "memory_constraint": "l2_cache_size",
+            "contiguous_layer_assignment": true
+          }
+        }
+      },
+      "model_mapping": {
+        "partition_0": {
+          "device_id": 0,
+          "layers": [0, 1],
+          "memory_allocation": {
+            "weights": "1.074 GB",
+            "activations": "83.8 GB (streamed)",
+            "buffer": "1GB",
+            "cache_utilization": "Weights cached in L2"
+          },
+          "input_output": {
+            "input_from": "host_memory",
+            "output_to": "device_1"
+          }
+        },
+        "partition_1": {
+          "device_id": 1,
+          "layers": [2, 3],
+          "memory_allocation": {
+            "weights": "1.074 GB",
+            "activations": "83.8 GB (streamed)",
+            "buffer": "1GB",
+            "cache_utilization": "Weights cached in L2"
+          },
+          "input_output": {
+            "input_from": "device_0",
+            "output_to": "device_2"
+          }
+        },
+        "partition_2": {
+          "device_id": 2,
+          "layers": [4, 5],
+          "memory_allocation": {
+            "weights": "1.074 GB",
+            "activations": "83.8 GB (streamed)",
+            "buffer": "1GB",
+            "cache_utilization": "Weights cached in L2"
+          },
+          "input_output": {
+            "input_from": "device_1",
+            "output_to": "device_3"
+          }
+        },
+        "partition_3": {
+          "device_id": 3,
+          "layers": [6, 7],
+          "memory_allocation": {
+            "weights": "1.074 GB",
+            "activations": "83.8 GB (streamed)",
+            "buffer": "1GB",
+            "cache_utilization": "Weights cached in L2"
+          },
+          "input_output": {
+            "input_from": "device_2",
+            "output_to": "device_4"
+          }
+        },
+        "partition_4": {
+          "device_id": 4,
+          "layers": [8, 9],
+          "memory_allocation": {
+            "weights": "1.074 GB",
+            "activations": "83.8 GB (streamed)",
+            "buffer": "1GB",
+            "cache_utilization": "Weights cached in L2"
+          },
+          "input_output": {
+            "input_from": "device_3",
+            "output_to": "device_5"
+          }
+        },
+        "partition_5": {
+          "device_id": 5,
+          "layers": [10, 11],
+          "memory_allocation": {
+            "weights": "1.074 GB",
+            "activations": "83.8 GB (streamed)",
+            "buffer": "1GB",
+            "cache_utilization": "Weights cached in L2"
+          },
+          "input_output": {
+            "input_from": "device_4",
+            "output_to": "device_6"
+          }
+        },
+        "partition_6": {
+          "device_id": 6,
+          "layers": [12, 13],
+          "memory_allocation": {
+            "weights": "1.074 GB",
+            "activations": "83.8 GB (streamed)",
+            "buffer": "1GB",
+            "cache_utilization": "Weights cached in L2"
+          },
+          "input_output": {
+            "input_from": "device_5",
+            "output_to": "device_7"
+          }
+        },
+        "partition_7": {
+          "device_id": 7,
+          "layers": [14, 15],
+          "memory_allocation": {
+            "weights": "1.074 GB",
+            "activations": "83.8 GB (streamed)",
+            "buffer": "1GB",
+            "cache_utilization": "Weights cached in L2"
+          },
+          "input_output": {
+            "input_from": "device_6",
+            "output_to": "host_memory"
+          }
+        }
+      },
+      "memory_optimization": {
+        "weight_caching_strategy": "Pre-load layer weights into L2 cache",
+        "activation_streaming": "Stream activations through memory hierarchy",
+        "buffer_management": "Pre-allocate operator buffers",
+        "inter_device_communication": "Minimal - only layer outputs transferred"
+      },
+      "execution_flow": {
+        "step_1": "Load partition weights to device L2 cache",
+        "step_2": "Stream input activations to device",
+        "step_3": "Execute assigned layers sequentially",
+        "step_4": "Transfer output to next device",
+        "step_5": "Repeat for next batch"
+      },
+      "performance_target": {
+        "tps": 15360,
+        "tpot": 0.065,
+        "improvement_over_baseline": {
+          "tps_gain": "20%",
+          "tpot_reduction": "17%"
+        }
+      }
+    }
+  },
+  "deployment_parameters": {
+    "model_specifications": {
+      "total_layers": 16,
+      "total_parameters": "30B",
+      "precision": "BF16",
+      "hidden_size": 16384,
+      "num_heads": 32,
+      "head_dim": 128,
+      "mlp_hidden_size": 16384
+    },
+    "runtime_parameters": {
+      "batch_size": 128,
+      "sequence_length": 10000,
+      "total_tokens_per_batch": 1280000
+    },
+    "memory_constraints": {
+      "l2_cache_per_gpu": "50MB",
+      "max_partition_size": "50MB (L2 cache constraint)"
+    }
+  }
+}

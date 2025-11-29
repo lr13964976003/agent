@@ -1,0 +1,339 @@
+#!/usr/bin/env python3
+
+import os
+
+def generate_complete_layer_wise_dag():
+    """Generate a complete DAG showing all 8 GPUs with 2 layers each"""
+    
+    dot_content = '''// Complete Layer-wise Deployment Strategy DAG - All 8 GPUs with 2 Layers Each
+digraph {
+    dpi=300
+    rankdir=TB
+    size="40,60"
+    
+    // Node styles
+    node [fontname=Arial, fontsize=10]
+    edge [fontname=Arial, fontsize=9]
+    
+    // Define node shapes and colors
+    node [fillcolor=lightblue, shape=rectangle, style=filled]  // Computation
+    node [fillcolor=lightgreen, shape=ellipse, style=filled]   // Communication
+    node [fillcolor=lightyellow, shape=parallelogram, style=filled]  // Routing/Aggregation
+    
+    // Input node
+    subgraph cluster_input {
+        label="Input Batch"
+        style=dashed
+        input [label="Input\\nGPU: Host\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", 
+               fillcolor=lightcyan, shape=ellipse]
+    }
+    
+    // GPU 0: Layers 0-1
+    subgraph cluster_gpu0 {
+        fillcolor=lightgray
+        label="GPU 0: Layers 0-1"
+        style="rounded,filled"
+        
+        gpu0_layernorm0 [label="LayerNorm\\nGPU: 0\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu0_mha_qkv [label="MHA Q/K/V Projection\\nGPU: 0\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu0_mha_attention [label="MHA Attention\\nGPU: 0\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu0_mha_out [label="MHA Output Projection\\nGPU: 0\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu0_residual0 [label="Residual Add\\nGPU: 0\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+        gpu0_layernorm1 [label="LayerNorm\\nGPU: 0\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu0_ffn_gate [label="FFN Gate\\nGPU: 0\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu0_ffn_experts [label="FFN Experts\\nGPU: 0\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu0_ffn_out [label="FFN Output Projection\\nGPU: 0\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu0_residual1 [label="Residual Add\\nGPU: 0\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+    }
+    
+    // Communication between GPU 0 and 1
+    comm_gpu0_gpu1 [label="Inter-GPU Transfer\\nGPU: 0 → 1\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightgreen, shape=ellipse]
+    
+    // GPU 1: Layers 2-3
+    subgraph cluster_gpu1 {
+        fillcolor=lightgray
+        label="GPU 1: Layers 2-3"
+        style="rounded,filled"
+        
+        gpu1_layernorm2 [label="LayerNorm\\nGPU: 1\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu1_mha_qkv [label="MHA Q/K/V Projection\\nGPU: 1\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu1_mha_attention [label="MHA Attention\\nGPU: 1\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu1_mha_out [label="MHA Output Projection\\nGPU: 1\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu1_residual2 [label="Residual Add\\nGPU: 1\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+        gpu1_layernorm3 [label="LayerNorm\\nGPU: 1\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu1_ffn_gate [label="FFN Gate\\nGPU: 1\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu1_ffn_experts [label="FFN Experts\\nGPU: 1\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu1_ffn_out [label="FFN Output Projection\\nGPU: 1\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu1_residual3 [label="Residual Add\\nGPU: 1\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+    }
+    
+    // Communication between GPU 1 and 2
+    comm_gpu1_gpu2 [label="Inter-GPU Transfer\\nGPU: 1 → 2\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightgreen, shape=ellipse]
+    
+    // GPU 2: Layers 4-5
+    subgraph cluster_gpu2 {
+        fillcolor=lightgray
+        label="GPU 2: Layers 4-5"
+        style="rounded,filled"
+        
+        gpu2_layernorm4 [label="LayerNorm\\nGPU: 2\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu2_mha_qkv [label="MHA Q/K/V Projection\\nGPU: 2\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu2_mha_attention [label="MHA Attention\\nGPU: 2\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu2_mha_out [label="MHA Output Projection\\nGPU: 2\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu2_residual4 [label="Residual Add\\nGPU: 2\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+        gpu2_layernorm5 [label="LayerNorm\\nGPU: 2\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu2_ffn_gate [label="FFN Gate\\nGPU: 2\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu2_ffn_experts [label="FFN Experts\\nGPU: 2\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu2_ffn_out [label="FFN Output Projection\\nGPU: 2\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu2_residual5 [label="Residual Add\\nGPU: 2\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+    }
+    
+    // Communication between GPU 2 and 3
+    comm_gpu2_gpu3 [label="Inter-GPU Transfer\\nGPU: 2 → 3\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightgreen, shape=ellipse]
+    
+    // GPU 3: Layers 6-7
+    subgraph cluster_gpu3 {
+        fillcolor=lightgray
+        label="GPU 3: Layers 6-7"
+        style="rounded,filled"
+        
+        gpu3_layernorm6 [label="LayerNorm\\nGPU: 3\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu3_mha_qkv [label="MHA Q/K/V Projection\\nGPU: 3\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu3_mha_attention [label="MHA Attention\\nGPU: 3\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu3_mha_out [label="MHA Output Projection\\nGPU: 3\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu3_residual6 [label="Residual Add\\nGPU: 3\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+        gpu3_layernorm7 [label="LayerNorm\\nGPU: 3\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu3_ffn_gate [label="FFN Gate\\nGPU: 3\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu3_ffn_experts [label="FFN Experts\\nGPU: 3\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu3_ffn_out [label="FFN Output Projection\\nGPU: 3\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu3_residual7 [label="Residual Add\\nGPU: 3\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+    }
+    
+    // Communication between GPU 3 and 4
+    comm_gpu3_gpu4 [label="Inter-GPU Transfer\\nGPU: 3 → 4\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightgreen, shape=ellipse]
+    
+    // GPU 4: Layers 8-9 (Representative Middle)
+    subgraph cluster_gpu4 {
+        fillcolor=lightgray
+        label="GPU 4: Layers 8-9 (Representative Middle)"
+        style="rounded,filled"
+        
+        gpu4_layernorm8 [label="LayerNorm\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu4_mha_qkv [label="MHA Q/K/V Projection\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu4_mha_attention [label="MHA Attention\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu4_mha_out [label="MHA Output Projection\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu4_residual8 [label="Residual Add\\nGPU: 4\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+        gpu4_layernorm9 [label="LayerNorm\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu4_ffn_gate [label="FFN Gate (Expert Selection)\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle, style=dashed]
+        gpu4_split_experts [label="Split for Experts\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=8192]", fillcolor=lightyellow, shape=parallelogram]
+        gpu4_expert1 [label="Expert 1\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=8192]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=8192]", fillcolor=lightblue, shape=rectangle]
+        gpu4_expert2 [label="Expert 2\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=8192]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=8192]", fillcolor=lightblue, shape=rectangle]
+        gpu4_aggregate_experts [label="Aggregate Experts\\nGPU: 4\\nInput1: [batch_size=128, seq_len=10000, mlp_hidden_size=8192]\\nInput2: [batch_size=128, seq_len=10000, mlp_hidden_size=8192]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+        gpu4_ffn_out [label="FFN Output Projection\\nGPU: 4\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu4_residual9 [label="Residual Add\\nGPU: 4\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+    }
+    
+    // Communication between GPU 4 and 5
+    comm_gpu4_gpu5 [label="Inter-GPU Transfer\\nGPU: 4 → 5\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightgreen, shape=ellipse]
+    
+    // GPU 5: Layers 10-11
+    subgraph cluster_gpu5 {
+        fillcolor=lightgray
+        label="GPU 5: Layers 10-11"
+        style="rounded,filled"
+        
+        gpu5_layernorm10 [label="LayerNorm\\nGPU: 5\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu5_mha_qkv [label="MHA Q/K/V Projection\\nGPU: 5\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu5_mha_attention [label="MHA Attention\\nGPU: 5\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu5_mha_out [label="MHA Output Projection\\nGPU: 5\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu5_residual10 [label="Residual Add\\nGPU: 5\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+        gpu5_layernorm11 [label="LayerNorm\\nGPU: 5\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu5_ffn_gate [label="FFN Gate\\nGPU: 5\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu5_ffn_experts [label="FFN Experts\\nGPU: 5\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu5_ffn_out [label="FFN Output Projection\\nGPU: 5\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu5_residual11 [label="Residual Add\\nGPU: 5\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+    }
+    
+    // Communication between GPU 5 and 6
+    comm_gpu5_gpu6 [label="Inter-GPU Transfer\\nGPU: 5 → 6\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightgreen, shape=ellipse]
+    
+    // GPU 6: Layers 12-13
+    subgraph cluster_gpu6 {
+        fillcolor=lightgray
+        label="GPU 6: Layers 12-13"
+        style="rounded,filled"
+        
+        gpu6_layernorm12 [label="LayerNorm\\nGPU: 6\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu6_mha_qkv [label="MHA Q/K/V Projection\\nGPU: 6\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu6_mha_attention [label="MHA Attention\\nGPU: 6\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu6_mha_out [label="MHA Output Projection\\nGPU: 6\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu6_residual12 [label="Residual Add\\nGPU: 6\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+        gpu6_layernorm13 [label="LayerNorm\\nGPU: 6\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu6_ffn_gate [label="FFN Gate\\nGPU: 6\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu6_ffn_experts [label="FFN Experts\\nGPU: 6\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu6_ffn_out [label="FFN Output Projection\\nGPU: 6\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu6_residual13 [label="Residual Add\\nGPU: 6\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+    }
+    
+    // Communication between GPU 6 and 7
+    comm_gpu6_gpu7 [label="Inter-GPU Transfer\\nGPU: 6 → 7\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightgreen, shape=ellipse]
+    
+    // GPU 7: Layers 14-15 (Final)
+    subgraph cluster_gpu7 {
+        fillcolor=lightgray
+        label="GPU 7: Layers 14-15 (Final)"
+        style="rounded,filled"
+        
+        gpu7_layernorm14 [label="LayerNorm\\nGPU: 7\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu7_mha_qkv [label="MHA Q/K/V Projection\\nGPU: 7\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu7_mha_attention [label="MHA Attention\\nGPU: 7\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]", fillcolor=lightblue, shape=rectangle]
+        gpu7_mha_out [label="MHA Output Projection\\nGPU: 7\\nInput: [batch_size=128, seq_len=10000, num_heads=32, head_dim=128]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu7_residual14 [label="Residual Add\\nGPU: 7\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+        gpu7_layernorm15 [label="LayerNorm\\nGPU: 7\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu7_ffn_gate [label="FFN Gate\\nGPU: 7\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu7_ffn_experts [label="FFN Experts\\nGPU: 7\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu7_ffn_out [label="FFN Output Projection\\nGPU: 7\\nInput: [batch_size=128, seq_len=10000, mlp_hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightblue, shape=rectangle]
+        gpu7_residual15 [label="Residual Add\\nGPU: 7\\nInput1: [batch_size=128, seq_len=10000, hidden_size=16384]\\nInput2: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightyellow, shape=parallelogram]
+    }
+    
+    // Output node
+    output [label="Output\\nGPU: Host\\nInput: [batch_size=128, seq_len=10000, hidden_size=16384]\\nOutput: [batch_size=128, seq_len=10000, hidden_size=16384]", fillcolor=lightcyan, shape=ellipse]
+    
+    // Connections - Complete pipeline
+    input -> gpu0_layernorm0
+    gpu0_layernorm0 -> gpu0_mha_qkv
+    gpu0_mha_qkv -> gpu0_mha_attention
+    gpu0_mha_attention -> gpu0_mha_out
+    gpu0_mha_out -> gpu0_residual0
+    input -> gpu0_residual0
+    gpu0_residual0 -> gpu0_layernorm1
+    gpu0_layernorm1 -> gpu0_ffn_gate
+    gpu0_ffn_gate -> gpu0_ffn_experts
+    gpu0_ffn_experts -> gpu0_ffn_out
+    gpu0_ffn_out -> gpu0_residual1
+    gpu0_residual0 -> gpu0_residual1
+    gpu0_residual1 -> comm_gpu0_gpu1
+    
+    comm_gpu0_gpu1 -> gpu1_layernorm2
+    gpu1_layernorm2 -> gpu1_mha_qkv
+    gpu1_mha_qkv -> gpu1_mha_attention
+    gpu1_mha_attention -> gpu1_mha_out
+    gpu1_mha_out -> gpu1_residual2
+    gpu1_layernorm2 -> gpu1_residual2
+    gpu1_residual2 -> gpu1_layernorm3
+    gpu1_layernorm3 -> gpu1_ffn_gate
+    gpu1_ffn_gate -> gpu1_ffn_experts
+    gpu1_ffn_experts -> gpu1_ffn_out
+    gpu1_ffn_out -> gpu1_residual3
+    gpu1_residual2 -> gpu1_residual3
+    gpu1_residual3 -> comm_gpu1_gpu2
+    
+    comm_gpu1_gpu2 -> gpu2_layernorm4
+    gpu2_layernorm4 -> gpu2_mha_qkv
+    gpu2_mha_qkv -> gpu2_mha_attention
+    gpu2_mha_attention -> gpu2_mha_out
+    gpu2_mha_out -> gpu2_residual4
+    gpu2_layernorm4 -> gpu2_residual4
+    gpu2_residual4 -> gpu2_layernorm5
+    gpu2_layernorm5 -> gpu2_ffn_gate
+    gpu2_ffn_gate -> gpu2_ffn_experts
+    gpu2_ffn_experts -> gpu2_ffn_out
+    gpu2_ffn_out -> gpu2_residual5
+    gpu2_residual4 -> gpu2_residual5
+    gpu2_residual5 -> comm_gpu2_gpu3
+    
+    comm_gpu2_gpu3 -> gpu3_layernorm6
+    gpu3_layernorm6 -> gpu3_mha_qkv
+    gpu3_mha_qkv -> gpu3_mha_attention
+    gpu3_mha_attention -> gpu3_mha_out
+    gpu3_mha_out -> gpu3_residual6
+    gpu3_layernorm6 -> gpu3_residual6
+    gpu3_residual6 -> gpu3_layernorm7
+    gpu3_layernorm7 -> gpu3_ffn_gate
+    gpu3_ffn_gate -> gpu3_ffn_experts
+    gpu3_ffn_experts -> gpu3_ffn_out
+    gpu3_ffn_out -> gpu3_residual7
+    gpu3_residual6 -> gpu3_residual7
+    gpu3_residual7 -> comm_gpu3_gpu4
+    
+    comm_gpu3_gpu4 -> gpu4_layernorm8
+    gpu4_layernorm8 -> gpu4_mha_qkv
+    gpu4_mha_qkv -> gpu4_mha_attention
+    gpu4_mha_attention -> gpu4_mha_out
+    gpu4_mha_out -> gpu4_residual8
+    gpu4_layernorm8 -> gpu4_residual8
+    gpu4_residual8 -> gpu4_layernorm9
+    gpu4_layernorm9 -> gpu4_ffn_gate
+    gpu4_ffn_gate -> gpu4_split_experts [style=dashed]
+    gpu4_split_experts -> gpu4_expert1
+    gpu4_split_experts -> gpu4_expert2
+    gpu4_expert1 -> gpu4_aggregate_experts
+    gpu4_expert2 -> gpu4_aggregate_experts
+    gpu4_aggregate_experts -> gpu4_ffn_out
+    gpu4_ffn_out -> gpu4_residual9
+    gpu4_residual8 -> gpu4_residual9
+    gpu4_residual9 -> comm_gpu4_gpu5
+    
+    comm_gpu4_gpu5 -> gpu5_layernorm10
+    gpu5_layernorm10 -> gpu5_mha_qkv
+    gpu5_mha_qkv -> gpu5_mha_attention
+    gpu5_mha_attention -> gpu5_mha_out
+    gpu5_mha_out -> gpu5_residual10
+    gpu5_layernorm10 -> gpu5_residual10
+    gpu5_residual10 -> gpu5_layernorm11
+    gpu5_layernorm11 -> gpu5_ffn_gate
+    gpu5_ffn_gate -> gpu5_ffn_experts
+    gpu5_ffn_experts -> gpu5_ffn_out
+    gpu5_ffn_out -> gpu5_residual11
+    gpu5_residual10 -> gpu5_residual11
+    gpu5_residual11 -> comm_gpu5_gpu6
+    
+    comm_gpu5_gpu6 -> gpu6_layernorm12
+    gpu6_layernorm12 -> gpu6_mha_qkv
+    gpu6_mha_qkv -> gpu6_mha_attention
+    gpu6_mha_attention -> gpu6_mha_out
+    gpu6_mha_out -> gpu6_residual12
+    gpu6_layernorm12 -> gpu6_residual12
+    gpu6_residual12 -> gpu6_layernorm13
+    gpu6_layernorm13 -> gpu6_ffn_gate
+    gpu6_ffn_gate -> gpu6_ffn_experts
+    gpu6_ffn_experts -> gpu6_ffn_out
+    gpu6_ffn_out -> gpu6_residual13
+    gpu6_residual12 -> gpu6_residual13
+    gpu6_residual13 -> comm_gpu6_gpu7
+    
+    comm_gpu6_gpu7 -> gpu7_layernorm14
+    gpu7_layernorm14 -> gpu7_mha_qkv
+    gpu7_mha_qkv -> gpu7_mha_attention
+    gpu7_mha_attention -> gpu7_mha_out
+    gpu7_mha_out -> gpu7_residual14
+    gpu7_layernorm14 -> gpu7_residual14
+    gpu7_residual14 -> gpu7_layernorm15
+    gpu7_layernorm15 -> gpu7_ffn_gate
+    gpu7_ffn_gate -> gpu7_ffn_experts
+    gpu7_ffn_experts -> gpu7_ffn_out
+    gpu7_ffn_out -> gpu7_residual15
+    gpu7_residual14 -> gpu7_residual15
+    gpu7_residual15 -> output
+}
+'''
+    
+    # Write DOT file
+    dot_file_path = "../outputs/2025-11-28-17-19-06/complete_layer_wise_deployment.dag"
+    with open(dot_file_path, 'w') as f:
+        f.write(dot_content)
+    
+    # Generate SVG using graphviz
+    try:
+        import subprocess
+        svg_file_path = "../outputs/2025-11-28-17-19-06/complete_layer_wise_deployment.svg"
+        subprocess.run(['dot', '-Tsvg', dot_file_path, '-o', svg_file_path], check=True)
+        print(f"SVG generated: {svg_file_path}")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("Graphviz not available, skipping SVG generation")
+    
+    return dot_file_path
+
+if __name__ == "__main__":
+    result_path = generate_complete_layer_wise_dag()
+    print(f"Complete DAG generated: {result_path}")
