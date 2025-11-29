@@ -72,7 +72,7 @@ def main():
                     ]
                 },
             "generate_dag": {
-                "slug": "chain_generate_dag",
+                "slug": "iter_generate_dag",
                 "version": 15,
                 "inputs": {
                     "knowledge_path": "../knowledges/llm_parallel_strategies.md",
