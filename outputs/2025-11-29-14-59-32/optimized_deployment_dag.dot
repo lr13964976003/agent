@@ -1,0 +1,158 @@
+// Optimized Deployment DAG
+// Hybrid strategy with improved TPS and reduced redundancy
+digraph {
+    dpi=300
+    rankdir=TB
+    size="22,32"
+    
+    // Node styles
+    node [fillcolor=lightblue, shape=rectangle, style=filled]
+    
+    // Input node
+    input [label="Input\nBatch: 128\nSeq: 10000\nDim: 4096", fillcolor=lightcoral, shape=diamond]
+    
+    // Output node
+    output [label="Output\nBatch: 128\nSeq: 10000\nDim: 4096", fillcolor=lightcoral, shape=diamond]
+    
+    // Optimized strategy: TP=4, PP=4 with better load balancing
+    // 16 GPUs total: 4 pipeline stages, 4-way tensor parallelism
+    
+    for stage in range(4):
+        start_layer = stage * 4
+        end_layer = start_layer + 3
+        
+        subgraph cluster_pipeline_stage_%d {
+            fillcolor=lightsteelblue
+            label="Pipeline Stage %d: Layers %d-%d\nGPUs %d-%d with TP=4" % (stage, stage, start_layer, end_layer, stage*4, stage*4+3)
+            style="rounded,filled"
+            
+            for layer in range(start_layer, end_layer + 1):
+                // Attention block with TP=4 (reduced from 8)
+                subgraph cluster_layer_%d_attn_stage%d {
+                    fillcolor=lightgray
+                    label="Layer %d Attention (TP=4)" % (layer, stage)
+                    style="rounded,filled"
+                    
+                    layer_%d_qkv_allgather_stage%d [label="QKV AllGather\n4 GPUs", fillcolor=lightgreen, shape=ellipse]
+                    
+                    // Each GPU handles 8 heads (32 total / 4 GPUs)
+                    for gpu_offset in range(4):
+                        gpu_id = stage * 4 + gpu_offset
+                        layer_%d_qkv_gpu%d [label="QKV Proj GPU%d\nColParallel\nDim: 1024x3072", fillcolor=lightblue, shape=rectangle]
+                        layer_%d_attn_comp_gpu%d [label="Attention Compute GPU%d\n8 heads\nSeq: 10000x128", fillcolor=lightblue, shape=rectangle]
+                        layer_%d_attn_out_gpu%d [label="Attn Out Proj GPU%d\nRowParallel\nDim: 1024x1024", fillcolor=lightblue, shape=rectangle]
+                    
+                    layer_%d_attn_allreduce_stage%d [label="Attention AllReduce\n4 GPUs", fillcolor=lightgreen, shape=ellipse]
+                }
+                
+                // Residual and LayerNorm
+                layer_%d_residual1_stage%d [label="Residual Add %d\n4096 dim", fillcolor=lightyellow, shape=parallelogram]
+                layer_%d_ln1_stage%d [label="LayerNorm %d\n4096 dim", fillcolor=lightblue, shape=rectangle]
+                
+                // MLP block with TP=4
+                subgraph cluster_layer_%d_mlp_stage%d {
+                    fillcolor=lightgray
+                    label="Layer %d MLP (TP=4)" % (layer, stage)
+                    style="rounded,filled"
+                    
+                    layer_%d_mlp_allreduce_stage%d [label="MLP AllReduce\n4 GPUs", fillcolor=lightgreen, shape=ellipse]
+                    
+                    for gpu_offset in range(4):
+                        gpu_id = stage * 4 + gpu_offset
+                        layer_%d_mlp1_gpu%d [label="MLP1 GPU%d\nColParallel\nDim: 1024x4096", fillcolor=lightblue, shape=rectangle]
+                        layer_%d_gelu_gpu%d [label="GELU GPU%d\n4096 dim", fillcolor=lightblue, shape=rectangle]
+                        layer_%d_mlp2_gpu%d [label="MLP2 GPU%d\nRowParallel\nDim: 4096x1024", fillcolor=lightblue, shape=rectangle]
+                }
+                
+                // Final residual and LayerNorm
+                layer_%d_residual2_stage%d [label="Residual Add %d\n4096 dim", fillcolor=lightyellow, shape=parallelogram]
+                layer_%d_ln2_stage%d [label="LayerNorm %d\n4096 dim", fillcolor=lightblue, shape=rectangle]
+        }
+        
+        // Pipeline communication between stages (except last)
+        if stage < 3:
+            next_stage = stage + 1
+            pipeline_comm_%d_%d [label="Pipeline Send/Recv\nStage %d → %d\nLayer %d → %d", fillcolor=orange, shape=ellipse] % (stage, next_stage, stage, next_stage, end_layer, end_layer+1)
+    
+    // Edges - Optimized connectivity flow
+    // Input to first stage
+    for gpu_offset in range(4):
+        gpu_id = gpu_offset  # Stage 0 GPUs
+        input -> layer_0_qkv_gpu%d
+    
+    // Stage 0 flow (layers 0-3)
+    for layer in range(4):
+        // Attention flow
+        for gpu_offset in range(4):
+            gpu_id = gpu_offset
+            layer_%d_qkv_gpu%d -> layer_%d_qkv_allgather_stage0
+        
+        layer_%d_qkv_allgather_stage0 -> layer_%d_attn_comp_gpu0
+        layer_%d_qkv_allgather_stage0 -> layer_%d_attn_comp_gpu1
+        layer_%d_qkv_allgather_stage0 -> layer_%d_attn_comp_gpu2
+        layer_%d_qkv_allgather_stage0 -> layer_%d_attn_comp_gpu3
+        
+        for gpu_offset in range(4):
+            gpu_id = gpu_offset
+            layer_%d_attn_comp_gpu%d -> layer_%d_attn_out_gpu%d
+            layer_%d_attn_out_gpu%d -> layer_%d_attn_allreduce_stage0
+        
+        layer_%d_attn_allreduce_stage0 -> layer_%d_residual1_stage0
+        layer_%d_residual1_stage0 -> layer_%d_ln1_stage0
+        
+        // MLP flow
+        for gpu_offset in range(4):
+            gpu_id = gpu_offset
+            layer_%d_ln1_stage0 -> layer_%d_mlp1_gpu%d
+            layer_%d_mlp1_gpu%d -> layer_%d_gelu_gpu%d
+            layer_%d_gelu_gpu%d -> layer_%d_mlp2_gpu%d
+            layer_%d_mlp2_gpu%d -> layer_%d_mlp_allreduce_stage0
+        
+        layer_%d_mlp_allreduce_stage0 -> layer_%d_residual2_stage0
+        layer_%d_residual2_stage0 -> layer_%d_ln2_stage0
+    
+    // Pipeline transitions between stages
+    for stage in range(3):
+        current_end_layer = stage * 4 + 3
+        next_start_layer = (stage + 1) * 4
+        
+        // Connect last layer of current stage to pipeline communication
+        layer_%d_ln2_stage%d -> pipeline_comm_%d_%d
+        
+        // Connect pipeline communication to first layer of next stage
+        pipeline_comm_%d_%d -> layer_%d_qkv_gpu%d
+        
+        // Continue flow for next stage
+        for layer in range(next_start_layer, next_start_layer + 4):
+            // Attention connections for next stage
+            for gpu_offset in range(4):
+                gpu_id = (stage + 1) * 4 + gpu_offset
+                layer_%d_qkv_gpu%d -> layer_%d_qkv_allgather_stage%d
+            
+            layer_%d_qkv_allgather_stage%d -> layer_%d_attn_comp_gpu%d
+            layer_%d_qkv_allgather_stage%d -> layer_%d_attn_comp_gpu%d
+            layer_%d_qkv_allgather_stage%d -> layer_%d_attn_comp_gpu%d
+            layer_%d_qkv_allgather_stage%d -> layer_%d_attn_comp_gpu%d
+            
+            for gpu_offset in range(4):
+                gpu_id = (stage + 1) * 4 + gpu_offset
+                layer_%d_attn_comp_gpu%d -> layer_%d_attn_out_gpu%d
+                layer_%d_attn_out_gpu%d -> layer_%d_attn_allreduce_stage%d
+            
+            layer_%d_attn_allreduce_stage%d -> layer_%d_residual1_stage%d
+            layer_%d_residual1_stage%d -> layer_%d_ln1_stage%d
+            
+            // MLP connections
+            for gpu_offset in range(4):
+                gpu_id = (stage + 1) * 4 + gpu_offset
+                layer_%d_ln1_stage%d -> layer_%d_mlp1_gpu%d
+                layer_%d_mlp1_gpu%d -> layer_%d_gelu_gpu%d
+                layer_%d_gelu_gpu%d -> layer_%d_mlp2_gpu%d
+                layer_%d_mlp2_gpu%d -> layer_%d_mlp_allreduce_stage%d
+            
+            layer_%d_mlp_allreduce_stage%d -> layer_%d_residual2_stage%d
+            layer_%d_residual2_stage%d -> layer_%d_ln2_stage%d
+    
+    // Final output from last layer of last stage
+    layer_15_ln2_stage3 -> output
+}

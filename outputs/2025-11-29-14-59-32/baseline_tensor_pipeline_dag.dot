@@ -1,0 +1,2092 @@
+// Baseline Tensor+Pipeline Parallelism DAG
+digraph {
+	dpi=300 rankdir=TB size="30,40"
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	node [fillcolor=lightgreen shape=ellipse style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input\nBatch: 128\nSeq: 10000\nDim: 4096" fillcolor=lightcoral shape=diamond]
+	subgraph cluster_layer_0_attn {
+		fillcolor=lightgray label="Layer 0 Attention (TP=8)" style="rounded,filled"
+		layer_0_qkv_gpu0 [label="QKV Proj GPU0\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_0_qkv_gpu1 [label="QKV Proj GPU1\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_0_qkv_gpu2 [label="QKV Proj GPU2\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_0_qkv_gpu3 [label="QKV Proj GPU3\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_0_qkv_gpu4 [label="QKV Proj GPU4\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_0_qkv_gpu5 [label="QKV Proj GPU5\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_0_qkv_gpu6 [label="QKV Proj GPU6\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_0_qkv_gpu7 [label="QKV Proj GPU7\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_0_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_0_attn_comp_gpu0 [label="Attention Compute GPU0\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_comp_gpu1 [label="Attention Compute GPU1\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_comp_gpu2 [label="Attention Compute GPU2\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_comp_gpu3 [label="Attention Compute GPU3\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_comp_gpu4 [label="Attention Compute GPU4\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_comp_gpu5 [label="Attention Compute GPU5\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_comp_gpu6 [label="Attention Compute GPU6\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_comp_gpu7 [label="Attention Compute GPU7\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_out_gpu0 [label="Attn Out Proj GPU0\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_out_gpu1 [label="Attn Out Proj GPU1\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_out_gpu2 [label="Attn Out Proj GPU2\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_out_gpu3 [label="Attn Out Proj GPU3\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_out_gpu4 [label="Attn Out Proj GPU4\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_out_gpu5 [label="Attn Out Proj GPU5\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_out_gpu6 [label="Attn Out Proj GPU6\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_out_gpu7 [label="Attn Out Proj GPU7\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_0_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_0_residual1 [label="Residual Add 0\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_0_ln1 [label="LayerNorm 0\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_0_mlp {
+		fillcolor=lightgray label="Layer 0 MLP (TP=8)" style="rounded,filled"
+		layer_0_mlp1_gpu0 [label="MLP1 GPU0\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp1_gpu1 [label="MLP1 GPU1\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp1_gpu2 [label="MLP1 GPU2\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp1_gpu3 [label="MLP1 GPU3\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp1_gpu4 [label="MLP1 GPU4\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp1_gpu5 [label="MLP1 GPU5\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp1_gpu6 [label="MLP1 GPU6\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp1_gpu7 [label="MLP1 GPU7\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_0_gelu_gpu0 [label="GELU GPU0\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_0_gelu_gpu1 [label="GELU GPU1\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_0_gelu_gpu2 [label="GELU GPU2\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_0_gelu_gpu3 [label="GELU GPU3\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_0_gelu_gpu4 [label="GELU GPU4\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_0_gelu_gpu5 [label="GELU GPU5\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_0_gelu_gpu6 [label="GELU GPU6\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_0_gelu_gpu7 [label="GELU GPU7\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp2_gpu0 [label="MLP2 GPU0\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp2_gpu1 [label="MLP2 GPU1\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp2_gpu2 [label="MLP2 GPU2\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp2_gpu3 [label="MLP2 GPU3\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp2_gpu4 [label="MLP2 GPU4\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp2_gpu5 [label="MLP2 GPU5\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp2_gpu6 [label="MLP2 GPU6\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp2_gpu7 [label="MLP2 GPU7\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_0_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_0_residual2 [label="Residual Add 0\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_0_ln2 [label="LayerNorm 0\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_1_attn {
+		fillcolor=lightgray label="Layer 1 Attention (TP=8)" style="rounded,filled"
+		layer_1_qkv_gpu0 [label="QKV Proj GPU0\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_1_qkv_gpu1 [label="QKV Proj GPU1\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_1_qkv_gpu2 [label="QKV Proj GPU2\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_1_qkv_gpu3 [label="QKV Proj GPU3\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_1_qkv_gpu4 [label="QKV Proj GPU4\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_1_qkv_gpu5 [label="QKV Proj GPU5\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_1_qkv_gpu6 [label="QKV Proj GPU6\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_1_qkv_gpu7 [label="QKV Proj GPU7\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_1_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_1_attn_comp_gpu0 [label="Attention Compute GPU0\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_comp_gpu1 [label="Attention Compute GPU1\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_comp_gpu2 [label="Attention Compute GPU2\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_comp_gpu3 [label="Attention Compute GPU3\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_comp_gpu4 [label="Attention Compute GPU4\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_comp_gpu5 [label="Attention Compute GPU5\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_comp_gpu6 [label="Attention Compute GPU6\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_comp_gpu7 [label="Attention Compute GPU7\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_out_gpu0 [label="Attn Out Proj GPU0\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_out_gpu1 [label="Attn Out Proj GPU1\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_out_gpu2 [label="Attn Out Proj GPU2\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_out_gpu3 [label="Attn Out Proj GPU3\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_out_gpu4 [label="Attn Out Proj GPU4\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_out_gpu5 [label="Attn Out Proj GPU5\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_out_gpu6 [label="Attn Out Proj GPU6\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_out_gpu7 [label="Attn Out Proj GPU7\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_1_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_1_residual1 [label="Residual Add 1\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_1_ln1 [label="LayerNorm 1\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_1_mlp {
+		fillcolor=lightgray label="Layer 1 MLP (TP=8)" style="rounded,filled"
+		layer_1_mlp1_gpu0 [label="MLP1 GPU0\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp1_gpu1 [label="MLP1 GPU1\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp1_gpu2 [label="MLP1 GPU2\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp1_gpu3 [label="MLP1 GPU3\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp1_gpu4 [label="MLP1 GPU4\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp1_gpu5 [label="MLP1 GPU5\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp1_gpu6 [label="MLP1 GPU6\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp1_gpu7 [label="MLP1 GPU7\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_1_gelu_gpu0 [label="GELU GPU0\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_1_gelu_gpu1 [label="GELU GPU1\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_1_gelu_gpu2 [label="GELU GPU2\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_1_gelu_gpu3 [label="GELU GPU3\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_1_gelu_gpu4 [label="GELU GPU4\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_1_gelu_gpu5 [label="GELU GPU5\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_1_gelu_gpu6 [label="GELU GPU6\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_1_gelu_gpu7 [label="GELU GPU7\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp2_gpu0 [label="MLP2 GPU0\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp2_gpu1 [label="MLP2 GPU1\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp2_gpu2 [label="MLP2 GPU2\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp2_gpu3 [label="MLP2 GPU3\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp2_gpu4 [label="MLP2 GPU4\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp2_gpu5 [label="MLP2 GPU5\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp2_gpu6 [label="MLP2 GPU6\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp2_gpu7 [label="MLP2 GPU7\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_1_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_1_residual2 [label="Residual Add 1\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_1_ln2 [label="LayerNorm 1\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_2_attn {
+		fillcolor=lightgray label="Layer 2 Attention (TP=8)" style="rounded,filled"
+		layer_2_qkv_gpu0 [label="QKV Proj GPU0\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_2_qkv_gpu1 [label="QKV Proj GPU1\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_2_qkv_gpu2 [label="QKV Proj GPU2\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_2_qkv_gpu3 [label="QKV Proj GPU3\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_2_qkv_gpu4 [label="QKV Proj GPU4\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_2_qkv_gpu5 [label="QKV Proj GPU5\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_2_qkv_gpu6 [label="QKV Proj GPU6\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_2_qkv_gpu7 [label="QKV Proj GPU7\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_2_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_2_attn_comp_gpu0 [label="Attention Compute GPU0\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_comp_gpu1 [label="Attention Compute GPU1\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_comp_gpu2 [label="Attention Compute GPU2\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_comp_gpu3 [label="Attention Compute GPU3\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_comp_gpu4 [label="Attention Compute GPU4\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_comp_gpu5 [label="Attention Compute GPU5\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_comp_gpu6 [label="Attention Compute GPU6\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_comp_gpu7 [label="Attention Compute GPU7\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_out_gpu0 [label="Attn Out Proj GPU0\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_out_gpu1 [label="Attn Out Proj GPU1\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_out_gpu2 [label="Attn Out Proj GPU2\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_out_gpu3 [label="Attn Out Proj GPU3\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_out_gpu4 [label="Attn Out Proj GPU4\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_out_gpu5 [label="Attn Out Proj GPU5\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_out_gpu6 [label="Attn Out Proj GPU6\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_out_gpu7 [label="Attn Out Proj GPU7\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_2_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_2_residual1 [label="Residual Add 2\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_2_ln1 [label="LayerNorm 2\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_2_mlp {
+		fillcolor=lightgray label="Layer 2 MLP (TP=8)" style="rounded,filled"
+		layer_2_mlp1_gpu0 [label="MLP1 GPU0\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp1_gpu1 [label="MLP1 GPU1\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp1_gpu2 [label="MLP1 GPU2\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp1_gpu3 [label="MLP1 GPU3\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp1_gpu4 [label="MLP1 GPU4\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp1_gpu5 [label="MLP1 GPU5\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp1_gpu6 [label="MLP1 GPU6\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp1_gpu7 [label="MLP1 GPU7\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_2_gelu_gpu0 [label="GELU GPU0\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_2_gelu_gpu1 [label="GELU GPU1\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_2_gelu_gpu2 [label="GELU GPU2\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_2_gelu_gpu3 [label="GELU GPU3\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_2_gelu_gpu4 [label="GELU GPU4\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_2_gelu_gpu5 [label="GELU GPU5\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_2_gelu_gpu6 [label="GELU GPU6\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_2_gelu_gpu7 [label="GELU GPU7\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp2_gpu0 [label="MLP2 GPU0\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp2_gpu1 [label="MLP2 GPU1\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp2_gpu2 [label="MLP2 GPU2\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp2_gpu3 [label="MLP2 GPU3\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp2_gpu4 [label="MLP2 GPU4\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp2_gpu5 [label="MLP2 GPU5\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp2_gpu6 [label="MLP2 GPU6\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp2_gpu7 [label="MLP2 GPU7\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_2_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_2_residual2 [label="Residual Add 2\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_2_ln2 [label="LayerNorm 2\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_3_attn {
+		fillcolor=lightgray label="Layer 3 Attention (TP=8)" style="rounded,filled"
+		layer_3_qkv_gpu0 [label="QKV Proj GPU0\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_3_qkv_gpu1 [label="QKV Proj GPU1\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_3_qkv_gpu2 [label="QKV Proj GPU2\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_3_qkv_gpu3 [label="QKV Proj GPU3\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_3_qkv_gpu4 [label="QKV Proj GPU4\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_3_qkv_gpu5 [label="QKV Proj GPU5\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_3_qkv_gpu6 [label="QKV Proj GPU6\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_3_qkv_gpu7 [label="QKV Proj GPU7\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_3_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_3_attn_comp_gpu0 [label="Attention Compute GPU0\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_comp_gpu1 [label="Attention Compute GPU1\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_comp_gpu2 [label="Attention Compute GPU2\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_comp_gpu3 [label="Attention Compute GPU3\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_comp_gpu4 [label="Attention Compute GPU4\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_comp_gpu5 [label="Attention Compute GPU5\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_comp_gpu6 [label="Attention Compute GPU6\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_comp_gpu7 [label="Attention Compute GPU7\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_out_gpu0 [label="Attn Out Proj GPU0\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_out_gpu1 [label="Attn Out Proj GPU1\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_out_gpu2 [label="Attn Out Proj GPU2\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_out_gpu3 [label="Attn Out Proj GPU3\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_out_gpu4 [label="Attn Out Proj GPU4\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_out_gpu5 [label="Attn Out Proj GPU5\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_out_gpu6 [label="Attn Out Proj GPU6\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_out_gpu7 [label="Attn Out Proj GPU7\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_3_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_3_residual1 [label="Residual Add 3\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_3_ln1 [label="LayerNorm 3\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_3_mlp {
+		fillcolor=lightgray label="Layer 3 MLP (TP=8)" style="rounded,filled"
+		layer_3_mlp1_gpu0 [label="MLP1 GPU0\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp1_gpu1 [label="MLP1 GPU1\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp1_gpu2 [label="MLP1 GPU2\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp1_gpu3 [label="MLP1 GPU3\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp1_gpu4 [label="MLP1 GPU4\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp1_gpu5 [label="MLP1 GPU5\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp1_gpu6 [label="MLP1 GPU6\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp1_gpu7 [label="MLP1 GPU7\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_3_gelu_gpu0 [label="GELU GPU0\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_3_gelu_gpu1 [label="GELU GPU1\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_3_gelu_gpu2 [label="GELU GPU2\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_3_gelu_gpu3 [label="GELU GPU3\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_3_gelu_gpu4 [label="GELU GPU4\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_3_gelu_gpu5 [label="GELU GPU5\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_3_gelu_gpu6 [label="GELU GPU6\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_3_gelu_gpu7 [label="GELU GPU7\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp2_gpu0 [label="MLP2 GPU0\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp2_gpu1 [label="MLP2 GPU1\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp2_gpu2 [label="MLP2 GPU2\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp2_gpu3 [label="MLP2 GPU3\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp2_gpu4 [label="MLP2 GPU4\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp2_gpu5 [label="MLP2 GPU5\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp2_gpu6 [label="MLP2 GPU6\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp2_gpu7 [label="MLP2 GPU7\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_3_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_3_residual2 [label="Residual Add 3\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_3_ln2 [label="LayerNorm 3\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_4_attn {
+		fillcolor=lightgray label="Layer 4 Attention (TP=8)" style="rounded,filled"
+		layer_4_qkv_gpu0 [label="QKV Proj GPU0\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_4_qkv_gpu1 [label="QKV Proj GPU1\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_4_qkv_gpu2 [label="QKV Proj GPU2\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_4_qkv_gpu3 [label="QKV Proj GPU3\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_4_qkv_gpu4 [label="QKV Proj GPU4\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_4_qkv_gpu5 [label="QKV Proj GPU5\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_4_qkv_gpu6 [label="QKV Proj GPU6\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_4_qkv_gpu7 [label="QKV Proj GPU7\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_4_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_4_attn_comp_gpu0 [label="Attention Compute GPU0\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_comp_gpu1 [label="Attention Compute GPU1\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_comp_gpu2 [label="Attention Compute GPU2\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_comp_gpu3 [label="Attention Compute GPU3\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_comp_gpu4 [label="Attention Compute GPU4\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_comp_gpu5 [label="Attention Compute GPU5\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_comp_gpu6 [label="Attention Compute GPU6\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_comp_gpu7 [label="Attention Compute GPU7\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_out_gpu0 [label="Attn Out Proj GPU0\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_out_gpu1 [label="Attn Out Proj GPU1\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_out_gpu2 [label="Attn Out Proj GPU2\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_out_gpu3 [label="Attn Out Proj GPU3\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_out_gpu4 [label="Attn Out Proj GPU4\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_out_gpu5 [label="Attn Out Proj GPU5\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_out_gpu6 [label="Attn Out Proj GPU6\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_out_gpu7 [label="Attn Out Proj GPU7\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_4_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_4_residual1 [label="Residual Add 4\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_4_ln1 [label="LayerNorm 4\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_4_mlp {
+		fillcolor=lightgray label="Layer 4 MLP (TP=8)" style="rounded,filled"
+		layer_4_mlp1_gpu0 [label="MLP1 GPU0\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp1_gpu1 [label="MLP1 GPU1\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp1_gpu2 [label="MLP1 GPU2\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp1_gpu3 [label="MLP1 GPU3\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp1_gpu4 [label="MLP1 GPU4\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp1_gpu5 [label="MLP1 GPU5\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp1_gpu6 [label="MLP1 GPU6\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp1_gpu7 [label="MLP1 GPU7\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_4_gelu_gpu0 [label="GELU GPU0\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_4_gelu_gpu1 [label="GELU GPU1\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_4_gelu_gpu2 [label="GELU GPU2\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_4_gelu_gpu3 [label="GELU GPU3\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_4_gelu_gpu4 [label="GELU GPU4\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_4_gelu_gpu5 [label="GELU GPU5\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_4_gelu_gpu6 [label="GELU GPU6\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_4_gelu_gpu7 [label="GELU GPU7\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp2_gpu0 [label="MLP2 GPU0\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp2_gpu1 [label="MLP2 GPU1\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp2_gpu2 [label="MLP2 GPU2\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp2_gpu3 [label="MLP2 GPU3\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp2_gpu4 [label="MLP2 GPU4\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp2_gpu5 [label="MLP2 GPU5\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp2_gpu6 [label="MLP2 GPU6\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp2_gpu7 [label="MLP2 GPU7\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_4_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_4_residual2 [label="Residual Add 4\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_4_ln2 [label="LayerNorm 4\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_5_attn {
+		fillcolor=lightgray label="Layer 5 Attention (TP=8)" style="rounded,filled"
+		layer_5_qkv_gpu0 [label="QKV Proj GPU0\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_5_qkv_gpu1 [label="QKV Proj GPU1\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_5_qkv_gpu2 [label="QKV Proj GPU2\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_5_qkv_gpu3 [label="QKV Proj GPU3\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_5_qkv_gpu4 [label="QKV Proj GPU4\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_5_qkv_gpu5 [label="QKV Proj GPU5\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_5_qkv_gpu6 [label="QKV Proj GPU6\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_5_qkv_gpu7 [label="QKV Proj GPU7\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_5_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_5_attn_comp_gpu0 [label="Attention Compute GPU0\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_comp_gpu1 [label="Attention Compute GPU1\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_comp_gpu2 [label="Attention Compute GPU2\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_comp_gpu3 [label="Attention Compute GPU3\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_comp_gpu4 [label="Attention Compute GPU4\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_comp_gpu5 [label="Attention Compute GPU5\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_comp_gpu6 [label="Attention Compute GPU6\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_comp_gpu7 [label="Attention Compute GPU7\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_out_gpu0 [label="Attn Out Proj GPU0\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_out_gpu1 [label="Attn Out Proj GPU1\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_out_gpu2 [label="Attn Out Proj GPU2\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_out_gpu3 [label="Attn Out Proj GPU3\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_out_gpu4 [label="Attn Out Proj GPU4\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_out_gpu5 [label="Attn Out Proj GPU5\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_out_gpu6 [label="Attn Out Proj GPU6\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_out_gpu7 [label="Attn Out Proj GPU7\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_5_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_5_residual1 [label="Residual Add 5\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_5_ln1 [label="LayerNorm 5\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_5_mlp {
+		fillcolor=lightgray label="Layer 5 MLP (TP=8)" style="rounded,filled"
+		layer_5_mlp1_gpu0 [label="MLP1 GPU0\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp1_gpu1 [label="MLP1 GPU1\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp1_gpu2 [label="MLP1 GPU2\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp1_gpu3 [label="MLP1 GPU3\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp1_gpu4 [label="MLP1 GPU4\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp1_gpu5 [label="MLP1 GPU5\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp1_gpu6 [label="MLP1 GPU6\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp1_gpu7 [label="MLP1 GPU7\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_5_gelu_gpu0 [label="GELU GPU0\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_5_gelu_gpu1 [label="GELU GPU1\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_5_gelu_gpu2 [label="GELU GPU2\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_5_gelu_gpu3 [label="GELU GPU3\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_5_gelu_gpu4 [label="GELU GPU4\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_5_gelu_gpu5 [label="GELU GPU5\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_5_gelu_gpu6 [label="GELU GPU6\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_5_gelu_gpu7 [label="GELU GPU7\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp2_gpu0 [label="MLP2 GPU0\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp2_gpu1 [label="MLP2 GPU1\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp2_gpu2 [label="MLP2 GPU2\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp2_gpu3 [label="MLP2 GPU3\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp2_gpu4 [label="MLP2 GPU4\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp2_gpu5 [label="MLP2 GPU5\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp2_gpu6 [label="MLP2 GPU6\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp2_gpu7 [label="MLP2 GPU7\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_5_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_5_residual2 [label="Residual Add 5\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_5_ln2 [label="LayerNorm 5\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_6_attn {
+		fillcolor=lightgray label="Layer 6 Attention (TP=8)" style="rounded,filled"
+		layer_6_qkv_gpu0 [label="QKV Proj GPU0\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_6_qkv_gpu1 [label="QKV Proj GPU1\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_6_qkv_gpu2 [label="QKV Proj GPU2\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_6_qkv_gpu3 [label="QKV Proj GPU3\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_6_qkv_gpu4 [label="QKV Proj GPU4\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_6_qkv_gpu5 [label="QKV Proj GPU5\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_6_qkv_gpu6 [label="QKV Proj GPU6\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_6_qkv_gpu7 [label="QKV Proj GPU7\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_6_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_6_attn_comp_gpu0 [label="Attention Compute GPU0\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_comp_gpu1 [label="Attention Compute GPU1\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_comp_gpu2 [label="Attention Compute GPU2\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_comp_gpu3 [label="Attention Compute GPU3\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_comp_gpu4 [label="Attention Compute GPU4\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_comp_gpu5 [label="Attention Compute GPU5\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_comp_gpu6 [label="Attention Compute GPU6\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_comp_gpu7 [label="Attention Compute GPU7\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_out_gpu0 [label="Attn Out Proj GPU0\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_out_gpu1 [label="Attn Out Proj GPU1\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_out_gpu2 [label="Attn Out Proj GPU2\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_out_gpu3 [label="Attn Out Proj GPU3\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_out_gpu4 [label="Attn Out Proj GPU4\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_out_gpu5 [label="Attn Out Proj GPU5\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_out_gpu6 [label="Attn Out Proj GPU6\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_out_gpu7 [label="Attn Out Proj GPU7\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_6_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_6_residual1 [label="Residual Add 6\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_6_ln1 [label="LayerNorm 6\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_6_mlp {
+		fillcolor=lightgray label="Layer 6 MLP (TP=8)" style="rounded,filled"
+		layer_6_mlp1_gpu0 [label="MLP1 GPU0\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp1_gpu1 [label="MLP1 GPU1\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp1_gpu2 [label="MLP1 GPU2\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp1_gpu3 [label="MLP1 GPU3\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp1_gpu4 [label="MLP1 GPU4\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp1_gpu5 [label="MLP1 GPU5\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp1_gpu6 [label="MLP1 GPU6\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp1_gpu7 [label="MLP1 GPU7\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_6_gelu_gpu0 [label="GELU GPU0\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_6_gelu_gpu1 [label="GELU GPU1\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_6_gelu_gpu2 [label="GELU GPU2\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_6_gelu_gpu3 [label="GELU GPU3\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_6_gelu_gpu4 [label="GELU GPU4\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_6_gelu_gpu5 [label="GELU GPU5\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_6_gelu_gpu6 [label="GELU GPU6\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_6_gelu_gpu7 [label="GELU GPU7\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp2_gpu0 [label="MLP2 GPU0\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp2_gpu1 [label="MLP2 GPU1\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp2_gpu2 [label="MLP2 GPU2\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp2_gpu3 [label="MLP2 GPU3\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp2_gpu4 [label="MLP2 GPU4\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp2_gpu5 [label="MLP2 GPU5\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp2_gpu6 [label="MLP2 GPU6\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp2_gpu7 [label="MLP2 GPU7\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_6_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_6_residual2 [label="Residual Add 6\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_6_ln2 [label="LayerNorm 6\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_7_attn {
+		fillcolor=lightgray label="Layer 7 Attention (TP=8)" style="rounded,filled"
+		layer_7_qkv_gpu0 [label="QKV Proj GPU0\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_7_qkv_gpu1 [label="QKV Proj GPU1\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_7_qkv_gpu2 [label="QKV Proj GPU2\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_7_qkv_gpu3 [label="QKV Proj GPU3\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_7_qkv_gpu4 [label="QKV Proj GPU4\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_7_qkv_gpu5 [label="QKV Proj GPU5\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_7_qkv_gpu6 [label="QKV Proj GPU6\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_7_qkv_gpu7 [label="QKV Proj GPU7\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_7_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_7_attn_comp_gpu0 [label="Attention Compute GPU0\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_comp_gpu1 [label="Attention Compute GPU1\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_comp_gpu2 [label="Attention Compute GPU2\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_comp_gpu3 [label="Attention Compute GPU3\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_comp_gpu4 [label="Attention Compute GPU4\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_comp_gpu5 [label="Attention Compute GPU5\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_comp_gpu6 [label="Attention Compute GPU6\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_comp_gpu7 [label="Attention Compute GPU7\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_out_gpu0 [label="Attn Out Proj GPU0\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_out_gpu1 [label="Attn Out Proj GPU1\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_out_gpu2 [label="Attn Out Proj GPU2\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_out_gpu3 [label="Attn Out Proj GPU3\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_out_gpu4 [label="Attn Out Proj GPU4\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_out_gpu5 [label="Attn Out Proj GPU5\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_out_gpu6 [label="Attn Out Proj GPU6\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_out_gpu7 [label="Attn Out Proj GPU7\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_7_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_7_residual1 [label="Residual Add 7\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_7_ln1 [label="LayerNorm 7\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_7_mlp {
+		fillcolor=lightgray label="Layer 7 MLP (TP=8)" style="rounded,filled"
+		layer_7_mlp1_gpu0 [label="MLP1 GPU0\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp1_gpu1 [label="MLP1 GPU1\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp1_gpu2 [label="MLP1 GPU2\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp1_gpu3 [label="MLP1 GPU3\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp1_gpu4 [label="MLP1 GPU4\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp1_gpu5 [label="MLP1 GPU5\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp1_gpu6 [label="MLP1 GPU6\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp1_gpu7 [label="MLP1 GPU7\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_7_gelu_gpu0 [label="GELU GPU0\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_7_gelu_gpu1 [label="GELU GPU1\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_7_gelu_gpu2 [label="GELU GPU2\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_7_gelu_gpu3 [label="GELU GPU3\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_7_gelu_gpu4 [label="GELU GPU4\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_7_gelu_gpu5 [label="GELU GPU5\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_7_gelu_gpu6 [label="GELU GPU6\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_7_gelu_gpu7 [label="GELU GPU7\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp2_gpu0 [label="MLP2 GPU0\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp2_gpu1 [label="MLP2 GPU1\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp2_gpu2 [label="MLP2 GPU2\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp2_gpu3 [label="MLP2 GPU3\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp2_gpu4 [label="MLP2 GPU4\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp2_gpu5 [label="MLP2 GPU5\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp2_gpu6 [label="MLP2 GPU6\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp2_gpu7 [label="MLP2 GPU7\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_7_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_7_residual2 [label="Residual Add 7\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_7_ln2 [label="LayerNorm 7\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_8_attn {
+		fillcolor=lightgray label="Layer 8 Attention (TP=8)" style="rounded,filled"
+		layer_8_qkv_gpu8 [label="QKV Proj GPU8\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_8_qkv_gpu9 [label="QKV Proj GPU9\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_8_qkv_gpu10 [label="QKV Proj GPU10\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_8_qkv_gpu11 [label="QKV Proj GPU11\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_8_qkv_gpu12 [label="QKV Proj GPU12\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_8_qkv_gpu13 [label="QKV Proj GPU13\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_8_qkv_gpu14 [label="QKV Proj GPU14\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_8_qkv_gpu15 [label="QKV Proj GPU15\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_8_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_8_attn_comp_gpu8 [label="Attention Compute GPU8\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_comp_gpu9 [label="Attention Compute GPU9\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_comp_gpu10 [label="Attention Compute GPU10\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_comp_gpu11 [label="Attention Compute GPU11\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_comp_gpu12 [label="Attention Compute GPU12\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_comp_gpu13 [label="Attention Compute GPU13\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_comp_gpu14 [label="Attention Compute GPU14\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_comp_gpu15 [label="Attention Compute GPU15\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_out_gpu8 [label="Attn Out Proj GPU8\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_out_gpu9 [label="Attn Out Proj GPU9\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_out_gpu10 [label="Attn Out Proj GPU10\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_out_gpu11 [label="Attn Out Proj GPU11\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_out_gpu12 [label="Attn Out Proj GPU12\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_out_gpu13 [label="Attn Out Proj GPU13\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_out_gpu14 [label="Attn Out Proj GPU14\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_out_gpu15 [label="Attn Out Proj GPU15\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_8_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_8_residual1 [label="Residual Add 8\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_8_ln1 [label="LayerNorm 8\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_8_mlp {
+		fillcolor=lightgray label="Layer 8 MLP (TP=8)" style="rounded,filled"
+		layer_8_mlp1_gpu8 [label="MLP1 GPU8\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp1_gpu9 [label="MLP1 GPU9\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp1_gpu10 [label="MLP1 GPU10\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp1_gpu11 [label="MLP1 GPU11\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp1_gpu12 [label="MLP1 GPU12\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp1_gpu13 [label="MLP1 GPU13\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp1_gpu14 [label="MLP1 GPU14\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp1_gpu15 [label="MLP1 GPU15\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_8_gelu_gpu8 [label="GELU GPU8\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_8_gelu_gpu9 [label="GELU GPU9\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_8_gelu_gpu10 [label="GELU GPU10\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_8_gelu_gpu11 [label="GELU GPU11\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_8_gelu_gpu12 [label="GELU GPU12\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_8_gelu_gpu13 [label="GELU GPU13\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_8_gelu_gpu14 [label="GELU GPU14\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_8_gelu_gpu15 [label="GELU GPU15\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp2_gpu8 [label="MLP2 GPU8\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp2_gpu9 [label="MLP2 GPU9\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp2_gpu10 [label="MLP2 GPU10\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp2_gpu11 [label="MLP2 GPU11\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp2_gpu12 [label="MLP2 GPU12\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp2_gpu13 [label="MLP2 GPU13\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp2_gpu14 [label="MLP2 GPU14\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp2_gpu15 [label="MLP2 GPU15\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_8_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_8_residual2 [label="Residual Add 8\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_8_ln2 [label="LayerNorm 8\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_9_attn {
+		fillcolor=lightgray label="Layer 9 Attention (TP=8)" style="rounded,filled"
+		layer_9_qkv_gpu8 [label="QKV Proj GPU8\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_9_qkv_gpu9 [label="QKV Proj GPU9\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_9_qkv_gpu10 [label="QKV Proj GPU10\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_9_qkv_gpu11 [label="QKV Proj GPU11\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_9_qkv_gpu12 [label="QKV Proj GPU12\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_9_qkv_gpu13 [label="QKV Proj GPU13\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_9_qkv_gpu14 [label="QKV Proj GPU14\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_9_qkv_gpu15 [label="QKV Proj GPU15\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_9_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_9_attn_comp_gpu8 [label="Attention Compute GPU8\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_comp_gpu9 [label="Attention Compute GPU9\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_comp_gpu10 [label="Attention Compute GPU10\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_comp_gpu11 [label="Attention Compute GPU11\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_comp_gpu12 [label="Attention Compute GPU12\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_comp_gpu13 [label="Attention Compute GPU13\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_comp_gpu14 [label="Attention Compute GPU14\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_comp_gpu15 [label="Attention Compute GPU15\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_out_gpu8 [label="Attn Out Proj GPU8\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_out_gpu9 [label="Attn Out Proj GPU9\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_out_gpu10 [label="Attn Out Proj GPU10\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_out_gpu11 [label="Attn Out Proj GPU11\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_out_gpu12 [label="Attn Out Proj GPU12\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_out_gpu13 [label="Attn Out Proj GPU13\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_out_gpu14 [label="Attn Out Proj GPU14\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_out_gpu15 [label="Attn Out Proj GPU15\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_9_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_9_residual1 [label="Residual Add 9\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_9_ln1 [label="LayerNorm 9\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_9_mlp {
+		fillcolor=lightgray label="Layer 9 MLP (TP=8)" style="rounded,filled"
+		layer_9_mlp1_gpu8 [label="MLP1 GPU8\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp1_gpu9 [label="MLP1 GPU9\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp1_gpu10 [label="MLP1 GPU10\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp1_gpu11 [label="MLP1 GPU11\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp1_gpu12 [label="MLP1 GPU12\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp1_gpu13 [label="MLP1 GPU13\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp1_gpu14 [label="MLP1 GPU14\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp1_gpu15 [label="MLP1 GPU15\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_9_gelu_gpu8 [label="GELU GPU8\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_9_gelu_gpu9 [label="GELU GPU9\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_9_gelu_gpu10 [label="GELU GPU10\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_9_gelu_gpu11 [label="GELU GPU11\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_9_gelu_gpu12 [label="GELU GPU12\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_9_gelu_gpu13 [label="GELU GPU13\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_9_gelu_gpu14 [label="GELU GPU14\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_9_gelu_gpu15 [label="GELU GPU15\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp2_gpu8 [label="MLP2 GPU8\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp2_gpu9 [label="MLP2 GPU9\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp2_gpu10 [label="MLP2 GPU10\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp2_gpu11 [label="MLP2 GPU11\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp2_gpu12 [label="MLP2 GPU12\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp2_gpu13 [label="MLP2 GPU13\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp2_gpu14 [label="MLP2 GPU14\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp2_gpu15 [label="MLP2 GPU15\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_9_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_9_residual2 [label="Residual Add 9\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_9_ln2 [label="LayerNorm 9\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_10_attn {
+		fillcolor=lightgray label="Layer 10 Attention (TP=8)" style="rounded,filled"
+		layer_10_qkv_gpu8 [label="QKV Proj GPU8\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_10_qkv_gpu9 [label="QKV Proj GPU9\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_10_qkv_gpu10 [label="QKV Proj GPU10\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_10_qkv_gpu11 [label="QKV Proj GPU11\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_10_qkv_gpu12 [label="QKV Proj GPU12\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_10_qkv_gpu13 [label="QKV Proj GPU13\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_10_qkv_gpu14 [label="QKV Proj GPU14\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_10_qkv_gpu15 [label="QKV Proj GPU15\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_10_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_10_attn_comp_gpu8 [label="Attention Compute GPU8\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_comp_gpu9 [label="Attention Compute GPU9\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_comp_gpu10 [label="Attention Compute GPU10\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_comp_gpu11 [label="Attention Compute GPU11\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_comp_gpu12 [label="Attention Compute GPU12\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_comp_gpu13 [label="Attention Compute GPU13\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_comp_gpu14 [label="Attention Compute GPU14\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_comp_gpu15 [label="Attention Compute GPU15\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_out_gpu8 [label="Attn Out Proj GPU8\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_out_gpu9 [label="Attn Out Proj GPU9\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_out_gpu10 [label="Attn Out Proj GPU10\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_out_gpu11 [label="Attn Out Proj GPU11\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_out_gpu12 [label="Attn Out Proj GPU12\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_out_gpu13 [label="Attn Out Proj GPU13\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_out_gpu14 [label="Attn Out Proj GPU14\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_out_gpu15 [label="Attn Out Proj GPU15\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_10_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_10_residual1 [label="Residual Add 10\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_10_ln1 [label="LayerNorm 10\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_10_mlp {
+		fillcolor=lightgray label="Layer 10 MLP (TP=8)" style="rounded,filled"
+		layer_10_mlp1_gpu8 [label="MLP1 GPU8\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp1_gpu9 [label="MLP1 GPU9\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp1_gpu10 [label="MLP1 GPU10\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp1_gpu11 [label="MLP1 GPU11\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp1_gpu12 [label="MLP1 GPU12\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp1_gpu13 [label="MLP1 GPU13\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp1_gpu14 [label="MLP1 GPU14\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp1_gpu15 [label="MLP1 GPU15\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_10_gelu_gpu8 [label="GELU GPU8\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_10_gelu_gpu9 [label="GELU GPU9\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_10_gelu_gpu10 [label="GELU GPU10\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_10_gelu_gpu11 [label="GELU GPU11\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_10_gelu_gpu12 [label="GELU GPU12\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_10_gelu_gpu13 [label="GELU GPU13\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_10_gelu_gpu14 [label="GELU GPU14\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_10_gelu_gpu15 [label="GELU GPU15\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp2_gpu8 [label="MLP2 GPU8\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp2_gpu9 [label="MLP2 GPU9\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp2_gpu10 [label="MLP2 GPU10\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp2_gpu11 [label="MLP2 GPU11\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp2_gpu12 [label="MLP2 GPU12\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp2_gpu13 [label="MLP2 GPU13\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp2_gpu14 [label="MLP2 GPU14\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp2_gpu15 [label="MLP2 GPU15\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_10_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_10_residual2 [label="Residual Add 10\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_10_ln2 [label="LayerNorm 10\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_11_attn {
+		fillcolor=lightgray label="Layer 11 Attention (TP=8)" style="rounded,filled"
+		layer_11_qkv_gpu8 [label="QKV Proj GPU8\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_11_qkv_gpu9 [label="QKV Proj GPU9\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_11_qkv_gpu10 [label="QKV Proj GPU10\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_11_qkv_gpu11 [label="QKV Proj GPU11\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_11_qkv_gpu12 [label="QKV Proj GPU12\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_11_qkv_gpu13 [label="QKV Proj GPU13\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_11_qkv_gpu14 [label="QKV Proj GPU14\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_11_qkv_gpu15 [label="QKV Proj GPU15\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_11_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_11_attn_comp_gpu8 [label="Attention Compute GPU8\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_comp_gpu9 [label="Attention Compute GPU9\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_comp_gpu10 [label="Attention Compute GPU10\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_comp_gpu11 [label="Attention Compute GPU11\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_comp_gpu12 [label="Attention Compute GPU12\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_comp_gpu13 [label="Attention Compute GPU13\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_comp_gpu14 [label="Attention Compute GPU14\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_comp_gpu15 [label="Attention Compute GPU15\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_out_gpu8 [label="Attn Out Proj GPU8\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_out_gpu9 [label="Attn Out Proj GPU9\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_out_gpu10 [label="Attn Out Proj GPU10\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_out_gpu11 [label="Attn Out Proj GPU11\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_out_gpu12 [label="Attn Out Proj GPU12\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_out_gpu13 [label="Attn Out Proj GPU13\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_out_gpu14 [label="Attn Out Proj GPU14\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_out_gpu15 [label="Attn Out Proj GPU15\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_11_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_11_residual1 [label="Residual Add 11\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_11_ln1 [label="LayerNorm 11\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_11_mlp {
+		fillcolor=lightgray label="Layer 11 MLP (TP=8)" style="rounded,filled"
+		layer_11_mlp1_gpu8 [label="MLP1 GPU8\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp1_gpu9 [label="MLP1 GPU9\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp1_gpu10 [label="MLP1 GPU10\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp1_gpu11 [label="MLP1 GPU11\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp1_gpu12 [label="MLP1 GPU12\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp1_gpu13 [label="MLP1 GPU13\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp1_gpu14 [label="MLP1 GPU14\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp1_gpu15 [label="MLP1 GPU15\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_11_gelu_gpu8 [label="GELU GPU8\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_11_gelu_gpu9 [label="GELU GPU9\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_11_gelu_gpu10 [label="GELU GPU10\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_11_gelu_gpu11 [label="GELU GPU11\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_11_gelu_gpu12 [label="GELU GPU12\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_11_gelu_gpu13 [label="GELU GPU13\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_11_gelu_gpu14 [label="GELU GPU14\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_11_gelu_gpu15 [label="GELU GPU15\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp2_gpu8 [label="MLP2 GPU8\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp2_gpu9 [label="MLP2 GPU9\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp2_gpu10 [label="MLP2 GPU10\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp2_gpu11 [label="MLP2 GPU11\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp2_gpu12 [label="MLP2 GPU12\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp2_gpu13 [label="MLP2 GPU13\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp2_gpu14 [label="MLP2 GPU14\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp2_gpu15 [label="MLP2 GPU15\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_11_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_11_residual2 [label="Residual Add 11\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_11_ln2 [label="LayerNorm 11\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_12_attn {
+		fillcolor=lightgray label="Layer 12 Attention (TP=8)" style="rounded,filled"
+		layer_12_qkv_gpu8 [label="QKV Proj GPU8\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_12_qkv_gpu9 [label="QKV Proj GPU9\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_12_qkv_gpu10 [label="QKV Proj GPU10\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_12_qkv_gpu11 [label="QKV Proj GPU11\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_12_qkv_gpu12 [label="QKV Proj GPU12\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_12_qkv_gpu13 [label="QKV Proj GPU13\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_12_qkv_gpu14 [label="QKV Proj GPU14\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_12_qkv_gpu15 [label="QKV Proj GPU15\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_12_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_12_attn_comp_gpu8 [label="Attention Compute GPU8\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_comp_gpu9 [label="Attention Compute GPU9\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_comp_gpu10 [label="Attention Compute GPU10\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_comp_gpu11 [label="Attention Compute GPU11\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_comp_gpu12 [label="Attention Compute GPU12\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_comp_gpu13 [label="Attention Compute GPU13\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_comp_gpu14 [label="Attention Compute GPU14\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_comp_gpu15 [label="Attention Compute GPU15\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_out_gpu8 [label="Attn Out Proj GPU8\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_out_gpu9 [label="Attn Out Proj GPU9\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_out_gpu10 [label="Attn Out Proj GPU10\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_out_gpu11 [label="Attn Out Proj GPU11\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_out_gpu12 [label="Attn Out Proj GPU12\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_out_gpu13 [label="Attn Out Proj GPU13\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_out_gpu14 [label="Attn Out Proj GPU14\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_out_gpu15 [label="Attn Out Proj GPU15\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_12_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_12_residual1 [label="Residual Add 12\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_12_ln1 [label="LayerNorm 12\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_12_mlp {
+		fillcolor=lightgray label="Layer 12 MLP (TP=8)" style="rounded,filled"
+		layer_12_mlp1_gpu8 [label="MLP1 GPU8\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp1_gpu9 [label="MLP1 GPU9\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp1_gpu10 [label="MLP1 GPU10\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp1_gpu11 [label="MLP1 GPU11\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp1_gpu12 [label="MLP1 GPU12\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp1_gpu13 [label="MLP1 GPU13\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp1_gpu14 [label="MLP1 GPU14\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp1_gpu15 [label="MLP1 GPU15\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_12_gelu_gpu8 [label="GELU GPU8\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_12_gelu_gpu9 [label="GELU GPU9\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_12_gelu_gpu10 [label="GELU GPU10\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_12_gelu_gpu11 [label="GELU GPU11\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_12_gelu_gpu12 [label="GELU GPU12\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_12_gelu_gpu13 [label="GELU GPU13\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_12_gelu_gpu14 [label="GELU GPU14\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_12_gelu_gpu15 [label="GELU GPU15\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp2_gpu8 [label="MLP2 GPU8\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp2_gpu9 [label="MLP2 GPU9\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp2_gpu10 [label="MLP2 GPU10\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp2_gpu11 [label="MLP2 GPU11\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp2_gpu12 [label="MLP2 GPU12\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp2_gpu13 [label="MLP2 GPU13\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp2_gpu14 [label="MLP2 GPU14\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp2_gpu15 [label="MLP2 GPU15\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_12_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_12_residual2 [label="Residual Add 12\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_12_ln2 [label="LayerNorm 12\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_13_attn {
+		fillcolor=lightgray label="Layer 13 Attention (TP=8)" style="rounded,filled"
+		layer_13_qkv_gpu8 [label="QKV Proj GPU8\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_13_qkv_gpu9 [label="QKV Proj GPU9\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_13_qkv_gpu10 [label="QKV Proj GPU10\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_13_qkv_gpu11 [label="QKV Proj GPU11\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_13_qkv_gpu12 [label="QKV Proj GPU12\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_13_qkv_gpu13 [label="QKV Proj GPU13\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_13_qkv_gpu14 [label="QKV Proj GPU14\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_13_qkv_gpu15 [label="QKV Proj GPU15\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_13_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_13_attn_comp_gpu8 [label="Attention Compute GPU8\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_comp_gpu9 [label="Attention Compute GPU9\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_comp_gpu10 [label="Attention Compute GPU10\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_comp_gpu11 [label="Attention Compute GPU11\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_comp_gpu12 [label="Attention Compute GPU12\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_comp_gpu13 [label="Attention Compute GPU13\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_comp_gpu14 [label="Attention Compute GPU14\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_comp_gpu15 [label="Attention Compute GPU15\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_out_gpu8 [label="Attn Out Proj GPU8\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_out_gpu9 [label="Attn Out Proj GPU9\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_out_gpu10 [label="Attn Out Proj GPU10\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_out_gpu11 [label="Attn Out Proj GPU11\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_out_gpu12 [label="Attn Out Proj GPU12\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_out_gpu13 [label="Attn Out Proj GPU13\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_out_gpu14 [label="Attn Out Proj GPU14\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_out_gpu15 [label="Attn Out Proj GPU15\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_13_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_13_residual1 [label="Residual Add 13\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_13_ln1 [label="LayerNorm 13\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_13_mlp {
+		fillcolor=lightgray label="Layer 13 MLP (TP=8)" style="rounded,filled"
+		layer_13_mlp1_gpu8 [label="MLP1 GPU8\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp1_gpu9 [label="MLP1 GPU9\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp1_gpu10 [label="MLP1 GPU10\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp1_gpu11 [label="MLP1 GPU11\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp1_gpu12 [label="MLP1 GPU12\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp1_gpu13 [label="MLP1 GPU13\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp1_gpu14 [label="MLP1 GPU14\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp1_gpu15 [label="MLP1 GPU15\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_13_gelu_gpu8 [label="GELU GPU8\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_13_gelu_gpu9 [label="GELU GPU9\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_13_gelu_gpu10 [label="GELU GPU10\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_13_gelu_gpu11 [label="GELU GPU11\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_13_gelu_gpu12 [label="GELU GPU12\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_13_gelu_gpu13 [label="GELU GPU13\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_13_gelu_gpu14 [label="GELU GPU14\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_13_gelu_gpu15 [label="GELU GPU15\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp2_gpu8 [label="MLP2 GPU8\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp2_gpu9 [label="MLP2 GPU9\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp2_gpu10 [label="MLP2 GPU10\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp2_gpu11 [label="MLP2 GPU11\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp2_gpu12 [label="MLP2 GPU12\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp2_gpu13 [label="MLP2 GPU13\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp2_gpu14 [label="MLP2 GPU14\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp2_gpu15 [label="MLP2 GPU15\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_13_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_13_residual2 [label="Residual Add 13\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_13_ln2 [label="LayerNorm 13\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_14_attn {
+		fillcolor=lightgray label="Layer 14 Attention (TP=8)" style="rounded,filled"
+		layer_14_qkv_gpu8 [label="QKV Proj GPU8\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_14_qkv_gpu9 [label="QKV Proj GPU9\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_14_qkv_gpu10 [label="QKV Proj GPU10\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_14_qkv_gpu11 [label="QKV Proj GPU11\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_14_qkv_gpu12 [label="QKV Proj GPU12\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_14_qkv_gpu13 [label="QKV Proj GPU13\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_14_qkv_gpu14 [label="QKV Proj GPU14\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_14_qkv_gpu15 [label="QKV Proj GPU15\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_14_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_14_attn_comp_gpu8 [label="Attention Compute GPU8\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_comp_gpu9 [label="Attention Compute GPU9\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_comp_gpu10 [label="Attention Compute GPU10\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_comp_gpu11 [label="Attention Compute GPU11\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_comp_gpu12 [label="Attention Compute GPU12\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_comp_gpu13 [label="Attention Compute GPU13\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_comp_gpu14 [label="Attention Compute GPU14\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_comp_gpu15 [label="Attention Compute GPU15\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_out_gpu8 [label="Attn Out Proj GPU8\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_out_gpu9 [label="Attn Out Proj GPU9\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_out_gpu10 [label="Attn Out Proj GPU10\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_out_gpu11 [label="Attn Out Proj GPU11\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_out_gpu12 [label="Attn Out Proj GPU12\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_out_gpu13 [label="Attn Out Proj GPU13\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_out_gpu14 [label="Attn Out Proj GPU14\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_out_gpu15 [label="Attn Out Proj GPU15\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_14_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_14_residual1 [label="Residual Add 14\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_14_ln1 [label="LayerNorm 14\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_14_mlp {
+		fillcolor=lightgray label="Layer 14 MLP (TP=8)" style="rounded,filled"
+		layer_14_mlp1_gpu8 [label="MLP1 GPU8\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp1_gpu9 [label="MLP1 GPU9\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp1_gpu10 [label="MLP1 GPU10\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp1_gpu11 [label="MLP1 GPU11\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp1_gpu12 [label="MLP1 GPU12\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp1_gpu13 [label="MLP1 GPU13\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp1_gpu14 [label="MLP1 GPU14\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp1_gpu15 [label="MLP1 GPU15\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_14_gelu_gpu8 [label="GELU GPU8\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_14_gelu_gpu9 [label="GELU GPU9\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_14_gelu_gpu10 [label="GELU GPU10\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_14_gelu_gpu11 [label="GELU GPU11\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_14_gelu_gpu12 [label="GELU GPU12\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_14_gelu_gpu13 [label="GELU GPU13\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_14_gelu_gpu14 [label="GELU GPU14\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_14_gelu_gpu15 [label="GELU GPU15\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp2_gpu8 [label="MLP2 GPU8\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp2_gpu9 [label="MLP2 GPU9\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp2_gpu10 [label="MLP2 GPU10\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp2_gpu11 [label="MLP2 GPU11\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp2_gpu12 [label="MLP2 GPU12\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp2_gpu13 [label="MLP2 GPU13\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp2_gpu14 [label="MLP2 GPU14\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp2_gpu15 [label="MLP2 GPU15\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_14_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_14_residual2 [label="Residual Add 14\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_14_ln2 [label="LayerNorm 14\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_15_attn {
+		fillcolor=lightgray label="Layer 15 Attention (TP=8)" style="rounded,filled"
+		layer_15_qkv_gpu8 [label="QKV Proj GPU8\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_15_qkv_gpu9 [label="QKV Proj GPU9\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_15_qkv_gpu10 [label="QKV Proj GPU10\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_15_qkv_gpu11 [label="QKV Proj GPU11\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_15_qkv_gpu12 [label="QKV Proj GPU12\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_15_qkv_gpu13 [label="QKV Proj GPU13\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_15_qkv_gpu14 [label="QKV Proj GPU14\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_15_qkv_gpu15 [label="QKV Proj GPU15\nColParallel\nDim: 512x1536" fillcolor=lightblue shape=rectangle]
+		layer_15_qkv_comm [label="QKV AllGather\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+		layer_15_attn_comp_gpu8 [label="Attention Compute GPU8\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_comp_gpu9 [label="Attention Compute GPU9\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_comp_gpu10 [label="Attention Compute GPU10\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_comp_gpu11 [label="Attention Compute GPU11\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_comp_gpu12 [label="Attention Compute GPU12\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_comp_gpu13 [label="Attention Compute GPU13\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_comp_gpu14 [label="Attention Compute GPU14\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_comp_gpu15 [label="Attention Compute GPU15\n4 heads\nSeq: 10000x128" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_out_gpu8 [label="Attn Out Proj GPU8\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_out_gpu9 [label="Attn Out Proj GPU9\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_out_gpu10 [label="Attn Out Proj GPU10\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_out_gpu11 [label="Attn Out Proj GPU11\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_out_gpu12 [label="Attn Out Proj GPU12\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_out_gpu13 [label="Attn Out Proj GPU13\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_out_gpu14 [label="Attn Out Proj GPU14\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_out_gpu15 [label="Attn Out Proj GPU15\nRowParallel\nDim: 512x512" fillcolor=lightblue shape=rectangle]
+		layer_15_attn_allreduce [label="Attention AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_15_residual1 [label="Residual Add 15\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_15_ln1 [label="LayerNorm 15\n4096 dim" fillcolor=lightblue shape=rectangle]
+	subgraph cluster_layer_15_mlp {
+		fillcolor=lightgray label="Layer 15 MLP (TP=8)" style="rounded,filled"
+		layer_15_mlp1_gpu8 [label="MLP1 GPU8\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp1_gpu9 [label="MLP1 GPU9\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp1_gpu10 [label="MLP1 GPU10\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp1_gpu11 [label="MLP1 GPU11\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp1_gpu12 [label="MLP1 GPU12\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp1_gpu13 [label="MLP1 GPU13\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp1_gpu14 [label="MLP1 GPU14\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp1_gpu15 [label="MLP1 GPU15\nColParallel\nDim: 512x2048" fillcolor=lightblue shape=rectangle]
+		layer_15_gelu_gpu8 [label="GELU GPU8\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_15_gelu_gpu9 [label="GELU GPU9\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_15_gelu_gpu10 [label="GELU GPU10\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_15_gelu_gpu11 [label="GELU GPU11\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_15_gelu_gpu12 [label="GELU GPU12\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_15_gelu_gpu13 [label="GELU GPU13\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_15_gelu_gpu14 [label="GELU GPU14\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_15_gelu_gpu15 [label="GELU GPU15\n2048 dim" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp2_gpu8 [label="MLP2 GPU8\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp2_gpu9 [label="MLP2 GPU9\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp2_gpu10 [label="MLP2 GPU10\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp2_gpu11 [label="MLP2 GPU11\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp2_gpu12 [label="MLP2 GPU12\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp2_gpu13 [label="MLP2 GPU13\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp2_gpu14 [label="MLP2 GPU14\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp2_gpu15 [label="MLP2 GPU15\nRowParallel\nDim: 2048x512" fillcolor=lightblue shape=rectangle]
+		layer_15_mlp_allreduce [label="MLP AllReduce\n8 GPUs" fillcolor=lightgreen shape=ellipse]
+	}
+	layer_15_residual2 [label="Residual Add 15\n4096 dim" fillcolor=lightyellow shape=parallelogram]
+	layer_15_ln2 [label="LayerNorm 15\n4096 dim" fillcolor=lightblue shape=rectangle]
+	output [label="Output\nBatch: 128\nSeq: 10000\nDim: 4096" fillcolor=lightcoral shape=diamond]
+	input -> layer_0_qkv_gpu0
+	layer_0_qkv_gpu0 -> layer_0_qkv_comm
+	layer_0_qkv_gpu1 -> layer_0_qkv_comm
+	layer_0_qkv_gpu2 -> layer_0_qkv_comm
+	layer_0_qkv_gpu3 -> layer_0_qkv_comm
+	layer_0_qkv_gpu4 -> layer_0_qkv_comm
+	layer_0_qkv_gpu5 -> layer_0_qkv_comm
+	layer_0_qkv_gpu6 -> layer_0_qkv_comm
+	layer_0_qkv_gpu7 -> layer_0_qkv_comm
+	layer_0_qkv_comm -> layer_0_attn_comp_gpu0
+	layer_0_qkv_comm -> layer_0_attn_comp_gpu1
+	layer_0_qkv_comm -> layer_0_attn_comp_gpu2
+	layer_0_qkv_comm -> layer_0_attn_comp_gpu3
+	layer_0_qkv_comm -> layer_0_attn_comp_gpu4
+	layer_0_qkv_comm -> layer_0_attn_comp_gpu5
+	layer_0_qkv_comm -> layer_0_attn_comp_gpu6
+	layer_0_qkv_comm -> layer_0_attn_comp_gpu7
+	layer_0_attn_comp_gpu0 -> layer_0_attn_out_gpu0
+	layer_0_attn_comp_gpu1 -> layer_0_attn_out_gpu1
+	layer_0_attn_comp_gpu2 -> layer_0_attn_out_gpu2
+	layer_0_attn_comp_gpu3 -> layer_0_attn_out_gpu3
+	layer_0_attn_comp_gpu4 -> layer_0_attn_out_gpu4
+	layer_0_attn_comp_gpu5 -> layer_0_attn_out_gpu5
+	layer_0_attn_comp_gpu6 -> layer_0_attn_out_gpu6
+	layer_0_attn_comp_gpu7 -> layer_0_attn_out_gpu7
+	layer_0_attn_out_gpu0 -> layer_0_attn_allreduce
+	layer_0_attn_out_gpu1 -> layer_0_attn_allreduce
+	layer_0_attn_out_gpu2 -> layer_0_attn_allreduce
+	layer_0_attn_out_gpu3 -> layer_0_attn_allreduce
+	layer_0_attn_out_gpu4 -> layer_0_attn_allreduce
+	layer_0_attn_out_gpu5 -> layer_0_attn_allreduce
+	layer_0_attn_out_gpu6 -> layer_0_attn_allreduce
+	layer_0_attn_out_gpu7 -> layer_0_attn_allreduce
+	layer_0_attn_allreduce -> layer_0_residual1
+	layer_0_residual1 -> layer_0_ln1
+	layer_0_ln1 -> layer_0_mlp1_gpu0
+	layer_0_mlp1_gpu0 -> layer_0_gelu_gpu0
+	layer_0_gelu_gpu0 -> layer_0_mlp2_gpu0
+	layer_0_mlp2_gpu0 -> layer_0_mlp_allreduce
+	layer_0_ln1 -> layer_0_mlp1_gpu1
+	layer_0_mlp1_gpu1 -> layer_0_gelu_gpu1
+	layer_0_gelu_gpu1 -> layer_0_mlp2_gpu1
+	layer_0_mlp2_gpu1 -> layer_0_mlp_allreduce
+	layer_0_ln1 -> layer_0_mlp1_gpu2
+	layer_0_mlp1_gpu2 -> layer_0_gelu_gpu2
+	layer_0_gelu_gpu2 -> layer_0_mlp2_gpu2
+	layer_0_mlp2_gpu2 -> layer_0_mlp_allreduce
+	layer_0_ln1 -> layer_0_mlp1_gpu3
+	layer_0_mlp1_gpu3 -> layer_0_gelu_gpu3
+	layer_0_gelu_gpu3 -> layer_0_mlp2_gpu3
+	layer_0_mlp2_gpu3 -> layer_0_mlp_allreduce
+	layer_0_ln1 -> layer_0_mlp1_gpu4
+	layer_0_mlp1_gpu4 -> layer_0_gelu_gpu4
+	layer_0_gelu_gpu4 -> layer_0_mlp2_gpu4
+	layer_0_mlp2_gpu4 -> layer_0_mlp_allreduce
+	layer_0_ln1 -> layer_0_mlp1_gpu5
+	layer_0_mlp1_gpu5 -> layer_0_gelu_gpu5
+	layer_0_gelu_gpu5 -> layer_0_mlp2_gpu5
+	layer_0_mlp2_gpu5 -> layer_0_mlp_allreduce
+	layer_0_ln1 -> layer_0_mlp1_gpu6
+	layer_0_mlp1_gpu6 -> layer_0_gelu_gpu6
+	layer_0_gelu_gpu6 -> layer_0_mlp2_gpu6
+	layer_0_mlp2_gpu6 -> layer_0_mlp_allreduce
+	layer_0_ln1 -> layer_0_mlp1_gpu7
+	layer_0_mlp1_gpu7 -> layer_0_gelu_gpu7
+	layer_0_gelu_gpu7 -> layer_0_mlp2_gpu7
+	layer_0_mlp2_gpu7 -> layer_0_mlp_allreduce
+	layer_0_mlp_allreduce -> layer_0_residual2
+	layer_0_residual2 -> layer_0_ln2
+	layer_0_ln2 -> layer_1_qkv_gpu0
+	layer_1_qkv_gpu0 -> layer_1_qkv_comm
+	layer_1_qkv_gpu1 -> layer_1_qkv_comm
+	layer_1_qkv_gpu2 -> layer_1_qkv_comm
+	layer_1_qkv_gpu3 -> layer_1_qkv_comm
+	layer_1_qkv_gpu4 -> layer_1_qkv_comm
+	layer_1_qkv_gpu5 -> layer_1_qkv_comm
+	layer_1_qkv_gpu6 -> layer_1_qkv_comm
+	layer_1_qkv_gpu7 -> layer_1_qkv_comm
+	layer_1_qkv_comm -> layer_1_attn_comp_gpu0
+	layer_1_qkv_comm -> layer_1_attn_comp_gpu1
+	layer_1_qkv_comm -> layer_1_attn_comp_gpu2
+	layer_1_qkv_comm -> layer_1_attn_comp_gpu3
+	layer_1_qkv_comm -> layer_1_attn_comp_gpu4
+	layer_1_qkv_comm -> layer_1_attn_comp_gpu5
+	layer_1_qkv_comm -> layer_1_attn_comp_gpu6
+	layer_1_qkv_comm -> layer_1_attn_comp_gpu7
+	layer_1_attn_comp_gpu0 -> layer_1_attn_out_gpu0
+	layer_1_attn_comp_gpu1 -> layer_1_attn_out_gpu1
+	layer_1_attn_comp_gpu2 -> layer_1_attn_out_gpu2
+	layer_1_attn_comp_gpu3 -> layer_1_attn_out_gpu3
+	layer_1_attn_comp_gpu4 -> layer_1_attn_out_gpu4
+	layer_1_attn_comp_gpu5 -> layer_1_attn_out_gpu5
+	layer_1_attn_comp_gpu6 -> layer_1_attn_out_gpu6
+	layer_1_attn_comp_gpu7 -> layer_1_attn_out_gpu7
+	layer_1_attn_out_gpu0 -> layer_1_attn_allreduce
+	layer_1_attn_out_gpu1 -> layer_1_attn_allreduce
+	layer_1_attn_out_gpu2 -> layer_1_attn_allreduce
+	layer_1_attn_out_gpu3 -> layer_1_attn_allreduce
+	layer_1_attn_out_gpu4 -> layer_1_attn_allreduce
+	layer_1_attn_out_gpu5 -> layer_1_attn_allreduce
+	layer_1_attn_out_gpu6 -> layer_1_attn_allreduce
+	layer_1_attn_out_gpu7 -> layer_1_attn_allreduce
+	layer_1_attn_allreduce -> layer_1_residual1
+	layer_1_residual1 -> layer_1_ln1
+	layer_1_ln1 -> layer_1_mlp1_gpu0
+	layer_1_mlp1_gpu0 -> layer_1_gelu_gpu0
+	layer_1_gelu_gpu0 -> layer_1_mlp2_gpu0
+	layer_1_mlp2_gpu0 -> layer_1_mlp_allreduce
+	layer_1_ln1 -> layer_1_mlp1_gpu1
+	layer_1_mlp1_gpu1 -> layer_1_gelu_gpu1
+	layer_1_gelu_gpu1 -> layer_1_mlp2_gpu1
+	layer_1_mlp2_gpu1 -> layer_1_mlp_allreduce
+	layer_1_ln1 -> layer_1_mlp1_gpu2
+	layer_1_mlp1_gpu2 -> layer_1_gelu_gpu2
+	layer_1_gelu_gpu2 -> layer_1_mlp2_gpu2
+	layer_1_mlp2_gpu2 -> layer_1_mlp_allreduce
+	layer_1_ln1 -> layer_1_mlp1_gpu3
+	layer_1_mlp1_gpu3 -> layer_1_gelu_gpu3
+	layer_1_gelu_gpu3 -> layer_1_mlp2_gpu3
+	layer_1_mlp2_gpu3 -> layer_1_mlp_allreduce
+	layer_1_ln1 -> layer_1_mlp1_gpu4
+	layer_1_mlp1_gpu4 -> layer_1_gelu_gpu4
+	layer_1_gelu_gpu4 -> layer_1_mlp2_gpu4
+	layer_1_mlp2_gpu4 -> layer_1_mlp_allreduce
+	layer_1_ln1 -> layer_1_mlp1_gpu5
+	layer_1_mlp1_gpu5 -> layer_1_gelu_gpu5
+	layer_1_gelu_gpu5 -> layer_1_mlp2_gpu5
+	layer_1_mlp2_gpu5 -> layer_1_mlp_allreduce
+	layer_1_ln1 -> layer_1_mlp1_gpu6
+	layer_1_mlp1_gpu6 -> layer_1_gelu_gpu6
+	layer_1_gelu_gpu6 -> layer_1_mlp2_gpu6
+	layer_1_mlp2_gpu6 -> layer_1_mlp_allreduce
+	layer_1_ln1 -> layer_1_mlp1_gpu7
+	layer_1_mlp1_gpu7 -> layer_1_gelu_gpu7
+	layer_1_gelu_gpu7 -> layer_1_mlp2_gpu7
+	layer_1_mlp2_gpu7 -> layer_1_mlp_allreduce
+	layer_1_mlp_allreduce -> layer_1_residual2
+	layer_1_residual2 -> layer_1_ln2
+	layer_1_ln2 -> layer_2_qkv_gpu0
+	layer_2_qkv_gpu0 -> layer_2_qkv_comm
+	layer_2_qkv_gpu1 -> layer_2_qkv_comm
+	layer_2_qkv_gpu2 -> layer_2_qkv_comm
+	layer_2_qkv_gpu3 -> layer_2_qkv_comm
+	layer_2_qkv_gpu4 -> layer_2_qkv_comm
+	layer_2_qkv_gpu5 -> layer_2_qkv_comm
+	layer_2_qkv_gpu6 -> layer_2_qkv_comm
+	layer_2_qkv_gpu7 -> layer_2_qkv_comm
+	layer_2_qkv_comm -> layer_2_attn_comp_gpu0
+	layer_2_qkv_comm -> layer_2_attn_comp_gpu1
+	layer_2_qkv_comm -> layer_2_attn_comp_gpu2
+	layer_2_qkv_comm -> layer_2_attn_comp_gpu3
+	layer_2_qkv_comm -> layer_2_attn_comp_gpu4
+	layer_2_qkv_comm -> layer_2_attn_comp_gpu5
+	layer_2_qkv_comm -> layer_2_attn_comp_gpu6
+	layer_2_qkv_comm -> layer_2_attn_comp_gpu7
+	layer_2_attn_comp_gpu0 -> layer_2_attn_out_gpu0
+	layer_2_attn_comp_gpu1 -> layer_2_attn_out_gpu1
+	layer_2_attn_comp_gpu2 -> layer_2_attn_out_gpu2
+	layer_2_attn_comp_gpu3 -> layer_2_attn_out_gpu3
+	layer_2_attn_comp_gpu4 -> layer_2_attn_out_gpu4
+	layer_2_attn_comp_gpu5 -> layer_2_attn_out_gpu5
+	layer_2_attn_comp_gpu6 -> layer_2_attn_out_gpu6
+	layer_2_attn_comp_gpu7 -> layer_2_attn_out_gpu7
+	layer_2_attn_out_gpu0 -> layer_2_attn_allreduce
+	layer_2_attn_out_gpu1 -> layer_2_attn_allreduce
+	layer_2_attn_out_gpu2 -> layer_2_attn_allreduce
+	layer_2_attn_out_gpu3 -> layer_2_attn_allreduce
+	layer_2_attn_out_gpu4 -> layer_2_attn_allreduce
+	layer_2_attn_out_gpu5 -> layer_2_attn_allreduce
+	layer_2_attn_out_gpu6 -> layer_2_attn_allreduce
+	layer_2_attn_out_gpu7 -> layer_2_attn_allreduce
+	layer_2_attn_allreduce -> layer_2_residual1
+	layer_2_residual1 -> layer_2_ln1
+	layer_2_ln1 -> layer_2_mlp1_gpu0
+	layer_2_mlp1_gpu0 -> layer_2_gelu_gpu0
+	layer_2_gelu_gpu0 -> layer_2_mlp2_gpu0
+	layer_2_mlp2_gpu0 -> layer_2_mlp_allreduce
+	layer_2_ln1 -> layer_2_mlp1_gpu1
+	layer_2_mlp1_gpu1 -> layer_2_gelu_gpu1
+	layer_2_gelu_gpu1 -> layer_2_mlp2_gpu1
+	layer_2_mlp2_gpu1 -> layer_2_mlp_allreduce
+	layer_2_ln1 -> layer_2_mlp1_gpu2
+	layer_2_mlp1_gpu2 -> layer_2_gelu_gpu2
+	layer_2_gelu_gpu2 -> layer_2_mlp2_gpu2
+	layer_2_mlp2_gpu2 -> layer_2_mlp_allreduce
+	layer_2_ln1 -> layer_2_mlp1_gpu3
+	layer_2_mlp1_gpu3 -> layer_2_gelu_gpu3
+	layer_2_gelu_gpu3 -> layer_2_mlp2_gpu3
+	layer_2_mlp2_gpu3 -> layer_2_mlp_allreduce
+	layer_2_ln1 -> layer_2_mlp1_gpu4
+	layer_2_mlp1_gpu4 -> layer_2_gelu_gpu4
+	layer_2_gelu_gpu4 -> layer_2_mlp2_gpu4
+	layer_2_mlp2_gpu4 -> layer_2_mlp_allreduce
+	layer_2_ln1 -> layer_2_mlp1_gpu5
+	layer_2_mlp1_gpu5 -> layer_2_gelu_gpu5
+	layer_2_gelu_gpu5 -> layer_2_mlp2_gpu5
+	layer_2_mlp2_gpu5 -> layer_2_mlp_allreduce
+	layer_2_ln1 -> layer_2_mlp1_gpu6
+	layer_2_mlp1_gpu6 -> layer_2_gelu_gpu6
+	layer_2_gelu_gpu6 -> layer_2_mlp2_gpu6
+	layer_2_mlp2_gpu6 -> layer_2_mlp_allreduce
+	layer_2_ln1 -> layer_2_mlp1_gpu7
+	layer_2_mlp1_gpu7 -> layer_2_gelu_gpu7
+	layer_2_gelu_gpu7 -> layer_2_mlp2_gpu7
+	layer_2_mlp2_gpu7 -> layer_2_mlp_allreduce
+	layer_2_mlp_allreduce -> layer_2_residual2
+	layer_2_residual2 -> layer_2_ln2
+	layer_2_ln2 -> layer_3_qkv_gpu0
+	layer_3_qkv_gpu0 -> layer_3_qkv_comm
+	layer_3_qkv_gpu1 -> layer_3_qkv_comm
+	layer_3_qkv_gpu2 -> layer_3_qkv_comm
+	layer_3_qkv_gpu3 -> layer_3_qkv_comm
+	layer_3_qkv_gpu4 -> layer_3_qkv_comm
+	layer_3_qkv_gpu5 -> layer_3_qkv_comm
+	layer_3_qkv_gpu6 -> layer_3_qkv_comm
+	layer_3_qkv_gpu7 -> layer_3_qkv_comm
+	layer_3_qkv_comm -> layer_3_attn_comp_gpu0
+	layer_3_qkv_comm -> layer_3_attn_comp_gpu1
+	layer_3_qkv_comm -> layer_3_attn_comp_gpu2
+	layer_3_qkv_comm -> layer_3_attn_comp_gpu3
+	layer_3_qkv_comm -> layer_3_attn_comp_gpu4
+	layer_3_qkv_comm -> layer_3_attn_comp_gpu5
+	layer_3_qkv_comm -> layer_3_attn_comp_gpu6
+	layer_3_qkv_comm -> layer_3_attn_comp_gpu7
+	layer_3_attn_comp_gpu0 -> layer_3_attn_out_gpu0
+	layer_3_attn_comp_gpu1 -> layer_3_attn_out_gpu1
+	layer_3_attn_comp_gpu2 -> layer_3_attn_out_gpu2
+	layer_3_attn_comp_gpu3 -> layer_3_attn_out_gpu3
+	layer_3_attn_comp_gpu4 -> layer_3_attn_out_gpu4
+	layer_3_attn_comp_gpu5 -> layer_3_attn_out_gpu5
+	layer_3_attn_comp_gpu6 -> layer_3_attn_out_gpu6
+	layer_3_attn_comp_gpu7 -> layer_3_attn_out_gpu7
+	layer_3_attn_out_gpu0 -> layer_3_attn_allreduce
+	layer_3_attn_out_gpu1 -> layer_3_attn_allreduce
+	layer_3_attn_out_gpu2 -> layer_3_attn_allreduce
+	layer_3_attn_out_gpu3 -> layer_3_attn_allreduce
+	layer_3_attn_out_gpu4 -> layer_3_attn_allreduce
+	layer_3_attn_out_gpu5 -> layer_3_attn_allreduce
+	layer_3_attn_out_gpu6 -> layer_3_attn_allreduce
+	layer_3_attn_out_gpu7 -> layer_3_attn_allreduce
+	layer_3_attn_allreduce -> layer_3_residual1
+	layer_3_residual1 -> layer_3_ln1
+	layer_3_ln1 -> layer_3_mlp1_gpu0
+	layer_3_mlp1_gpu0 -> layer_3_gelu_gpu0
+	layer_3_gelu_gpu0 -> layer_3_mlp2_gpu0
+	layer_3_mlp2_gpu0 -> layer_3_mlp_allreduce
+	layer_3_ln1 -> layer_3_mlp1_gpu1
+	layer_3_mlp1_gpu1 -> layer_3_gelu_gpu1
+	layer_3_gelu_gpu1 -> layer_3_mlp2_gpu1
+	layer_3_mlp2_gpu1 -> layer_3_mlp_allreduce
+	layer_3_ln1 -> layer_3_mlp1_gpu2
+	layer_3_mlp1_gpu2 -> layer_3_gelu_gpu2
+	layer_3_gelu_gpu2 -> layer_3_mlp2_gpu2
+	layer_3_mlp2_gpu2 -> layer_3_mlp_allreduce
+	layer_3_ln1 -> layer_3_mlp1_gpu3
+	layer_3_mlp1_gpu3 -> layer_3_gelu_gpu3
+	layer_3_gelu_gpu3 -> layer_3_mlp2_gpu3
+	layer_3_mlp2_gpu3 -> layer_3_mlp_allreduce
+	layer_3_ln1 -> layer_3_mlp1_gpu4
+	layer_3_mlp1_gpu4 -> layer_3_gelu_gpu4
+	layer_3_gelu_gpu4 -> layer_3_mlp2_gpu4
+	layer_3_mlp2_gpu4 -> layer_3_mlp_allreduce
+	layer_3_ln1 -> layer_3_mlp1_gpu5
+	layer_3_mlp1_gpu5 -> layer_3_gelu_gpu5
+	layer_3_gelu_gpu5 -> layer_3_mlp2_gpu5
+	layer_3_mlp2_gpu5 -> layer_3_mlp_allreduce
+	layer_3_ln1 -> layer_3_mlp1_gpu6
+	layer_3_mlp1_gpu6 -> layer_3_gelu_gpu6
+	layer_3_gelu_gpu6 -> layer_3_mlp2_gpu6
+	layer_3_mlp2_gpu6 -> layer_3_mlp_allreduce
+	layer_3_ln1 -> layer_3_mlp1_gpu7
+	layer_3_mlp1_gpu7 -> layer_3_gelu_gpu7
+	layer_3_gelu_gpu7 -> layer_3_mlp2_gpu7
+	layer_3_mlp2_gpu7 -> layer_3_mlp_allreduce
+	layer_3_mlp_allreduce -> layer_3_residual2
+	layer_3_residual2 -> layer_3_ln2
+	layer_3_ln2 -> layer_4_qkv_gpu0
+	layer_4_qkv_gpu0 -> layer_4_qkv_comm
+	layer_4_qkv_gpu1 -> layer_4_qkv_comm
+	layer_4_qkv_gpu2 -> layer_4_qkv_comm
+	layer_4_qkv_gpu3 -> layer_4_qkv_comm
+	layer_4_qkv_gpu4 -> layer_4_qkv_comm
+	layer_4_qkv_gpu5 -> layer_4_qkv_comm
+	layer_4_qkv_gpu6 -> layer_4_qkv_comm
+	layer_4_qkv_gpu7 -> layer_4_qkv_comm
+	layer_4_qkv_comm -> layer_4_attn_comp_gpu0
+	layer_4_qkv_comm -> layer_4_attn_comp_gpu1
+	layer_4_qkv_comm -> layer_4_attn_comp_gpu2
+	layer_4_qkv_comm -> layer_4_attn_comp_gpu3
+	layer_4_qkv_comm -> layer_4_attn_comp_gpu4
+	layer_4_qkv_comm -> layer_4_attn_comp_gpu5
+	layer_4_qkv_comm -> layer_4_attn_comp_gpu6
+	layer_4_qkv_comm -> layer_4_attn_comp_gpu7
+	layer_4_attn_comp_gpu0 -> layer_4_attn_out_gpu0
+	layer_4_attn_comp_gpu1 -> layer_4_attn_out_gpu1
+	layer_4_attn_comp_gpu2 -> layer_4_attn_out_gpu2
+	layer_4_attn_comp_gpu3 -> layer_4_attn_out_gpu3
+	layer_4_attn_comp_gpu4 -> layer_4_attn_out_gpu4
+	layer_4_attn_comp_gpu5 -> layer_4_attn_out_gpu5
+	layer_4_attn_comp_gpu6 -> layer_4_attn_out_gpu6
+	layer_4_attn_comp_gpu7 -> layer_4_attn_out_gpu7
+	layer_4_attn_out_gpu0 -> layer_4_attn_allreduce
+	layer_4_attn_out_gpu1 -> layer_4_attn_allreduce
+	layer_4_attn_out_gpu2 -> layer_4_attn_allreduce
+	layer_4_attn_out_gpu3 -> layer_4_attn_allreduce
+	layer_4_attn_out_gpu4 -> layer_4_attn_allreduce
+	layer_4_attn_out_gpu5 -> layer_4_attn_allreduce
+	layer_4_attn_out_gpu6 -> layer_4_attn_allreduce
+	layer_4_attn_out_gpu7 -> layer_4_attn_allreduce
+	layer_4_attn_allreduce -> layer_4_residual1
+	layer_4_residual1 -> layer_4_ln1
+	layer_4_ln1 -> layer_4_mlp1_gpu0
+	layer_4_mlp1_gpu0 -> layer_4_gelu_gpu0
+	layer_4_gelu_gpu0 -> layer_4_mlp2_gpu0
+	layer_4_mlp2_gpu0 -> layer_4_mlp_allreduce
+	layer_4_ln1 -> layer_4_mlp1_gpu1
+	layer_4_mlp1_gpu1 -> layer_4_gelu_gpu1
+	layer_4_gelu_gpu1 -> layer_4_mlp2_gpu1
+	layer_4_mlp2_gpu1 -> layer_4_mlp_allreduce
+	layer_4_ln1 -> layer_4_mlp1_gpu2
+	layer_4_mlp1_gpu2 -> layer_4_gelu_gpu2
+	layer_4_gelu_gpu2 -> layer_4_mlp2_gpu2
+	layer_4_mlp2_gpu2 -> layer_4_mlp_allreduce
+	layer_4_ln1 -> layer_4_mlp1_gpu3
+	layer_4_mlp1_gpu3 -> layer_4_gelu_gpu3
+	layer_4_gelu_gpu3 -> layer_4_mlp2_gpu3
+	layer_4_mlp2_gpu3 -> layer_4_mlp_allreduce
+	layer_4_ln1 -> layer_4_mlp1_gpu4
+	layer_4_mlp1_gpu4 -> layer_4_gelu_gpu4
+	layer_4_gelu_gpu4 -> layer_4_mlp2_gpu4
+	layer_4_mlp2_gpu4 -> layer_4_mlp_allreduce
+	layer_4_ln1 -> layer_4_mlp1_gpu5
+	layer_4_mlp1_gpu5 -> layer_4_gelu_gpu5
+	layer_4_gelu_gpu5 -> layer_4_mlp2_gpu5
+	layer_4_mlp2_gpu5 -> layer_4_mlp_allreduce
+	layer_4_ln1 -> layer_4_mlp1_gpu6
+	layer_4_mlp1_gpu6 -> layer_4_gelu_gpu6
+	layer_4_gelu_gpu6 -> layer_4_mlp2_gpu6
+	layer_4_mlp2_gpu6 -> layer_4_mlp_allreduce
+	layer_4_ln1 -> layer_4_mlp1_gpu7
+	layer_4_mlp1_gpu7 -> layer_4_gelu_gpu7
+	layer_4_gelu_gpu7 -> layer_4_mlp2_gpu7
+	layer_4_mlp2_gpu7 -> layer_4_mlp_allreduce
+	layer_4_mlp_allreduce -> layer_4_residual2
+	layer_4_residual2 -> layer_4_ln2
+	layer_4_ln2 -> layer_5_qkv_gpu0
+	layer_5_qkv_gpu0 -> layer_5_qkv_comm
+	layer_5_qkv_gpu1 -> layer_5_qkv_comm
+	layer_5_qkv_gpu2 -> layer_5_qkv_comm
+	layer_5_qkv_gpu3 -> layer_5_qkv_comm
+	layer_5_qkv_gpu4 -> layer_5_qkv_comm
+	layer_5_qkv_gpu5 -> layer_5_qkv_comm
+	layer_5_qkv_gpu6 -> layer_5_qkv_comm
+	layer_5_qkv_gpu7 -> layer_5_qkv_comm
+	layer_5_qkv_comm -> layer_5_attn_comp_gpu0
+	layer_5_qkv_comm -> layer_5_attn_comp_gpu1
+	layer_5_qkv_comm -> layer_5_attn_comp_gpu2
+	layer_5_qkv_comm -> layer_5_attn_comp_gpu3
+	layer_5_qkv_comm -> layer_5_attn_comp_gpu4
+	layer_5_qkv_comm -> layer_5_attn_comp_gpu5
+	layer_5_qkv_comm -> layer_5_attn_comp_gpu6
+	layer_5_qkv_comm -> layer_5_attn_comp_gpu7
+	layer_5_attn_comp_gpu0 -> layer_5_attn_out_gpu0
+	layer_5_attn_comp_gpu1 -> layer_5_attn_out_gpu1
+	layer_5_attn_comp_gpu2 -> layer_5_attn_out_gpu2
+	layer_5_attn_comp_gpu3 -> layer_5_attn_out_gpu3
+	layer_5_attn_comp_gpu4 -> layer_5_attn_out_gpu4
+	layer_5_attn_comp_gpu5 -> layer_5_attn_out_gpu5
+	layer_5_attn_comp_gpu6 -> layer_5_attn_out_gpu6
+	layer_5_attn_comp_gpu7 -> layer_5_attn_out_gpu7
+	layer_5_attn_out_gpu0 -> layer_5_attn_allreduce
+	layer_5_attn_out_gpu1 -> layer_5_attn_allreduce
+	layer_5_attn_out_gpu2 -> layer_5_attn_allreduce
+	layer_5_attn_out_gpu3 -> layer_5_attn_allreduce
+	layer_5_attn_out_gpu4 -> layer_5_attn_allreduce
+	layer_5_attn_out_gpu5 -> layer_5_attn_allreduce
+	layer_5_attn_out_gpu6 -> layer_5_attn_allreduce
+	layer_5_attn_out_gpu7 -> layer_5_attn_allreduce
+	layer_5_attn_allreduce -> layer_5_residual1
+	layer_5_residual1 -> layer_5_ln1
+	layer_5_ln1 -> layer_5_mlp1_gpu0
+	layer_5_mlp1_gpu0 -> layer_5_gelu_gpu0
+	layer_5_gelu_gpu0 -> layer_5_mlp2_gpu0
+	layer_5_mlp2_gpu0 -> layer_5_mlp_allreduce
+	layer_5_ln1 -> layer_5_mlp1_gpu1
+	layer_5_mlp1_gpu1 -> layer_5_gelu_gpu1
+	layer_5_gelu_gpu1 -> layer_5_mlp2_gpu1
+	layer_5_mlp2_gpu1 -> layer_5_mlp_allreduce
+	layer_5_ln1 -> layer_5_mlp1_gpu2
+	layer_5_mlp1_gpu2 -> layer_5_gelu_gpu2
+	layer_5_gelu_gpu2 -> layer_5_mlp2_gpu2
+	layer_5_mlp2_gpu2 -> layer_5_mlp_allreduce
+	layer_5_ln1 -> layer_5_mlp1_gpu3
+	layer_5_mlp1_gpu3 -> layer_5_gelu_gpu3
+	layer_5_gelu_gpu3 -> layer_5_mlp2_gpu3
+	layer_5_mlp2_gpu3 -> layer_5_mlp_allreduce
+	layer_5_ln1 -> layer_5_mlp1_gpu4
+	layer_5_mlp1_gpu4 -> layer_5_gelu_gpu4
+	layer_5_gelu_gpu4 -> layer_5_mlp2_gpu4
+	layer_5_mlp2_gpu4 -> layer_5_mlp_allreduce
+	layer_5_ln1 -> layer_5_mlp1_gpu5
+	layer_5_mlp1_gpu5 -> layer_5_gelu_gpu5
+	layer_5_gelu_gpu5 -> layer_5_mlp2_gpu5
+	layer_5_mlp2_gpu5 -> layer_5_mlp_allreduce
+	layer_5_ln1 -> layer_5_mlp1_gpu6
+	layer_5_mlp1_gpu6 -> layer_5_gelu_gpu6
+	layer_5_gelu_gpu6 -> layer_5_mlp2_gpu6
+	layer_5_mlp2_gpu6 -> layer_5_mlp_allreduce
+	layer_5_ln1 -> layer_5_mlp1_gpu7
+	layer_5_mlp1_gpu7 -> layer_5_gelu_gpu7
+	layer_5_gelu_gpu7 -> layer_5_mlp2_gpu7
+	layer_5_mlp2_gpu7 -> layer_5_mlp_allreduce
+	layer_5_mlp_allreduce -> layer_5_residual2
+	layer_5_residual2 -> layer_5_ln2
+	layer_5_ln2 -> layer_6_qkv_gpu0
+	layer_6_qkv_gpu0 -> layer_6_qkv_comm
+	layer_6_qkv_gpu1 -> layer_6_qkv_comm
+	layer_6_qkv_gpu2 -> layer_6_qkv_comm
+	layer_6_qkv_gpu3 -> layer_6_qkv_comm
+	layer_6_qkv_gpu4 -> layer_6_qkv_comm
+	layer_6_qkv_gpu5 -> layer_6_qkv_comm
+	layer_6_qkv_gpu6 -> layer_6_qkv_comm
+	layer_6_qkv_gpu7 -> layer_6_qkv_comm
+	layer_6_qkv_comm -> layer_6_attn_comp_gpu0
+	layer_6_qkv_comm -> layer_6_attn_comp_gpu1
+	layer_6_qkv_comm -> layer_6_attn_comp_gpu2
+	layer_6_qkv_comm -> layer_6_attn_comp_gpu3
+	layer_6_qkv_comm -> layer_6_attn_comp_gpu4
+	layer_6_qkv_comm -> layer_6_attn_comp_gpu5
+	layer_6_qkv_comm -> layer_6_attn_comp_gpu6
+	layer_6_qkv_comm -> layer_6_attn_comp_gpu7
+	layer_6_attn_comp_gpu0 -> layer_6_attn_out_gpu0
+	layer_6_attn_comp_gpu1 -> layer_6_attn_out_gpu1
+	layer_6_attn_comp_gpu2 -> layer_6_attn_out_gpu2
+	layer_6_attn_comp_gpu3 -> layer_6_attn_out_gpu3
+	layer_6_attn_comp_gpu4 -> layer_6_attn_out_gpu4
+	layer_6_attn_comp_gpu5 -> layer_6_attn_out_gpu5
+	layer_6_attn_comp_gpu6 -> layer_6_attn_out_gpu6
+	layer_6_attn_comp_gpu7 -> layer_6_attn_out_gpu7
+	layer_6_attn_out_gpu0 -> layer_6_attn_allreduce
+	layer_6_attn_out_gpu1 -> layer_6_attn_allreduce
+	layer_6_attn_out_gpu2 -> layer_6_attn_allreduce
+	layer_6_attn_out_gpu3 -> layer_6_attn_allreduce
+	layer_6_attn_out_gpu4 -> layer_6_attn_allreduce
+	layer_6_attn_out_gpu5 -> layer_6_attn_allreduce
+	layer_6_attn_out_gpu6 -> layer_6_attn_allreduce
+	layer_6_attn_out_gpu7 -> layer_6_attn_allreduce
+	layer_6_attn_allreduce -> layer_6_residual1
+	layer_6_residual1 -> layer_6_ln1
+	layer_6_ln1 -> layer_6_mlp1_gpu0
+	layer_6_mlp1_gpu0 -> layer_6_gelu_gpu0
+	layer_6_gelu_gpu0 -> layer_6_mlp2_gpu0
+	layer_6_mlp2_gpu0 -> layer_6_mlp_allreduce
+	layer_6_ln1 -> layer_6_mlp1_gpu1
+	layer_6_mlp1_gpu1 -> layer_6_gelu_gpu1
+	layer_6_gelu_gpu1 -> layer_6_mlp2_gpu1
+	layer_6_mlp2_gpu1 -> layer_6_mlp_allreduce
+	layer_6_ln1 -> layer_6_mlp1_gpu2
+	layer_6_mlp1_gpu2 -> layer_6_gelu_gpu2
+	layer_6_gelu_gpu2 -> layer_6_mlp2_gpu2
+	layer_6_mlp2_gpu2 -> layer_6_mlp_allreduce
+	layer_6_ln1 -> layer_6_mlp1_gpu3
+	layer_6_mlp1_gpu3 -> layer_6_gelu_gpu3
+	layer_6_gelu_gpu3 -> layer_6_mlp2_gpu3
+	layer_6_mlp2_gpu3 -> layer_6_mlp_allreduce
+	layer_6_ln1 -> layer_6_mlp1_gpu4
+	layer_6_mlp1_gpu4 -> layer_6_gelu_gpu4
+	layer_6_gelu_gpu4 -> layer_6_mlp2_gpu4
+	layer_6_mlp2_gpu4 -> layer_6_mlp_allreduce
+	layer_6_ln1 -> layer_6_mlp1_gpu5
+	layer_6_mlp1_gpu5 -> layer_6_gelu_gpu5
+	layer_6_gelu_gpu5 -> layer_6_mlp2_gpu5
+	layer_6_mlp2_gpu5 -> layer_6_mlp_allreduce
+	layer_6_ln1 -> layer_6_mlp1_gpu6
+	layer_6_mlp1_gpu6 -> layer_6_gelu_gpu6
+	layer_6_gelu_gpu6 -> layer_6_mlp2_gpu6
+	layer_6_mlp2_gpu6 -> layer_6_mlp_allreduce
+	layer_6_ln1 -> layer_6_mlp1_gpu7
+	layer_6_mlp1_gpu7 -> layer_6_gelu_gpu7
+	layer_6_gelu_gpu7 -> layer_6_mlp2_gpu7
+	layer_6_mlp2_gpu7 -> layer_6_mlp_allreduce
+	layer_6_mlp_allreduce -> layer_6_residual2
+	layer_6_residual2 -> layer_6_ln2
+	layer_6_ln2 -> layer_7_qkv_gpu0
+	layer_7_qkv_gpu0 -> layer_7_qkv_comm
+	layer_7_qkv_gpu1 -> layer_7_qkv_comm
+	layer_7_qkv_gpu2 -> layer_7_qkv_comm
+	layer_7_qkv_gpu3 -> layer_7_qkv_comm
+	layer_7_qkv_gpu4 -> layer_7_qkv_comm
+	layer_7_qkv_gpu5 -> layer_7_qkv_comm
+	layer_7_qkv_gpu6 -> layer_7_qkv_comm
+	layer_7_qkv_gpu7 -> layer_7_qkv_comm
+	layer_7_qkv_comm -> layer_7_attn_comp_gpu0
+	layer_7_qkv_comm -> layer_7_attn_comp_gpu1
+	layer_7_qkv_comm -> layer_7_attn_comp_gpu2
+	layer_7_qkv_comm -> layer_7_attn_comp_gpu3
+	layer_7_qkv_comm -> layer_7_attn_comp_gpu4
+	layer_7_qkv_comm -> layer_7_attn_comp_gpu5
+	layer_7_qkv_comm -> layer_7_attn_comp_gpu6
+	layer_7_qkv_comm -> layer_7_attn_comp_gpu7
+	layer_7_attn_comp_gpu0 -> layer_7_attn_out_gpu0
+	layer_7_attn_comp_gpu1 -> layer_7_attn_out_gpu1
+	layer_7_attn_comp_gpu2 -> layer_7_attn_out_gpu2
+	layer_7_attn_comp_gpu3 -> layer_7_attn_out_gpu3
+	layer_7_attn_comp_gpu4 -> layer_7_attn_out_gpu4
+	layer_7_attn_comp_gpu5 -> layer_7_attn_out_gpu5
+	layer_7_attn_comp_gpu6 -> layer_7_attn_out_gpu6
+	layer_7_attn_comp_gpu7 -> layer_7_attn_out_gpu7
+	layer_7_attn_out_gpu0 -> layer_7_attn_allreduce
+	layer_7_attn_out_gpu1 -> layer_7_attn_allreduce
+	layer_7_attn_out_gpu2 -> layer_7_attn_allreduce
+	layer_7_attn_out_gpu3 -> layer_7_attn_allreduce
+	layer_7_attn_out_gpu4 -> layer_7_attn_allreduce
+	layer_7_attn_out_gpu5 -> layer_7_attn_allreduce
+	layer_7_attn_out_gpu6 -> layer_7_attn_allreduce
+	layer_7_attn_out_gpu7 -> layer_7_attn_allreduce
+	layer_7_attn_allreduce -> layer_7_residual1
+	layer_7_residual1 -> layer_7_ln1
+	layer_7_ln1 -> layer_7_mlp1_gpu0
+	layer_7_mlp1_gpu0 -> layer_7_gelu_gpu0
+	layer_7_gelu_gpu0 -> layer_7_mlp2_gpu0
+	layer_7_mlp2_gpu0 -> layer_7_mlp_allreduce
+	layer_7_ln1 -> layer_7_mlp1_gpu1
+	layer_7_mlp1_gpu1 -> layer_7_gelu_gpu1
+	layer_7_gelu_gpu1 -> layer_7_mlp2_gpu1
+	layer_7_mlp2_gpu1 -> layer_7_mlp_allreduce
+	layer_7_ln1 -> layer_7_mlp1_gpu2
+	layer_7_mlp1_gpu2 -> layer_7_gelu_gpu2
+	layer_7_gelu_gpu2 -> layer_7_mlp2_gpu2
+	layer_7_mlp2_gpu2 -> layer_7_mlp_allreduce
+	layer_7_ln1 -> layer_7_mlp1_gpu3
+	layer_7_mlp1_gpu3 -> layer_7_gelu_gpu3
+	layer_7_gelu_gpu3 -> layer_7_mlp2_gpu3
+	layer_7_mlp2_gpu3 -> layer_7_mlp_allreduce
+	layer_7_ln1 -> layer_7_mlp1_gpu4
+	layer_7_mlp1_gpu4 -> layer_7_gelu_gpu4
+	layer_7_gelu_gpu4 -> layer_7_mlp2_gpu4
+	layer_7_mlp2_gpu4 -> layer_7_mlp_allreduce
+	layer_7_ln1 -> layer_7_mlp1_gpu5
+	layer_7_mlp1_gpu5 -> layer_7_gelu_gpu5
+	layer_7_gelu_gpu5 -> layer_7_mlp2_gpu5
+	layer_7_mlp2_gpu5 -> layer_7_mlp_allreduce
+	layer_7_ln1 -> layer_7_mlp1_gpu6
+	layer_7_mlp1_gpu6 -> layer_7_gelu_gpu6
+	layer_7_gelu_gpu6 -> layer_7_mlp2_gpu6
+	layer_7_mlp2_gpu6 -> layer_7_mlp_allreduce
+	layer_7_ln1 -> layer_7_mlp1_gpu7
+	layer_7_mlp1_gpu7 -> layer_7_gelu_gpu7
+	layer_7_gelu_gpu7 -> layer_7_mlp2_gpu7
+	layer_7_mlp2_gpu7 -> layer_7_mlp_allreduce
+	layer_7_mlp_allreduce -> layer_7_residual2
+	layer_7_residual2 -> layer_7_ln2
+	pipeline_comm_7_to_8 [label="Pipeline Send/Recv\nLayer 7 → 8" fillcolor=orange shape=ellipse]
+	layer_7_ln2 -> pipeline_comm_7_to_8
+	pipeline_comm_7_to_8 -> layer_8_qkv_gpu0
+	layer_8_qkv_gpu8 -> layer_8_qkv_comm
+	layer_8_qkv_gpu9 -> layer_8_qkv_comm
+	layer_8_qkv_gpu10 -> layer_8_qkv_comm
+	layer_8_qkv_gpu11 -> layer_8_qkv_comm
+	layer_8_qkv_gpu12 -> layer_8_qkv_comm
+	layer_8_qkv_gpu13 -> layer_8_qkv_comm
+	layer_8_qkv_gpu14 -> layer_8_qkv_comm
+	layer_8_qkv_gpu15 -> layer_8_qkv_comm
+	layer_8_qkv_comm -> layer_8_attn_comp_gpu8
+	layer_8_qkv_comm -> layer_8_attn_comp_gpu9
+	layer_8_qkv_comm -> layer_8_attn_comp_gpu10
+	layer_8_qkv_comm -> layer_8_attn_comp_gpu11
+	layer_8_qkv_comm -> layer_8_attn_comp_gpu12
+	layer_8_qkv_comm -> layer_8_attn_comp_gpu13
+	layer_8_qkv_comm -> layer_8_attn_comp_gpu14
+	layer_8_qkv_comm -> layer_8_attn_comp_gpu15
+	layer_8_attn_comp_gpu8 -> layer_8_attn_out_gpu8
+	layer_8_attn_comp_gpu9 -> layer_8_attn_out_gpu9
+	layer_8_attn_comp_gpu10 -> layer_8_attn_out_gpu10
+	layer_8_attn_comp_gpu11 -> layer_8_attn_out_gpu11
+	layer_8_attn_comp_gpu12 -> layer_8_attn_out_gpu12
+	layer_8_attn_comp_gpu13 -> layer_8_attn_out_gpu13
+	layer_8_attn_comp_gpu14 -> layer_8_attn_out_gpu14
+	layer_8_attn_comp_gpu15 -> layer_8_attn_out_gpu15
+	layer_8_attn_out_gpu8 -> layer_8_attn_allreduce
+	layer_8_attn_out_gpu9 -> layer_8_attn_allreduce
+	layer_8_attn_out_gpu10 -> layer_8_attn_allreduce
+	layer_8_attn_out_gpu11 -> layer_8_attn_allreduce
+	layer_8_attn_out_gpu12 -> layer_8_attn_allreduce
+	layer_8_attn_out_gpu13 -> layer_8_attn_allreduce
+	layer_8_attn_out_gpu14 -> layer_8_attn_allreduce
+	layer_8_attn_out_gpu15 -> layer_8_attn_allreduce
+	layer_8_attn_allreduce -> layer_8_residual1
+	layer_8_residual1 -> layer_8_ln1
+	layer_8_ln1 -> layer_8_mlp1_gpu8
+	layer_8_mlp1_gpu8 -> layer_8_gelu_gpu8
+	layer_8_gelu_gpu8 -> layer_8_mlp2_gpu8
+	layer_8_mlp2_gpu8 -> layer_8_mlp_allreduce
+	layer_8_ln1 -> layer_8_mlp1_gpu9
+	layer_8_mlp1_gpu9 -> layer_8_gelu_gpu9
+	layer_8_gelu_gpu9 -> layer_8_mlp2_gpu9
+	layer_8_mlp2_gpu9 -> layer_8_mlp_allreduce
+	layer_8_ln1 -> layer_8_mlp1_gpu10
+	layer_8_mlp1_gpu10 -> layer_8_gelu_gpu10
+	layer_8_gelu_gpu10 -> layer_8_mlp2_gpu10
+	layer_8_mlp2_gpu10 -> layer_8_mlp_allreduce
+	layer_8_ln1 -> layer_8_mlp1_gpu11
+	layer_8_mlp1_gpu11 -> layer_8_gelu_gpu11
+	layer_8_gelu_gpu11 -> layer_8_mlp2_gpu11
+	layer_8_mlp2_gpu11 -> layer_8_mlp_allreduce
+	layer_8_ln1 -> layer_8_mlp1_gpu12
+	layer_8_mlp1_gpu12 -> layer_8_gelu_gpu12
+	layer_8_gelu_gpu12 -> layer_8_mlp2_gpu12
+	layer_8_mlp2_gpu12 -> layer_8_mlp_allreduce
+	layer_8_ln1 -> layer_8_mlp1_gpu13
+	layer_8_mlp1_gpu13 -> layer_8_gelu_gpu13
+	layer_8_gelu_gpu13 -> layer_8_mlp2_gpu13
+	layer_8_mlp2_gpu13 -> layer_8_mlp_allreduce
+	layer_8_ln1 -> layer_8_mlp1_gpu14
+	layer_8_mlp1_gpu14 -> layer_8_gelu_gpu14
+	layer_8_gelu_gpu14 -> layer_8_mlp2_gpu14
+	layer_8_mlp2_gpu14 -> layer_8_mlp_allreduce
+	layer_8_ln1 -> layer_8_mlp1_gpu15
+	layer_8_mlp1_gpu15 -> layer_8_gelu_gpu15
+	layer_8_gelu_gpu15 -> layer_8_mlp2_gpu15
+	layer_8_mlp2_gpu15 -> layer_8_mlp_allreduce
+	layer_8_mlp_allreduce -> layer_8_residual2
+	layer_8_residual2 -> layer_8_ln2
+	layer_8_ln2 -> layer_9_qkv_gpu0
+	layer_9_qkv_gpu8 -> layer_9_qkv_comm
+	layer_9_qkv_gpu9 -> layer_9_qkv_comm
+	layer_9_qkv_gpu10 -> layer_9_qkv_comm
+	layer_9_qkv_gpu11 -> layer_9_qkv_comm
+	layer_9_qkv_gpu12 -> layer_9_qkv_comm
+	layer_9_qkv_gpu13 -> layer_9_qkv_comm
+	layer_9_qkv_gpu14 -> layer_9_qkv_comm
+	layer_9_qkv_gpu15 -> layer_9_qkv_comm
+	layer_9_qkv_comm -> layer_9_attn_comp_gpu8
+	layer_9_qkv_comm -> layer_9_attn_comp_gpu9
+	layer_9_qkv_comm -> layer_9_attn_comp_gpu10
+	layer_9_qkv_comm -> layer_9_attn_comp_gpu11
+	layer_9_qkv_comm -> layer_9_attn_comp_gpu12
+	layer_9_qkv_comm -> layer_9_attn_comp_gpu13
+	layer_9_qkv_comm -> layer_9_attn_comp_gpu14
+	layer_9_qkv_comm -> layer_9_attn_comp_gpu15
+	layer_9_attn_comp_gpu8 -> layer_9_attn_out_gpu8
+	layer_9_attn_comp_gpu9 -> layer_9_attn_out_gpu9
+	layer_9_attn_comp_gpu10 -> layer_9_attn_out_gpu10
+	layer_9_attn_comp_gpu11 -> layer_9_attn_out_gpu11
+	layer_9_attn_comp_gpu12 -> layer_9_attn_out_gpu12
+	layer_9_attn_comp_gpu13 -> layer_9_attn_out_gpu13
+	layer_9_attn_comp_gpu14 -> layer_9_attn_out_gpu14
+	layer_9_attn_comp_gpu15 -> layer_9_attn_out_gpu15
+	layer_9_attn_out_gpu8 -> layer_9_attn_allreduce
+	layer_9_attn_out_gpu9 -> layer_9_attn_allreduce
+	layer_9_attn_out_gpu10 -> layer_9_attn_allreduce
+	layer_9_attn_out_gpu11 -> layer_9_attn_allreduce
+	layer_9_attn_out_gpu12 -> layer_9_attn_allreduce
+	layer_9_attn_out_gpu13 -> layer_9_attn_allreduce
+	layer_9_attn_out_gpu14 -> layer_9_attn_allreduce
+	layer_9_attn_out_gpu15 -> layer_9_attn_allreduce
+	layer_9_attn_allreduce -> layer_9_residual1
+	layer_9_residual1 -> layer_9_ln1
+	layer_9_ln1 -> layer_9_mlp1_gpu8
+	layer_9_mlp1_gpu8 -> layer_9_gelu_gpu8
+	layer_9_gelu_gpu8 -> layer_9_mlp2_gpu8
+	layer_9_mlp2_gpu8 -> layer_9_mlp_allreduce
+	layer_9_ln1 -> layer_9_mlp1_gpu9
+	layer_9_mlp1_gpu9 -> layer_9_gelu_gpu9
+	layer_9_gelu_gpu9 -> layer_9_mlp2_gpu9
+	layer_9_mlp2_gpu9 -> layer_9_mlp_allreduce
+	layer_9_ln1 -> layer_9_mlp1_gpu10
+	layer_9_mlp1_gpu10 -> layer_9_gelu_gpu10
+	layer_9_gelu_gpu10 -> layer_9_mlp2_gpu10
+	layer_9_mlp2_gpu10 -> layer_9_mlp_allreduce
+	layer_9_ln1 -> layer_9_mlp1_gpu11
+	layer_9_mlp1_gpu11 -> layer_9_gelu_gpu11
+	layer_9_gelu_gpu11 -> layer_9_mlp2_gpu11
+	layer_9_mlp2_gpu11 -> layer_9_mlp_allreduce
+	layer_9_ln1 -> layer_9_mlp1_gpu12
+	layer_9_mlp1_gpu12 -> layer_9_gelu_gpu12
+	layer_9_gelu_gpu12 -> layer_9_mlp2_gpu12
+	layer_9_mlp2_gpu12 -> layer_9_mlp_allreduce
+	layer_9_ln1 -> layer_9_mlp1_gpu13
+	layer_9_mlp1_gpu13 -> layer_9_gelu_gpu13
+	layer_9_gelu_gpu13 -> layer_9_mlp2_gpu13
+	layer_9_mlp2_gpu13 -> layer_9_mlp_allreduce
+	layer_9_ln1 -> layer_9_mlp1_gpu14
+	layer_9_mlp1_gpu14 -> layer_9_gelu_gpu14
+	layer_9_gelu_gpu14 -> layer_9_mlp2_gpu14
+	layer_9_mlp2_gpu14 -> layer_9_mlp_allreduce
+	layer_9_ln1 -> layer_9_mlp1_gpu15
+	layer_9_mlp1_gpu15 -> layer_9_gelu_gpu15
+	layer_9_gelu_gpu15 -> layer_9_mlp2_gpu15
+	layer_9_mlp2_gpu15 -> layer_9_mlp_allreduce
+	layer_9_mlp_allreduce -> layer_9_residual2
+	layer_9_residual2 -> layer_9_ln2
+	layer_9_ln2 -> layer_10_qkv_gpu0
+	layer_10_qkv_gpu8 -> layer_10_qkv_comm
+	layer_10_qkv_gpu9 -> layer_10_qkv_comm
+	layer_10_qkv_gpu10 -> layer_10_qkv_comm
+	layer_10_qkv_gpu11 -> layer_10_qkv_comm
+	layer_10_qkv_gpu12 -> layer_10_qkv_comm
+	layer_10_qkv_gpu13 -> layer_10_qkv_comm
+	layer_10_qkv_gpu14 -> layer_10_qkv_comm
+	layer_10_qkv_gpu15 -> layer_10_qkv_comm
+	layer_10_qkv_comm -> layer_10_attn_comp_gpu8
+	layer_10_qkv_comm -> layer_10_attn_comp_gpu9
+	layer_10_qkv_comm -> layer_10_attn_comp_gpu10
+	layer_10_qkv_comm -> layer_10_attn_comp_gpu11
+	layer_10_qkv_comm -> layer_10_attn_comp_gpu12
+	layer_10_qkv_comm -> layer_10_attn_comp_gpu13
+	layer_10_qkv_comm -> layer_10_attn_comp_gpu14
+	layer_10_qkv_comm -> layer_10_attn_comp_gpu15
+	layer_10_attn_comp_gpu8 -> layer_10_attn_out_gpu8
+	layer_10_attn_comp_gpu9 -> layer_10_attn_out_gpu9
+	layer_10_attn_comp_gpu10 -> layer_10_attn_out_gpu10
+	layer_10_attn_comp_gpu11 -> layer_10_attn_out_gpu11
+	layer_10_attn_comp_gpu12 -> layer_10_attn_out_gpu12
+	layer_10_attn_comp_gpu13 -> layer_10_attn_out_gpu13
+	layer_10_attn_comp_gpu14 -> layer_10_attn_out_gpu14
+	layer_10_attn_comp_gpu15 -> layer_10_attn_out_gpu15
+	layer_10_attn_out_gpu8 -> layer_10_attn_allreduce
+	layer_10_attn_out_gpu9 -> layer_10_attn_allreduce
+	layer_10_attn_out_gpu10 -> layer_10_attn_allreduce
+	layer_10_attn_out_gpu11 -> layer_10_attn_allreduce
+	layer_10_attn_out_gpu12 -> layer_10_attn_allreduce
+	layer_10_attn_out_gpu13 -> layer_10_attn_allreduce
+	layer_10_attn_out_gpu14 -> layer_10_attn_allreduce
+	layer_10_attn_out_gpu15 -> layer_10_attn_allreduce
+	layer_10_attn_allreduce -> layer_10_residual1
+	layer_10_residual1 -> layer_10_ln1
+	layer_10_ln1 -> layer_10_mlp1_gpu8
+	layer_10_mlp1_gpu8 -> layer_10_gelu_gpu8
+	layer_10_gelu_gpu8 -> layer_10_mlp2_gpu8
+	layer_10_mlp2_gpu8 -> layer_10_mlp_allreduce
+	layer_10_ln1 -> layer_10_mlp1_gpu9
+	layer_10_mlp1_gpu9 -> layer_10_gelu_gpu9
+	layer_10_gelu_gpu9 -> layer_10_mlp2_gpu9
+	layer_10_mlp2_gpu9 -> layer_10_mlp_allreduce
+	layer_10_ln1 -> layer_10_mlp1_gpu10
+	layer_10_mlp1_gpu10 -> layer_10_gelu_gpu10
+	layer_10_gelu_gpu10 -> layer_10_mlp2_gpu10
+	layer_10_mlp2_gpu10 -> layer_10_mlp_allreduce
+	layer_10_ln1 -> layer_10_mlp1_gpu11
+	layer_10_mlp1_gpu11 -> layer_10_gelu_gpu11
+	layer_10_gelu_gpu11 -> layer_10_mlp2_gpu11
+	layer_10_mlp2_gpu11 -> layer_10_mlp_allreduce
+	layer_10_ln1 -> layer_10_mlp1_gpu12
+	layer_10_mlp1_gpu12 -> layer_10_gelu_gpu12
+	layer_10_gelu_gpu12 -> layer_10_mlp2_gpu12
+	layer_10_mlp2_gpu12 -> layer_10_mlp_allreduce
+	layer_10_ln1 -> layer_10_mlp1_gpu13
+	layer_10_mlp1_gpu13 -> layer_10_gelu_gpu13
+	layer_10_gelu_gpu13 -> layer_10_mlp2_gpu13
+	layer_10_mlp2_gpu13 -> layer_10_mlp_allreduce
+	layer_10_ln1 -> layer_10_mlp1_gpu14
+	layer_10_mlp1_gpu14 -> layer_10_gelu_gpu14
+	layer_10_gelu_gpu14 -> layer_10_mlp2_gpu14
+	layer_10_mlp2_gpu14 -> layer_10_mlp_allreduce
+	layer_10_ln1 -> layer_10_mlp1_gpu15
+	layer_10_mlp1_gpu15 -> layer_10_gelu_gpu15
+	layer_10_gelu_gpu15 -> layer_10_mlp2_gpu15
+	layer_10_mlp2_gpu15 -> layer_10_mlp_allreduce
+	layer_10_mlp_allreduce -> layer_10_residual2
+	layer_10_residual2 -> layer_10_ln2
+	layer_10_ln2 -> layer_11_qkv_gpu0
+	layer_11_qkv_gpu8 -> layer_11_qkv_comm
+	layer_11_qkv_gpu9 -> layer_11_qkv_comm
+	layer_11_qkv_gpu10 -> layer_11_qkv_comm
+	layer_11_qkv_gpu11 -> layer_11_qkv_comm
+	layer_11_qkv_gpu12 -> layer_11_qkv_comm
+	layer_11_qkv_gpu13 -> layer_11_qkv_comm
+	layer_11_qkv_gpu14 -> layer_11_qkv_comm
+	layer_11_qkv_gpu15 -> layer_11_qkv_comm
+	layer_11_qkv_comm -> layer_11_attn_comp_gpu8
+	layer_11_qkv_comm -> layer_11_attn_comp_gpu9
+	layer_11_qkv_comm -> layer_11_attn_comp_gpu10
+	layer_11_qkv_comm -> layer_11_attn_comp_gpu11
+	layer_11_qkv_comm -> layer_11_attn_comp_gpu12
+	layer_11_qkv_comm -> layer_11_attn_comp_gpu13
+	layer_11_qkv_comm -> layer_11_attn_comp_gpu14
+	layer_11_qkv_comm -> layer_11_attn_comp_gpu15
+	layer_11_attn_comp_gpu8 -> layer_11_attn_out_gpu8
+	layer_11_attn_comp_gpu9 -> layer_11_attn_out_gpu9
+	layer_11_attn_comp_gpu10 -> layer_11_attn_out_gpu10
+	layer_11_attn_comp_gpu11 -> layer_11_attn_out_gpu11
+	layer_11_attn_comp_gpu12 -> layer_11_attn_out_gpu12
+	layer_11_attn_comp_gpu13 -> layer_11_attn_out_gpu13
+	layer_11_attn_comp_gpu14 -> layer_11_attn_out_gpu14
+	layer_11_attn_comp_gpu15 -> layer_11_attn_out_gpu15
+	layer_11_attn_out_gpu8 -> layer_11_attn_allreduce
+	layer_11_attn_out_gpu9 -> layer_11_attn_allreduce
+	layer_11_attn_out_gpu10 -> layer_11_attn_allreduce
+	layer_11_attn_out_gpu11 -> layer_11_attn_allreduce
+	layer_11_attn_out_gpu12 -> layer_11_attn_allreduce
+	layer_11_attn_out_gpu13 -> layer_11_attn_allreduce
+	layer_11_attn_out_gpu14 -> layer_11_attn_allreduce
+	layer_11_attn_out_gpu15 -> layer_11_attn_allreduce
+	layer_11_attn_allreduce -> layer_11_residual1
+	layer_11_residual1 -> layer_11_ln1
+	layer_11_ln1 -> layer_11_mlp1_gpu8
+	layer_11_mlp1_gpu8 -> layer_11_gelu_gpu8
+	layer_11_gelu_gpu8 -> layer_11_mlp2_gpu8
+	layer_11_mlp2_gpu8 -> layer_11_mlp_allreduce
+	layer_11_ln1 -> layer_11_mlp1_gpu9
+	layer_11_mlp1_gpu9 -> layer_11_gelu_gpu9
+	layer_11_gelu_gpu9 -> layer_11_mlp2_gpu9
+	layer_11_mlp2_gpu9 -> layer_11_mlp_allreduce
+	layer_11_ln1 -> layer_11_mlp1_gpu10
+	layer_11_mlp1_gpu10 -> layer_11_gelu_gpu10
+	layer_11_gelu_gpu10 -> layer_11_mlp2_gpu10
+	layer_11_mlp2_gpu10 -> layer_11_mlp_allreduce
+	layer_11_ln1 -> layer_11_mlp1_gpu11
+	layer_11_mlp1_gpu11 -> layer_11_gelu_gpu11
+	layer_11_gelu_gpu11 -> layer_11_mlp2_gpu11
+	layer_11_mlp2_gpu11 -> layer_11_mlp_allreduce
+	layer_11_ln1 -> layer_11_mlp1_gpu12
+	layer_11_mlp1_gpu12 -> layer_11_gelu_gpu12
+	layer_11_gelu_gpu12 -> layer_11_mlp2_gpu12
+	layer_11_mlp2_gpu12 -> layer_11_mlp_allreduce
+	layer_11_ln1 -> layer_11_mlp1_gpu13
+	layer_11_mlp1_gpu13 -> layer_11_gelu_gpu13
+	layer_11_gelu_gpu13 -> layer_11_mlp2_gpu13
+	layer_11_mlp2_gpu13 -> layer_11_mlp_allreduce
+	layer_11_ln1 -> layer_11_mlp1_gpu14
+	layer_11_mlp1_gpu14 -> layer_11_gelu_gpu14
+	layer_11_gelu_gpu14 -> layer_11_mlp2_gpu14
+	layer_11_mlp2_gpu14 -> layer_11_mlp_allreduce
+	layer_11_ln1 -> layer_11_mlp1_gpu15
+	layer_11_mlp1_gpu15 -> layer_11_gelu_gpu15
+	layer_11_gelu_gpu15 -> layer_11_mlp2_gpu15
+	layer_11_mlp2_gpu15 -> layer_11_mlp_allreduce
+	layer_11_mlp_allreduce -> layer_11_residual2
+	layer_11_residual2 -> layer_11_ln2
+	layer_11_ln2 -> layer_12_qkv_gpu0
+	layer_12_qkv_gpu8 -> layer_12_qkv_comm
+	layer_12_qkv_gpu9 -> layer_12_qkv_comm
+	layer_12_qkv_gpu10 -> layer_12_qkv_comm
+	layer_12_qkv_gpu11 -> layer_12_qkv_comm
+	layer_12_qkv_gpu12 -> layer_12_qkv_comm
+	layer_12_qkv_gpu13 -> layer_12_qkv_comm
+	layer_12_qkv_gpu14 -> layer_12_qkv_comm
+	layer_12_qkv_gpu15 -> layer_12_qkv_comm
+	layer_12_qkv_comm -> layer_12_attn_comp_gpu8
+	layer_12_qkv_comm -> layer_12_attn_comp_gpu9
+	layer_12_qkv_comm -> layer_12_attn_comp_gpu10
+	layer_12_qkv_comm -> layer_12_attn_comp_gpu11
+	layer_12_qkv_comm -> layer_12_attn_comp_gpu12
+	layer_12_qkv_comm -> layer_12_attn_comp_gpu13
+	layer_12_qkv_comm -> layer_12_attn_comp_gpu14
+	layer_12_qkv_comm -> layer_12_attn_comp_gpu15
+	layer_12_attn_comp_gpu8 -> layer_12_attn_out_gpu8
+	layer_12_attn_comp_gpu9 -> layer_12_attn_out_gpu9
+	layer_12_attn_comp_gpu10 -> layer_12_attn_out_gpu10
+	layer_12_attn_comp_gpu11 -> layer_12_attn_out_gpu11
+	layer_12_attn_comp_gpu12 -> layer_12_attn_out_gpu12
+	layer_12_attn_comp_gpu13 -> layer_12_attn_out_gpu13
+	layer_12_attn_comp_gpu14 -> layer_12_attn_out_gpu14
+	layer_12_attn_comp_gpu15 -> layer_12_attn_out_gpu15
+	layer_12_attn_out_gpu8 -> layer_12_attn_allreduce
+	layer_12_attn_out_gpu9 -> layer_12_attn_allreduce
+	layer_12_attn_out_gpu10 -> layer_12_attn_allreduce
+	layer_12_attn_out_gpu11 -> layer_12_attn_allreduce
+	layer_12_attn_out_gpu12 -> layer_12_attn_allreduce
+	layer_12_attn_out_gpu13 -> layer_12_attn_allreduce
+	layer_12_attn_out_gpu14 -> layer_12_attn_allreduce
+	layer_12_attn_out_gpu15 -> layer_12_attn_allreduce
+	layer_12_attn_allreduce -> layer_12_residual1
+	layer_12_residual1 -> layer_12_ln1
+	layer_12_ln1 -> layer_12_mlp1_gpu8
+	layer_12_mlp1_gpu8 -> layer_12_gelu_gpu8
+	layer_12_gelu_gpu8 -> layer_12_mlp2_gpu8
+	layer_12_mlp2_gpu8 -> layer_12_mlp_allreduce
+	layer_12_ln1 -> layer_12_mlp1_gpu9
+	layer_12_mlp1_gpu9 -> layer_12_gelu_gpu9
+	layer_12_gelu_gpu9 -> layer_12_mlp2_gpu9
+	layer_12_mlp2_gpu9 -> layer_12_mlp_allreduce
+	layer_12_ln1 -> layer_12_mlp1_gpu10
+	layer_12_mlp1_gpu10 -> layer_12_gelu_gpu10
+	layer_12_gelu_gpu10 -> layer_12_mlp2_gpu10
+	layer_12_mlp2_gpu10 -> layer_12_mlp_allreduce
+	layer_12_ln1 -> layer_12_mlp1_gpu11
+	layer_12_mlp1_gpu11 -> layer_12_gelu_gpu11
+	layer_12_gelu_gpu11 -> layer_12_mlp2_gpu11
+	layer_12_mlp2_gpu11 -> layer_12_mlp_allreduce
+	layer_12_ln1 -> layer_12_mlp1_gpu12
+	layer_12_mlp1_gpu12 -> layer_12_gelu_gpu12
+	layer_12_gelu_gpu12 -> layer_12_mlp2_gpu12
+	layer_12_mlp2_gpu12 -> layer_12_mlp_allreduce
+	layer_12_ln1 -> layer_12_mlp1_gpu13
+	layer_12_mlp1_gpu13 -> layer_12_gelu_gpu13
+	layer_12_gelu_gpu13 -> layer_12_mlp2_gpu13
+	layer_12_mlp2_gpu13 -> layer_12_mlp_allreduce
+	layer_12_ln1 -> layer_12_mlp1_gpu14
+	layer_12_mlp1_gpu14 -> layer_12_gelu_gpu14
+	layer_12_gelu_gpu14 -> layer_12_mlp2_gpu14
+	layer_12_mlp2_gpu14 -> layer_12_mlp_allreduce
+	layer_12_ln1 -> layer_12_mlp1_gpu15
+	layer_12_mlp1_gpu15 -> layer_12_gelu_gpu15
+	layer_12_gelu_gpu15 -> layer_12_mlp2_gpu15
+	layer_12_mlp2_gpu15 -> layer_12_mlp_allreduce
+	layer_12_mlp_allreduce -> layer_12_residual2
+	layer_12_residual2 -> layer_12_ln2
+	layer_12_ln2 -> layer_13_qkv_gpu0
+	layer_13_qkv_gpu8 -> layer_13_qkv_comm
+	layer_13_qkv_gpu9 -> layer_13_qkv_comm
+	layer_13_qkv_gpu10 -> layer_13_qkv_comm
+	layer_13_qkv_gpu11 -> layer_13_qkv_comm
+	layer_13_qkv_gpu12 -> layer_13_qkv_comm
+	layer_13_qkv_gpu13 -> layer_13_qkv_comm
+	layer_13_qkv_gpu14 -> layer_13_qkv_comm
+	layer_13_qkv_gpu15 -> layer_13_qkv_comm
+	layer_13_qkv_comm -> layer_13_attn_comp_gpu8
+	layer_13_qkv_comm -> layer_13_attn_comp_gpu9
+	layer_13_qkv_comm -> layer_13_attn_comp_gpu10
+	layer_13_qkv_comm -> layer_13_attn_comp_gpu11
+	layer_13_qkv_comm -> layer_13_attn_comp_gpu12
+	layer_13_qkv_comm -> layer_13_attn_comp_gpu13
+	layer_13_qkv_comm -> layer_13_attn_comp_gpu14
+	layer_13_qkv_comm -> layer_13_attn_comp_gpu15
+	layer_13_attn_comp_gpu8 -> layer_13_attn_out_gpu8
+	layer_13_attn_comp_gpu9 -> layer_13_attn_out_gpu9
+	layer_13_attn_comp_gpu10 -> layer_13_attn_out_gpu10
+	layer_13_attn_comp_gpu11 -> layer_13_attn_out_gpu11
+	layer_13_attn_comp_gpu12 -> layer_13_attn_out_gpu12
+	layer_13_attn_comp_gpu13 -> layer_13_attn_out_gpu13
+	layer_13_attn_comp_gpu14 -> layer_13_attn_out_gpu14
+	layer_13_attn_comp_gpu15 -> layer_13_attn_out_gpu15
+	layer_13_attn_out_gpu8 -> layer_13_attn_allreduce
+	layer_13_attn_out_gpu9 -> layer_13_attn_allreduce
+	layer_13_attn_out_gpu10 -> layer_13_attn_allreduce
+	layer_13_attn_out_gpu11 -> layer_13_attn_allreduce
+	layer_13_attn_out_gpu12 -> layer_13_attn_allreduce
+	layer_13_attn_out_gpu13 -> layer_13_attn_allreduce
+	layer_13_attn_out_gpu14 -> layer_13_attn_allreduce
+	layer_13_attn_out_gpu15 -> layer_13_attn_allreduce
+	layer_13_attn_allreduce -> layer_13_residual1
+	layer_13_residual1 -> layer_13_ln1
+	layer_13_ln1 -> layer_13_mlp1_gpu8
+	layer_13_mlp1_gpu8 -> layer_13_gelu_gpu8
+	layer_13_gelu_gpu8 -> layer_13_mlp2_gpu8
+	layer_13_mlp2_gpu8 -> layer_13_mlp_allreduce
+	layer_13_ln1 -> layer_13_mlp1_gpu9
+	layer_13_mlp1_gpu9 -> layer_13_gelu_gpu9
+	layer_13_gelu_gpu9 -> layer_13_mlp2_gpu9
+	layer_13_mlp2_gpu9 -> layer_13_mlp_allreduce
+	layer_13_ln1 -> layer_13_mlp1_gpu10
+	layer_13_mlp1_gpu10 -> layer_13_gelu_gpu10
+	layer_13_gelu_gpu10 -> layer_13_mlp2_gpu10
+	layer_13_mlp2_gpu10 -> layer_13_mlp_allreduce
+	layer_13_ln1 -> layer_13_mlp1_gpu11
+	layer_13_mlp1_gpu11 -> layer_13_gelu_gpu11
+	layer_13_gelu_gpu11 -> layer_13_mlp2_gpu11
+	layer_13_mlp2_gpu11 -> layer_13_mlp_allreduce
+	layer_13_ln1 -> layer_13_mlp1_gpu12
+	layer_13_mlp1_gpu12 -> layer_13_gelu_gpu12
+	layer_13_gelu_gpu12 -> layer_13_mlp2_gpu12
+	layer_13_mlp2_gpu12 -> layer_13_mlp_allreduce
+	layer_13_ln1 -> layer_13_mlp1_gpu13
+	layer_13_mlp1_gpu13 -> layer_13_gelu_gpu13
+	layer_13_gelu_gpu13 -> layer_13_mlp2_gpu13
+	layer_13_mlp2_gpu13 -> layer_13_mlp_allreduce
+	layer_13_ln1 -> layer_13_mlp1_gpu14
+	layer_13_mlp1_gpu14 -> layer_13_gelu_gpu14
+	layer_13_gelu_gpu14 -> layer_13_mlp2_gpu14
+	layer_13_mlp2_gpu14 -> layer_13_mlp_allreduce
+	layer_13_ln1 -> layer_13_mlp1_gpu15
+	layer_13_mlp1_gpu15 -> layer_13_gelu_gpu15
+	layer_13_gelu_gpu15 -> layer_13_mlp2_gpu15
+	layer_13_mlp2_gpu15 -> layer_13_mlp_allreduce
+	layer_13_mlp_allreduce -> layer_13_residual2
+	layer_13_residual2 -> layer_13_ln2
+	layer_13_ln2 -> layer_14_qkv_gpu0
+	layer_14_qkv_gpu8 -> layer_14_qkv_comm
+	layer_14_qkv_gpu9 -> layer_14_qkv_comm
+	layer_14_qkv_gpu10 -> layer_14_qkv_comm
+	layer_14_qkv_gpu11 -> layer_14_qkv_comm
+	layer_14_qkv_gpu12 -> layer_14_qkv_comm
+	layer_14_qkv_gpu13 -> layer_14_qkv_comm
+	layer_14_qkv_gpu14 -> layer_14_qkv_comm
+	layer_14_qkv_gpu15 -> layer_14_qkv_comm
+	layer_14_qkv_comm -> layer_14_attn_comp_gpu8
+	layer_14_qkv_comm -> layer_14_attn_comp_gpu9
+	layer_14_qkv_comm -> layer_14_attn_comp_gpu10
+	layer_14_qkv_comm -> layer_14_attn_comp_gpu11
+	layer_14_qkv_comm -> layer_14_attn_comp_gpu12
+	layer_14_qkv_comm -> layer_14_attn_comp_gpu13
+	layer_14_qkv_comm -> layer_14_attn_comp_gpu14
+	layer_14_qkv_comm -> layer_14_attn_comp_gpu15
+	layer_14_attn_comp_gpu8 -> layer_14_attn_out_gpu8
+	layer_14_attn_comp_gpu9 -> layer_14_attn_out_gpu9
+	layer_14_attn_comp_gpu10 -> layer_14_attn_out_gpu10
+	layer_14_attn_comp_gpu11 -> layer_14_attn_out_gpu11
+	layer_14_attn_comp_gpu12 -> layer_14_attn_out_gpu12
+	layer_14_attn_comp_gpu13 -> layer_14_attn_out_gpu13
+	layer_14_attn_comp_gpu14 -> layer_14_attn_out_gpu14
+	layer_14_attn_comp_gpu15 -> layer_14_attn_out_gpu15
+	layer_14_attn_out_gpu8 -> layer_14_attn_allreduce
+	layer_14_attn_out_gpu9 -> layer_14_attn_allreduce
+	layer_14_attn_out_gpu10 -> layer_14_attn_allreduce
+	layer_14_attn_out_gpu11 -> layer_14_attn_allreduce
+	layer_14_attn_out_gpu12 -> layer_14_attn_allreduce
+	layer_14_attn_out_gpu13 -> layer_14_attn_allreduce
+	layer_14_attn_out_gpu14 -> layer_14_attn_allreduce
+	layer_14_attn_out_gpu15 -> layer_14_attn_allreduce
+	layer_14_attn_allreduce -> layer_14_residual1
+	layer_14_residual1 -> layer_14_ln1
+	layer_14_ln1 -> layer_14_mlp1_gpu8
+	layer_14_mlp1_gpu8 -> layer_14_gelu_gpu8
+	layer_14_gelu_gpu8 -> layer_14_mlp2_gpu8
+	layer_14_mlp2_gpu8 -> layer_14_mlp_allreduce
+	layer_14_ln1 -> layer_14_mlp1_gpu9
+	layer_14_mlp1_gpu9 -> layer_14_gelu_gpu9
+	layer_14_gelu_gpu9 -> layer_14_mlp2_gpu9
+	layer_14_mlp2_gpu9 -> layer_14_mlp_allreduce
+	layer_14_ln1 -> layer_14_mlp1_gpu10
+	layer_14_mlp1_gpu10 -> layer_14_gelu_gpu10
+	layer_14_gelu_gpu10 -> layer_14_mlp2_gpu10
+	layer_14_mlp2_gpu10 -> layer_14_mlp_allreduce
+	layer_14_ln1 -> layer_14_mlp1_gpu11
+	layer_14_mlp1_gpu11 -> layer_14_gelu_gpu11
+	layer_14_gelu_gpu11 -> layer_14_mlp2_gpu11
+	layer_14_mlp2_gpu11 -> layer_14_mlp_allreduce
+	layer_14_ln1 -> layer_14_mlp1_gpu12
+	layer_14_mlp1_gpu12 -> layer_14_gelu_gpu12
+	layer_14_gelu_gpu12 -> layer_14_mlp2_gpu12
+	layer_14_mlp2_gpu12 -> layer_14_mlp_allreduce
+	layer_14_ln1 -> layer_14_mlp1_gpu13
+	layer_14_mlp1_gpu13 -> layer_14_gelu_gpu13
+	layer_14_gelu_gpu13 -> layer_14_mlp2_gpu13
+	layer_14_mlp2_gpu13 -> layer_14_mlp_allreduce
+	layer_14_ln1 -> layer_14_mlp1_gpu14
+	layer_14_mlp1_gpu14 -> layer_14_gelu_gpu14
+	layer_14_gelu_gpu14 -> layer_14_mlp2_gpu14
+	layer_14_mlp2_gpu14 -> layer_14_mlp_allreduce
+	layer_14_ln1 -> layer_14_mlp1_gpu15
+	layer_14_mlp1_gpu15 -> layer_14_gelu_gpu15
+	layer_14_gelu_gpu15 -> layer_14_mlp2_gpu15
+	layer_14_mlp2_gpu15 -> layer_14_mlp_allreduce
+	layer_14_mlp_allreduce -> layer_14_residual2
+	layer_14_residual2 -> layer_14_ln2
+	layer_14_ln2 -> layer_15_qkv_gpu0
+	layer_15_qkv_gpu8 -> layer_15_qkv_comm
+	layer_15_qkv_gpu9 -> layer_15_qkv_comm
+	layer_15_qkv_gpu10 -> layer_15_qkv_comm
+	layer_15_qkv_gpu11 -> layer_15_qkv_comm
+	layer_15_qkv_gpu12 -> layer_15_qkv_comm
+	layer_15_qkv_gpu13 -> layer_15_qkv_comm
+	layer_15_qkv_gpu14 -> layer_15_qkv_comm
+	layer_15_qkv_gpu15 -> layer_15_qkv_comm
+	layer_15_qkv_comm -> layer_15_attn_comp_gpu8
+	layer_15_qkv_comm -> layer_15_attn_comp_gpu9
+	layer_15_qkv_comm -> layer_15_attn_comp_gpu10
+	layer_15_qkv_comm -> layer_15_attn_comp_gpu11
+	layer_15_qkv_comm -> layer_15_attn_comp_gpu12
+	layer_15_qkv_comm -> layer_15_attn_comp_gpu13
+	layer_15_qkv_comm -> layer_15_attn_comp_gpu14
+	layer_15_qkv_comm -> layer_15_attn_comp_gpu15
+	layer_15_attn_comp_gpu8 -> layer_15_attn_out_gpu8
+	layer_15_attn_comp_gpu9 -> layer_15_attn_out_gpu9
+	layer_15_attn_comp_gpu10 -> layer_15_attn_out_gpu10
+	layer_15_attn_comp_gpu11 -> layer_15_attn_out_gpu11
+	layer_15_attn_comp_gpu12 -> layer_15_attn_out_gpu12
+	layer_15_attn_comp_gpu13 -> layer_15_attn_out_gpu13
+	layer_15_attn_comp_gpu14 -> layer_15_attn_out_gpu14
+	layer_15_attn_comp_gpu15 -> layer_15_attn_out_gpu15
+	layer_15_attn_out_gpu8 -> layer_15_attn_allreduce
+	layer_15_attn_out_gpu9 -> layer_15_attn_allreduce
+	layer_15_attn_out_gpu10 -> layer_15_attn_allreduce
+	layer_15_attn_out_gpu11 -> layer_15_attn_allreduce
+	layer_15_attn_out_gpu12 -> layer_15_attn_allreduce
+	layer_15_attn_out_gpu13 -> layer_15_attn_allreduce
+	layer_15_attn_out_gpu14 -> layer_15_attn_allreduce
+	layer_15_attn_out_gpu15 -> layer_15_attn_allreduce
+	layer_15_attn_allreduce -> layer_15_residual1
+	layer_15_residual1 -> layer_15_ln1
+	layer_15_ln1 -> layer_15_mlp1_gpu8
+	layer_15_mlp1_gpu8 -> layer_15_gelu_gpu8
+	layer_15_gelu_gpu8 -> layer_15_mlp2_gpu8
+	layer_15_mlp2_gpu8 -> layer_15_mlp_allreduce
+	layer_15_ln1 -> layer_15_mlp1_gpu9
+	layer_15_mlp1_gpu9 -> layer_15_gelu_gpu9
+	layer_15_gelu_gpu9 -> layer_15_mlp2_gpu9
+	layer_15_mlp2_gpu9 -> layer_15_mlp_allreduce
+	layer_15_ln1 -> layer_15_mlp1_gpu10
+	layer_15_mlp1_gpu10 -> layer_15_gelu_gpu10
+	layer_15_gelu_gpu10 -> layer_15_mlp2_gpu10
+	layer_15_mlp2_gpu10 -> layer_15_mlp_allreduce
+	layer_15_ln1 -> layer_15_mlp1_gpu11
+	layer_15_mlp1_gpu11 -> layer_15_gelu_gpu11
+	layer_15_gelu_gpu11 -> layer_15_mlp2_gpu11
+	layer_15_mlp2_gpu11 -> layer_15_mlp_allreduce
+	layer_15_ln1 -> layer_15_mlp1_gpu12
+	layer_15_mlp1_gpu12 -> layer_15_gelu_gpu12
+	layer_15_gelu_gpu12 -> layer_15_mlp2_gpu12
+	layer_15_mlp2_gpu12 -> layer_15_mlp_allreduce
+	layer_15_ln1 -> layer_15_mlp1_gpu13
+	layer_15_mlp1_gpu13 -> layer_15_gelu_gpu13
+	layer_15_gelu_gpu13 -> layer_15_mlp2_gpu13
+	layer_15_mlp2_gpu13 -> layer_15_mlp_allreduce
+	layer_15_ln1 -> layer_15_mlp1_gpu14
+	layer_15_mlp1_gpu14 -> layer_15_gelu_gpu14
+	layer_15_gelu_gpu14 -> layer_15_mlp2_gpu14
+	layer_15_mlp2_gpu14 -> layer_15_mlp_allreduce
+	layer_15_ln1 -> layer_15_mlp1_gpu15
+	layer_15_mlp1_gpu15 -> layer_15_gelu_gpu15
+	layer_15_gelu_gpu15 -> layer_15_mlp2_gpu15
+	layer_15_mlp2_gpu15 -> layer_15_mlp_allreduce
+	layer_15_mlp_allreduce -> layer_15_residual2
+	layer_15_residual2 -> layer_15_ln2
+	layer_15_ln2 -> output
+}

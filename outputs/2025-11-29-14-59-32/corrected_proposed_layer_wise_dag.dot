@@ -1,0 +1,1016 @@
+// Corrected Proposed Layer-wise DAG with Tensor Parallelism
+digraph proposed_layer_wise_tensor_pipeline_dag {
+	bgcolor=white fontname=Arial rankdir=TB
+	node [fontname=Arial fontsize=10]
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	input [label="Input\nBatch: 128\nSeq: 10000\nHidden: 4096" fillcolor=lightgreen shape=parallelogram]
+	layer_0_input_dist [label="Layer 0\nInput Distribution\nGPU 0" fillcolor=lightyellow shape=parallelogram]
+	layer_0_qkv_gpu0 [label="Layer 0 QKV Proj\nGPU 0\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_0_qkv_gpu1 [label="Layer 0 QKV Proj\nGPU 1\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_0_qkv_gpu2 [label="Layer 0 QKV Proj\nGPU 2\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_0_qkv_gpu3 [label="Layer 0 QKV Proj\nGPU 3\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_0_allgather_qkv [label="Layer 0\nAllGather QKV\nTP=4\nGPU 0" fillcolor=orange shape=ellipse]
+	layer_0_attention [label="Layer 0\nAttention\n32×128 dim\nGPU 0" fillcolor=lightblue]
+	layer_0_attn_out_gpu0 [label="Layer 0 Attn Out\nGPU 0\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_0_attn_out_gpu1 [label="Layer 0 Attn Out\nGPU 1\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_0_attn_out_gpu2 [label="Layer 0 Attn Out\nGPU 2\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_0_attn_out_gpu3 [label="Layer 0 Attn Out\nGPU 3\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_0_allreduce_attn [label="Layer 0\nAllReduce Attn\nTP=4\nGPU 0" fillcolor=orange shape=ellipse]
+	layer_0_residual1 [label="Layer 0\nResidual Add\nGPU 0" fillcolor=lightyellow shape=parallelogram]
+	layer_0_ln1 [label="Layer 0\nLayerNorm 1\nγ,β: 4096\nGPU 0" fillcolor=lightblue]
+	layer_0_mlp_fc1_gpu0 [label="Layer 0 MLP FC1\nGPU 0\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_0_mlp_fc1_gpu1 [label="Layer 0 MLP FC1\nGPU 1\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_0_mlp_fc1_gpu2 [label="Layer 0 MLP FC1\nGPU 2\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_0_mlp_fc1_gpu3 [label="Layer 0 MLP FC1\nGPU 3\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_0_allgather_mlp [label="Layer 0\nAllGather MLP\nTP=4\nGPU 0" fillcolor=orange shape=ellipse]
+	layer_0_gelu [label="Layer 0\nGELU Activation\nGPU 0" fillcolor=lightblue]
+	layer_0_mlp_fc2_gpu0 [label="Layer 0 MLP FC2\nGPU 0\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_0_mlp_fc2_gpu1 [label="Layer 0 MLP FC2\nGPU 1\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_0_mlp_fc2_gpu2 [label="Layer 0 MLP FC2\nGPU 2\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_0_mlp_fc2_gpu3 [label="Layer 0 MLP FC2\nGPU 3\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_0_allreduce_mlp [label="Layer 0\nAllReduce MLP\nTP=4\nGPU 0" fillcolor=orange shape=ellipse]
+	layer_0_residual2 [label="Layer 0\nResidual Add\nGPU 0" fillcolor=lightyellow shape=parallelogram]
+	layer_0_ln2 [label="Layer 0\nLayerNorm 2\nγ,β: 4096\nGPU 0" fillcolor=lightblue]
+	layer_1_input_dist [label="Layer 1\nInput Distribution\nGPU 0" fillcolor=lightyellow shape=parallelogram]
+	layer_1_qkv_gpu0 [label="Layer 1 QKV Proj\nGPU 0\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_1_qkv_gpu1 [label="Layer 1 QKV Proj\nGPU 1\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_1_qkv_gpu2 [label="Layer 1 QKV Proj\nGPU 2\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_1_qkv_gpu3 [label="Layer 1 QKV Proj\nGPU 3\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_1_allgather_qkv [label="Layer 1\nAllGather QKV\nTP=4\nGPU 0" fillcolor=orange shape=ellipse]
+	layer_1_attention [label="Layer 1\nAttention\n32×128 dim\nGPU 0" fillcolor=lightblue]
+	layer_1_attn_out_gpu0 [label="Layer 1 Attn Out\nGPU 0\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_1_attn_out_gpu1 [label="Layer 1 Attn Out\nGPU 1\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_1_attn_out_gpu2 [label="Layer 1 Attn Out\nGPU 2\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_1_attn_out_gpu3 [label="Layer 1 Attn Out\nGPU 3\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_1_allreduce_attn [label="Layer 1\nAllReduce Attn\nTP=4\nGPU 0" fillcolor=orange shape=ellipse]
+	layer_1_residual1 [label="Layer 1\nResidual Add\nGPU 0" fillcolor=lightyellow shape=parallelogram]
+	layer_1_ln1 [label="Layer 1\nLayerNorm 1\nγ,β: 4096\nGPU 0" fillcolor=lightblue]
+	layer_1_mlp_fc1_gpu0 [label="Layer 1 MLP FC1\nGPU 0\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_1_mlp_fc1_gpu1 [label="Layer 1 MLP FC1\nGPU 1\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_1_mlp_fc1_gpu2 [label="Layer 1 MLP FC1\nGPU 2\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_1_mlp_fc1_gpu3 [label="Layer 1 MLP FC1\nGPU 3\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_1_allgather_mlp [label="Layer 1\nAllGather MLP\nTP=4\nGPU 0" fillcolor=orange shape=ellipse]
+	layer_1_gelu [label="Layer 1\nGELU Activation\nGPU 0" fillcolor=lightblue]
+	layer_1_mlp_fc2_gpu0 [label="Layer 1 MLP FC2\nGPU 0\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_1_mlp_fc2_gpu1 [label="Layer 1 MLP FC2\nGPU 1\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_1_mlp_fc2_gpu2 [label="Layer 1 MLP FC2\nGPU 2\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_1_mlp_fc2_gpu3 [label="Layer 1 MLP FC2\nGPU 3\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_1_allreduce_mlp [label="Layer 1\nAllReduce MLP\nTP=4\nGPU 0" fillcolor=orange shape=ellipse]
+	layer_1_residual2 [label="Layer 1\nResidual Add\nGPU 0" fillcolor=lightyellow shape=parallelogram]
+	layer_1_ln2 [label="Layer 1\nLayerNorm 2\nγ,β: 4096\nGPU 0" fillcolor=lightblue]
+	layer_1_to_gpu1 [label="Layer 1→2\nPipeline Comm\nGPU 0→1" fillcolor=purple shape=ellipse]
+	layer_2_input_dist [label="Layer 2\nInput Distribution\nGPU 1" fillcolor=lightyellow shape=parallelogram]
+	layer_2_qkv_gpu4 [label="Layer 2 QKV Proj\nGPU 4\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_2_qkv_gpu5 [label="Layer 2 QKV Proj\nGPU 5\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_2_qkv_gpu6 [label="Layer 2 QKV Proj\nGPU 6\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_2_qkv_gpu7 [label="Layer 2 QKV Proj\nGPU 7\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_2_allgather_qkv [label="Layer 2\nAllGather QKV\nTP=4\nGPU 1" fillcolor=orange shape=ellipse]
+	layer_2_attention [label="Layer 2\nAttention\n32×128 dim\nGPU 1" fillcolor=lightblue]
+	layer_2_attn_out_gpu4 [label="Layer 2 Attn Out\nGPU 4\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_2_attn_out_gpu5 [label="Layer 2 Attn Out\nGPU 5\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_2_attn_out_gpu6 [label="Layer 2 Attn Out\nGPU 6\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_2_attn_out_gpu7 [label="Layer 2 Attn Out\nGPU 7\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_2_allreduce_attn [label="Layer 2\nAllReduce Attn\nTP=4\nGPU 1" fillcolor=orange shape=ellipse]
+	layer_2_residual1 [label="Layer 2\nResidual Add\nGPU 1" fillcolor=lightyellow shape=parallelogram]
+	layer_2_ln1 [label="Layer 2\nLayerNorm 1\nγ,β: 4096\nGPU 1" fillcolor=lightblue]
+	layer_2_mlp_fc1_gpu4 [label="Layer 2 MLP FC1\nGPU 4\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_2_mlp_fc1_gpu5 [label="Layer 2 MLP FC1\nGPU 5\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_2_mlp_fc1_gpu6 [label="Layer 2 MLP FC1\nGPU 6\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_2_mlp_fc1_gpu7 [label="Layer 2 MLP FC1\nGPU 7\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_2_allgather_mlp [label="Layer 2\nAllGather MLP\nTP=4\nGPU 1" fillcolor=orange shape=ellipse]
+	layer_2_gelu [label="Layer 2\nGELU Activation\nGPU 1" fillcolor=lightblue]
+	layer_2_mlp_fc2_gpu4 [label="Layer 2 MLP FC2\nGPU 4\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_2_mlp_fc2_gpu5 [label="Layer 2 MLP FC2\nGPU 5\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_2_mlp_fc2_gpu6 [label="Layer 2 MLP FC2\nGPU 6\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_2_mlp_fc2_gpu7 [label="Layer 2 MLP FC2\nGPU 7\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_2_allreduce_mlp [label="Layer 2\nAllReduce MLP\nTP=4\nGPU 1" fillcolor=orange shape=ellipse]
+	layer_2_residual2 [label="Layer 2\nResidual Add\nGPU 1" fillcolor=lightyellow shape=parallelogram]
+	layer_2_ln2 [label="Layer 2\nLayerNorm 2\nγ,β: 4096\nGPU 1" fillcolor=lightblue]
+	layer_3_input_dist [label="Layer 3\nInput Distribution\nGPU 1" fillcolor=lightyellow shape=parallelogram]
+	layer_3_qkv_gpu4 [label="Layer 3 QKV Proj\nGPU 4\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_3_qkv_gpu5 [label="Layer 3 QKV Proj\nGPU 5\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_3_qkv_gpu6 [label="Layer 3 QKV Proj\nGPU 6\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_3_qkv_gpu7 [label="Layer 3 QKV Proj\nGPU 7\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_3_allgather_qkv [label="Layer 3\nAllGather QKV\nTP=4\nGPU 1" fillcolor=orange shape=ellipse]
+	layer_3_attention [label="Layer 3\nAttention\n32×128 dim\nGPU 1" fillcolor=lightblue]
+	layer_3_attn_out_gpu4 [label="Layer 3 Attn Out\nGPU 4\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_3_attn_out_gpu5 [label="Layer 3 Attn Out\nGPU 5\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_3_attn_out_gpu6 [label="Layer 3 Attn Out\nGPU 6\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_3_attn_out_gpu7 [label="Layer 3 Attn Out\nGPU 7\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_3_allreduce_attn [label="Layer 3\nAllReduce Attn\nTP=4\nGPU 1" fillcolor=orange shape=ellipse]
+	layer_3_residual1 [label="Layer 3\nResidual Add\nGPU 1" fillcolor=lightyellow shape=parallelogram]
+	layer_3_ln1 [label="Layer 3\nLayerNorm 1\nγ,β: 4096\nGPU 1" fillcolor=lightblue]
+	layer_3_mlp_fc1_gpu4 [label="Layer 3 MLP FC1\nGPU 4\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_3_mlp_fc1_gpu5 [label="Layer 3 MLP FC1\nGPU 5\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_3_mlp_fc1_gpu6 [label="Layer 3 MLP FC1\nGPU 6\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_3_mlp_fc1_gpu7 [label="Layer 3 MLP FC1\nGPU 7\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_3_allgather_mlp [label="Layer 3\nAllGather MLP\nTP=4\nGPU 1" fillcolor=orange shape=ellipse]
+	layer_3_gelu [label="Layer 3\nGELU Activation\nGPU 1" fillcolor=lightblue]
+	layer_3_mlp_fc2_gpu4 [label="Layer 3 MLP FC2\nGPU 4\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_3_mlp_fc2_gpu5 [label="Layer 3 MLP FC2\nGPU 5\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_3_mlp_fc2_gpu6 [label="Layer 3 MLP FC2\nGPU 6\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_3_mlp_fc2_gpu7 [label="Layer 3 MLP FC2\nGPU 7\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_3_allreduce_mlp [label="Layer 3\nAllReduce MLP\nTP=4\nGPU 1" fillcolor=orange shape=ellipse]
+	layer_3_residual2 [label="Layer 3\nResidual Add\nGPU 1" fillcolor=lightyellow shape=parallelogram]
+	layer_3_ln2 [label="Layer 3\nLayerNorm 2\nγ,β: 4096\nGPU 1" fillcolor=lightblue]
+	layer_3_to_gpu2 [label="Layer 3→4\nPipeline Comm\nGPU 1→2" fillcolor=purple shape=ellipse]
+	layer_4_input_dist [label="Layer 4\nInput Distribution\nGPU 2" fillcolor=lightyellow shape=parallelogram]
+	layer_4_qkv_gpu8 [label="Layer 4 QKV Proj\nGPU 8\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_4_qkv_gpu9 [label="Layer 4 QKV Proj\nGPU 9\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_4_qkv_gpu10 [label="Layer 4 QKV Proj\nGPU 10\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_4_qkv_gpu11 [label="Layer 4 QKV Proj\nGPU 11\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_4_allgather_qkv [label="Layer 4\nAllGather QKV\nTP=4\nGPU 2" fillcolor=orange shape=ellipse]
+	layer_4_attention [label="Layer 4\nAttention\n32×128 dim\nGPU 2" fillcolor=lightblue]
+	layer_4_attn_out_gpu8 [label="Layer 4 Attn Out\nGPU 8\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_4_attn_out_gpu9 [label="Layer 4 Attn Out\nGPU 9\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_4_attn_out_gpu10 [label="Layer 4 Attn Out\nGPU 10\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_4_attn_out_gpu11 [label="Layer 4 Attn Out\nGPU 11\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_4_allreduce_attn [label="Layer 4\nAllReduce Attn\nTP=4\nGPU 2" fillcolor=orange shape=ellipse]
+	layer_4_residual1 [label="Layer 4\nResidual Add\nGPU 2" fillcolor=lightyellow shape=parallelogram]
+	layer_4_ln1 [label="Layer 4\nLayerNorm 1\nγ,β: 4096\nGPU 2" fillcolor=lightblue]
+	layer_4_mlp_fc1_gpu8 [label="Layer 4 MLP FC1\nGPU 8\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_4_mlp_fc1_gpu9 [label="Layer 4 MLP FC1\nGPU 9\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_4_mlp_fc1_gpu10 [label="Layer 4 MLP FC1\nGPU 10\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_4_mlp_fc1_gpu11 [label="Layer 4 MLP FC1\nGPU 11\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_4_allgather_mlp [label="Layer 4\nAllGather MLP\nTP=4\nGPU 2" fillcolor=orange shape=ellipse]
+	layer_4_gelu [label="Layer 4\nGELU Activation\nGPU 2" fillcolor=lightblue]
+	layer_4_mlp_fc2_gpu8 [label="Layer 4 MLP FC2\nGPU 8\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_4_mlp_fc2_gpu9 [label="Layer 4 MLP FC2\nGPU 9\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_4_mlp_fc2_gpu10 [label="Layer 4 MLP FC2\nGPU 10\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_4_mlp_fc2_gpu11 [label="Layer 4 MLP FC2\nGPU 11\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_4_allreduce_mlp [label="Layer 4\nAllReduce MLP\nTP=4\nGPU 2" fillcolor=orange shape=ellipse]
+	layer_4_residual2 [label="Layer 4\nResidual Add\nGPU 2" fillcolor=lightyellow shape=parallelogram]
+	layer_4_ln2 [label="Layer 4\nLayerNorm 2\nγ,β: 4096\nGPU 2" fillcolor=lightblue]
+	layer_5_input_dist [label="Layer 5\nInput Distribution\nGPU 2" fillcolor=lightyellow shape=parallelogram]
+	layer_5_qkv_gpu8 [label="Layer 5 QKV Proj\nGPU 8\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_5_qkv_gpu9 [label="Layer 5 QKV Proj\nGPU 9\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_5_qkv_gpu10 [label="Layer 5 QKV Proj\nGPU 10\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_5_qkv_gpu11 [label="Layer 5 QKV Proj\nGPU 11\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_5_allgather_qkv [label="Layer 5\nAllGather QKV\nTP=4\nGPU 2" fillcolor=orange shape=ellipse]
+	layer_5_attention [label="Layer 5\nAttention\n32×128 dim\nGPU 2" fillcolor=lightblue]
+	layer_5_attn_out_gpu8 [label="Layer 5 Attn Out\nGPU 8\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_5_attn_out_gpu9 [label="Layer 5 Attn Out\nGPU 9\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_5_attn_out_gpu10 [label="Layer 5 Attn Out\nGPU 10\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_5_attn_out_gpu11 [label="Layer 5 Attn Out\nGPU 11\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_5_allreduce_attn [label="Layer 5\nAllReduce Attn\nTP=4\nGPU 2" fillcolor=orange shape=ellipse]
+	layer_5_residual1 [label="Layer 5\nResidual Add\nGPU 2" fillcolor=lightyellow shape=parallelogram]
+	layer_5_ln1 [label="Layer 5\nLayerNorm 1\nγ,β: 4096\nGPU 2" fillcolor=lightblue]
+	layer_5_mlp_fc1_gpu8 [label="Layer 5 MLP FC1\nGPU 8\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_5_mlp_fc1_gpu9 [label="Layer 5 MLP FC1\nGPU 9\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_5_mlp_fc1_gpu10 [label="Layer 5 MLP FC1\nGPU 10\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_5_mlp_fc1_gpu11 [label="Layer 5 MLP FC1\nGPU 11\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_5_allgather_mlp [label="Layer 5\nAllGather MLP\nTP=4\nGPU 2" fillcolor=orange shape=ellipse]
+	layer_5_gelu [label="Layer 5\nGELU Activation\nGPU 2" fillcolor=lightblue]
+	layer_5_mlp_fc2_gpu8 [label="Layer 5 MLP FC2\nGPU 8\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_5_mlp_fc2_gpu9 [label="Layer 5 MLP FC2\nGPU 9\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_5_mlp_fc2_gpu10 [label="Layer 5 MLP FC2\nGPU 10\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_5_mlp_fc2_gpu11 [label="Layer 5 MLP FC2\nGPU 11\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_5_allreduce_mlp [label="Layer 5\nAllReduce MLP\nTP=4\nGPU 2" fillcolor=orange shape=ellipse]
+	layer_5_residual2 [label="Layer 5\nResidual Add\nGPU 2" fillcolor=lightyellow shape=parallelogram]
+	layer_5_ln2 [label="Layer 5\nLayerNorm 2\nγ,β: 4096\nGPU 2" fillcolor=lightblue]
+	layer_5_to_gpu3 [label="Layer 5→6\nPipeline Comm\nGPU 2→3" fillcolor=purple shape=ellipse]
+	layer_6_input_dist [label="Layer 6\nInput Distribution\nGPU 3" fillcolor=lightyellow shape=parallelogram]
+	layer_6_qkv_gpu12 [label="Layer 6 QKV Proj\nGPU 12\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_6_qkv_gpu13 [label="Layer 6 QKV Proj\nGPU 13\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_6_qkv_gpu14 [label="Layer 6 QKV Proj\nGPU 14\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_6_qkv_gpu15 [label="Layer 6 QKV Proj\nGPU 15\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_6_allgather_qkv [label="Layer 6\nAllGather QKV\nTP=4\nGPU 3" fillcolor=orange shape=ellipse]
+	layer_6_attention [label="Layer 6\nAttention\n32×128 dim\nGPU 3" fillcolor=lightblue]
+	layer_6_attn_out_gpu12 [label="Layer 6 Attn Out\nGPU 12\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_6_attn_out_gpu13 [label="Layer 6 Attn Out\nGPU 13\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_6_attn_out_gpu14 [label="Layer 6 Attn Out\nGPU 14\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_6_attn_out_gpu15 [label="Layer 6 Attn Out\nGPU 15\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_6_allreduce_attn [label="Layer 6\nAllReduce Attn\nTP=4\nGPU 3" fillcolor=orange shape=ellipse]
+	layer_6_residual1 [label="Layer 6\nResidual Add\nGPU 3" fillcolor=lightyellow shape=parallelogram]
+	layer_6_ln1 [label="Layer 6\nLayerNorm 1\nγ,β: 4096\nGPU 3" fillcolor=lightblue]
+	layer_6_mlp_fc1_gpu12 [label="Layer 6 MLP FC1\nGPU 12\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_6_mlp_fc1_gpu13 [label="Layer 6 MLP FC1\nGPU 13\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_6_mlp_fc1_gpu14 [label="Layer 6 MLP FC1\nGPU 14\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_6_mlp_fc1_gpu15 [label="Layer 6 MLP FC1\nGPU 15\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_6_allgather_mlp [label="Layer 6\nAllGather MLP\nTP=4\nGPU 3" fillcolor=orange shape=ellipse]
+	layer_6_gelu [label="Layer 6\nGELU Activation\nGPU 3" fillcolor=lightblue]
+	layer_6_mlp_fc2_gpu12 [label="Layer 6 MLP FC2\nGPU 12\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_6_mlp_fc2_gpu13 [label="Layer 6 MLP FC2\nGPU 13\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_6_mlp_fc2_gpu14 [label="Layer 6 MLP FC2\nGPU 14\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_6_mlp_fc2_gpu15 [label="Layer 6 MLP FC2\nGPU 15\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_6_allreduce_mlp [label="Layer 6\nAllReduce MLP\nTP=4\nGPU 3" fillcolor=orange shape=ellipse]
+	layer_6_residual2 [label="Layer 6\nResidual Add\nGPU 3" fillcolor=lightyellow shape=parallelogram]
+	layer_6_ln2 [label="Layer 6\nLayerNorm 2\nγ,β: 4096\nGPU 3" fillcolor=lightblue]
+	layer_7_input_dist [label="Layer 7\nInput Distribution\nGPU 3" fillcolor=lightyellow shape=parallelogram]
+	layer_7_qkv_gpu12 [label="Layer 7 QKV Proj\nGPU 12\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_7_qkv_gpu13 [label="Layer 7 QKV Proj\nGPU 13\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_7_qkv_gpu14 [label="Layer 7 QKV Proj\nGPU 14\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_7_qkv_gpu15 [label="Layer 7 QKV Proj\nGPU 15\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_7_allgather_qkv [label="Layer 7\nAllGather QKV\nTP=4\nGPU 3" fillcolor=orange shape=ellipse]
+	layer_7_attention [label="Layer 7\nAttention\n32×128 dim\nGPU 3" fillcolor=lightblue]
+	layer_7_attn_out_gpu12 [label="Layer 7 Attn Out\nGPU 12\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_7_attn_out_gpu13 [label="Layer 7 Attn Out\nGPU 13\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_7_attn_out_gpu14 [label="Layer 7 Attn Out\nGPU 14\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_7_attn_out_gpu15 [label="Layer 7 Attn Out\nGPU 15\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_7_allreduce_attn [label="Layer 7\nAllReduce Attn\nTP=4\nGPU 3" fillcolor=orange shape=ellipse]
+	layer_7_residual1 [label="Layer 7\nResidual Add\nGPU 3" fillcolor=lightyellow shape=parallelogram]
+	layer_7_ln1 [label="Layer 7\nLayerNorm 1\nγ,β: 4096\nGPU 3" fillcolor=lightblue]
+	layer_7_mlp_fc1_gpu12 [label="Layer 7 MLP FC1\nGPU 12\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_7_mlp_fc1_gpu13 [label="Layer 7 MLP FC1\nGPU 13\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_7_mlp_fc1_gpu14 [label="Layer 7 MLP FC1\nGPU 14\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_7_mlp_fc1_gpu15 [label="Layer 7 MLP FC1\nGPU 15\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_7_allgather_mlp [label="Layer 7\nAllGather MLP\nTP=4\nGPU 3" fillcolor=orange shape=ellipse]
+	layer_7_gelu [label="Layer 7\nGELU Activation\nGPU 3" fillcolor=lightblue]
+	layer_7_mlp_fc2_gpu12 [label="Layer 7 MLP FC2\nGPU 12\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_7_mlp_fc2_gpu13 [label="Layer 7 MLP FC2\nGPU 13\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_7_mlp_fc2_gpu14 [label="Layer 7 MLP FC2\nGPU 14\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_7_mlp_fc2_gpu15 [label="Layer 7 MLP FC2\nGPU 15\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_7_allreduce_mlp [label="Layer 7\nAllReduce MLP\nTP=4\nGPU 3" fillcolor=orange shape=ellipse]
+	layer_7_residual2 [label="Layer 7\nResidual Add\nGPU 3" fillcolor=lightyellow shape=parallelogram]
+	layer_7_ln2 [label="Layer 7\nLayerNorm 2\nγ,β: 4096\nGPU 3" fillcolor=lightblue]
+	layer_7_to_gpu4 [label="Layer 7→8\nPipeline Comm\nGPU 3→4" fillcolor=purple shape=ellipse]
+	layer_8_input_dist [label="Layer 8\nInput Distribution\nGPU 4" fillcolor=lightyellow shape=parallelogram]
+	layer_8_qkv_gpu16 [label="Layer 8 QKV Proj\nGPU 16\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_8_qkv_gpu17 [label="Layer 8 QKV Proj\nGPU 17\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_8_qkv_gpu18 [label="Layer 8 QKV Proj\nGPU 18\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_8_qkv_gpu19 [label="Layer 8 QKV Proj\nGPU 19\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_8_allgather_qkv [label="Layer 8\nAllGather QKV\nTP=4\nGPU 4" fillcolor=orange shape=ellipse]
+	layer_8_attention [label="Layer 8\nAttention\n32×128 dim\nGPU 4" fillcolor=lightblue]
+	layer_8_attn_out_gpu16 [label="Layer 8 Attn Out\nGPU 16\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_8_attn_out_gpu17 [label="Layer 8 Attn Out\nGPU 17\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_8_attn_out_gpu18 [label="Layer 8 Attn Out\nGPU 18\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_8_attn_out_gpu19 [label="Layer 8 Attn Out\nGPU 19\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_8_allreduce_attn [label="Layer 8\nAllReduce Attn\nTP=4\nGPU 4" fillcolor=orange shape=ellipse]
+	layer_8_residual1 [label="Layer 8\nResidual Add\nGPU 4" fillcolor=lightyellow shape=parallelogram]
+	layer_8_ln1 [label="Layer 8\nLayerNorm 1\nγ,β: 4096\nGPU 4" fillcolor=lightblue]
+	layer_8_mlp_fc1_gpu16 [label="Layer 8 MLP FC1\nGPU 16\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_8_mlp_fc1_gpu17 [label="Layer 8 MLP FC1\nGPU 17\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_8_mlp_fc1_gpu18 [label="Layer 8 MLP FC1\nGPU 18\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_8_mlp_fc1_gpu19 [label="Layer 8 MLP FC1\nGPU 19\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_8_allgather_mlp [label="Layer 8\nAllGather MLP\nTP=4\nGPU 4" fillcolor=orange shape=ellipse]
+	layer_8_gelu [label="Layer 8\nGELU Activation\nGPU 4" fillcolor=lightblue]
+	layer_8_mlp_fc2_gpu16 [label="Layer 8 MLP FC2\nGPU 16\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_8_mlp_fc2_gpu17 [label="Layer 8 MLP FC2\nGPU 17\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_8_mlp_fc2_gpu18 [label="Layer 8 MLP FC2\nGPU 18\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_8_mlp_fc2_gpu19 [label="Layer 8 MLP FC2\nGPU 19\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_8_allreduce_mlp [label="Layer 8\nAllReduce MLP\nTP=4\nGPU 4" fillcolor=orange shape=ellipse]
+	layer_8_residual2 [label="Layer 8\nResidual Add\nGPU 4" fillcolor=lightyellow shape=parallelogram]
+	layer_8_ln2 [label="Layer 8\nLayerNorm 2\nγ,β: 4096\nGPU 4" fillcolor=lightblue]
+	layer_9_input_dist [label="Layer 9\nInput Distribution\nGPU 4" fillcolor=lightyellow shape=parallelogram]
+	layer_9_qkv_gpu16 [label="Layer 9 QKV Proj\nGPU 16\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_9_qkv_gpu17 [label="Layer 9 QKV Proj\nGPU 17\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_9_qkv_gpu18 [label="Layer 9 QKV Proj\nGPU 18\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_9_qkv_gpu19 [label="Layer 9 QKV Proj\nGPU 19\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_9_allgather_qkv [label="Layer 9\nAllGather QKV\nTP=4\nGPU 4" fillcolor=orange shape=ellipse]
+	layer_9_attention [label="Layer 9\nAttention\n32×128 dim\nGPU 4" fillcolor=lightblue]
+	layer_9_attn_out_gpu16 [label="Layer 9 Attn Out\nGPU 16\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_9_attn_out_gpu17 [label="Layer 9 Attn Out\nGPU 17\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_9_attn_out_gpu18 [label="Layer 9 Attn Out\nGPU 18\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_9_attn_out_gpu19 [label="Layer 9 Attn Out\nGPU 19\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_9_allreduce_attn [label="Layer 9\nAllReduce Attn\nTP=4\nGPU 4" fillcolor=orange shape=ellipse]
+	layer_9_residual1 [label="Layer 9\nResidual Add\nGPU 4" fillcolor=lightyellow shape=parallelogram]
+	layer_9_ln1 [label="Layer 9\nLayerNorm 1\nγ,β: 4096\nGPU 4" fillcolor=lightblue]
+	layer_9_mlp_fc1_gpu16 [label="Layer 9 MLP FC1\nGPU 16\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_9_mlp_fc1_gpu17 [label="Layer 9 MLP FC1\nGPU 17\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_9_mlp_fc1_gpu18 [label="Layer 9 MLP FC1\nGPU 18\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_9_mlp_fc1_gpu19 [label="Layer 9 MLP FC1\nGPU 19\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_9_allgather_mlp [label="Layer 9\nAllGather MLP\nTP=4\nGPU 4" fillcolor=orange shape=ellipse]
+	layer_9_gelu [label="Layer 9\nGELU Activation\nGPU 4" fillcolor=lightblue]
+	layer_9_mlp_fc2_gpu16 [label="Layer 9 MLP FC2\nGPU 16\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_9_mlp_fc2_gpu17 [label="Layer 9 MLP FC2\nGPU 17\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_9_mlp_fc2_gpu18 [label="Layer 9 MLP FC2\nGPU 18\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_9_mlp_fc2_gpu19 [label="Layer 9 MLP FC2\nGPU 19\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_9_allreduce_mlp [label="Layer 9\nAllReduce MLP\nTP=4\nGPU 4" fillcolor=orange shape=ellipse]
+	layer_9_residual2 [label="Layer 9\nResidual Add\nGPU 4" fillcolor=lightyellow shape=parallelogram]
+	layer_9_ln2 [label="Layer 9\nLayerNorm 2\nγ,β: 4096\nGPU 4" fillcolor=lightblue]
+	layer_9_to_gpu5 [label="Layer 9→10\nPipeline Comm\nGPU 4→5" fillcolor=purple shape=ellipse]
+	layer_10_input_dist [label="Layer 10\nInput Distribution\nGPU 5" fillcolor=lightyellow shape=parallelogram]
+	layer_10_qkv_gpu20 [label="Layer 10 QKV Proj\nGPU 20\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_10_qkv_gpu21 [label="Layer 10 QKV Proj\nGPU 21\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_10_qkv_gpu22 [label="Layer 10 QKV Proj\nGPU 22\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_10_qkv_gpu23 [label="Layer 10 QKV Proj\nGPU 23\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_10_allgather_qkv [label="Layer 10\nAllGather QKV\nTP=4\nGPU 5" fillcolor=orange shape=ellipse]
+	layer_10_attention [label="Layer 10\nAttention\n32×128 dim\nGPU 5" fillcolor=lightblue]
+	layer_10_attn_out_gpu20 [label="Layer 10 Attn Out\nGPU 20\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_10_attn_out_gpu21 [label="Layer 10 Attn Out\nGPU 21\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_10_attn_out_gpu22 [label="Layer 10 Attn Out\nGPU 22\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_10_attn_out_gpu23 [label="Layer 10 Attn Out\nGPU 23\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_10_allreduce_attn [label="Layer 10\nAllReduce Attn\nTP=4\nGPU 5" fillcolor=orange shape=ellipse]
+	layer_10_residual1 [label="Layer 10\nResidual Add\nGPU 5" fillcolor=lightyellow shape=parallelogram]
+	layer_10_ln1 [label="Layer 10\nLayerNorm 1\nγ,β: 4096\nGPU 5" fillcolor=lightblue]
+	layer_10_mlp_fc1_gpu20 [label="Layer 10 MLP FC1\nGPU 20\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_10_mlp_fc1_gpu21 [label="Layer 10 MLP FC1\nGPU 21\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_10_mlp_fc1_gpu22 [label="Layer 10 MLP FC1\nGPU 22\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_10_mlp_fc1_gpu23 [label="Layer 10 MLP FC1\nGPU 23\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_10_allgather_mlp [label="Layer 10\nAllGather MLP\nTP=4\nGPU 5" fillcolor=orange shape=ellipse]
+	layer_10_gelu [label="Layer 10\nGELU Activation\nGPU 5" fillcolor=lightblue]
+	layer_10_mlp_fc2_gpu20 [label="Layer 10 MLP FC2\nGPU 20\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_10_mlp_fc2_gpu21 [label="Layer 10 MLP FC2\nGPU 21\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_10_mlp_fc2_gpu22 [label="Layer 10 MLP FC2\nGPU 22\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_10_mlp_fc2_gpu23 [label="Layer 10 MLP FC2\nGPU 23\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_10_allreduce_mlp [label="Layer 10\nAllReduce MLP\nTP=4\nGPU 5" fillcolor=orange shape=ellipse]
+	layer_10_residual2 [label="Layer 10\nResidual Add\nGPU 5" fillcolor=lightyellow shape=parallelogram]
+	layer_10_ln2 [label="Layer 10\nLayerNorm 2\nγ,β: 4096\nGPU 5" fillcolor=lightblue]
+	layer_11_input_dist [label="Layer 11\nInput Distribution\nGPU 5" fillcolor=lightyellow shape=parallelogram]
+	layer_11_qkv_gpu20 [label="Layer 11 QKV Proj\nGPU 20\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_11_qkv_gpu21 [label="Layer 11 QKV Proj\nGPU 21\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_11_qkv_gpu22 [label="Layer 11 QKV Proj\nGPU 22\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_11_qkv_gpu23 [label="Layer 11 QKV Proj\nGPU 23\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_11_allgather_qkv [label="Layer 11\nAllGather QKV\nTP=4\nGPU 5" fillcolor=orange shape=ellipse]
+	layer_11_attention [label="Layer 11\nAttention\n32×128 dim\nGPU 5" fillcolor=lightblue]
+	layer_11_attn_out_gpu20 [label="Layer 11 Attn Out\nGPU 20\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_11_attn_out_gpu21 [label="Layer 11 Attn Out\nGPU 21\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_11_attn_out_gpu22 [label="Layer 11 Attn Out\nGPU 22\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_11_attn_out_gpu23 [label="Layer 11 Attn Out\nGPU 23\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_11_allreduce_attn [label="Layer 11\nAllReduce Attn\nTP=4\nGPU 5" fillcolor=orange shape=ellipse]
+	layer_11_residual1 [label="Layer 11\nResidual Add\nGPU 5" fillcolor=lightyellow shape=parallelogram]
+	layer_11_ln1 [label="Layer 11\nLayerNorm 1\nγ,β: 4096\nGPU 5" fillcolor=lightblue]
+	layer_11_mlp_fc1_gpu20 [label="Layer 11 MLP FC1\nGPU 20\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_11_mlp_fc1_gpu21 [label="Layer 11 MLP FC1\nGPU 21\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_11_mlp_fc1_gpu22 [label="Layer 11 MLP FC1\nGPU 22\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_11_mlp_fc1_gpu23 [label="Layer 11 MLP FC1\nGPU 23\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_11_allgather_mlp [label="Layer 11\nAllGather MLP\nTP=4\nGPU 5" fillcolor=orange shape=ellipse]
+	layer_11_gelu [label="Layer 11\nGELU Activation\nGPU 5" fillcolor=lightblue]
+	layer_11_mlp_fc2_gpu20 [label="Layer 11 MLP FC2\nGPU 20\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_11_mlp_fc2_gpu21 [label="Layer 11 MLP FC2\nGPU 21\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_11_mlp_fc2_gpu22 [label="Layer 11 MLP FC2\nGPU 22\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_11_mlp_fc2_gpu23 [label="Layer 11 MLP FC2\nGPU 23\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_11_allreduce_mlp [label="Layer 11\nAllReduce MLP\nTP=4\nGPU 5" fillcolor=orange shape=ellipse]
+	layer_11_residual2 [label="Layer 11\nResidual Add\nGPU 5" fillcolor=lightyellow shape=parallelogram]
+	layer_11_ln2 [label="Layer 11\nLayerNorm 2\nγ,β: 4096\nGPU 5" fillcolor=lightblue]
+	layer_11_to_gpu6 [label="Layer 11→12\nPipeline Comm\nGPU 5→6" fillcolor=purple shape=ellipse]
+	layer_12_input_dist [label="Layer 12\nInput Distribution\nGPU 6" fillcolor=lightyellow shape=parallelogram]
+	layer_12_qkv_gpu24 [label="Layer 12 QKV Proj\nGPU 24\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_12_qkv_gpu25 [label="Layer 12 QKV Proj\nGPU 25\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_12_qkv_gpu26 [label="Layer 12 QKV Proj\nGPU 26\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_12_qkv_gpu27 [label="Layer 12 QKV Proj\nGPU 27\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_12_allgather_qkv [label="Layer 12\nAllGather QKV\nTP=4\nGPU 6" fillcolor=orange shape=ellipse]
+	layer_12_attention [label="Layer 12\nAttention\n32×128 dim\nGPU 6" fillcolor=lightblue]
+	layer_12_attn_out_gpu24 [label="Layer 12 Attn Out\nGPU 24\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_12_attn_out_gpu25 [label="Layer 12 Attn Out\nGPU 25\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_12_attn_out_gpu26 [label="Layer 12 Attn Out\nGPU 26\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_12_attn_out_gpu27 [label="Layer 12 Attn Out\nGPU 27\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_12_allreduce_attn [label="Layer 12\nAllReduce Attn\nTP=4\nGPU 6" fillcolor=orange shape=ellipse]
+	layer_12_residual1 [label="Layer 12\nResidual Add\nGPU 6" fillcolor=lightyellow shape=parallelogram]
+	layer_12_ln1 [label="Layer 12\nLayerNorm 1\nγ,β: 4096\nGPU 6" fillcolor=lightblue]
+	layer_12_mlp_fc1_gpu24 [label="Layer 12 MLP FC1\nGPU 24\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_12_mlp_fc1_gpu25 [label="Layer 12 MLP FC1\nGPU 25\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_12_mlp_fc1_gpu26 [label="Layer 12 MLP FC1\nGPU 26\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_12_mlp_fc1_gpu27 [label="Layer 12 MLP FC1\nGPU 27\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_12_allgather_mlp [label="Layer 12\nAllGather MLP\nTP=4\nGPU 6" fillcolor=orange shape=ellipse]
+	layer_12_gelu [label="Layer 12\nGELU Activation\nGPU 6" fillcolor=lightblue]
+	layer_12_mlp_fc2_gpu24 [label="Layer 12 MLP FC2\nGPU 24\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_12_mlp_fc2_gpu25 [label="Layer 12 MLP FC2\nGPU 25\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_12_mlp_fc2_gpu26 [label="Layer 12 MLP FC2\nGPU 26\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_12_mlp_fc2_gpu27 [label="Layer 12 MLP FC2\nGPU 27\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_12_allreduce_mlp [label="Layer 12\nAllReduce MLP\nTP=4\nGPU 6" fillcolor=orange shape=ellipse]
+	layer_12_residual2 [label="Layer 12\nResidual Add\nGPU 6" fillcolor=lightyellow shape=parallelogram]
+	layer_12_ln2 [label="Layer 12\nLayerNorm 2\nγ,β: 4096\nGPU 6" fillcolor=lightblue]
+	layer_13_input_dist [label="Layer 13\nInput Distribution\nGPU 6" fillcolor=lightyellow shape=parallelogram]
+	layer_13_qkv_gpu24 [label="Layer 13 QKV Proj\nGPU 24\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_13_qkv_gpu25 [label="Layer 13 QKV Proj\nGPU 25\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_13_qkv_gpu26 [label="Layer 13 QKV Proj\nGPU 26\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_13_qkv_gpu27 [label="Layer 13 QKV Proj\nGPU 27\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_13_allgather_qkv [label="Layer 13\nAllGather QKV\nTP=4\nGPU 6" fillcolor=orange shape=ellipse]
+	layer_13_attention [label="Layer 13\nAttention\n32×128 dim\nGPU 6" fillcolor=lightblue]
+	layer_13_attn_out_gpu24 [label="Layer 13 Attn Out\nGPU 24\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_13_attn_out_gpu25 [label="Layer 13 Attn Out\nGPU 25\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_13_attn_out_gpu26 [label="Layer 13 Attn Out\nGPU 26\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_13_attn_out_gpu27 [label="Layer 13 Attn Out\nGPU 27\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_13_allreduce_attn [label="Layer 13\nAllReduce Attn\nTP=4\nGPU 6" fillcolor=orange shape=ellipse]
+	layer_13_residual1 [label="Layer 13\nResidual Add\nGPU 6" fillcolor=lightyellow shape=parallelogram]
+	layer_13_ln1 [label="Layer 13\nLayerNorm 1\nγ,β: 4096\nGPU 6" fillcolor=lightblue]
+	layer_13_mlp_fc1_gpu24 [label="Layer 13 MLP FC1\nGPU 24\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_13_mlp_fc1_gpu25 [label="Layer 13 MLP FC1\nGPU 25\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_13_mlp_fc1_gpu26 [label="Layer 13 MLP FC1\nGPU 26\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_13_mlp_fc1_gpu27 [label="Layer 13 MLP FC1\nGPU 27\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_13_allgather_mlp [label="Layer 13\nAllGather MLP\nTP=4\nGPU 6" fillcolor=orange shape=ellipse]
+	layer_13_gelu [label="Layer 13\nGELU Activation\nGPU 6" fillcolor=lightblue]
+	layer_13_mlp_fc2_gpu24 [label="Layer 13 MLP FC2\nGPU 24\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_13_mlp_fc2_gpu25 [label="Layer 13 MLP FC2\nGPU 25\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_13_mlp_fc2_gpu26 [label="Layer 13 MLP FC2\nGPU 26\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_13_mlp_fc2_gpu27 [label="Layer 13 MLP FC2\nGPU 27\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_13_allreduce_mlp [label="Layer 13\nAllReduce MLP\nTP=4\nGPU 6" fillcolor=orange shape=ellipse]
+	layer_13_residual2 [label="Layer 13\nResidual Add\nGPU 6" fillcolor=lightyellow shape=parallelogram]
+	layer_13_ln2 [label="Layer 13\nLayerNorm 2\nγ,β: 4096\nGPU 6" fillcolor=lightblue]
+	layer_13_to_gpu7 [label="Layer 13→14\nPipeline Comm\nGPU 6→7" fillcolor=purple shape=ellipse]
+	layer_14_input_dist [label="Layer 14\nInput Distribution\nGPU 7" fillcolor=lightyellow shape=parallelogram]
+	layer_14_qkv_gpu28 [label="Layer 14 QKV Proj\nGPU 28\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_14_qkv_gpu29 [label="Layer 14 QKV Proj\nGPU 29\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_14_qkv_gpu30 [label="Layer 14 QKV Proj\nGPU 30\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_14_qkv_gpu31 [label="Layer 14 QKV Proj\nGPU 31\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_14_allgather_qkv [label="Layer 14\nAllGather QKV\nTP=4\nGPU 7" fillcolor=orange shape=ellipse]
+	layer_14_attention [label="Layer 14\nAttention\n32×128 dim\nGPU 7" fillcolor=lightblue]
+	layer_14_attn_out_gpu28 [label="Layer 14 Attn Out\nGPU 28\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_14_attn_out_gpu29 [label="Layer 14 Attn Out\nGPU 29\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_14_attn_out_gpu30 [label="Layer 14 Attn Out\nGPU 30\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_14_attn_out_gpu31 [label="Layer 14 Attn Out\nGPU 31\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_14_allreduce_attn [label="Layer 14\nAllReduce Attn\nTP=4\nGPU 7" fillcolor=orange shape=ellipse]
+	layer_14_residual1 [label="Layer 14\nResidual Add\nGPU 7" fillcolor=lightyellow shape=parallelogram]
+	layer_14_ln1 [label="Layer 14\nLayerNorm 1\nγ,β: 4096\nGPU 7" fillcolor=lightblue]
+	layer_14_mlp_fc1_gpu28 [label="Layer 14 MLP FC1\nGPU 28\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_14_mlp_fc1_gpu29 [label="Layer 14 MLP FC1\nGPU 29\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_14_mlp_fc1_gpu30 [label="Layer 14 MLP FC1\nGPU 30\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_14_mlp_fc1_gpu31 [label="Layer 14 MLP FC1\nGPU 31\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_14_allgather_mlp [label="Layer 14\nAllGather MLP\nTP=4\nGPU 7" fillcolor=orange shape=ellipse]
+	layer_14_gelu [label="Layer 14\nGELU Activation\nGPU 7" fillcolor=lightblue]
+	layer_14_mlp_fc2_gpu28 [label="Layer 14 MLP FC2\nGPU 28\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_14_mlp_fc2_gpu29 [label="Layer 14 MLP FC2\nGPU 29\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_14_mlp_fc2_gpu30 [label="Layer 14 MLP FC2\nGPU 30\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_14_mlp_fc2_gpu31 [label="Layer 14 MLP FC2\nGPU 31\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_14_allreduce_mlp [label="Layer 14\nAllReduce MLP\nTP=4\nGPU 7" fillcolor=orange shape=ellipse]
+	layer_14_residual2 [label="Layer 14\nResidual Add\nGPU 7" fillcolor=lightyellow shape=parallelogram]
+	layer_14_ln2 [label="Layer 14\nLayerNorm 2\nγ,β: 4096\nGPU 7" fillcolor=lightblue]
+	layer_15_input_dist [label="Layer 15\nInput Distribution\nGPU 7" fillcolor=lightyellow shape=parallelogram]
+	layer_15_qkv_gpu28 [label="Layer 15 QKV Proj\nGPU 28\nTP Rank 0\n[4096→12288]" fillcolor=lightblue]
+	layer_15_qkv_gpu29 [label="Layer 15 QKV Proj\nGPU 29\nTP Rank 1\n[4096→12288]" fillcolor=lightblue]
+	layer_15_qkv_gpu30 [label="Layer 15 QKV Proj\nGPU 30\nTP Rank 2\n[4096→12288]" fillcolor=lightblue]
+	layer_15_qkv_gpu31 [label="Layer 15 QKV Proj\nGPU 31\nTP Rank 3\n[4096→12288]" fillcolor=lightblue]
+	layer_15_allgather_qkv [label="Layer 15\nAllGather QKV\nTP=4\nGPU 7" fillcolor=orange shape=ellipse]
+	layer_15_attention [label="Layer 15\nAttention\n32×128 dim\nGPU 7" fillcolor=lightblue]
+	layer_15_attn_out_gpu28 [label="Layer 15 Attn Out\nGPU 28\nTP Rank 0\n[4096→4096]" fillcolor=lightblue]
+	layer_15_attn_out_gpu29 [label="Layer 15 Attn Out\nGPU 29\nTP Rank 1\n[4096→4096]" fillcolor=lightblue]
+	layer_15_attn_out_gpu30 [label="Layer 15 Attn Out\nGPU 30\nTP Rank 2\n[4096→4096]" fillcolor=lightblue]
+	layer_15_attn_out_gpu31 [label="Layer 15 Attn Out\nGPU 31\nTP Rank 3\n[4096→4096]" fillcolor=lightblue]
+	layer_15_allreduce_attn [label="Layer 15\nAllReduce Attn\nTP=4\nGPU 7" fillcolor=orange shape=ellipse]
+	layer_15_residual1 [label="Layer 15\nResidual Add\nGPU 7" fillcolor=lightyellow shape=parallelogram]
+	layer_15_ln1 [label="Layer 15\nLayerNorm 1\nγ,β: 4096\nGPU 7" fillcolor=lightblue]
+	layer_15_mlp_fc1_gpu28 [label="Layer 15 MLP FC1\nGPU 28\nTP Rank 0\n[4096→16384]" fillcolor=lightblue]
+	layer_15_mlp_fc1_gpu29 [label="Layer 15 MLP FC1\nGPU 29\nTP Rank 1\n[4096→16384]" fillcolor=lightblue]
+	layer_15_mlp_fc1_gpu30 [label="Layer 15 MLP FC1\nGPU 30\nTP Rank 2\n[4096→16384]" fillcolor=lightblue]
+	layer_15_mlp_fc1_gpu31 [label="Layer 15 MLP FC1\nGPU 31\nTP Rank 3\n[4096→16384]" fillcolor=lightblue]
+	layer_15_allgather_mlp [label="Layer 15\nAllGather MLP\nTP=4\nGPU 7" fillcolor=orange shape=ellipse]
+	layer_15_gelu [label="Layer 15\nGELU Activation\nGPU 7" fillcolor=lightblue]
+	layer_15_mlp_fc2_gpu28 [label="Layer 15 MLP FC2\nGPU 28\nTP Rank 0\n[16384→4096]" fillcolor=lightblue]
+	layer_15_mlp_fc2_gpu29 [label="Layer 15 MLP FC2\nGPU 29\nTP Rank 1\n[16384→4096]" fillcolor=lightblue]
+	layer_15_mlp_fc2_gpu30 [label="Layer 15 MLP FC2\nGPU 30\nTP Rank 2\n[16384→4096]" fillcolor=lightblue]
+	layer_15_mlp_fc2_gpu31 [label="Layer 15 MLP FC2\nGPU 31\nTP Rank 3\n[16384→4096]" fillcolor=lightblue]
+	layer_15_allreduce_mlp [label="Layer 15\nAllReduce MLP\nTP=4\nGPU 7" fillcolor=orange shape=ellipse]
+	layer_15_residual2 [label="Layer 15\nResidual Add\nGPU 7" fillcolor=lightyellow shape=parallelogram]
+	layer_15_ln2 [label="Layer 15\nLayerNorm 2\nγ,β: 4096\nGPU 7" fillcolor=lightblue]
+	output [label="Output\nBatch: 128\nSeq: 10000\nHidden: 4096" fillcolor=lightgreen shape=parallelogram]
+	input -> layer_0_input_dist
+	input -> layer_0_input_dist
+	layer_0_input_dist -> layer_0_qkv_gpu0
+	layer_0_input_dist -> layer_0_qkv_gpu1
+	layer_0_input_dist -> layer_0_qkv_gpu2
+	layer_0_input_dist -> layer_0_qkv_gpu3
+	layer_0_qkv_gpu0 -> layer_0_allgather_qkv
+	layer_0_qkv_gpu1 -> layer_0_allgather_qkv
+	layer_0_qkv_gpu2 -> layer_0_allgather_qkv
+	layer_0_qkv_gpu3 -> layer_0_allgather_qkv
+	layer_0_allgather_qkv -> layer_0_attention
+	layer_0_attention -> layer_0_attn_out_gpu0
+	layer_0_attn_out_gpu0 -> layer_0_allreduce_attn
+	layer_0_attn_out_gpu1 -> layer_0_allreduce_attn
+	layer_0_attn_out_gpu2 -> layer_0_allreduce_attn
+	layer_0_attn_out_gpu3 -> layer_0_allreduce_attn
+	layer_0_allreduce_attn -> layer_0_residual1
+	layer_0_input_dist -> layer_0_residual1
+	layer_0_residual1 -> layer_0_ln1
+	layer_0_ln1 -> layer_0_mlp_fc1_gpu0
+	layer_0_ln1 -> layer_0_mlp_fc1_gpu1
+	layer_0_ln1 -> layer_0_mlp_fc1_gpu2
+	layer_0_ln1 -> layer_0_mlp_fc1_gpu3
+	layer_0_mlp_fc1_gpu0 -> layer_0_allgather_mlp
+	layer_0_mlp_fc1_gpu1 -> layer_0_allgather_mlp
+	layer_0_mlp_fc1_gpu2 -> layer_0_allgather_mlp
+	layer_0_mlp_fc1_gpu3 -> layer_0_allgather_mlp
+	layer_0_allgather_mlp -> layer_0_gelu
+	layer_0_gelu -> layer_0_mlp_fc2_gpu0
+	layer_0_mlp_fc2_gpu0 -> layer_0_allreduce_mlp
+	layer_0_mlp_fc2_gpu1 -> layer_0_allreduce_mlp
+	layer_0_mlp_fc2_gpu2 -> layer_0_allreduce_mlp
+	layer_0_mlp_fc2_gpu3 -> layer_0_allreduce_mlp
+	layer_0_allreduce_mlp -> layer_0_residual2
+	layer_0_residual1 -> layer_0_residual2
+	layer_0_residual2 -> layer_0_ln2
+	layer_0_ln2 -> layer_1_input_dist
+	layer_1_input_dist -> layer_1_qkv_gpu0
+	layer_1_input_dist -> layer_1_qkv_gpu1
+	layer_1_input_dist -> layer_1_qkv_gpu2
+	layer_1_input_dist -> layer_1_qkv_gpu3
+	layer_1_qkv_gpu0 -> layer_1_allgather_qkv
+	layer_1_qkv_gpu1 -> layer_1_allgather_qkv
+	layer_1_qkv_gpu2 -> layer_1_allgather_qkv
+	layer_1_qkv_gpu3 -> layer_1_allgather_qkv
+	layer_1_allgather_qkv -> layer_1_attention
+	layer_1_attention -> layer_1_attn_out_gpu0
+	layer_1_attn_out_gpu0 -> layer_1_allreduce_attn
+	layer_1_attn_out_gpu1 -> layer_1_allreduce_attn
+	layer_1_attn_out_gpu2 -> layer_1_allreduce_attn
+	layer_1_attn_out_gpu3 -> layer_1_allreduce_attn
+	layer_1_allreduce_attn -> layer_1_residual1
+	layer_1_input_dist -> layer_1_residual1
+	layer_1_residual1 -> layer_1_ln1
+	layer_1_ln1 -> layer_1_mlp_fc1_gpu0
+	layer_1_ln1 -> layer_1_mlp_fc1_gpu1
+	layer_1_ln1 -> layer_1_mlp_fc1_gpu2
+	layer_1_ln1 -> layer_1_mlp_fc1_gpu3
+	layer_1_mlp_fc1_gpu0 -> layer_1_allgather_mlp
+	layer_1_mlp_fc1_gpu1 -> layer_1_allgather_mlp
+	layer_1_mlp_fc1_gpu2 -> layer_1_allgather_mlp
+	layer_1_mlp_fc1_gpu3 -> layer_1_allgather_mlp
+	layer_1_allgather_mlp -> layer_1_gelu
+	layer_1_gelu -> layer_1_mlp_fc2_gpu0
+	layer_1_mlp_fc2_gpu0 -> layer_1_allreduce_mlp
+	layer_1_mlp_fc2_gpu1 -> layer_1_allreduce_mlp
+	layer_1_mlp_fc2_gpu2 -> layer_1_allreduce_mlp
+	layer_1_mlp_fc2_gpu3 -> layer_1_allreduce_mlp
+	layer_1_allreduce_mlp -> layer_1_residual2
+	layer_1_residual1 -> layer_1_residual2
+	layer_1_residual2 -> layer_1_ln2
+	layer_1_ln2 -> layer_1_to_gpu1
+	layer_1_to_gpu1 -> layer_2_input_dist
+	layer_2_input_dist -> layer_2_qkv_gpu4
+	layer_2_input_dist -> layer_2_qkv_gpu5
+	layer_2_input_dist -> layer_2_qkv_gpu6
+	layer_2_input_dist -> layer_2_qkv_gpu7
+	layer_2_qkv_gpu4 -> layer_2_allgather_qkv
+	layer_2_qkv_gpu5 -> layer_2_allgather_qkv
+	layer_2_qkv_gpu6 -> layer_2_allgather_qkv
+	layer_2_qkv_gpu7 -> layer_2_allgather_qkv
+	layer_2_allgather_qkv -> layer_2_attention
+	layer_2_attention -> layer_2_attn_out_gpu4
+	layer_2_attn_out_gpu4 -> layer_2_allreduce_attn
+	layer_2_attn_out_gpu5 -> layer_2_allreduce_attn
+	layer_2_attn_out_gpu6 -> layer_2_allreduce_attn
+	layer_2_attn_out_gpu7 -> layer_2_allreduce_attn
+	layer_2_allreduce_attn -> layer_2_residual1
+	layer_2_input_dist -> layer_2_residual1
+	layer_2_residual1 -> layer_2_ln1
+	layer_2_ln1 -> layer_2_mlp_fc1_gpu4
+	layer_2_ln1 -> layer_2_mlp_fc1_gpu5
+	layer_2_ln1 -> layer_2_mlp_fc1_gpu6
+	layer_2_ln1 -> layer_2_mlp_fc1_gpu7
+	layer_2_mlp_fc1_gpu4 -> layer_2_allgather_mlp
+	layer_2_mlp_fc1_gpu5 -> layer_2_allgather_mlp
+	layer_2_mlp_fc1_gpu6 -> layer_2_allgather_mlp
+	layer_2_mlp_fc1_gpu7 -> layer_2_allgather_mlp
+	layer_2_allgather_mlp -> layer_2_gelu
+	layer_2_gelu -> layer_2_mlp_fc2_gpu4
+	layer_2_mlp_fc2_gpu4 -> layer_2_allreduce_mlp
+	layer_2_mlp_fc2_gpu5 -> layer_2_allreduce_mlp
+	layer_2_mlp_fc2_gpu6 -> layer_2_allreduce_mlp
+	layer_2_mlp_fc2_gpu7 -> layer_2_allreduce_mlp
+	layer_2_allreduce_mlp -> layer_2_residual2
+	layer_2_residual1 -> layer_2_residual2
+	layer_2_residual2 -> layer_2_ln2
+	layer_2_ln2 -> layer_3_input_dist
+	layer_3_input_dist -> layer_3_qkv_gpu4
+	layer_3_input_dist -> layer_3_qkv_gpu5
+	layer_3_input_dist -> layer_3_qkv_gpu6
+	layer_3_input_dist -> layer_3_qkv_gpu7
+	layer_3_qkv_gpu4 -> layer_3_allgather_qkv
+	layer_3_qkv_gpu5 -> layer_3_allgather_qkv
+	layer_3_qkv_gpu6 -> layer_3_allgather_qkv
+	layer_3_qkv_gpu7 -> layer_3_allgather_qkv
+	layer_3_allgather_qkv -> layer_3_attention
+	layer_3_attention -> layer_3_attn_out_gpu4
+	layer_3_attn_out_gpu4 -> layer_3_allreduce_attn
+	layer_3_attn_out_gpu5 -> layer_3_allreduce_attn
+	layer_3_attn_out_gpu6 -> layer_3_allreduce_attn
+	layer_3_attn_out_gpu7 -> layer_3_allreduce_attn
+	layer_3_allreduce_attn -> layer_3_residual1
+	layer_3_input_dist -> layer_3_residual1
+	layer_3_residual1 -> layer_3_ln1
+	layer_3_ln1 -> layer_3_mlp_fc1_gpu4
+	layer_3_ln1 -> layer_3_mlp_fc1_gpu5
+	layer_3_ln1 -> layer_3_mlp_fc1_gpu6
+	layer_3_ln1 -> layer_3_mlp_fc1_gpu7
+	layer_3_mlp_fc1_gpu4 -> layer_3_allgather_mlp
+	layer_3_mlp_fc1_gpu5 -> layer_3_allgather_mlp
+	layer_3_mlp_fc1_gpu6 -> layer_3_allgather_mlp
+	layer_3_mlp_fc1_gpu7 -> layer_3_allgather_mlp
+	layer_3_allgather_mlp -> layer_3_gelu
+	layer_3_gelu -> layer_3_mlp_fc2_gpu4
+	layer_3_mlp_fc2_gpu4 -> layer_3_allreduce_mlp
+	layer_3_mlp_fc2_gpu5 -> layer_3_allreduce_mlp
+	layer_3_mlp_fc2_gpu6 -> layer_3_allreduce_mlp
+	layer_3_mlp_fc2_gpu7 -> layer_3_allreduce_mlp
+	layer_3_allreduce_mlp -> layer_3_residual2
+	layer_3_residual1 -> layer_3_residual2
+	layer_3_residual2 -> layer_3_ln2
+	layer_3_ln2 -> layer_3_to_gpu2
+	layer_3_to_gpu2 -> layer_4_input_dist
+	layer_4_input_dist -> layer_4_qkv_gpu8
+	layer_4_input_dist -> layer_4_qkv_gpu9
+	layer_4_input_dist -> layer_4_qkv_gpu10
+	layer_4_input_dist -> layer_4_qkv_gpu11
+	layer_4_qkv_gpu8 -> layer_4_allgather_qkv
+	layer_4_qkv_gpu9 -> layer_4_allgather_qkv
+	layer_4_qkv_gpu10 -> layer_4_allgather_qkv
+	layer_4_qkv_gpu11 -> layer_4_allgather_qkv
+	layer_4_allgather_qkv -> layer_4_attention
+	layer_4_attention -> layer_4_attn_out_gpu8
+	layer_4_attn_out_gpu8 -> layer_4_allreduce_attn
+	layer_4_attn_out_gpu9 -> layer_4_allreduce_attn
+	layer_4_attn_out_gpu10 -> layer_4_allreduce_attn
+	layer_4_attn_out_gpu11 -> layer_4_allreduce_attn
+	layer_4_allreduce_attn -> layer_4_residual1
+	layer_4_input_dist -> layer_4_residual1
+	layer_4_residual1 -> layer_4_ln1
+	layer_4_ln1 -> layer_4_mlp_fc1_gpu8
+	layer_4_ln1 -> layer_4_mlp_fc1_gpu9
+	layer_4_ln1 -> layer_4_mlp_fc1_gpu10
+	layer_4_ln1 -> layer_4_mlp_fc1_gpu11
+	layer_4_mlp_fc1_gpu8 -> layer_4_allgather_mlp
+	layer_4_mlp_fc1_gpu9 -> layer_4_allgather_mlp
+	layer_4_mlp_fc1_gpu10 -> layer_4_allgather_mlp
+	layer_4_mlp_fc1_gpu11 -> layer_4_allgather_mlp
+	layer_4_allgather_mlp -> layer_4_gelu
+	layer_4_gelu -> layer_4_mlp_fc2_gpu8
+	layer_4_mlp_fc2_gpu8 -> layer_4_allreduce_mlp
+	layer_4_mlp_fc2_gpu9 -> layer_4_allreduce_mlp
+	layer_4_mlp_fc2_gpu10 -> layer_4_allreduce_mlp
+	layer_4_mlp_fc2_gpu11 -> layer_4_allreduce_mlp
+	layer_4_allreduce_mlp -> layer_4_residual2
+	layer_4_residual1 -> layer_4_residual2
+	layer_4_residual2 -> layer_4_ln2
+	layer_4_ln2 -> layer_5_input_dist
+	layer_5_input_dist -> layer_5_qkv_gpu8
+	layer_5_input_dist -> layer_5_qkv_gpu9
+	layer_5_input_dist -> layer_5_qkv_gpu10
+	layer_5_input_dist -> layer_5_qkv_gpu11
+	layer_5_qkv_gpu8 -> layer_5_allgather_qkv
+	layer_5_qkv_gpu9 -> layer_5_allgather_qkv
+	layer_5_qkv_gpu10 -> layer_5_allgather_qkv
+	layer_5_qkv_gpu11 -> layer_5_allgather_qkv
+	layer_5_allgather_qkv -> layer_5_attention
+	layer_5_attention -> layer_5_attn_out_gpu8
+	layer_5_attn_out_gpu8 -> layer_5_allreduce_attn
+	layer_5_attn_out_gpu9 -> layer_5_allreduce_attn
+	layer_5_attn_out_gpu10 -> layer_5_allreduce_attn
+	layer_5_attn_out_gpu11 -> layer_5_allreduce_attn
+	layer_5_allreduce_attn -> layer_5_residual1
+	layer_5_input_dist -> layer_5_residual1
+	layer_5_residual1 -> layer_5_ln1
+	layer_5_ln1 -> layer_5_mlp_fc1_gpu8
+	layer_5_ln1 -> layer_5_mlp_fc1_gpu9
+	layer_5_ln1 -> layer_5_mlp_fc1_gpu10
+	layer_5_ln1 -> layer_5_mlp_fc1_gpu11
+	layer_5_mlp_fc1_gpu8 -> layer_5_allgather_mlp
+	layer_5_mlp_fc1_gpu9 -> layer_5_allgather_mlp
+	layer_5_mlp_fc1_gpu10 -> layer_5_allgather_mlp
+	layer_5_mlp_fc1_gpu11 -> layer_5_allgather_mlp
+	layer_5_allgather_mlp -> layer_5_gelu
+	layer_5_gelu -> layer_5_mlp_fc2_gpu8
+	layer_5_mlp_fc2_gpu8 -> layer_5_allreduce_mlp
+	layer_5_mlp_fc2_gpu9 -> layer_5_allreduce_mlp
+	layer_5_mlp_fc2_gpu10 -> layer_5_allreduce_mlp
+	layer_5_mlp_fc2_gpu11 -> layer_5_allreduce_mlp
+	layer_5_allreduce_mlp -> layer_5_residual2
+	layer_5_residual1 -> layer_5_residual2
+	layer_5_residual2 -> layer_5_ln2
+	layer_5_ln2 -> layer_5_to_gpu3
+	layer_5_to_gpu3 -> layer_6_input_dist
+	layer_6_input_dist -> layer_6_qkv_gpu12
+	layer_6_input_dist -> layer_6_qkv_gpu13
+	layer_6_input_dist -> layer_6_qkv_gpu14
+	layer_6_input_dist -> layer_6_qkv_gpu15
+	layer_6_qkv_gpu12 -> layer_6_allgather_qkv
+	layer_6_qkv_gpu13 -> layer_6_allgather_qkv
+	layer_6_qkv_gpu14 -> layer_6_allgather_qkv
+	layer_6_qkv_gpu15 -> layer_6_allgather_qkv
+	layer_6_allgather_qkv -> layer_6_attention
+	layer_6_attention -> layer_6_attn_out_gpu12
+	layer_6_attn_out_gpu12 -> layer_6_allreduce_attn
+	layer_6_attn_out_gpu13 -> layer_6_allreduce_attn
+	layer_6_attn_out_gpu14 -> layer_6_allreduce_attn
+	layer_6_attn_out_gpu15 -> layer_6_allreduce_attn
+	layer_6_allreduce_attn -> layer_6_residual1
+	layer_6_input_dist -> layer_6_residual1
+	layer_6_residual1 -> layer_6_ln1
+	layer_6_ln1 -> layer_6_mlp_fc1_gpu12
+	layer_6_ln1 -> layer_6_mlp_fc1_gpu13
+	layer_6_ln1 -> layer_6_mlp_fc1_gpu14
+	layer_6_ln1 -> layer_6_mlp_fc1_gpu15
+	layer_6_mlp_fc1_gpu12 -> layer_6_allgather_mlp
+	layer_6_mlp_fc1_gpu13 -> layer_6_allgather_mlp
+	layer_6_mlp_fc1_gpu14 -> layer_6_allgather_mlp
+	layer_6_mlp_fc1_gpu15 -> layer_6_allgather_mlp
+	layer_6_allgather_mlp -> layer_6_gelu
+	layer_6_gelu -> layer_6_mlp_fc2_gpu12
+	layer_6_mlp_fc2_gpu12 -> layer_6_allreduce_mlp
+	layer_6_mlp_fc2_gpu13 -> layer_6_allreduce_mlp
+	layer_6_mlp_fc2_gpu14 -> layer_6_allreduce_mlp
+	layer_6_mlp_fc2_gpu15 -> layer_6_allreduce_mlp
+	layer_6_allreduce_mlp -> layer_6_residual2
+	layer_6_residual1 -> layer_6_residual2
+	layer_6_residual2 -> layer_6_ln2
+	layer_6_ln2 -> layer_7_input_dist
+	layer_7_input_dist -> layer_7_qkv_gpu12
+	layer_7_input_dist -> layer_7_qkv_gpu13
+	layer_7_input_dist -> layer_7_qkv_gpu14
+	layer_7_input_dist -> layer_7_qkv_gpu15
+	layer_7_qkv_gpu12 -> layer_7_allgather_qkv
+	layer_7_qkv_gpu13 -> layer_7_allgather_qkv
+	layer_7_qkv_gpu14 -> layer_7_allgather_qkv
+	layer_7_qkv_gpu15 -> layer_7_allgather_qkv
+	layer_7_allgather_qkv -> layer_7_attention
+	layer_7_attention -> layer_7_attn_out_gpu12
+	layer_7_attn_out_gpu12 -> layer_7_allreduce_attn
+	layer_7_attn_out_gpu13 -> layer_7_allreduce_attn
+	layer_7_attn_out_gpu14 -> layer_7_allreduce_attn
+	layer_7_attn_out_gpu15 -> layer_7_allreduce_attn
+	layer_7_allreduce_attn -> layer_7_residual1
+	layer_7_input_dist -> layer_7_residual1
+	layer_7_residual1 -> layer_7_ln1
+	layer_7_ln1 -> layer_7_mlp_fc1_gpu12
+	layer_7_ln1 -> layer_7_mlp_fc1_gpu13
+	layer_7_ln1 -> layer_7_mlp_fc1_gpu14
+	layer_7_ln1 -> layer_7_mlp_fc1_gpu15
+	layer_7_mlp_fc1_gpu12 -> layer_7_allgather_mlp
+	layer_7_mlp_fc1_gpu13 -> layer_7_allgather_mlp
+	layer_7_mlp_fc1_gpu14 -> layer_7_allgather_mlp
+	layer_7_mlp_fc1_gpu15 -> layer_7_allgather_mlp
+	layer_7_allgather_mlp -> layer_7_gelu
+	layer_7_gelu -> layer_7_mlp_fc2_gpu12
+	layer_7_mlp_fc2_gpu12 -> layer_7_allreduce_mlp
+	layer_7_mlp_fc2_gpu13 -> layer_7_allreduce_mlp
+	layer_7_mlp_fc2_gpu14 -> layer_7_allreduce_mlp
+	layer_7_mlp_fc2_gpu15 -> layer_7_allreduce_mlp
+	layer_7_allreduce_mlp -> layer_7_residual2
+	layer_7_residual1 -> layer_7_residual2
+	layer_7_residual2 -> layer_7_ln2
+	layer_7_ln2 -> layer_7_to_gpu4
+	layer_7_to_gpu4 -> layer_8_input_dist
+	layer_8_input_dist -> layer_8_qkv_gpu16
+	layer_8_input_dist -> layer_8_qkv_gpu17
+	layer_8_input_dist -> layer_8_qkv_gpu18
+	layer_8_input_dist -> layer_8_qkv_gpu19
+	layer_8_qkv_gpu16 -> layer_8_allgather_qkv
+	layer_8_qkv_gpu17 -> layer_8_allgather_qkv
+	layer_8_qkv_gpu18 -> layer_8_allgather_qkv
+	layer_8_qkv_gpu19 -> layer_8_allgather_qkv
+	layer_8_allgather_qkv -> layer_8_attention
+	layer_8_attention -> layer_8_attn_out_gpu16
+	layer_8_attn_out_gpu16 -> layer_8_allreduce_attn
+	layer_8_attn_out_gpu17 -> layer_8_allreduce_attn
+	layer_8_attn_out_gpu18 -> layer_8_allreduce_attn
+	layer_8_attn_out_gpu19 -> layer_8_allreduce_attn
+	layer_8_allreduce_attn -> layer_8_residual1
+	layer_8_input_dist -> layer_8_residual1
+	layer_8_residual1 -> layer_8_ln1
+	layer_8_ln1 -> layer_8_mlp_fc1_gpu16
+	layer_8_ln1 -> layer_8_mlp_fc1_gpu17
+	layer_8_ln1 -> layer_8_mlp_fc1_gpu18
+	layer_8_ln1 -> layer_8_mlp_fc1_gpu19
+	layer_8_mlp_fc1_gpu16 -> layer_8_allgather_mlp
+	layer_8_mlp_fc1_gpu17 -> layer_8_allgather_mlp
+	layer_8_mlp_fc1_gpu18 -> layer_8_allgather_mlp
+	layer_8_mlp_fc1_gpu19 -> layer_8_allgather_mlp
+	layer_8_allgather_mlp -> layer_8_gelu
+	layer_8_gelu -> layer_8_mlp_fc2_gpu16
+	layer_8_mlp_fc2_gpu16 -> layer_8_allreduce_mlp
+	layer_8_mlp_fc2_gpu17 -> layer_8_allreduce_mlp
+	layer_8_mlp_fc2_gpu18 -> layer_8_allreduce_mlp
+	layer_8_mlp_fc2_gpu19 -> layer_8_allreduce_mlp
+	layer_8_allreduce_mlp -> layer_8_residual2
+	layer_8_residual1 -> layer_8_residual2
+	layer_8_residual2 -> layer_8_ln2
+	layer_8_ln2 -> layer_9_input_dist
+	layer_9_input_dist -> layer_9_qkv_gpu16
+	layer_9_input_dist -> layer_9_qkv_gpu17
+	layer_9_input_dist -> layer_9_qkv_gpu18
+	layer_9_input_dist -> layer_9_qkv_gpu19
+	layer_9_qkv_gpu16 -> layer_9_allgather_qkv
+	layer_9_qkv_gpu17 -> layer_9_allgather_qkv
+	layer_9_qkv_gpu18 -> layer_9_allgather_qkv
+	layer_9_qkv_gpu19 -> layer_9_allgather_qkv
+	layer_9_allgather_qkv -> layer_9_attention
+	layer_9_attention -> layer_9_attn_out_gpu16
+	layer_9_attn_out_gpu16 -> layer_9_allreduce_attn
+	layer_9_attn_out_gpu17 -> layer_9_allreduce_attn
+	layer_9_attn_out_gpu18 -> layer_9_allreduce_attn
+	layer_9_attn_out_gpu19 -> layer_9_allreduce_attn
+	layer_9_allreduce_attn -> layer_9_residual1
+	layer_9_input_dist -> layer_9_residual1
+	layer_9_residual1 -> layer_9_ln1
+	layer_9_ln1 -> layer_9_mlp_fc1_gpu16
+	layer_9_ln1 -> layer_9_mlp_fc1_gpu17
+	layer_9_ln1 -> layer_9_mlp_fc1_gpu18
+	layer_9_ln1 -> layer_9_mlp_fc1_gpu19
+	layer_9_mlp_fc1_gpu16 -> layer_9_allgather_mlp
+	layer_9_mlp_fc1_gpu17 -> layer_9_allgather_mlp
+	layer_9_mlp_fc1_gpu18 -> layer_9_allgather_mlp
+	layer_9_mlp_fc1_gpu19 -> layer_9_allgather_mlp
+	layer_9_allgather_mlp -> layer_9_gelu
+	layer_9_gelu -> layer_9_mlp_fc2_gpu16
+	layer_9_mlp_fc2_gpu16 -> layer_9_allreduce_mlp
+	layer_9_mlp_fc2_gpu17 -> layer_9_allreduce_mlp
+	layer_9_mlp_fc2_gpu18 -> layer_9_allreduce_mlp
+	layer_9_mlp_fc2_gpu19 -> layer_9_allreduce_mlp
+	layer_9_allreduce_mlp -> layer_9_residual2
+	layer_9_residual1 -> layer_9_residual2
+	layer_9_residual2 -> layer_9_ln2
+	layer_9_ln2 -> layer_9_to_gpu5
+	layer_9_to_gpu5 -> layer_10_input_dist
+	layer_10_input_dist -> layer_10_qkv_gpu20
+	layer_10_input_dist -> layer_10_qkv_gpu21
+	layer_10_input_dist -> layer_10_qkv_gpu22
+	layer_10_input_dist -> layer_10_qkv_gpu23
+	layer_10_qkv_gpu20 -> layer_10_allgather_qkv
+	layer_10_qkv_gpu21 -> layer_10_allgather_qkv
+	layer_10_qkv_gpu22 -> layer_10_allgather_qkv
+	layer_10_qkv_gpu23 -> layer_10_allgather_qkv
+	layer_10_allgather_qkv -> layer_10_attention
+	layer_10_attention -> layer_10_attn_out_gpu20
+	layer_10_attn_out_gpu20 -> layer_10_allreduce_attn
+	layer_10_attn_out_gpu21 -> layer_10_allreduce_attn
+	layer_10_attn_out_gpu22 -> layer_10_allreduce_attn
+	layer_10_attn_out_gpu23 -> layer_10_allreduce_attn
+	layer_10_allreduce_attn -> layer_10_residual1
+	layer_10_input_dist -> layer_10_residual1
+	layer_10_residual1 -> layer_10_ln1
+	layer_10_ln1 -> layer_10_mlp_fc1_gpu20
+	layer_10_ln1 -> layer_10_mlp_fc1_gpu21
+	layer_10_ln1 -> layer_10_mlp_fc1_gpu22
+	layer_10_ln1 -> layer_10_mlp_fc1_gpu23
+	layer_10_mlp_fc1_gpu20 -> layer_10_allgather_mlp
+	layer_10_mlp_fc1_gpu21 -> layer_10_allgather_mlp
+	layer_10_mlp_fc1_gpu22 -> layer_10_allgather_mlp
+	layer_10_mlp_fc1_gpu23 -> layer_10_allgather_mlp
+	layer_10_allgather_mlp -> layer_10_gelu
+	layer_10_gelu -> layer_10_mlp_fc2_gpu20
+	layer_10_mlp_fc2_gpu20 -> layer_10_allreduce_mlp
+	layer_10_mlp_fc2_gpu21 -> layer_10_allreduce_mlp
+	layer_10_mlp_fc2_gpu22 -> layer_10_allreduce_mlp
+	layer_10_mlp_fc2_gpu23 -> layer_10_allreduce_mlp
+	layer_10_allreduce_mlp -> layer_10_residual2
+	layer_10_residual1 -> layer_10_residual2
+	layer_10_residual2 -> layer_10_ln2
+	layer_10_ln2 -> layer_11_input_dist
+	layer_11_input_dist -> layer_11_qkv_gpu20
+	layer_11_input_dist -> layer_11_qkv_gpu21
+	layer_11_input_dist -> layer_11_qkv_gpu22
+	layer_11_input_dist -> layer_11_qkv_gpu23
+	layer_11_qkv_gpu20 -> layer_11_allgather_qkv
+	layer_11_qkv_gpu21 -> layer_11_allgather_qkv
+	layer_11_qkv_gpu22 -> layer_11_allgather_qkv
+	layer_11_qkv_gpu23 -> layer_11_allgather_qkv
+	layer_11_allgather_qkv -> layer_11_attention
+	layer_11_attention -> layer_11_attn_out_gpu20
+	layer_11_attn_out_gpu20 -> layer_11_allreduce_attn
+	layer_11_attn_out_gpu21 -> layer_11_allreduce_attn
+	layer_11_attn_out_gpu22 -> layer_11_allreduce_attn
+	layer_11_attn_out_gpu23 -> layer_11_allreduce_attn
+	layer_11_allreduce_attn -> layer_11_residual1
+	layer_11_input_dist -> layer_11_residual1
+	layer_11_residual1 -> layer_11_ln1
+	layer_11_ln1 -> layer_11_mlp_fc1_gpu20
+	layer_11_ln1 -> layer_11_mlp_fc1_gpu21
+	layer_11_ln1 -> layer_11_mlp_fc1_gpu22
+	layer_11_ln1 -> layer_11_mlp_fc1_gpu23
+	layer_11_mlp_fc1_gpu20 -> layer_11_allgather_mlp
+	layer_11_mlp_fc1_gpu21 -> layer_11_allgather_mlp
+	layer_11_mlp_fc1_gpu22 -> layer_11_allgather_mlp
+	layer_11_mlp_fc1_gpu23 -> layer_11_allgather_mlp
+	layer_11_allgather_mlp -> layer_11_gelu
+	layer_11_gelu -> layer_11_mlp_fc2_gpu20
+	layer_11_mlp_fc2_gpu20 -> layer_11_allreduce_mlp
+	layer_11_mlp_fc2_gpu21 -> layer_11_allreduce_mlp
+	layer_11_mlp_fc2_gpu22 -> layer_11_allreduce_mlp
+	layer_11_mlp_fc2_gpu23 -> layer_11_allreduce_mlp
+	layer_11_allreduce_mlp -> layer_11_residual2
+	layer_11_residual1 -> layer_11_residual2
+	layer_11_residual2 -> layer_11_ln2
+	layer_11_ln2 -> layer_11_to_gpu6
+	layer_11_to_gpu6 -> layer_12_input_dist
+	layer_12_input_dist -> layer_12_qkv_gpu24
+	layer_12_input_dist -> layer_12_qkv_gpu25
+	layer_12_input_dist -> layer_12_qkv_gpu26
+	layer_12_input_dist -> layer_12_qkv_gpu27
+	layer_12_qkv_gpu24 -> layer_12_allgather_qkv
+	layer_12_qkv_gpu25 -> layer_12_allgather_qkv
+	layer_12_qkv_gpu26 -> layer_12_allgather_qkv
+	layer_12_qkv_gpu27 -> layer_12_allgather_qkv
+	layer_12_allgather_qkv -> layer_12_attention
+	layer_12_attention -> layer_12_attn_out_gpu24
+	layer_12_attn_out_gpu24 -> layer_12_allreduce_attn
+	layer_12_attn_out_gpu25 -> layer_12_allreduce_attn
+	layer_12_attn_out_gpu26 -> layer_12_allreduce_attn
+	layer_12_attn_out_gpu27 -> layer_12_allreduce_attn
+	layer_12_allreduce_attn -> layer_12_residual1
+	layer_12_input_dist -> layer_12_residual1
+	layer_12_residual1 -> layer_12_ln1
+	layer_12_ln1 -> layer_12_mlp_fc1_gpu24
+	layer_12_ln1 -> layer_12_mlp_fc1_gpu25
+	layer_12_ln1 -> layer_12_mlp_fc1_gpu26
+	layer_12_ln1 -> layer_12_mlp_fc1_gpu27
+	layer_12_mlp_fc1_gpu24 -> layer_12_allgather_mlp
+	layer_12_mlp_fc1_gpu25 -> layer_12_allgather_mlp
+	layer_12_mlp_fc1_gpu26 -> layer_12_allgather_mlp
+	layer_12_mlp_fc1_gpu27 -> layer_12_allgather_mlp
+	layer_12_allgather_mlp -> layer_12_gelu
+	layer_12_gelu -> layer_12_mlp_fc2_gpu24
+	layer_12_mlp_fc2_gpu24 -> layer_12_allreduce_mlp
+	layer_12_mlp_fc2_gpu25 -> layer_12_allreduce_mlp
+	layer_12_mlp_fc2_gpu26 -> layer_12_allreduce_mlp
+	layer_12_mlp_fc2_gpu27 -> layer_12_allreduce_mlp
+	layer_12_allreduce_mlp -> layer_12_residual2
+	layer_12_residual1 -> layer_12_residual2
+	layer_12_residual2 -> layer_12_ln2
+	layer_12_ln2 -> layer_13_input_dist
+	layer_13_input_dist -> layer_13_qkv_gpu24
+	layer_13_input_dist -> layer_13_qkv_gpu25
+	layer_13_input_dist -> layer_13_qkv_gpu26
+	layer_13_input_dist -> layer_13_qkv_gpu27
+	layer_13_qkv_gpu24 -> layer_13_allgather_qkv
+	layer_13_qkv_gpu25 -> layer_13_allgather_qkv
+	layer_13_qkv_gpu26 -> layer_13_allgather_qkv
+	layer_13_qkv_gpu27 -> layer_13_allgather_qkv
+	layer_13_allgather_qkv -> layer_13_attention
+	layer_13_attention -> layer_13_attn_out_gpu24
+	layer_13_attn_out_gpu24 -> layer_13_allreduce_attn
+	layer_13_attn_out_gpu25 -> layer_13_allreduce_attn
+	layer_13_attn_out_gpu26 -> layer_13_allreduce_attn
+	layer_13_attn_out_gpu27 -> layer_13_allreduce_attn
+	layer_13_allreduce_attn -> layer_13_residual1
+	layer_13_input_dist -> layer_13_residual1
+	layer_13_residual1 -> layer_13_ln1
+	layer_13_ln1 -> layer_13_mlp_fc1_gpu24
+	layer_13_ln1 -> layer_13_mlp_fc1_gpu25
+	layer_13_ln1 -> layer_13_mlp_fc1_gpu26
+	layer_13_ln1 -> layer_13_mlp_fc1_gpu27
+	layer_13_mlp_fc1_gpu24 -> layer_13_allgather_mlp
+	layer_13_mlp_fc1_gpu25 -> layer_13_allgather_mlp
+	layer_13_mlp_fc1_gpu26 -> layer_13_allgather_mlp
+	layer_13_mlp_fc1_gpu27 -> layer_13_allgather_mlp
+	layer_13_allgather_mlp -> layer_13_gelu
+	layer_13_gelu -> layer_13_mlp_fc2_gpu24
+	layer_13_mlp_fc2_gpu24 -> layer_13_allreduce_mlp
+	layer_13_mlp_fc2_gpu25 -> layer_13_allreduce_mlp
+	layer_13_mlp_fc2_gpu26 -> layer_13_allreduce_mlp
+	layer_13_mlp_fc2_gpu27 -> layer_13_allreduce_mlp
+	layer_13_allreduce_mlp -> layer_13_residual2
+	layer_13_residual1 -> layer_13_residual2
+	layer_13_residual2 -> layer_13_ln2
+	layer_13_ln2 -> layer_13_to_gpu7
+	layer_13_to_gpu7 -> layer_14_input_dist
+	layer_14_input_dist -> layer_14_qkv_gpu28
+	layer_14_input_dist -> layer_14_qkv_gpu29
+	layer_14_input_dist -> layer_14_qkv_gpu30
+	layer_14_input_dist -> layer_14_qkv_gpu31
+	layer_14_qkv_gpu28 -> layer_14_allgather_qkv
+	layer_14_qkv_gpu29 -> layer_14_allgather_qkv
+	layer_14_qkv_gpu30 -> layer_14_allgather_qkv
+	layer_14_qkv_gpu31 -> layer_14_allgather_qkv
+	layer_14_allgather_qkv -> layer_14_attention
+	layer_14_attention -> layer_14_attn_out_gpu28
+	layer_14_attn_out_gpu28 -> layer_14_allreduce_attn
+	layer_14_attn_out_gpu29 -> layer_14_allreduce_attn
+	layer_14_attn_out_gpu30 -> layer_14_allreduce_attn
+	layer_14_attn_out_gpu31 -> layer_14_allreduce_attn
+	layer_14_allreduce_attn -> layer_14_residual1
+	layer_14_input_dist -> layer_14_residual1
+	layer_14_residual1 -> layer_14_ln1
+	layer_14_ln1 -> layer_14_mlp_fc1_gpu28
+	layer_14_ln1 -> layer_14_mlp_fc1_gpu29
+	layer_14_ln1 -> layer_14_mlp_fc1_gpu30
+	layer_14_ln1 -> layer_14_mlp_fc1_gpu31
+	layer_14_mlp_fc1_gpu28 -> layer_14_allgather_mlp
+	layer_14_mlp_fc1_gpu29 -> layer_14_allgather_mlp
+	layer_14_mlp_fc1_gpu30 -> layer_14_allgather_mlp
+	layer_14_mlp_fc1_gpu31 -> layer_14_allgather_mlp
+	layer_14_allgather_mlp -> layer_14_gelu
+	layer_14_gelu -> layer_14_mlp_fc2_gpu28
+	layer_14_mlp_fc2_gpu28 -> layer_14_allreduce_mlp
+	layer_14_mlp_fc2_gpu29 -> layer_14_allreduce_mlp
+	layer_14_mlp_fc2_gpu30 -> layer_14_allreduce_mlp
+	layer_14_mlp_fc2_gpu31 -> layer_14_allreduce_mlp
+	layer_14_allreduce_mlp -> layer_14_residual2
+	layer_14_residual1 -> layer_14_residual2
+	layer_14_residual2 -> layer_14_ln2
+	layer_14_ln2 -> layer_15_input_dist
+	layer_15_input_dist -> layer_15_qkv_gpu28
+	layer_15_input_dist -> layer_15_qkv_gpu29
+	layer_15_input_dist -> layer_15_qkv_gpu30
+	layer_15_input_dist -> layer_15_qkv_gpu31
+	layer_15_qkv_gpu28 -> layer_15_allgather_qkv
+	layer_15_qkv_gpu29 -> layer_15_allgather_qkv
+	layer_15_qkv_gpu30 -> layer_15_allgather_qkv
+	layer_15_qkv_gpu31 -> layer_15_allgather_qkv
+	layer_15_allgather_qkv -> layer_15_attention
+	layer_15_attention -> layer_15_attn_out_gpu28
+	layer_15_attn_out_gpu28 -> layer_15_allreduce_attn
+	layer_15_attn_out_gpu29 -> layer_15_allreduce_attn
+	layer_15_attn_out_gpu30 -> layer_15_allreduce_attn
+	layer_15_attn_out_gpu31 -> layer_15_allreduce_attn
+	layer_15_allreduce_attn -> layer_15_residual1
+	layer_15_input_dist -> layer_15_residual1
+	layer_15_residual1 -> layer_15_ln1
+	layer_15_ln1 -> layer_15_mlp_fc1_gpu28
+	layer_15_ln1 -> layer_15_mlp_fc1_gpu29
+	layer_15_ln1 -> layer_15_mlp_fc1_gpu30
+	layer_15_ln1 -> layer_15_mlp_fc1_gpu31
+	layer_15_mlp_fc1_gpu28 -> layer_15_allgather_mlp
+	layer_15_mlp_fc1_gpu29 -> layer_15_allgather_mlp
+	layer_15_mlp_fc1_gpu30 -> layer_15_allgather_mlp
+	layer_15_mlp_fc1_gpu31 -> layer_15_allgather_mlp
+	layer_15_allgather_mlp -> layer_15_gelu
+	layer_15_gelu -> layer_15_mlp_fc2_gpu28
+	layer_15_mlp_fc2_gpu28 -> layer_15_allreduce_mlp
+	layer_15_mlp_fc2_gpu29 -> layer_15_allreduce_mlp
+	layer_15_mlp_fc2_gpu30 -> layer_15_allreduce_mlp
+	layer_15_mlp_fc2_gpu31 -> layer_15_allreduce_mlp
+	layer_15_allreduce_mlp -> layer_15_residual2
+	layer_15_residual1 -> layer_15_residual2
+	layer_15_residual2 -> layer_15_ln2
+	layer_15_ln2 -> output
+}
