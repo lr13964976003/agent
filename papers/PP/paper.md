@@ -194,8 +194,8 @@ We measure performance with two key metrics:
 
 | Model                    | Method                | GPUs | TPS (tokens/s) | TPOT (ms) |
 | ------------------------ | --------------------- | ---- | -------------- | --------------- |
-| Dense (16-layer)          | Baseline (TP=8, PP=2) | 16   | 12,800         | 0.078           |
-| Dense (16-layer)          | Proposed Layer-wise   | 16   | 15,360         | 0.065           |
+| Dense (4-layer)          | Baseline (TP=8, PP=2) | 16   | 12,800         | 0.078           |
+| Dense (4-layer)          | Proposed Layer-wise   | 16   | 15,360         | 0.065           |
 
 
 ---
