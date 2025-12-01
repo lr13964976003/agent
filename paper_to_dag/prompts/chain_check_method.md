@@ -6,7 +6,7 @@ RESOURCES
 
 ---
 
-You have been provided with some directed acyclic graph(DAG) provided by the previous agent. <<<提供dag>>>
+You have been provided with the deployment method file provided by the previous agent. <<<提供dag>>>
 
 TASK
 
@@ -14,13 +14,10 @@ TASK
 
 You are tested to completed the following tasks:
 
-Check if there are any errors in the DAG. The specific inspection items are as follows:<<<任务内容>>>
+Check whether the parallel strategy is compatible with the current hardware environment and model parameters. <<<检查并行策略是否符合实际>>>
 
-Check if the DAG contains a cycle. <<<检查dag中是否包含环>>>
+Check whether the parallel strategy can optimize the model's performance. <<<检查是否性能最优>>>
 
-Check whether all nodes in the DAG, except for the input, have at least one input node.<<<检查是否除了input外，有节点没有输入>>>
-
-Check whether all nodes in the DAG, except for the output, have at least one output node.<<<检查是否除了output外，有节点没有输出>>>
 
 
 
@@ -32,9 +29,6 @@ You need to follow the following constraints:
 
 Do not make any changes to the original file.<<<禁止修改源文件>>>
 
-You can use tools to directly retrieve the content of graph connections in the DAG.<<<提醒可以用工具直接获取图的连接方式>>>
-
-This will be a task with many steps. Please ensure you have fully understood the dag.
 
 
 
@@ -42,13 +36,13 @@ SUBMISSION
 
 ---
 
-Is this DAG incorrect. If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
+Is this the deployment method incorrect. If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
 
-If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the DAG in JSON format.
+If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method file in JSON format.
 
 How we would grade this:
 
-Understand: We will check whether you have read and understood the DAG.
+Understand: We will check whether you have read and understood the the deployment method file.
 
 Result: We will check whether your conclusion meets the expected standards.
 
