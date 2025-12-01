@@ -6,7 +6,7 @@ RESOURCES
 
 ---
 
-You have been provided with the deployment method file provided by the previous agent. <<<提供dag>>>
+You have been provided with the deployment method file provided by the previous agent. <<<提供部署方案文件>>>
 
 TASK
 
