@@ -1,7 +1,7 @@
 ```
 ## **Environment Condition**
 
-* **Model**: 16-layer Mixture-of-Experts (MoE), Each layer has 64 experts
+* **Model**: 4-layer Mixture-of-Experts (MoE), Each layer has 64 experts
 * **Precision**: FP8
 * **Batch size**: Each batch consists of 128 sequences.
 * **Sequence Length**: 128 tokens per sequence.
