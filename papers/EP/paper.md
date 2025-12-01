@@ -208,13 +208,13 @@ Our method provides:
 We evaluate the proposed large-scale cross-node expert parallelism method in an **inference-only** setting using adequate H100 GPUs. The model and configuration are as follows:
 
 
-* **Model**: 16-layer Mixture-of-Experts (MoE), each expert is a MLP
-* **Precision**: BF16
+* **Model**: 16-layer Mixture-of-Experts (MoE), Each layer has 64 experts
+* **Precision**: FP8
 * **Batch size**: Each batch consists of 128 sequences.
-* **Sequence Length**: 10000 tokens per sequence.
-* **Token Dimension**: The dimension of each token is 4096.
-* **Dimension of MHA**: The number of heads is 32 and the dimension of each heads is 128
-* **Hidden size of MLP**: The hidden is of MLP is 16384
+* **Sequence Length**: 128 tokens per sequence.
+* **Token Dimension**: The dimension of each token is 1024.
+* **Dimension of MHA**: The number of heads is 16 and the dimension of each heads is 64
+* **Hidden size of MOE**: The hidden is of MOE is 4096
 
 
 **Metrics:**
@@ -233,19 +233,19 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 #### **2.1 Baseline Deployment (TP=8, PP=2)**
 
 
-* **GPUs Used**: adequate H100 GPUs
+* **GPUs Used**: 16 H100 GPUs
 * **Per-GPU Allocation**:
 
 
-  * Each GPU holds  tensor-parallel shard for all layers.
-  * Experts are colocated on GPUs.
+  * Each GPU holds 8 tensor-parallel shard for all layers.
+  * Experts are colocated on 16 GPUs.
 * **Processing**: Tokens flow sequentially through the pipeline stages, and multiple experts per GPU share compute resources.
 
 
 #### **2.2 Proposed Cross-Node Expert Parallelism**
 
 
-* **GPUs Used**: adequate H100 GPUs (one GPU per expert per layer)
+* **GPUs Used**: 16 H100 GPUs (one GPU per expert per layer)
 * **Per-GPU Allocation**:
 
 
