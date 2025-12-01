@@ -18,7 +18,10 @@ Check if there are any errors in the DAG. The specific inspection items are as f
 
 Check if the DAG contains a cycle. <<<检查dag中是否包含环>>>
 
-Check if except for the input node, each node in DAG must have a preceding input node; except for the output node, each node must output to another node. <<<检查DAG中是否有空悬的节点>>>
+Check whether all nodes in the DAG, except for the input, have at least one input node.<<<检查是否除了input外，有节点没有输入>>>
+
+Check whether all nodes in the DAG, except for the output, have at least one output node.<<<检查是否除了output外，有节点没有输出>>>
+
 
 
 NOTE
@@ -39,7 +42,7 @@ SUBMISSION
 
 ---
 
-Is this DAG incorrect, If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
+Is this DAG incorrect. If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
 
 If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the DAG in JSON format.
 
@@ -48,10 +51,4 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
-
-
-
-
-
-
 
