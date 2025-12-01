@@ -1,0 +1,40 @@
+// Tensor Parallelism Detailed View
+digraph {
+	dpi=300 rankdir=LR size="20,20"
+	input [label="Input\n[batch_size=128, seq_len=1024, hidden_dim=1024]"]
+	subgraph cluster_gpu0 {
+		fillcolor=lightcyan label="GPU 0" style="rounded,filled"
+		q_proj_0 [label="Q Projection\n[batch_size=128, seq_len=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+		k_proj_0 [label="K Projection\n[batch_size=128, seq_len=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+		v_proj_0 [label="V Projection\n[batch_size=128, seq_len=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+		attn_0 [label="Attention\n[batch_size=128, seq_len=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+		out_proj_0 [label="Output Projection\n[batch_size=128, seq_len=1024, hidden_dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_gpu1 {
+		fillcolor=lightcyan label="GPU 1" style="rounded,filled"
+		q_proj_1 [label="Q Projection\n[batch_size=128, seq_len=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+		k_proj_1 [label="K Projection\n[batch_size=128, seq_len=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+		v_proj_1 [label="V Projection\n[batch_size=128, seq_len=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+		attn_1 [label="Attention\n[batch_size=128, seq_len=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+		out_proj_1 [label="Output Projection\n[batch_size=128, seq_len=1024, hidden_dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	all_reduce [label="All-Reduce Sum\n[batch_size=128, seq_len=1024, hidden_dim=1024]" fillcolor=lightblue shape=ellipse]
+	output [label="Output\n[batch_size=128, seq_len=1024, hidden_dim=1024]"]
+	input -> q_proj_0
+	input -> q_proj_1
+	input -> k_proj_0
+	input -> k_proj_1
+	input -> v_proj_0
+	input -> v_proj_1
+	q_proj_0 -> attn_0
+	k_proj_0 -> attn_0
+	v_proj_0 -> attn_0
+	q_proj_1 -> attn_1
+	k_proj_1 -> attn_1
+	v_proj_1 -> attn_1
+	attn_0 -> out_proj_0
+	attn_1 -> out_proj_1
+	out_proj_0 -> all_reduce
+	out_proj_1 -> all_reduce
+	all_reduce -> output
+}
