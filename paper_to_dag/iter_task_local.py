@@ -98,36 +98,6 @@ def main():
                      ExtractEdgeFromDAGTool()
                      ]
                  },
-             "generate_method": {
-                 "slug": "chain_generate_method",
-                 "version": 1,
-                 "inputs": {
-					 "environment_path": "../environment/EP/paper.md",
-					 "knowledge_path": "../knowledges/llm_parallel_strategies.md",
-                     "save_path": f"../outputs/{submission_dir}"
-                     },
-                 "tools": [
-                     ExtractEdgeFromDAGTool(),
-                     FileReadTool(),
-					 PythonTool(),
-                     CommandTool(),
-                     FileWriterTool()
-                     ]
-                 },
-		     "check_method": {
-                 "slug": "chain_check_method",
-                 "version": 1,
-                 "inputs": {
-                     "save_path": f"../outputs/{submission_dir}"
-                     },
-                 "tools": [
-                     ExtractEdgeFromDAGTool(),
-                     FileReadTool(),
-					 PythonTool(),
-                     CommandTool(),
-                     FileWriterTool()
-                     ]
-                 },
 		     "performance": {
                  "slug": "chain_performance",
                  "version": 17,
@@ -173,8 +143,6 @@ def main():
 
     paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], work_task=tasks[1], review_task=tasks[2])
     paper_result = paper_loop.run()
-	method_loop = ReviewLoop(worker=agents[5], reviewer=agents[6], work_task=tasks[5], review_task=tasks[6])
-    method_result = method_loop.run()
     dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=paper_result)
     dag_result = dag_loop.run()
     
