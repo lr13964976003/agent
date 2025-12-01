@@ -48,7 +48,7 @@ SUBMISSION
 
 The generated method should be saved in {save_path}. 
 
-Submit the save paths of all files you generated in JSON format. <<<要求用json格式提交生成dag的路径>>>
+You don't need to submit the complete content because it is too large. Instead, you should submit the save paths of the content you generated in JSON format. <<<提交路径而不是content>>>
 
 <<<用评分标准约束Agent行为>>>
 
