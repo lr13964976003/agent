@@ -20,9 +20,7 @@ You are tested to completed the following tasks:
 
 Gain a deep understanding of the methods proposed in the deployment method. <<<要求理解部署方案>>> 
 
-
-
-Generate complete model deployment DAGs(directed acyclic graph) according to you deployment plan and the baseline in the paper by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
+Generate one complete model deployment DAG(directed acyclic graph) according to deployment method by calling tools to generate graphviz code, meet the following conditions: <<<要求生成一个DAG，并遵守以下要求>>>
 
 Card Boundary Division (specify which GPU each node is on) <<<按不同GPU划分边界>>>
 
@@ -107,6 +105,7 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
 
