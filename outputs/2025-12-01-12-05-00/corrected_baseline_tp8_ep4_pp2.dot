@@ -1,0 +1,203 @@
+digraph Corrected_Baseline_TP8_EP4_PP2 {
+    rankdir=TB
+    splines=ortho
+    graph [fontname=Arial, fontsize=12]
+    
+    // Node styles
+    node [shape=rectangle, style=filled, fillcolor=lightblue, fontname=Arial, fontsize=10]
+    
+    // Input/Output
+    input [label="Input\n[batch_size=128, seq_len=1024, d_model=1024]\nGPU: All", fillcolor=lightgreen, shape=ellipse]
+    output [label="Output\n[batch_size=128, seq_len=1024, d_model=1024]\nGPU: All", fillcolor=lightgreen, shape=ellipse]
+    
+    // Communication nodes
+    comm_tp_allreduce [label="TP All-Reduce\nGPU: 0-7, 8-15, 16-23, 24-31, 32-39, 40-47, 48-55, 56-63", fillcolor=lightgray, shape=ellipse]
+    comm_ep_all2all [label="EP All-to-All\nGPU: Per TP group", fillcolor=lightgray, shape=ellipse]
+    comm_pp_stage0_1 [label="PP Stage 0→1\nGPU: 31→32", fillcolor=orange, shape=diamond]
+    
+    // Stage 0: Layers 0-7 (GPUs 0-31)
+    // TP Group 0: GPUs 0-7, TP Group 1: GPUs 8-15, TP Group 2: GPUs 16-23, TP Group 3: GPUs 24-31
+    
+    // Layer 0 - Stage 0
+    layer_0_input_split [label="Input Split\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=128]\nGPU: Per TP group", fillcolor=yellow, shape=parallelogram]
+    
+    // QKV Linear with TP=8 (column parallel)
+    layer_0_qkv_split [label="QKV Split\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=128]\nGPU: 0-7 (TP=8)", fillcolor=yellow, shape=parallelogram]
+    layer_0_qkv_gpu0 [label="QKV Linear\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 0", fillcolor=lightcoral]
+    layer_0_qkv_gpu1 [label="QKV Linear\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 1", fillcolor=lightcoral]
+    layer_0_qkv_gpu2 [label="QKV Linear\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 2", fillcolor=lightcoral]
+    layer_0_qkv_gpu3 [label="QKV Linear\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 3", fillcolor=lightcoral]
+    layer_0_qkv_gpu4 [label="QKV Linear\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 4", fillcolor=lightcoral]
+    layer_0_qkv_gpu5 [label="QKV Linear\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 5", fillcolor=lightcoral]
+    layer_0_qkv_gpu6 [label="QKV Linear\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 6", fillcolor=lightcoral]
+    layer_0_qkv_gpu7 [label="QKV Linear\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 7", fillcolor=lightcoral]
+    
+    // Multi-head attention computation
+    layer_0_attn_gpu0 [label="Attention Compute\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 0", fillcolor=lightcoral]
+    layer_0_attn_gpu1 [label="Attention Compute\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 1", fillcolor=lightcoral]
+    layer_0_attn_gpu2 [label="Attention Compute\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 2", fillcolor=lightcoral]
+    layer_0_attn_gpu3 [label="Attention Compute\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 3", fillcolor=lightcoral]
+    layer_0_attn_gpu4 [label="Attention Compute\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 4", fillcolor=lightcoral]
+    layer_0_attn_gpu5 [label="Attention Compute\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 5", fillcolor=lightcoral]
+    layer_0_attn_gpu6 [label="Attention Compute\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 6", fillcolor=lightcoral]
+    layer_0_attn_gpu7 [label="Attention Compute\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 7", fillcolor=lightcoral]
+    
+    // Attention output projection with TP=8 (row parallel)
+    layer_0_proj_gpu0 [label="Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 0", fillcolor=lightcoral]
+    layer_0_proj_gpu1 [label="Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 1", fillcolor=lightcoral]
+    layer_0_proj_gpu2 [label="Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 2", fillcolor=lightcoral]
+    layer_0_proj_gpu3 [label="Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 3", fillcolor=lightcoral]
+    layer_0_proj_gpu4 [label="Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 4", fillcolor=lightcoral]
+    layer_0_proj_gpu5 [label="Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 5", fillcolor=lightcoral]
+    layer_0_proj_gpu6 [label="Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 6", fillcolor=lightcoral]
+    layer_0_proj_gpu7 [label="Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 7", fillcolor=lightcoral]
+    
+    // Attention all-reduce and residual connection
+    layer_0_attn_allreduce [label="Attention All-Reduce\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-7", fillcolor=lightgray, shape=ellipse]
+    layer_0_add_norm1 [label="Add+Residual+Norm\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-7", fillcolor=lightblue]
+    
+    // MoE Layer with EP=4 (64 experts total, 16 per GPU within EP group)
+    layer_0_gate [label="MoE Gate\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,topk=2]\nGPU: 0-7", fillcolor=yellow, shape=parallelogram]
+    
+    // Expert distribution across EP groups (4 groups of 8 GPUs each)
+    // EP Group 0: GPUs 0-7, EP Group 1: GPUs 8-15, EP Group 2: GPUs 16-23, EP Group 3: GPUs 24-31
+    
+    layer_0_ep0_scatter [label="EP Scatter\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-7", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep1_scatter [label="EP Scatter\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 8-15", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep2_scatter [label="EP Scatter\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 16-23", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep3_scatter [label="EP Scatter\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 24-31", fillcolor=lightgray, shape=ellipse]
+    
+    // Experts (16 per EP group, 64 total)
+    // EP Group 0 (GPUs 0-7): 16 experts, 2 per GPU
+    layer_0_exp0_gpu0 [label="Expert 0\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0", fillcolor=lightgreen]
+    layer_0_exp1_gpu0 [label="Expert 1\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0", fillcolor=lightgreen]
+    layer_0_exp2_gpu1 [label="Expert 2\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 1", fillcolor=lightgreen]
+    layer_0_exp3_gpu1 [label="Expert 3\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 1", fillcolor=lightgreen]
+    layer_0_exp4_gpu2 [label="Expert 4\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 2", fillcolor=lightgreen]
+    layer_0_exp5_gpu2 [label="Expert 5\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 2", fillcolor=lightgreen]
+    layer_0_exp6_gpu3 [label="Expert 6\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 3", fillcolor=lightgreen]
+    layer_0_exp7_gpu3 [label="Expert 7\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 3", fillcolor=lightgreen]
+    layer_0_exp8_gpu4 [label="Expert 8\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 4", fillcolor=lightgreen]
+    layer_0_exp9_gpu4 [label="Expert 9\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 4", fillcolor=lightgreen]
+    layer_0_exp10_gpu5 [label="Expert 10\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 5", fillcolor=lightgreen]
+    layer_0_exp11_gpu5 [label="Expert 11\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 5", fillcolor=lightgreen]
+    layer_0_exp12_gpu6 [label="Expert 12\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 6", fillcolor=lightgreen]
+    layer_0_exp13_gpu6 [label="Expert 13\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 6", fillcolor=lightgreen]
+    layer_0_exp14_gpu7 [label="Expert 14\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 7", fillcolor=lightgreen]
+    layer_0_exp15_gpu7 [label="Expert 15\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 7", fillcolor=lightgreen]
+    
+    layer_0_ep0_gather [label="EP Gather\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-7", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep1_gather [label="EP Gather\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 8-15", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep2_gather [label="EP Gather\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 16-23", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep3_gather [label="EP Gather\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 24-31", fillcolor=lightgray, shape=ellipse]
+    
+    layer_0_moe_agg [label="MoE Aggregation\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-31", fillcolor=yellow, shape=parallelogram]
+    layer_0_add_norm2 [label="Add+Residual+Norm\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-31", fillcolor=lightblue]
+    
+    // Connections for Layer 0
+    input -> layer_0_input_split
+    
+    // QKV computation
+    layer_0_input_split -> layer_0_qkv_split
+    layer_0_qkv_split -> layer_0_qkv_gpu0
+    layer_0_qkv_split -> layer_0_qkv_gpu1
+    layer_0_qkv_split -> layer_0_qkv_gpu2
+    layer_0_qkv_split -> layer_0_qkv_gpu3
+    layer_0_qkv_split -> layer_0_qkv_gpu4
+    layer_0_qkv_split -> layer_0_qkv_gpu5
+    layer_0_qkv_split -> layer_0_qkv_gpu6
+    layer_0_qkv_split -> layer_0_qkv_gpu7
+    
+    layer_0_qkv_gpu0 -> layer_0_attn_gpu0
+    layer_0_qkv_gpu1 -> layer_0_attn_gpu1
+    layer_0_qkv_gpu2 -> layer_0_attn_gpu2
+    layer_0_qkv_gpu3 -> layer_0_attn_gpu3
+    layer_0_qkv_gpu4 -> layer_0_attn_gpu4
+    layer_0_qkv_gpu5 -> layer_0_attn_gpu5
+    layer_0_qkv_gpu6 -> layer_0_attn_gpu6
+    layer_0_qkv_gpu7 -> layer_0_attn_gpu7
+    
+    layer_0_attn_gpu0 -> layer_0_proj_gpu0
+    layer_0_attn_gpu1 -> layer_0_proj_gpu1
+    layer_0_attn_gpu2 -> layer_0_proj_gpu2
+    layer_0_attn_gpu3 -> layer_0_proj_gpu3
+    layer_0_attn_gpu4 -> layer_0_proj_gpu4
+    layer_0_attn_gpu5 -> layer_0_proj_gpu5
+    layer_0_attn_gpu6 -> layer_0_proj_gpu6
+    layer_0_attn_gpu7 -> layer_0_proj_gpu7
+    
+    layer_0_proj_gpu0 -> layer_0_attn_allreduce
+    layer_0_proj_gpu1 -> layer_0_attn_allreduce
+    layer_0_proj_gpu2 -> layer_0_attn_allreduce
+    layer_0_proj_gpu3 -> layer_0_attn_allreduce
+    layer_0_proj_gpu4 -> layer_0_attn_allreduce
+    layer_0_proj_gpu5 -> layer_0_attn_allreduce
+    layer_0_proj_gpu6 -> layer_0_attn_allreduce
+    layer_0_proj_gpu7 -> layer_0_attn_allreduce
+    
+    layer_0_attn_allreduce -> layer_0_add_norm1
+    input -> layer_0_add_norm1 [style=dashed, label="residual"]
+    
+    // MoE computation
+    layer_0_add_norm1 -> layer_0_gate
+    layer_0_add_norm1 -> layer_0_ep0_scatter
+    layer_0_gate -> layer_0_ep0_scatter [style=dashed, label="routing"]
+    
+    // Expert routing and computation
+    layer_0_ep0_scatter -> layer_0_exp0_gpu0
+    layer_0_ep0_scatter -> layer_0_exp1_gpu0
+    layer_0_ep0_scatter -> layer_0_exp2_gpu1
+    layer_0_ep0_scatter -> layer_0_exp3_gpu1
+    layer_0_ep0_scatter -> layer_0_exp4_gpu2
+    layer_0_ep0_scatter -> layer_0_exp5_gpu2
+    layer_0_ep0_scatter -> layer_0_exp6_gpu3
+    layer_0_ep0_scatter -> layer_0_exp7_gpu3
+    layer_0_ep0_scatter -> layer_0_exp8_gpu4
+    layer_0_ep0_scatter -> layer_0_exp9_gpu4
+    layer_0_ep0_scatter -> layer_0_exp10_gpu5
+    layer_0_ep0_scatter -> layer_0_exp11_gpu5
+    layer_0_ep0_scatter -> layer_0_exp12_gpu6
+    layer_0_ep0_scatter -> layer_0_exp13_gpu6
+    layer_0_ep0_scatter -> layer_0_exp14_gpu7
+    layer_0_ep0_scatter -> layer_0_exp15_gpu7
+    
+    layer_0_exp0_gpu0 -> layer_0_ep0_gather
+    layer_0_exp1_gpu0 -> layer_0_ep0_gather
+    layer_0_exp2_gpu1 -> layer_0_ep0_gather
+    layer_0_exp3_gpu1 -> layer_0_ep0_gather
+    layer_0_exp4_gpu2 -> layer_0_ep0_gather
+    layer_0_exp5_gpu2 -> layer_0_ep0_gather
+    layer_0_exp6_gpu3 -> layer_0_ep0_gather
+    layer_0_exp7_gpu3 -> layer_0_ep0_gather
+    layer_0_exp8_gpu4 -> layer_0_ep0_gather
+    layer_0_exp9_gpu4 -> layer_0_ep0_gather
+    layer_0_exp10_gpu5 -> layer_0_ep0_gather
+    layer_0_exp11_gpu5 -> layer_0_ep0_gather
+    layer_0_exp12_gpu6 -> layer_0_ep0_gather
+    layer_0_exp13_gpu6 -> layer_0_ep0_gather
+    layer_0_exp14_gpu7 -> layer_0_ep0_gather
+    layer_0_exp15_gpu7 -> layer_0_ep0_gather
+    
+    layer_0_ep0_gather -> layer_0_moe_agg
+    layer_0_ep1_gather -> layer_0_moe_agg
+    layer_0_ep2_gather -> layer_0_moe_agg
+    layer_0_ep3_gather -> layer_0_moe_agg
+    
+    layer_0_moe_agg -> layer_0_add_norm2
+    layer_0_add_norm1 -> layer_0_add_norm2 [style=dashed, label="residual"]
+    
+    // Simplified representation for other layers (showing key differences)
+    // Layer 7 (last layer in stage 0)
+    layer_7_add_norm2 [label="Layer 7 Add+Norm\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-31", fillcolor=lightblue]
+    
+    // Stage 1: Layers 8-15 (GPUs 32-63)
+    layer_8_input_split [label="Stage 1 Input Split\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=128]\nGPU: 32-39,40-47,48-55,56-63", fillcolor=yellow, shape=parallelogram]
+    layer_15_add_norm2 [label="Layer 15 Add+Norm\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 32-63", fillcolor=lightblue]
+    
+    // Connections
+    layer_0_add_norm2 -> layer_7_add_norm2 [style=dotted, label="layers 1-6"]
+    layer_7_add_norm2 -> comm_pp_stage0_1
+    comm_pp_stage0_1 -> layer_8_input_split
+    layer_8_input_split -> layer_15_add_norm2 [style=dotted, label="layers 8-14"]
+    layer_15_add_norm2 -> output
+}

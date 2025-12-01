@@ -1,0 +1,188 @@
+digraph Corrected_Proposed_TP8_EP4_PP2 {
+    rankdir=TB
+    splines=ortho
+    graph [fontname=Arial, fontsize=12]
+    
+    // Node styles
+    node [shape=rectangle, style=filled, fillcolor=lightblue, fontname=Arial, fontsize=10]
+    
+    // Input/Output
+    input [label="Input\n[batch_size=128, seq_len=1024, d_model=1024]\nGPU: All", fillcolor=lightgreen, shape=ellipse]
+    output [label="Output\n[batch_size=128, seq_len=1024, d_model=1024]\nGPU: All", fillcolor=lightgreen, shape=ellipse]
+    
+    // Communication nodes
+    comm_tp_allreduce [label="TP All-Reduce\nOptimized ring algorithm\nGPU: Per TP group", fillcolor=lightgray, shape=ellipse]
+    comm_ep_hierarchical [label="EP Hierarchical All-to-All\nNVLink + InfiniBand\nGPU: Per EP group", fillcolor=lightgray, shape=ellipse]
+    comm_pp_async [label="PP Async Communication\nDouble buffered\nGPU: 31→32", fillcolor=orange, shape=diamond]
+    
+    // Optimized Stage 0: Layers 0-7 with load balancing
+    
+    // Layer 0 - Optimized attention with better tensor splits
+    layer_0_input_opt [label="Optimized Input Split\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=128]\nGPU: Per TP group", fillcolor=yellow, shape=parallelogram]
+    
+    // Optimized QKV with fused operations
+    layer_0_qkv_fused_gpu0 [label="Fused QKV\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 0", fillcolor=lightgreen]
+    layer_0_qkv_fused_gpu1 [label="Fused QKV\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 1", fillcolor=lightgreen]
+    layer_0_qkv_fused_gpu2 [label="Fused QKV\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 2", fillcolor=lightgreen]
+    layer_0_qkv_fused_gpu3 [label="Fused QKV\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 3", fillcolor=lightgreen]
+    layer_0_qkv_fused_gpu4 [label="Fused QKV\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 4", fillcolor=lightgreen]
+    layer_0_qkv_fused_gpu5 [label="Fused QKV\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 5", fillcolor=lightgreen]
+    layer_0_qkv_fused_gpu6 [label="Fused QKV\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 6", fillcolor=lightgreen]
+    layer_0_qkv_fused_gpu7 [label="Fused QKV\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 7", fillcolor=lightgreen]
+    
+    // Optimized attention with flash attention
+    layer_0_flash_attn_gpu0 [label="Flash Attention\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 0", fillcolor=lightgreen]
+    layer_0_flash_attn_gpu1 [label="Flash Attention\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 1", fillcolor=lightgreen]
+    layer_0_flash_attn_gpu2 [label="Flash Attention\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 2", fillcolor=lightgreen]
+    layer_0_flash_attn_gpu3 [label="Flash Attention\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 3", fillcolor=lightgreen]
+    layer_0_flash_attn_gpu4 [label="Flash Attention\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 4", fillcolor=lightgreen]
+    layer_0_flash_attn_gpu5 [label="Flash Attention\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 5", fillcolor=lightgreen]
+    layer_0_flash_attn_gpu6 [label="Flash Attention\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 6", fillcolor=lightgreen]
+    layer_0_flash_attn_gpu7 [label="Flash Attention\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,heads=2,d_k=64]\nGPU: 7", fillcolor=lightgreen]
+    
+    // Optimized projection
+    layer_0_proj_opt_gpu0 [label="Optimized Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 0", fillcolor=lightgreen]
+    layer_0_proj_opt_gpu1 [label="Optimized Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 1", fillcolor=lightgreen]
+    layer_0_proj_opt_gpu2 [label="Optimized Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 2", fillcolor=lightgreen]
+    layer_0_proj_opt_gpu3 [label="Optimized Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 3", fillcolor=lightgreen]
+    layer_0_proj_opt_gpu4 [label="Optimized Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 4", fillcolor=lightgreen]
+    layer_0_proj_opt_gpu5 [label="Optimized Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 5", fillcolor=lightgreen]
+    layer_0_proj_opt_gpu6 [label="Optimized Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 6", fillcolor=lightgreen]
+    layer_0_proj_opt_gpu7 [label="Optimized Projection\n[batch=128,seq=1024,heads=2,d_k=64]→[batch=128,seq=1024,d_model=128]\nGPU: 7", fillcolor=lightgreen]
+    
+    // Optimized all-reduce with ring algorithm
+    layer_0_attn_allreduce_opt [label="Optimized All-Reduce\nRing algorithm, 2ms latency\n[batch=128,seq=1024,d_model=128]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-7", fillcolor=lightgray, shape=ellipse]
+    layer_0_add_norm1_opt [label="Fused Add+Residual+Norm\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-7", fillcolor=lightgreen]
+    
+    // Optimized MoE with load balancing
+    layer_0_gate_opt [label="Load-Balanced Gate\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,topk=2]\nGPU: 0-7", fillcolor=yellow, shape=parallelogram]
+    
+    // Optimized expert distribution with hierarchical communication
+    layer_0_ep0_scatter_opt [label="Hierarchical EP Scatter\nNVLink优先\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-7", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep1_scatter_opt [label="Hierarchical EP Scatter\nNVLink优先\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 8-15", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep2_scatter_opt [label="Hierarchical EP Scatter\nNVLink优先\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 16-23", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep3_scatter_opt [label="Hierarchical EP Scatter\nNVLink优先\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 24-31", fillcolor=lightgray, shape=ellipse]
+    
+    // Optimized experts with expert parallelism
+    layer_0_exp0_opt_gpu0 [label="Expert 0 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0", fillcolor=lightcoral]
+    layer_0_exp1_opt_gpu0 [label="Expert 1 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0", fillcolor=lightcoral]
+    layer_0_exp2_opt_gpu1 [label="Expert 2 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 1", fillcolor=lightcoral]
+    layer_0_exp3_opt_gpu1 [label="Expert 3 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 1", fillcolor=lightcoral]
+    layer_0_exp4_opt_gpu2 [label="Expert 4 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 2", fillcolor=lightcoral]
+    layer_0_exp5_opt_gpu2 [label="Expert 5 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 2", fillcolor=lightcoral]
+    layer_0_exp6_opt_gpu3 [label="Expert 6 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 3", fillcolor=lightcoral]
+    layer_0_exp7_opt_gpu3 [label="Expert 7 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 3", fillcolor=lightcoral]
+    layer_0_exp8_opt_gpu4 [label="Expert 8 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 4", fillcolor=lightcoral]
+    layer_0_exp9_opt_gpu4 [label="Expert 9 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 4", fillcolor=lightcoral]
+    layer_0_exp10_opt_gpu5 [label="Expert 10 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 5", fillcolor=lightcoral]
+    layer_0_exp11_opt_gpu5 [label="Expert 11 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 5", fillcolor=lightcoral]
+    layer_0_exp12_opt_gpu6 [label="Expert 12 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 6", fillcolor=lightcoral]
+    layer_0_exp13_opt_gpu6 [label="Expert 13 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 6", fillcolor=lightcoral]
+    layer_0_exp14_opt_gpu7 [label="Expert 14 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 7", fillcolor=lightcoral]
+    layer_0_exp15_opt_gpu7 [label="Expert 15 (Optimized)\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 7", fillcolor=lightcoral]
+    
+    layer_0_ep0_gather_opt [label="Hierarchical EP Gather\nNVLink优先\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-7", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep1_gather_opt [label="Hierarchical EP Gather\nNVLink优先\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 8-15", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep2_gather_opt [label="Hierarchical EP Gather\nNVLink优先\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 16-23", fillcolor=lightgray, shape=ellipse]
+    layer_0_ep3_gather_opt [label="Hierarchical EP Gather\nNVLink优先\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 24-31", fillcolor=lightgray, shape=ellipse]
+    
+    layer_0_moe_agg_opt [label="Optimized MoE Aggregation\nLoad balanced\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-31", fillcolor=yellow, shape=parallelogram]
+    layer_0_add_norm2_opt [label="Fused Add+Residual+Norm\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 0-31", fillcolor=lightgreen]
+    
+    // Optimized Stage 1 representation
+    layer_15_add_norm2_opt [label="Optimized Layer 15\nAdd+Residual+Norm\n[batch=128,seq=1024,d_model=1024]→[batch=128,seq=1024,d_model=1024]\nGPU: 32-63", fillcolor=lightgreen]
+    
+    // Connections for optimized version
+    input -> layer_0_input_opt
+    
+    // Optimized attention path
+    layer_0_input_opt -> layer_0_qkv_fused_gpu0
+    layer_0_input_opt -> layer_0_qkv_fused_gpu1
+    layer_0_input_opt -> layer_0_qkv_fused_gpu2
+    layer_0_input_opt -> layer_0_qkv_fused_gpu3
+    layer_0_input_opt -> layer_0_qkv_fused_gpu4
+    layer_0_input_opt -> layer_0_qkv_fused_gpu5
+    layer_0_input_opt -> layer_0_qkv_fused_gpu6
+    layer_0_input_opt -> layer_0_qkv_fused_gpu7
+    
+    layer_0_qkv_fused_gpu0 -> layer_0_flash_attn_gpu0
+    layer_0_qkv_fused_gpu1 -> layer_0_flash_attn_gpu1
+    layer_0_qkv_fused_gpu2 -> layer_0_flash_attn_gpu2
+    layer_0_qkv_fused_gpu3 -> layer_0_flash_attn_gpu3
+    layer_0_qkv_fused_gpu4 -> layer_0_flash_attn_gpu4
+    layer_0_qkv_fused_gpu5 -> layer_0_flash_attn_gpu5
+    layer_0_qkv_fused_gpu6 -> layer_0_flash_attn_gpu6
+    layer_0_qkv_fused_gpu7 -> layer_0_flash_attn_gpu7
+    
+    layer_0_flash_attn_gpu0 -> layer_0_proj_opt_gpu0
+    layer_0_flash_attn_gpu1 -> layer_0_proj_opt_gpu1
+    layer_0_flash_attn_gpu2 -> layer_0_proj_opt_gpu2
+    layer_0_flash_attn_gpu3 -> layer_0_proj_opt_gpu3
+    layer_0_flash_attn_gpu4 -> layer_0_proj_opt_gpu4
+    layer_0_flash_attn_gpu5 -> layer_0_proj_opt_gpu5
+    layer_0_flash_attn_gpu6 -> layer_0_proj_opt_gpu6
+    layer_0_flash_attn_gpu7 -> layer_0_proj_opt_gpu7
+    
+    layer_0_proj_opt_gpu0 -> layer_0_attn_allreduce_opt
+    layer_0_proj_opt_gpu1 -> layer_0_attn_allreduce_opt
+    layer_0_proj_opt_gpu2 -> layer_0_attn_allreduce_opt
+    layer_0_proj_opt_gpu3 -> layer_0_attn_allreduce_opt
+    layer_0_proj_opt_gpu4 -> layer_0_attn_allreduce_opt
+    layer_0_proj_opt_gpu5 -> layer_0_attn_allreduce_opt
+    layer_0_proj_opt_gpu6 -> layer_0_attn_allreduce_opt
+    layer_0_proj_opt_gpu7 -> layer_0_attn_allreduce_opt
+    
+    layer_0_attn_allreduce_opt -> layer_0_add_norm1_opt
+    input -> layer_0_add_norm1_opt [style=dashed, label="residual"]
+    
+    // Optimized MoE path
+    layer_0_add_norm1_opt -> layer_0_gate_opt
+    layer_0_add_norm1_opt -> layer_0_ep0_scatter_opt
+    layer_0_gate_opt -> layer_0_ep0_scatter_opt [style=dashed, label="routing"]
+    
+    layer_0_ep0_scatter_opt -> layer_0_exp0_opt_gpu0
+    layer_0_ep0_scatter_opt -> layer_0_exp1_opt_gpu0
+    layer_0_ep0_scatter_opt -> layer_0_exp2_opt_gpu1
+    layer_0_ep0_scatter_opt -> layer_0_exp3_opt_gpu1
+    layer_0_ep0_scatter_opt -> layer_0_exp4_opt_gpu2
+    layer_0_ep0_scatter_opt -> layer_0_exp5_opt_gpu2
+    layer_0_ep0_scatter_opt -> layer_0_exp6_opt_gpu3
+    layer_0_ep0_scatter_opt -> layer_0_exp7_opt_gpu3
+    layer_0_ep0_scatter_opt -> layer_0_exp8_opt_gpu4
+    layer_0_ep0_scatter_opt -> layer_0_exp9_opt_gpu4
+    layer_0_ep0_scatter_opt -> layer_0_exp10_opt_gpu5
+    layer_0_ep0_scatter_opt -> layer_0_exp11_opt_gpu5
+    layer_0_ep0_scatter_opt -> layer_0_exp12_opt_gpu6
+    layer_0_ep0_scatter_opt -> layer_0_exp13_opt_gpu6
+    layer_0_ep0_scatter_opt -> layer_0_exp14_opt_gpu7
+    layer_0_ep0_scatter_opt -> layer_0_exp15_opt_gpu7
+    
+    layer_0_exp0_opt_gpu0 -> layer_0_ep0_gather_opt
+    layer_0_exp1_opt_gpu0 -> layer_0_ep0_gather_opt
+    layer_0_exp2_opt_gpu1 -> layer_0_ep0_gather_opt
+    layer_0_exp3_opt_gpu1 -> layer_0_ep0_gather_opt
+    layer_0_exp4_opt_gpu2 -> layer_0_ep0_gather_opt
+    layer_0_exp5_opt_gpu2 -> layer_0_ep0_gather_opt
+    layer_0_exp6_opt_gpu3 -> layer_0_ep0_gather_opt
+    layer_0_exp7_opt_gpu3 -> layer_0_ep0_gather_opt
+    layer_0_exp8_opt_gpu4 -> layer_0_ep0_gather_opt
+    layer_0_exp9_opt_gpu4 -> layer_0_ep0_gather_opt
+    layer_0_exp10_opt_gpu5 -> layer_0_ep0_gather_opt
+    layer_0_exp11_opt_gpu5 -> layer_0_ep0_gather_opt
+    layer_0_exp12_opt_gpu6 -> layer_0_ep0_gather_opt
+    layer_0_exp13_opt_gpu6 -> layer_0_ep0_gather_opt
+    layer_0_exp14_opt_gpu7 -> layer_0_ep0_gather_opt
+    layer_0_exp15_opt_gpu7 -> layer_0_ep0_gather_opt
+    
+    layer_0_ep0_gather_opt -> layer_0_moe_agg_opt
+    layer_0_ep1_gather_opt -> layer_0_moe_agg_opt
+    layer_0_ep2_gather_opt -> layer_0_moe_agg_opt
+    layer_0_ep3_gather_opt -> layer_0_moe_agg_opt
+    
+    layer_0_moe_agg_opt -> layer_0_add_norm2_opt
+    layer_0_add_norm1_opt -> layer_0_add_norm2_opt [style=dashed, label="residual"]
+    
+    // Simplified path to output (representing all layers)
+    layer_0_add_norm2_opt -> layer_15_add_norm2_opt [style=dotted, label="layers 1-14 optimized"]
+    layer_15_add_norm2_opt -> output
+}
