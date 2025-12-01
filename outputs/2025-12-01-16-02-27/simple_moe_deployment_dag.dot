@@ -1,0 +1,79 @@
+// 7B MoE Model Deployment DAG - Simplified
+digraph {
+	dpi=300 rankdir=TB size="100,50"
+	input [label="Total Input\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	layer0_input [label="Layer 0 Input\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	input -> layer0_input
+	layer0_qkv [label="QKV Linear (TP=4)\nGPU: [0-3]\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, heads=16, d_k=192]" fillcolor=lightcoral style=filled]
+	layer0_input -> layer0_qkv
+	layer0_attn [label="Attention Compute\nGPU: [0-3]\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=192]\nOutput: [batch_size=128, seq_len=10240, heads=16, d_k=64]" fillcolor=lightcoral style=filled]
+	layer0_qkv -> layer0_attn
+	layer0_attn_allreduce [label="Attention All-Reduce\nGPU: All\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightpink shape=ellipse style=filled]
+	layer0_attn -> layer0_attn_allreduce
+	layer0_attn_residual [label="Attention + Residual\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024], [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer0_input -> layer0_attn_residual
+	layer0_attn_allreduce -> layer0_attn_residual
+	layer0_gate [label="MoE Gate Network\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, num_experts=64]" fillcolor=lightgreen style=filled]
+	layer0_attn_residual -> layer0_gate
+	layer0_expert0 [label="Expert 0\nGPU: [0-3]\nInput: [batch_size=8, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=8, seq_len=10240, hidden_dim=1024]" fillcolor=lightsalmon style=filled]
+	layer0_gate -> layer0_expert0 [style=dashed]
+	layer0_alltoall [label="All-to-All Expert Routing\nGPU: All\nInput: [batch_size=8, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=8, seq_len=10240, hidden_dim=1024]" fillcolor=lightpink shape=ellipse style=filled]
+	layer0_expert0 -> layer0_alltoall
+	layer0_moe_aggregate [label="MoE Output Aggregation\nGPU: All\nInput: [batch_size=8, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer0_alltoall -> layer0_moe_aggregate
+	layer0_moe_residual [label="MoE + Residual\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024], [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer0_attn_residual -> layer0_moe_residual [style=dashed]
+	layer0_moe_aggregate -> layer0_moe_residual
+	layer0_output [label="Layer 0 Output\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightblue style=filled]
+	layer0_moe_residual -> layer0_output
+	layer1_input [label="Layer 1 Input\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer0_output -> layer1_input
+	layer1_qkv [label="QKV Linear (TP=4)\nGPU: [0-3]\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, heads=16, d_k=192]" fillcolor=lightcoral style=filled]
+	layer1_input -> layer1_qkv
+	layer1_attn [label="Attention Compute\nGPU: [0-3]\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=192]\nOutput: [batch_size=128, seq_len=10240, heads=16, d_k=64]" fillcolor=lightcoral style=filled]
+	layer1_qkv -> layer1_attn
+	layer1_attn_allreduce [label="Attention All-Reduce\nGPU: All\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightpink shape=ellipse style=filled]
+	layer1_attn -> layer1_attn_allreduce
+	layer1_attn_residual [label="Attention + Residual\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024], [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer1_input -> layer1_attn_residual
+	layer1_attn_allreduce -> layer1_attn_residual
+	layer1_gate [label="MoE Gate Network\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, num_experts=64]" fillcolor=lightgreen style=filled]
+	layer1_attn_residual -> layer1_gate
+	layer1_expert0 [label="Expert 0\nGPU: [0-3]\nInput: [batch_size=8, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=8, seq_len=10240, hidden_dim=1024]" fillcolor=lightsalmon style=filled]
+	layer1_gate -> layer1_expert0 [style=dashed]
+	layer1_alltoall [label="All-to-All Expert Routing\nGPU: All\nInput: [batch_size=8, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=8, seq_len=10240, hidden_dim=1024]" fillcolor=lightpink shape=ellipse style=filled]
+	layer1_expert0 -> layer1_alltoall
+	layer1_moe_aggregate [label="MoE Output Aggregation\nGPU: All\nInput: [batch_size=8, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer1_alltoall -> layer1_moe_aggregate
+	layer1_moe_residual [label="MoE + Residual\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024], [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer1_attn_residual -> layer1_moe_residual [style=dashed]
+	layer1_moe_aggregate -> layer1_moe_residual
+	layer1_output [label="Layer 1 Output\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightblue style=filled]
+	layer1_moe_residual -> layer1_output
+	layer2_input [label="Layer 2 Input\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer1_output -> layer2_input
+	layer2_qkv [label="QKV Linear (TP=4)\nGPU: [0-3]\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, heads=16, d_k=192]" fillcolor=lightcoral style=filled]
+	layer2_input -> layer2_qkv
+	layer2_attn [label="Attention Compute\nGPU: [0-3]\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=192]\nOutput: [batch_size=128, seq_len=10240, heads=16, d_k=64]" fillcolor=lightcoral style=filled]
+	layer2_qkv -> layer2_attn
+	layer2_attn_allreduce [label="Attention All-Reduce\nGPU: All\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightpink shape=ellipse style=filled]
+	layer2_attn -> layer2_attn_allreduce
+	layer2_attn_residual [label="Attention + Residual\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024], [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer2_input -> layer2_attn_residual
+	layer2_attn_allreduce -> layer2_attn_residual
+	layer2_gate [label="MoE Gate Network\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, num_experts=64]" fillcolor=lightgreen style=filled]
+	layer2_attn_residual -> layer2_gate
+	layer2_expert0 [label="Expert 0\nGPU: [0-3]\nInput: [batch_size=8, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=8, seq_len=10240, hidden_dim=1024]" fillcolor=lightsalmon style=filled]
+	layer2_gate -> layer2_expert0 [style=dashed]
+	layer2_alltoall [label="All-to-All Expert Routing\nGPU: All\nInput: [batch_size=8, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=8, seq_len=10240, hidden_dim=1024]" fillcolor=lightpink shape=ellipse style=filled]
+	layer2_expert0 -> layer2_alltoall
+	layer2_moe_aggregate [label="MoE Output Aggregation\nGPU: All\nInput: [batch_size=8, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer2_alltoall -> layer2_moe_aggregate
+	layer2_moe_residual [label="MoE + Residual\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024], [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	layer2_attn_residual -> layer2_moe_residual [style=dashed]
+	layer2_moe_aggregate -> layer2_moe_residual
+	layer2_output [label="Layer 2 Output\nGPU: All\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightblue style=filled]
+	layer2_moe_residual -> layer2_output
+	final_output [label="Final Output\nInput: [batch_size=128, seq_len=10240, hidden_dim=1024]\nOutput: [batch_size=128, seq_len=10240, hidden_dim=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	layer2_output -> final_output
+}
