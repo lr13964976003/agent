@@ -214,7 +214,7 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 * **Sequence Length**: 128 tokens per sequence.
 * **Token Dimension**: The dimension of each token is 1024.
 * **Dimension of MHA**: The number of heads is 16 and the dimension of each heads is 64
-* **Hidden size of MOE**: The hidden is of MOE is 4096
+* **Hidden size of MOE**: The hidden is of MOE is 2048
 
 
 **Metrics:**
