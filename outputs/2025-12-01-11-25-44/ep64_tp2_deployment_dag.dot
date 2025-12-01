@@ -1,0 +1,115 @@
+digraph EP64_TP2_Deployment {
+    rankdir=TB;
+    node [shape=box, style=rounded, fontname="Arial"];
+    
+    // Input Layer
+    Input [label="Input\n(128×1024 tokens)", shape=ellipse, fillcolor=lightblue, style=filled];
+    
+    // Global definitions
+    ranksep=0.8;
+    nodesep=0.5;
+    
+    // Subgraph for each GPU pair (TP=2)
+    subgraph cluster_gpu_pairs {
+        label="128 GPUs: 64 EP groups × 2 TP partners";
+        style=dashed;
+        fillcolor=lightgray;
+        
+        // Create 64 EP groups, each with duplicated for TP=2
+        // We'll show representative nodes for clarity
+        
+        // EP Group 0 (GPU 0-1)
+        subgraph cluster_ep0 {
+            label="EP Group 0 (Experts 0)";
+            style=rounded;
+            
+            GPU0_Attn [label="GPU 0\nAttention (8 heads)", fillcolor=lightgreen, style=filled];
+            GPU0_Expert [label="GPU 0\n8 Expert Instances\n(0.5 per layer × 16)", fillcolor=lightyellow, style=filled];
+            GPU0_Comm [label="GPU 0\nAllReduce", fillcolor=lightcoral, style=filled];
+            
+            GPU1_Attn [label="GPU 1\nAttention (8 heads)", fillcolor=lightgreen, style=filled];
+            GPU1_Expert [label="GPU 1\n8 Expert Instances\n(0.5 per layer × 16)", fillcolor=lightyellow, style=filled];
+            GPU1_Comm [label="GPU 1\nAllReduce", fillcolor=lightcoral, style=filled];
+            
+            GPU0_Attn -> GPU0_Expert [label="Attention Output"];
+            GPU1_Attn -> GPU1_Expert [label="Attention Output"];
+            GPU0_Expert -> GPU0_Comm [label="Expert Output"];
+            GPU1_Expert -> GPU1_Comm [label="Expert Output"];
+            GPU0_Comm -> GPU1_Comm [dir=both, style=dashed, label="TP AllReduce"];
+        }
+        
+        // EP Group 1 (GPU 2-3) - Representative
+        subgraph cluster_ep1 {
+            label="EP Group 1 (Experts 1)";
+            style=rounded;
+            
+            GPU2_Attn [label="GPU 2\nAttention (8 heads)", fillcolor=lightgreen, style=filled];
+            GPU2_Expert [label="GPU 2\n8 Expert Instances\n(0.5 per layer × 16)", fillcolor=lightyellow, style=filled];
+            GPU2_Comm [label="GPU 2\nAllReduce", fillcolor=lightcoral, style=filled];
+            
+            GPU3_Attn [label="GPU 3\nAttention (8 heads)", fillcolor=lightgreen, style=filled];
+            GPU3_Expert [label="GPU 3\n8 Expert Instances\n(0.5 per layer × 16)", fillcolor=lightyellow, style=filled];
+            GPU3_Comm [label="GPU 3\nAllReduce", fillcolor=lightcoral, style=filled];
+            
+            GPU2_Attn -> GPU2_Expert [label="Attention Output"];
+            GPU3_Attn -> GPU3_Expert [label="Attention Output"];
+            GPU2_Expert -> GPU2_Comm [label="Expert Output"];
+            GPU3_Expert -> GPU3_Comm [label="Expert Output"];
+            GPU2_Comm -> GPU3_Comm [dir=both, style=dashed, label="TP AllReduce"];
+        }
+        
+        // Ellipsis for remaining EP groups
+        Ellipsis1 [label="... 62 more EP groups ...", shape=none];
+        
+        // EP Group 63 (GPU 126-127)
+        subgraph cluster_ep63 {
+            label="EP Group 63 (Experts 63)";
+            style=rounded;
+            
+            GPU126_Attn [label="GPU 126\nAttention (8 heads)", fillcolor=lightgreen, style=filled];
+            GPU126_Expert [label="GPU 126\n8 Expert Instances\n(0.5 per layer × 16)", fillcolor=lightyellow, style=filled];
+            GPU126_Comm [label="GPU 126\nAllReduce", fillcolor=lightcoral, style=filled];
+            
+            GPU127_Attn [label="GPU 127\nAttention (8 heads)", fillcolor=lightgreen, style=filled];
+            GPU127_Expert [label="GPU 127\n8 Expert Instances\n(0.5 per layer × 16)", fillcolor=lightyellow, style=filled];
+            GPU127_Comm [label="GPU 127\nAllReduce", fillcolor=lightcoral, style=filled];
+            
+            GPU126_Attn -> GPU126_Expert [label="Attention Output"];
+            GPU127_Attn -> GPU127_Expert [label="Attention Output"];
+            GPU126_Expert -> GPU126_Comm [label="Expert Output"];
+            GPU127_Expert -> GPU127_Comm [label="Expert Output"];
+            GPU126_Comm -> GPU127_Comm [dir=both, style=dashed, label="TP AllReduce"];
+        }
+    }
+    
+    // Expert Parallelism communication
+    ExpertComm [label="EP AllGather\n(64-way)", shape=diamond, fillcolor=orange, style=filled];
+    
+    // Layer connections (simplified)
+    Input -> GPU0_Attn [label="Broadcast"];
+    Input -> GPU1_Attn [label="Broadcast"];
+    Input -> GPU2_Attn [label="Broadcast"];
+    Input -> GPU3_Attn [label="Broadcast"];
+    Input -> GPU126_Attn [label="Broadcast"];
+    Input -> GPU127_Attn [label="Broadcast"];
+    
+    // Expert communication connections
+    GPU0_Comm -> ExpertComm [style=dotted, label="EP Comm"];
+    GPU1_Comm -> ExpertComm [style=dotted, label="EP Comm"];
+    GPU2_Comm -> ExpertComm [style=dotted, label="EP Comm"];
+    GPU3_Comm -> ExpertComm [style=dotted, label="EP Comm"];
+    GPU126_Comm -> ExpertComm [style=dotted, label="EP Comm"];
+    GPU127_Comm -> ExpertComm [style=dotted, label="EP Comm"];
+    
+    // Output
+    Output [label="Final Output\n(128×1024 tokens)", shape=ellipse, fillcolor=lightblue, style=filled];
+    ExpertComm -> Output [label="Final Result"];
+    
+    // Legend
+    Legend [label=<<table border="0" cellborder="1" cellspacing="0">
+        <tr><td bgcolor="lightgreen">Attention (TP=2)</td></tr>
+        <tr><td bgcolor="lightyellow">Expert Instances (8 per GPU)</td></tr>
+        <tr><td bgcolor="lightcoral">Communication (AllReduce)</td></tr>
+        <tr><td bgcolor="orange">Expert Parallelism</td></tr>
+        </table>>, shape=none, pos="1,1!"];
+}

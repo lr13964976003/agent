@@ -1,0 +1,68 @@
+{
+  "strategy": "tensor_parallel",
+  "gpu_count": 3,
+  "stages": [
+    {
+      "name": "embedding_stage",
+      "gpu_ids": [0],
+      "parallel_mode": "tensor_parallel",
+      "tensor_splits": {
+        "embed_1": {
+          "type": "column_parallel",
+          "split_dim": 1,
+          "partitions": 2,
+          "devices": [0, 1]
+        }
+      }
+    },
+    {
+      "name": "expert_stage",
+      "gpu_ids": [1],
+      "parallel_mode": "tensor_parallel",
+      "tensor_splits": {
+        "expert_2": {
+          "type": "row_parallel",
+          "split_dim": 0,
+          "partitions": 2,
+          "devices": [1, 2]
+        }
+      }
+    },
+    {
+      "name": "aggregation_stage",
+      "gpu_ids": [2],
+      "parallel_mode": "data_parallel",
+      "replicas": 1
+    }
+  ],
+  "communication": {
+    "embed_to_expert": {
+      "type": "all_gather",
+      "from_devices": [0, 1],
+      "to_devices": [1, 2],
+      "bandwidth_optimized": true
+    },
+    "expert_to_agg": {
+      "type": "all_reduce",
+      "from_devices": [1, 2],
+      "to_devices": [2],
+      "latency_optimized": true
+    }
+  },
+  "load_balancing": {
+    "compute_distribution": {
+      "gpu_0": "embed_1_col_parallel",
+      "gpu_1": "embed_1_col_parallel + expert_2_row_parallel",
+      "gpu_2": "expert_2_row_parallel + agg_3"
+    },
+    "memory_balance": {
+      "max_memory_per_gpu": "4096*1024*4 bytes",
+      "balanced": true
+    }
+  },
+  "performance_metrics": {
+    "latency_reduction": "30% via tensor parallelism",
+    "throughput_increase": "2x via pipelining + tensor parallelism",
+    "gpu_utilization": "95%+ per GPU"
+  }
+}

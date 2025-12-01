@@ -1,0 +1,91 @@
+{
+  "generated_dags": [
+    {
+      "method": "Cross-Node Expert Parallelism (Proposed)",
+      "description": "Large-scale cross-node expert parallelism with 16 experts on 16 GPUs, one expert per GPU",
+      "files": [
+        "../outputs/2025-12-01-11-42-14/expert_parallelism_dag.dot",
+        "../outputs/2025-12-01-11-42-14/expert_parallelism_dag.svg"
+      ],
+      "key_features": [
+        "16 experts distributed across 16 GPUs",
+        "One expert per GPU principle",
+        "Asynchronous token routing with gating mechanism",
+        "Expert-level parallelism with communication overlap",
+        "Complete MLP (4096→16384→4096) per expert"
+      ]
+    },
+    {
+      "method": "Baseline (TP=8, PP=2)",
+      "description": "Baseline tensor parallelism=8 and pipeline parallelism=2 configuration",
+      "files": [
+        "../outputs/2025-12-01-11-42-14/baseline_tp8_pp2_dag.dot",
+        "../outputs/2025-12-01-11-42-14/baseline_tp8_pp2_dag.svg"
+      ],
+      "key_features": [
+        "Tensor parallelism across 8 GPUs per stage",
+        "Pipeline parallelism with 2 stages",
+        "Multiple experts colocated on same GPU",
+        "Sequential token flow through pipeline stages"
+      ]
+    },
+    {
+      "method": "Helix Two-Level Attention Partitioning (Proposed)",
+      "description": "Two-level attention partitioning with 4×4 = 16 partitions for 16 GPUs",
+      "files": [
+        "../outputs/2025-12-01-11-42-14/helix_two_level_dag.dot",
+        "../outputs/2025-12-01-11-42-14/helix_two_level_dag.svg"
+      ],
+      "key_features": [
+        "4 head groups × 4 dimension slices = 16 partitions",
+        "Each partition handles 256-dimensional vectors",
+        "Hierarchical concatenation: intra-group then inter-group",
+        "Perfect load balancing with equal parameter blocks"
+      ]
+    },
+    {
+      "method": "Helix Baseline (TP=8, PP=2)",
+      "description": "Helix baseline with tensor parallelism=8 and pipeline parallelism=2",
+      "files": [
+        "../outputs/2025-12-01-11-42-14/helix_baseline_tp8_pp2_dag.dot",
+        "../outputs/2025-12-01-11-42-14/helix_baseline_tp8_pp2_dag.svg"
+      ],
+      "key_features": [
+        "Traditional tensor parallelism approach",
+        "Pipeline parallelism for multi-layer deployment",
+        "Head-wise splitting limitations",
+        "Communication overhead between tensor parallel groups"
+      ]
+    }
+  ],
+  "dag_specifications": {
+    "node_types": {
+      "ellipse": "Input/Output nodes",
+      "rectangle": "Computation nodes",
+      "parallelogram": "Routing/Aggregation nodes",
+      "diamond": "Communication nodes"
+    },
+    "required_attributes": [
+      "INPUT DIMENSION",
+      "OUTPUT DIMENSION",
+      "GPU assignment"
+    ],
+    "communication_patterns": [
+      "All-gather for tensor parallelism",
+      "All-reduce for expert aggregation",
+      "Pipeline communication between stages",
+      "Hierarchical reduction for attention partitioning"
+    ]
+  },
+  "model_parameters": {
+    "batch_size": 128,
+    "sequence_length": 10000,
+    "d_model": 4096,
+    "num_heads": 32,
+    "head_dimension": 128,
+    "mlp_hidden_size": 16384,
+    "num_experts": 16,
+    "num_layers": 16,
+    "precision": "BF16/FP16"
+  }
+}

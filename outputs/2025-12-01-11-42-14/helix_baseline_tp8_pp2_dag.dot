@@ -1,0 +1,28 @@
+digraph Helix_Baseline_TP8_PP2 {
+	fontname=Arial fontsize=12 rankdir=TB
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=yellow shape=parallelogram style=filled]
+	node [fillcolor=orange shape=diamond style=filled]
+	input [label="Input\n[batch_size=128, seq_len=10000, d_model=4096]" fillcolor=lightblue shape=ellipse]
+	node [fillcolor=lightcoral shape=rectangle style=filled]
+	layer0_mha_tp8 [label="Layer 0 MHA\nTensor Parallel=8\nGPU 0-7\n32 heads split across 8 GPUs\n[batch_size=128, seq_len=10000, d_model=4096]→[batch_size=128, seq_len=10000, d_model=4096]" fillcolor=lightcoral shape=rectangle]
+	layer0_mlp_tp8 [label="Layer 0 MLP\nTensor Parallel=8\nGPU 0-7\nColumn+Row Parallel\n[batch_size=128, seq_len=10000, d_model=4096]→[batch_size=128, seq_len=10000, d_model=4096]" fillcolor=lightcoral shape=rectangle]
+	input -> layer0_mha_tp8
+	layer0_mha_tp8 -> layer0_mlp_tp8
+	residual0 [label="Residual Add Layer 0\nGPU 0-7\n[batch_size=128, seq_len=10000, d_model=4096] + [batch_size=128, seq_len=10000, d_model=4096]" fillcolor=yellow shape=parallelogram]
+	input -> residual0
+	layer0_mlp_tp8 -> residual0
+	pipe_comm_0_1 [label="Pipeline Communication\nStage 0 → Stage 1\nGPU 7 → GPU 8" fillcolor=orange shape=diamond]
+	residual0 -> pipe_comm_0_1
+	node [fillcolor=lightsteelblue shape=rectangle style=filled]
+	layer1_mha_tp8 [label="Layer 1 MHA\nTensor Parallel=8\nGPU 8-15\n32 heads split across 8 GPUs\n[batch_size=128, seq_len=10000, d_model=4096]→[batch_size=128, seq_len=10000, d_model=4096]" fillcolor=lightsteelblue shape=rectangle]
+	layer1_mlp_tp8 [label="Layer 1 MLP\nTensor Parallel=8\nGPU 8-15\nColumn+Row Parallel\n[batch_size=128, seq_len=10000, d_model=4096]→[batch_size=128, seq_len=10000, d_model=4096]" fillcolor=lightsteelblue shape=rectangle]
+	pipe_comm_0_1 -> layer1_mha_tp8
+	layer1_mha_tp8 -> layer1_mlp_tp8
+	residual1 [label="Residual Add Layer 1\nGPU 8-15\n[batch_size=128, seq_len=10000, d_model=4096] + [batch_size=128, seq_len=10000, d_model=4096]" fillcolor=yellow shape=parallelogram]
+	pipe_comm_0_1 -> residual1
+	layer1_mlp_tp8 -> residual1
+	output [label="Output\n[batch_size=128, seq_len=10000, d_model=4096]" fillcolor=lightblue shape=ellipse]
+	residual1 -> output
+}
