@@ -18,13 +18,9 @@ TASK
 
 You are tested to completed the following tasks:
 
-Gain a deep understanding of the methods proposed in the paper. <<<要求理解论文>>> 
+Gain a deep understanding of the methods proposed in the deployment method. <<<要求理解部署方案>>> 
 
-Determine how to deploy the model onto GPUs by according to the paper. Ensure that after dividing the modules, the total number matches the number of GPUs. <<<要求按论文提出方法提出部署方案>>>
 
-After you complete the division of one module, calculate how many parts the module has been divided into and whether it matches the number of GPUs.  <<<要求反思部署方案是否符合实际>>>
-
-Please analyze how the dimensions of the module will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析维度变化是否正确>>>
 
 Generate complete model deployment DAGs(directed acyclic graph) according to you deployment plan and the baseline in the paper by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
 
@@ -32,7 +28,25 @@ Card Boundary Division (specify which GPU each node is on) <<<按不同GPU划分
 
 Multi-Card Communication Path Simulation (show data flow across cards as nodes) <<<显示不同GPU间的通信>>>
 
+Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
+
+Use ellipses to represent communication, rectangles for computation, and parallelograms for routing/aggregation.<<<指定节点形状>>>
+
 The aggregation and split of data need to be represented by nodes. <<<显示数据聚合与分割>>>
+
+Each nodes in DAG must have the attributions: INPUT DIMENSION and OUTPUT DIMENSION. Sample: Input: \[batch\_size=?, seq\_len=?, heads=?, d\_k=?],Output:\[batch\_size=?, seq\_len=?, heads=?, d\_k=?]<<<每个计算节点必须注明输入维度和输出维度>>>
+
+Please analyze how the dimensions of the module will change. Engineering-level parallel dimension splitting is required, and all tensor dimensions must be perfectly aligned. In the event of any engineering errors, you will bear all consequences. <<<要求分析维度变化是否正确>>>
+
+Information from different dimensions must be separated by commas.<<<不同维度信息用,隔开>>>
+
+If a module contains multiple operations, you must break it down to explicitly represent all of them.<<<包含多个operator的模块要拆>>>
+
+Generally speaking, a layer in the model consists of a Multi-Head Attention along with an FFN or (Gate and Experts). <<<提供模型一层的组成信息>>>
+
+A complete DAG must include a total input and output.<<<提醒要包含完整输入输出>>>
+
+The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意dag中不能漏残差的边>>>
 
 Prohibit simplification of modules (such as Expert, etc.) <<<禁止简化模块>>>
 
@@ -46,35 +60,13 @@ NOTE
 
 You need to follow the following constraints:
 
-If multiple models are used in the paper, all the DAGs of them need to be generated.<<<提醒要生成多个dag而不是合并模型>>>
-
-The baseline DAG also needs to be generated, so you will output at least two DAGs.<<<baseline同样需要被生成>>>
-
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
-
-Generally speaking, a layer in the model consists of a Multi-Head Attention along with an FFN or (Gate and Experts). <<<提供模型一层的组成信息>>>
-
-A complete DAG must include a total input and output.<<<提醒要包含完整输入输出>>>
-
-If a module contains multiple operations, you must break it down to explicitly represent all of them.<<<包含多个operator的模块要拆>>>
-
-Each nodes must have the attributions: INPUT DIMENSION and OUTPUT DIMENSION. Sample: Input: \[batch\_size=?, seq\_len=?, heads=?, d\_k=?],Output:\[batch\_size=?, seq\_len=?, heads=?, d\_k=?]<<<每个计算节点必须注明输入维度和输出维度>>>
-
-Information from different dimensions must be separated by commas.<<<不同维度信息用,隔开>>>
 
 The generated DAG must not contain any cycles.<<<禁止有环>>>
 
 Except for the input node, each node must have a preceding input node; except for the output node, each node must output to another node. <<<禁止有空悬的节点>>>
 
-The residual add has at least two inputs. Please ensure not to omit its input connections..<<<注意dag中不能漏残差的边>>>
-
 The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
-
-Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
-
-Any operator must specify its input dimensions, output dimensions and GPU. If the operator exists across all GPUs, it should be noted as every GPUs it uses.  <<<要求每个算子注明维度与GPU>>>
-
-Use ellipses to represent communication, rectangles for computation, and parallelograms for routing/aggregation.<<<指定节点形状>>>
 
 Ensure that each node you create is connected to at least one other node. <<<不允许生成无用节点>>>
 
@@ -115,5 +107,6 @@ Attitude: We will check whether you have engaged in perfunctory behavior by only
 Accuracy: We will verify whether your DAG deployment meets the requirements.
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
+
 
 
