@@ -1,0 +1,370 @@
+// MoE Single GPU Deployment DAG
+digraph {
+	concentrate=true rankdir=TB splines=ortho
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	node [fillcolor=lightgreen shape=ellipse style=filled]
+	node [fillcolor=yellow shape=parallelogram style=filled]
+	input [label="Input\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer0_ln_attn [label="LayerNorm (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	input -> layer0_ln_attn
+	layer0_q_proj [label="Q Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer0_k_proj [label="K Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer0_v_proj [label="V Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer0_ln_attn -> layer0_q_proj
+	layer0_ln_attn -> layer0_k_proj
+	layer0_ln_attn -> layer0_v_proj
+	layer0_attn_scores [label="Attention Scores\nInput: Q=[batch_size=8, seq_len=256, heads=8, d_k=128], K=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer0_q_proj -> layer0_attn_scores
+	layer0_k_proj -> layer0_attn_scores
+	layer0_attn_weights [label="Softmax (Attention)\nInput: [batch_size=8, heads=8, seq_len=256, seq_len=256]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer0_attn_scores -> layer0_attn_weights
+	layer0_attn_out [label="Attention Output\nInput: Weights=[batch_size=8, heads=8, seq_len=256, seq_len=256], V=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer0_attn_weights -> layer0_attn_out
+	layer0_v_proj -> layer0_attn_out
+	layer0_attn_proj [label="Attention Output Projection\nInput: [batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer0_attn_out -> layer0_attn_proj
+	layer0_residual_attn [label="Residual Add (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer0_ln_attn -> layer0_residual_attn
+	layer0_attn_proj -> layer0_residual_attn
+	layer0_ln_moe [label="LayerNorm (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer0_residual_attn -> layer0_ln_moe
+	layer0_gate [label="Gate Network\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, experts=4]" fillcolor=yellow shape=parallelogram]
+	layer0_ln_moe -> layer0_gate
+	layer0_expert0 [label="Expert 0\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer0_gate -> layer0_expert0 [label="select expert 0" style=dashed]
+	layer0_ln_moe -> layer0_expert0
+	layer0_expert1 [label="Expert 1\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer0_gate -> layer0_expert1 [label="select expert 1" style=dashed]
+	layer0_ln_moe -> layer0_expert1
+	layer0_expert2 [label="Expert 2\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer0_gate -> layer0_expert2 [label="select expert 2" style=dashed]
+	layer0_ln_moe -> layer0_expert2
+	layer0_expert3 [label="Expert 3\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer0_gate -> layer0_expert3 [label="select expert 3" style=dashed]
+	layer0_ln_moe -> layer0_expert3
+	layer0_expert_agg [label="Expert Aggregation\nInput: Expert0=[batch_size=8, seq_len=256, token_dim=1024], Expert1=[batch_size=8, seq_len=256, token_dim=1024], Expert2=[batch_size=8, seq_len=256, token_dim=1024], Expert3=[batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer0_expert0 -> layer0_expert_agg
+	layer0_expert1 -> layer0_expert_agg
+	layer0_expert2 -> layer0_expert_agg
+	layer0_expert3 -> layer0_expert_agg
+	layer0_residual_moe [label="Residual Add (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer0_residual_attn -> layer0_residual_moe
+	layer0_expert_agg -> layer0_residual_moe
+	layer1_ln_attn [label="LayerNorm (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer0_residual_moe -> layer1_ln_attn
+	layer1_q_proj [label="Q Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer1_k_proj [label="K Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer1_v_proj [label="V Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer1_ln_attn -> layer1_q_proj
+	layer1_ln_attn -> layer1_k_proj
+	layer1_ln_attn -> layer1_v_proj
+	layer1_attn_scores [label="Attention Scores\nInput: Q=[batch_size=8, seq_len=256, heads=8, d_k=128], K=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer1_q_proj -> layer1_attn_scores
+	layer1_k_proj -> layer1_attn_scores
+	layer1_attn_weights [label="Softmax (Attention)\nInput: [batch_size=8, heads=8, seq_len=256, seq_len=256]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer1_attn_scores -> layer1_attn_weights
+	layer1_attn_out [label="Attention Output\nInput: Weights=[batch_size=8, heads=8, seq_len=256, seq_len=256], V=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer1_attn_weights -> layer1_attn_out
+	layer1_v_proj -> layer1_attn_out
+	layer1_attn_proj [label="Attention Output Projection\nInput: [batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer1_attn_out -> layer1_attn_proj
+	layer1_residual_attn [label="Residual Add (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer1_ln_attn -> layer1_residual_attn
+	layer1_attn_proj -> layer1_residual_attn
+	layer1_ln_moe [label="LayerNorm (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer1_residual_attn -> layer1_ln_moe
+	layer1_gate [label="Gate Network\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, experts=4]" fillcolor=yellow shape=parallelogram]
+	layer1_ln_moe -> layer1_gate
+	layer1_expert0 [label="Expert 0\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer1_gate -> layer1_expert0 [label="select expert 0" style=dashed]
+	layer1_ln_moe -> layer1_expert0
+	layer1_expert1 [label="Expert 1\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer1_gate -> layer1_expert1 [label="select expert 1" style=dashed]
+	layer1_ln_moe -> layer1_expert1
+	layer1_expert2 [label="Expert 2\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer1_gate -> layer1_expert2 [label="select expert 2" style=dashed]
+	layer1_ln_moe -> layer1_expert2
+	layer1_expert3 [label="Expert 3\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer1_gate -> layer1_expert3 [label="select expert 3" style=dashed]
+	layer1_ln_moe -> layer1_expert3
+	layer1_expert_agg [label="Expert Aggregation\nInput: Expert0=[batch_size=8, seq_len=256, token_dim=1024], Expert1=[batch_size=8, seq_len=256, token_dim=1024], Expert2=[batch_size=8, seq_len=256, token_dim=1024], Expert3=[batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer1_expert0 -> layer1_expert_agg
+	layer1_expert1 -> layer1_expert_agg
+	layer1_expert2 -> layer1_expert_agg
+	layer1_expert3 -> layer1_expert_agg
+	layer1_residual_moe [label="Residual Add (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer1_residual_attn -> layer1_residual_moe
+	layer1_expert_agg -> layer1_residual_moe
+	layer2_ln_attn [label="LayerNorm (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer1_residual_moe -> layer2_ln_attn
+	layer2_q_proj [label="Q Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer2_k_proj [label="K Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer2_v_proj [label="V Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer2_ln_attn -> layer2_q_proj
+	layer2_ln_attn -> layer2_k_proj
+	layer2_ln_attn -> layer2_v_proj
+	layer2_attn_scores [label="Attention Scores\nInput: Q=[batch_size=8, seq_len=256, heads=8, d_k=128], K=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer2_q_proj -> layer2_attn_scores
+	layer2_k_proj -> layer2_attn_scores
+	layer2_attn_weights [label="Softmax (Attention)\nInput: [batch_size=8, heads=8, seq_len=256, seq_len=256]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer2_attn_scores -> layer2_attn_weights
+	layer2_attn_out [label="Attention Output\nInput: Weights=[batch_size=8, heads=8, seq_len=256, seq_len=256], V=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer2_attn_weights -> layer2_attn_out
+	layer2_v_proj -> layer2_attn_out
+	layer2_attn_proj [label="Attention Output Projection\nInput: [batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer2_attn_out -> layer2_attn_proj
+	layer2_residual_attn [label="Residual Add (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer2_ln_attn -> layer2_residual_attn
+	layer2_attn_proj -> layer2_residual_attn
+	layer2_ln_moe [label="LayerNorm (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer2_residual_attn -> layer2_ln_moe
+	layer2_gate [label="Gate Network\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, experts=4]" fillcolor=yellow shape=parallelogram]
+	layer2_ln_moe -> layer2_gate
+	layer2_expert0 [label="Expert 0\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer2_gate -> layer2_expert0 [label="select expert 0" style=dashed]
+	layer2_ln_moe -> layer2_expert0
+	layer2_expert1 [label="Expert 1\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer2_gate -> layer2_expert1 [label="select expert 1" style=dashed]
+	layer2_ln_moe -> layer2_expert1
+	layer2_expert2 [label="Expert 2\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer2_gate -> layer2_expert2 [label="select expert 2" style=dashed]
+	layer2_ln_moe -> layer2_expert2
+	layer2_expert3 [label="Expert 3\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer2_gate -> layer2_expert3 [label="select expert 3" style=dashed]
+	layer2_ln_moe -> layer2_expert3
+	layer2_expert_agg [label="Expert Aggregation\nInput: Expert0=[batch_size=8, seq_len=256, token_dim=1024], Expert1=[batch_size=8, seq_len=256, token_dim=1024], Expert2=[batch_size=8, seq_len=256, token_dim=1024], Expert3=[batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer2_expert0 -> layer2_expert_agg
+	layer2_expert1 -> layer2_expert_agg
+	layer2_expert2 -> layer2_expert_agg
+	layer2_expert3 -> layer2_expert_agg
+	layer2_residual_moe [label="Residual Add (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer2_residual_attn -> layer2_residual_moe
+	layer2_expert_agg -> layer2_residual_moe
+	layer3_ln_attn [label="LayerNorm (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer2_residual_moe -> layer3_ln_attn
+	layer3_q_proj [label="Q Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer3_k_proj [label="K Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer3_v_proj [label="V Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer3_ln_attn -> layer3_q_proj
+	layer3_ln_attn -> layer3_k_proj
+	layer3_ln_attn -> layer3_v_proj
+	layer3_attn_scores [label="Attention Scores\nInput: Q=[batch_size=8, seq_len=256, heads=8, d_k=128], K=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer3_q_proj -> layer3_attn_scores
+	layer3_k_proj -> layer3_attn_scores
+	layer3_attn_weights [label="Softmax (Attention)\nInput: [batch_size=8, heads=8, seq_len=256, seq_len=256]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer3_attn_scores -> layer3_attn_weights
+	layer3_attn_out [label="Attention Output\nInput: Weights=[batch_size=8, heads=8, seq_len=256, seq_len=256], V=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer3_attn_weights -> layer3_attn_out
+	layer3_v_proj -> layer3_attn_out
+	layer3_attn_proj [label="Attention Output Projection\nInput: [batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer3_attn_out -> layer3_attn_proj
+	layer3_residual_attn [label="Residual Add (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer3_ln_attn -> layer3_residual_attn
+	layer3_attn_proj -> layer3_residual_attn
+	layer3_ln_moe [label="LayerNorm (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer3_residual_attn -> layer3_ln_moe
+	layer3_gate [label="Gate Network\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, experts=4]" fillcolor=yellow shape=parallelogram]
+	layer3_ln_moe -> layer3_gate
+	layer3_expert0 [label="Expert 0\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer3_gate -> layer3_expert0 [label="select expert 0" style=dashed]
+	layer3_ln_moe -> layer3_expert0
+	layer3_expert1 [label="Expert 1\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer3_gate -> layer3_expert1 [label="select expert 1" style=dashed]
+	layer3_ln_moe -> layer3_expert1
+	layer3_expert2 [label="Expert 2\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer3_gate -> layer3_expert2 [label="select expert 2" style=dashed]
+	layer3_ln_moe -> layer3_expert2
+	layer3_expert3 [label="Expert 3\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer3_gate -> layer3_expert3 [label="select expert 3" style=dashed]
+	layer3_ln_moe -> layer3_expert3
+	layer3_expert_agg [label="Expert Aggregation\nInput: Expert0=[batch_size=8, seq_len=256, token_dim=1024], Expert1=[batch_size=8, seq_len=256, token_dim=1024], Expert2=[batch_size=8, seq_len=256, token_dim=1024], Expert3=[batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer3_expert0 -> layer3_expert_agg
+	layer3_expert1 -> layer3_expert_agg
+	layer3_expert2 -> layer3_expert_agg
+	layer3_expert3 -> layer3_expert_agg
+	layer3_residual_moe [label="Residual Add (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer3_residual_attn -> layer3_residual_moe
+	layer3_expert_agg -> layer3_residual_moe
+	layer4_ln_attn [label="LayerNorm (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer3_residual_moe -> layer4_ln_attn
+	layer4_q_proj [label="Q Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer4_k_proj [label="K Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer4_v_proj [label="V Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer4_ln_attn -> layer4_q_proj
+	layer4_ln_attn -> layer4_k_proj
+	layer4_ln_attn -> layer4_v_proj
+	layer4_attn_scores [label="Attention Scores\nInput: Q=[batch_size=8, seq_len=256, heads=8, d_k=128], K=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer4_q_proj -> layer4_attn_scores
+	layer4_k_proj -> layer4_attn_scores
+	layer4_attn_weights [label="Softmax (Attention)\nInput: [batch_size=8, heads=8, seq_len=256, seq_len=256]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer4_attn_scores -> layer4_attn_weights
+	layer4_attn_out [label="Attention Output\nInput: Weights=[batch_size=8, heads=8, seq_len=256, seq_len=256], V=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer4_attn_weights -> layer4_attn_out
+	layer4_v_proj -> layer4_attn_out
+	layer4_attn_proj [label="Attention Output Projection\nInput: [batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer4_attn_out -> layer4_attn_proj
+	layer4_residual_attn [label="Residual Add (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer4_ln_attn -> layer4_residual_attn
+	layer4_attn_proj -> layer4_residual_attn
+	layer4_ln_moe [label="LayerNorm (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer4_residual_attn -> layer4_ln_moe
+	layer4_gate [label="Gate Network\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, experts=4]" fillcolor=yellow shape=parallelogram]
+	layer4_ln_moe -> layer4_gate
+	layer4_expert0 [label="Expert 0\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer4_gate -> layer4_expert0 [label="select expert 0" style=dashed]
+	layer4_ln_moe -> layer4_expert0
+	layer4_expert1 [label="Expert 1\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer4_gate -> layer4_expert1 [label="select expert 1" style=dashed]
+	layer4_ln_moe -> layer4_expert1
+	layer4_expert2 [label="Expert 2\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer4_gate -> layer4_expert2 [label="select expert 2" style=dashed]
+	layer4_ln_moe -> layer4_expert2
+	layer4_expert3 [label="Expert 3\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer4_gate -> layer4_expert3 [label="select expert 3" style=dashed]
+	layer4_ln_moe -> layer4_expert3
+	layer4_expert_agg [label="Expert Aggregation\nInput: Expert0=[batch_size=8, seq_len=256, token_dim=1024], Expert1=[batch_size=8, seq_len=256, token_dim=1024], Expert2=[batch_size=8, seq_len=256, token_dim=1024], Expert3=[batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer4_expert0 -> layer4_expert_agg
+	layer4_expert1 -> layer4_expert_agg
+	layer4_expert2 -> layer4_expert_agg
+	layer4_expert3 -> layer4_expert_agg
+	layer4_residual_moe [label="Residual Add (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer4_residual_attn -> layer4_residual_moe
+	layer4_expert_agg -> layer4_residual_moe
+	layer5_ln_attn [label="LayerNorm (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer4_residual_moe -> layer5_ln_attn
+	layer5_q_proj [label="Q Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer5_k_proj [label="K Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer5_v_proj [label="V Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer5_ln_attn -> layer5_q_proj
+	layer5_ln_attn -> layer5_k_proj
+	layer5_ln_attn -> layer5_v_proj
+	layer5_attn_scores [label="Attention Scores\nInput: Q=[batch_size=8, seq_len=256, heads=8, d_k=128], K=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer5_q_proj -> layer5_attn_scores
+	layer5_k_proj -> layer5_attn_scores
+	layer5_attn_weights [label="Softmax (Attention)\nInput: [batch_size=8, heads=8, seq_len=256, seq_len=256]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer5_attn_scores -> layer5_attn_weights
+	layer5_attn_out [label="Attention Output\nInput: Weights=[batch_size=8, heads=8, seq_len=256, seq_len=256], V=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer5_attn_weights -> layer5_attn_out
+	layer5_v_proj -> layer5_attn_out
+	layer5_attn_proj [label="Attention Output Projection\nInput: [batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer5_attn_out -> layer5_attn_proj
+	layer5_residual_attn [label="Residual Add (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer5_ln_attn -> layer5_residual_attn
+	layer5_attn_proj -> layer5_residual_attn
+	layer5_ln_moe [label="LayerNorm (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer5_residual_attn -> layer5_ln_moe
+	layer5_gate [label="Gate Network\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, experts=4]" fillcolor=yellow shape=parallelogram]
+	layer5_ln_moe -> layer5_gate
+	layer5_expert0 [label="Expert 0\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer5_gate -> layer5_expert0 [label="select expert 0" style=dashed]
+	layer5_ln_moe -> layer5_expert0
+	layer5_expert1 [label="Expert 1\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer5_gate -> layer5_expert1 [label="select expert 1" style=dashed]
+	layer5_ln_moe -> layer5_expert1
+	layer5_expert2 [label="Expert 2\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer5_gate -> layer5_expert2 [label="select expert 2" style=dashed]
+	layer5_ln_moe -> layer5_expert2
+	layer5_expert3 [label="Expert 3\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer5_gate -> layer5_expert3 [label="select expert 3" style=dashed]
+	layer5_ln_moe -> layer5_expert3
+	layer5_expert_agg [label="Expert Aggregation\nInput: Expert0=[batch_size=8, seq_len=256, token_dim=1024], Expert1=[batch_size=8, seq_len=256, token_dim=1024], Expert2=[batch_size=8, seq_len=256, token_dim=1024], Expert3=[batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer5_expert0 -> layer5_expert_agg
+	layer5_expert1 -> layer5_expert_agg
+	layer5_expert2 -> layer5_expert_agg
+	layer5_expert3 -> layer5_expert_agg
+	layer5_residual_moe [label="Residual Add (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer5_residual_attn -> layer5_residual_moe
+	layer5_expert_agg -> layer5_residual_moe
+	layer6_ln_attn [label="LayerNorm (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer5_residual_moe -> layer6_ln_attn
+	layer6_q_proj [label="Q Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer6_k_proj [label="K Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer6_v_proj [label="V Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer6_ln_attn -> layer6_q_proj
+	layer6_ln_attn -> layer6_k_proj
+	layer6_ln_attn -> layer6_v_proj
+	layer6_attn_scores [label="Attention Scores\nInput: Q=[batch_size=8, seq_len=256, heads=8, d_k=128], K=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer6_q_proj -> layer6_attn_scores
+	layer6_k_proj -> layer6_attn_scores
+	layer6_attn_weights [label="Softmax (Attention)\nInput: [batch_size=8, heads=8, seq_len=256, seq_len=256]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer6_attn_scores -> layer6_attn_weights
+	layer6_attn_out [label="Attention Output\nInput: Weights=[batch_size=8, heads=8, seq_len=256, seq_len=256], V=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer6_attn_weights -> layer6_attn_out
+	layer6_v_proj -> layer6_attn_out
+	layer6_attn_proj [label="Attention Output Projection\nInput: [batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer6_attn_out -> layer6_attn_proj
+	layer6_residual_attn [label="Residual Add (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer6_ln_attn -> layer6_residual_attn
+	layer6_attn_proj -> layer6_residual_attn
+	layer6_ln_moe [label="LayerNorm (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer6_residual_attn -> layer6_ln_moe
+	layer6_gate [label="Gate Network\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, experts=4]" fillcolor=yellow shape=parallelogram]
+	layer6_ln_moe -> layer6_gate
+	layer6_expert0 [label="Expert 0\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer6_gate -> layer6_expert0 [label="select expert 0" style=dashed]
+	layer6_ln_moe -> layer6_expert0
+	layer6_expert1 [label="Expert 1\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer6_gate -> layer6_expert1 [label="select expert 1" style=dashed]
+	layer6_ln_moe -> layer6_expert1
+	layer6_expert2 [label="Expert 2\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer6_gate -> layer6_expert2 [label="select expert 2" style=dashed]
+	layer6_ln_moe -> layer6_expert2
+	layer6_expert3 [label="Expert 3\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer6_gate -> layer6_expert3 [label="select expert 3" style=dashed]
+	layer6_ln_moe -> layer6_expert3
+	layer6_expert_agg [label="Expert Aggregation\nInput: Expert0=[batch_size=8, seq_len=256, token_dim=1024], Expert1=[batch_size=8, seq_len=256, token_dim=1024], Expert2=[batch_size=8, seq_len=256, token_dim=1024], Expert3=[batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer6_expert0 -> layer6_expert_agg
+	layer6_expert1 -> layer6_expert_agg
+	layer6_expert2 -> layer6_expert_agg
+	layer6_expert3 -> layer6_expert_agg
+	layer6_residual_moe [label="Residual Add (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer6_residual_attn -> layer6_residual_moe
+	layer6_expert_agg -> layer6_residual_moe
+	layer7_ln_attn [label="LayerNorm (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer6_residual_moe -> layer7_ln_attn
+	layer7_q_proj [label="Q Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer7_k_proj [label="K Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer7_v_proj [label="V Projection\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer7_ln_attn -> layer7_q_proj
+	layer7_ln_attn -> layer7_k_proj
+	layer7_ln_attn -> layer7_v_proj
+	layer7_attn_scores [label="Attention Scores\nInput: Q=[batch_size=8, seq_len=256, heads=8, d_k=128], K=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer7_q_proj -> layer7_attn_scores
+	layer7_k_proj -> layer7_attn_scores
+	layer7_attn_weights [label="Softmax (Attention)\nInput: [batch_size=8, heads=8, seq_len=256, seq_len=256]\nOutput: [batch_size=8, heads=8, seq_len=256, seq_len=256]" fillcolor=lightblue shape=rectangle]
+	layer7_attn_scores -> layer7_attn_weights
+	layer7_attn_out [label="Attention Output\nInput: Weights=[batch_size=8, heads=8, seq_len=256, seq_len=256], V=[batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, heads=8, d_k=128]" fillcolor=lightblue shape=rectangle]
+	layer7_attn_weights -> layer7_attn_out
+	layer7_v_proj -> layer7_attn_out
+	layer7_attn_proj [label="Attention Output Projection\nInput: [batch_size=8, seq_len=256, heads=8, d_k=128]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer7_attn_out -> layer7_attn_proj
+	layer7_residual_attn [label="Residual Add (Attention)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer7_ln_attn -> layer7_residual_attn
+	layer7_attn_proj -> layer7_residual_attn
+	layer7_ln_moe [label="LayerNorm (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer7_residual_attn -> layer7_ln_moe
+	layer7_gate [label="Gate Network\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, experts=4]" fillcolor=yellow shape=parallelogram]
+	layer7_ln_moe -> layer7_gate
+	layer7_expert0 [label="Expert 0\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer7_gate -> layer7_expert0 [label="select expert 0" style=dashed]
+	layer7_ln_moe -> layer7_expert0
+	layer7_expert1 [label="Expert 1\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer7_gate -> layer7_expert1 [label="select expert 1" style=dashed]
+	layer7_ln_moe -> layer7_expert1
+	layer7_expert2 [label="Expert 2\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer7_gate -> layer7_expert2 [label="select expert 2" style=dashed]
+	layer7_ln_moe -> layer7_expert2
+	layer7_expert3 [label="Expert 3\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer7_gate -> layer7_expert3 [label="select expert 3" style=dashed]
+	layer7_ln_moe -> layer7_expert3
+	layer7_expert_agg [label="Expert Aggregation\nInput: Expert0=[batch_size=8, seq_len=256, token_dim=1024], Expert1=[batch_size=8, seq_len=256, token_dim=1024], Expert2=[batch_size=8, seq_len=256, token_dim=1024], Expert3=[batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer7_expert0 -> layer7_expert_agg
+	layer7_expert1 -> layer7_expert_agg
+	layer7_expert2 -> layer7_expert_agg
+	layer7_expert3 -> layer7_expert_agg
+	layer7_residual_moe [label="Residual Add (MoE)\nInput: [batch_size=8, seq_len=256, token_dim=1024], [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=yellow shape=parallelogram]
+	layer7_residual_attn -> layer7_residual_moe
+	layer7_expert_agg -> layer7_residual_moe
+	output [label="Output\nInput: [batch_size=8, seq_len=256, token_dim=1024]\nOutput: [batch_size=8, seq_len=256, token_dim=1024]" fillcolor=lightblue shape=rectangle]
+	layer7_residual_moe -> output
+}
