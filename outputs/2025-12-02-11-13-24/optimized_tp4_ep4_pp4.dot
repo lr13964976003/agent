@@ -1,0 +1,264 @@
+// Optimized MoE Model with TP=4, EP=4, PP=4 Parallel Strategy
+digraph {
+    concentrate=true;
+    rankdir=TB;
+    splines=ortho;
+    node [fillcolor=lightblue, shape=rectangle, style=filled];
+    
+    // Define node styles
+    node [fillcolor=lightgreen, shape=ellipse, style=filled];
+    node [fillcolor=yellow, shape=parallelogram, style=filled];
+    node [fillcolor=lightcoral, shape=diamond, style=filled];
+    node [fillcolor=lightpink, shape=hexagon, style=filled];
+    
+    // Input node
+    input [label="Input\n[batch_size=8, seq_len=256, token_dim=1024]", fillcolor=lightblue, shape=rectangle];
+    
+    // Pipeline Stage 0 - GPUs 0-3 (TP+EP)
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0 (Layers 0-1)\nGPUs 0-3 (TP=4, EP=4)";
+        style=dashed;
+        
+        // Layer 0 - Attention with TP=4
+        layer0_ln [label="LayerNorm\nGPU: 0-3\n[8, 256, 1024]", fillcolor=lightblue];
+        layer0_q_tp0 [label="Q Proj TP0\nGPU: 0\n[8, 256, 128]", fillcolor=lightgreen];
+        layer0_q_tp1 [label="Q Proj TP1\nGPU: 1\n[8, 256, 128]", fillcolor=lightgreen];
+        layer0_q_tp2 [label="Q Proj TP2\nGPU: 2\n[8, 256, 128]", fillcolor=lightgreen];
+        layer0_q_tp3 [label="Q Proj TP3\nGPU: 3\n[8, 256, 128]", fillcolor=lightgreen];
+        
+        layer0_k_tp0 [label="K Proj TP0\nGPU: 0\n[8, 256, 128]", fillcolor=lightgreen];
+        layer0_k_tp1 [label="K Proj TP1\nGPU: 1\n[8, 256, 128]", fillcolor=lightgreen];
+        layer0_k_tp2 [label="K Proj TP2\nGPU: 2\n[8, 256, 128]", fillcolor=lightgreen];
+        layer0_k_tp3 [label="K Proj TP3\nGPU: 3\n[8, 256, 128]", fillcolor=lightgreen];
+        
+        layer0_v_tp0 [label="V Proj TP0\nGPU: 0\n[8, 256, 128]", fillcolor=lightgreen];
+        layer0_v_tp1 [label="V Proj TP1\nGPU: 1\n[8, 256, 128]", fillcolor=lightgreen];
+        layer0_v_tp2 [label="V Proj TP2\nGPU: 2\n[8, 256, 128]", fillcolor=lightgreen];
+        layer0_v_tp3 [label="V Proj TP3\nGPU: 3\n[8, 256, 128]", fillcolor=lightgreen];
+        
+        layer0_attn [label="Attention\nGPU: 0-3\n[8, 8, 256, 256]", fillcolor=yellow];
+        layer0_out_proj [label="Output Proj\nGPU: 0-3\n[8, 256, 1024]", fillcolor=lightgreen];
+        layer0_residual [label="Residual Add\nGPU: 0-3\n[8, 256, 1024]", fillcolor=yellow];
+        
+        // Layer 0 - MoE with EP=4
+        layer0_moe_ln [label="LayerNorm (MoE)\nGPU: 0-3\n[8, 256, 1024]", fillcolor=lightblue];
+        layer0_gate [label="Gate Network\nGPU: 0-3\n[8, 256, 4]", fillcolor=yellow];
+        
+        // Expert 0 on GPU 0
+        layer0_expert0 [label="Expert 0\nGPU: 0\n[8, 256, 1024]", fillcolor=lightcoral];
+        // Expert 1 on GPU 1
+        layer0_expert1 [label="Expert 1\nGPU: 1\n[8, 256, 1024]", fillcolor=lightcoral];
+        // Expert 2 on GPU 2
+        layer0_expert2 [label="Expert 2\nGPU: 2\n[8, 256, 1024]", fillcolor=lightcoral];
+        // Expert 3 on GPU 3
+        layer0_expert3 [label="Expert 3\nGPU: 3\n[8, 256, 1024]", fillcolor=lightcoral];
+        
+        layer0_expert_agg [label="Expert Aggregation\nGPU: 0-3\n[8, 256, 1024]", fillcolor=yellow];
+        layer0_moe_residual [label="Residual Add (MoE)\nGPU: 0-3\n[8, 256, 1024]", fillcolor=yellow];
+    }
+    
+    // Pipeline Stage 1 - GPUs 4-7 (TP+EP)
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1 (Layers 2-3)\nGPUs 4-7 (TP=4, EP=4)";
+        style=dashed;
+        
+        // Similar structure for Layer 2
+        layer2_ln [label="LayerNorm\nGPU: 4-7\n[8, 256, 1024]", fillcolor=lightblue];
+        layer2_attn [label="Attention\nGPU: 4-7\n[8, 8, 256, 256]", fillcolor=yellow];
+        layer2_out_proj [label="Output Proj\nGPU: 4-7\n[8, 256, 1024]", fillcolor=lightgreen];
+        layer2_residual [label="Residual Add\nGPU: 4-7\n[8, 256, 1024]", fillcolor=yellow];
+        
+        // Layer 2 - MoE with EP=4
+        layer2_moe_ln [label="LayerNorm (MoE)\nGPU: 4-7\n[8, 256, 1024]", fillcolor=lightblue];
+        layer2_gate [label="Gate Network\nGPU: 4-7\n[8, 256, 4]", fillcolor=yellow];
+        layer2_expert0 [label="Expert 0\nGPU: 4\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer2_expert1 [label="Expert 1\nGPU: 5\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer2_expert2 [label="Expert 2\nGPU: 6\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer2_expert3 [label="Expert 3\nGPU: 7\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer2_expert_agg [label="Expert Aggregation\nGPU: 4-7\n[8, 256, 1024]", fillcolor=yellow];
+        layer2_moe_residual [label="Residual Add (MoE)\nGPU: 4-7\n[8, 256, 1024]", fillcolor=yellow];
+    }
+    
+    // Pipeline Stage 2 - GPUs 8-11 (TP+EP)
+    subgraph cluster_stage2 {
+        label="Pipeline Stage 2 (Layers 4-5)\nGPUs 8-11 (TP=4, EP=4)";
+        style=dashed;
+        
+        // Layer 4
+        layer4_ln [label="LayerNorm\nGPU: 8-11\n[8, 256, 1024]", fillcolor=lightblue];
+        layer4_attn [label="Attention\nGPU: 8-11\n[8, 8, 256, 256]", fillcolor=yellow];
+        layer4_out_proj [label="Output Proj\nGPU: 8-11\n[8, 256, 1024]", fillcolor=lightgreen];
+        layer4_residual [label="Residual Add\nGPU: 8-11\n[8, 256, 1024]", fillcolor=yellow];
+        
+        // Layer 4 - MoE with EP=4
+        layer4_moe_ln [label="LayerNorm (MoE)\nGPU: 8-11\n[8, 256, 1024]", fillcolor=lightblue];
+        layer4_gate [label="Gate Network\nGPU: 8-11\n[8, 256, 4]", fillcolor=yellow];
+        layer4_expert0 [label="Expert 0\nGPU: 8\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer4_expert1 [label="Expert 1\nGPU: 9\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer4_expert2 [label="Expert 2\nGPU: 10\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer4_expert3 [label="Expert 3\nGPU: 11\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer4_expert_agg [label="Expert Aggregation\nGPU: 8-11\n[8, 256, 1024]", fillcolor=yellow];
+        layer4_moe_residual [label="Residual Add (MoE)\nGPU: 8-11\n[8, 256, 1024]", fillcolor=yellow];
+    }
+    
+    // Pipeline Stage 3 - GPUs 12-15 (TP+EP)
+    subgraph cluster_stage3 {
+        label="Pipeline Stage 3 (Layers 6-7)\nGPUs 12-15 (TP=4, EP=4)";
+        style=dashed;
+        
+        // Layer 6
+        layer6_ln [label="LayerNorm\nGPU: 12-15\n[8, 256, 1024]", fillcolor=lightblue];
+        layer6_attn [label="Attention\nGPU: 12-15\n[8, 8, 256, 256]", fillcolor=yellow];
+        layer6_out_proj [label="Output Proj\nGPU: 12-15\n[8, 256, 1024]", fillcolor=lightgreen];
+        layer6_residual [label="Residual Add\nGPU: 12-15\n[8, 256, 1024]", fillcolor=yellow];
+        
+        // Layer 6 - MoE with EP=4
+        layer6_moe_ln [label="LayerNorm (MoE)\nGPU: 12-15\n[8, 256, 1024]", fillcolor=lightblue];
+        layer6_gate [label="Gate Network\nGPU: 12-15\n[8, 256, 4]", fillcolor=yellow];
+        layer6_expert0 [label="Expert 0\nGPU: 12\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer6_expert1 [label="Expert 1\nGPU: 13\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer6_expert2 [label="Expert 2\nGPU: 14\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer6_expert3 [label="Expert 3\nGPU: 15\n[8, 256, 1024]", fillcolor=lightcoral];
+        layer6_expert_agg [label="Expert Aggregation\nGPU: 12-15\n[8, 256, 1024]", fillcolor=yellow];
+        layer6_moe_residual [label="Residual Add (MoE)\nGPU: 12-15\n[8, 256, 1024]", fillcolor=yellow];
+    }
+    
+    // Output
+    output [label="Output\n[batch_size=8, seq_len=256, token_dim=1024]", fillcolor=lightblue, shape=rectangle];
+    
+    // Connections - Pipeline Flow
+    input -> layer0_ln;
+    
+    // Layer 0 Attention Flow
+    layer0_ln -> layer0_q_tp0;
+    layer0_ln -> layer0_q_tp1;
+    layer0_ln -> layer0_q_tp2;
+    layer0_ln -> layer0_q_tp3;
+    layer0_ln -> layer0_k_tp0;
+    layer0_ln -> layer0_k_tp1;
+    layer0_ln -> layer0_k_tp2;
+    layer0_ln -> layer0_k_tp3;
+    layer0_ln -> layer0_v_tp0;
+    layer0_ln -> layer0_v_tp1;
+    layer0_ln -> layer0_v_tp2;
+    layer0_ln -> layer0_v_tp3;
+    
+    layer0_q_tp0 -> layer0_attn;
+    layer0_q_tp1 -> layer0_attn;
+    layer0_q_tp2 -> layer0_attn;
+    layer0_q_tp3 -> layer0_attn;
+    layer0_k_tp0 -> layer0_attn;
+    layer0_k_tp1 -> layer0_attn;
+    layer0_k_tp2 -> layer0_attn;
+    layer0_k_tp3 -> layer0_attn;
+    layer0_v_tp0 -> layer0_attn;
+    layer0_v_tp1 -> layer0_attn;
+    layer0_v_tp2 -> layer0_attn;
+    layer0_v_tp3 -> layer0_attn;
+    
+    layer0_attn -> layer0_out_proj;
+    layer0_out_proj -> layer0_residual;
+    layer0_ln -> layer0_residual;
+    
+    // Layer 0 MoE Flow
+    layer0_residual -> layer0_moe_ln;
+    layer0_moe_ln -> layer0_gate;
+    layer0_moe_ln -> layer0_expert0;
+    layer0_moe_ln -> layer0_expert1;
+    layer0_moe_ln -> layer0_expert2;
+    layer0_moe_ln -> layer0_expert3;
+    layer0_gate -> layer0_expert0 [style=dashed, label="route"];
+    layer0_gate -> layer0_expert1 [style=dashed, label="route"];
+    layer0_gate -> layer0_expert2 [style=dashed, label="route"];
+    layer0_gate -> layer0_expert3 [style=dashed, label="route"];
+    
+    layer0_expert0 -> layer0_expert_agg;
+    layer0_expert1 -> layer0_expert_agg;
+    layer0_expert2 -> layer0_expert_agg;
+    layer0_expert3 -> layer0_expert_agg;
+    layer0_expert_agg -> layer0_moe_residual;
+    layer0_residual -> layer0_moe_residual;
+    
+    // Pipeline communication to stage 1
+    layer0_moe_residual -> layer2_ln [style=dashed, label="PP Comm"];
+    
+    // Continue with simplified connections for remaining stages
+    layer2_ln -> layer2_attn;
+    layer2_attn -> layer2_out_proj;
+    layer2_out_proj -> layer2_residual;
+    layer2_ln -> layer2_residual;
+    
+    layer2_residual -> layer2_moe_ln;
+    layer2_moe_ln -> layer2_gate;
+    layer2_moe_ln -> layer2_expert0;
+    layer2_moe_ln -> layer2_expert1;
+    layer2_moe_ln -> layer2_expert2;
+    layer2_moe_ln -> layer2_expert3;
+    layer2_gate -> layer2_expert0 [style=dashed, label="route"];
+    layer2_gate -> layer2_expert1 [style=dashed, label="route"];
+    layer2_gate -> layer2_expert2 [style=dashed, label="route"];
+    layer2_gate -> layer2_expert3 [style=dashed, label="route"];
+    
+    layer2_expert0 -> layer2_expert_agg;
+    layer2_expert1 -> layer2_expert_agg;
+    layer2_expert2 -> layer2_expert_agg;
+    layer2_expert3 -> layer2_expert_agg;
+    layer2_expert_agg -> layer2_moe_residual;
+    layer2_residual -> layer2_moe_residual;
+    
+    // Pipeline communication to stage 2
+    layer2_moe_residual -> layer4_ln [style=dashed, label="PP Comm"];
+    
+    // Stage 2 to stage 3
+    layer4_ln -> layer4_attn;
+    layer4_attn -> layer4_out_proj;
+    layer4_out_proj -> layer4_residual;
+    layer4_ln -> layer4_residual;
+    
+    layer4_residual -> layer4_moe_ln;
+    layer4_moe_ln -> layer4_gate;
+    layer4_moe_ln -> layer4_expert0;
+    layer4_moe_ln -> layer4_expert1;
+    layer4_moe_ln -> layer4_expert2;
+    layer4_moe_ln -> layer4_expert3;
+    layer4_gate -> layer4_expert0 [style=dashed, label="route"];
+    layer4_gate -> layer4_expert1 [style=dashed, label="route"];
+    layer4_gate -> layer4_expert2 [style=dashed, label="route"];
+    layer4_gate -> layer4_expert3 [style=dashed, label="route"];
+    
+    layer4_expert0 -> layer4_expert_agg;
+    layer4_expert1 -> layer4_expert_agg;
+    layer4_expert2 -> layer4_expert_agg;
+    layer4_expert3 -> layer4_expert_agg;
+    layer4_expert_agg -> layer4_moe_residual;
+    layer4_residual -> layer4_moe_residual;
+    
+    // Pipeline communication to stage 3
+    layer4_moe_residual -> layer6_ln [style=dashed, label="PP Comm"];
+    
+    // Final stage to output
+    layer6_ln -> layer6_attn;
+    layer6_attn -> layer6_out_proj;
+    layer6_out_proj -> layer6_residual;
+    layer6_ln -> layer6_residual;
+    
+    layer6_residual -> layer6_moe_ln;
+    layer6_moe_ln -> layer6_gate;
+    layer6_moe_ln -> layer6_expert0;
+    layer6_moe_ln -> layer6_expert1;
+    layer6_moe_ln -> layer6_expert2;
+    layer6_moe_ln -> layer6_expert3;
+    layer6_gate -> layer6_expert0 [style=dashed, label="route"];
+    layer6_gate -> layer6_expert1 [style=dashed, label="route"];
+    layer6_gate -> layer6_expert2 [style=dashed, label="route"];
+    layer6_gate -> layer6_expert3 [style=dashed, label="route"];
+    
+    layer6_expert0 -> layer6_expert_agg;
+    layer6_expert1 -> layer6_expert_agg;
+    layer6_expert2 -> layer6_expert_agg;
+    layer6_expert3 -> layer6_expert_agg;
+    layer6_expert_agg -> layer6_moe_residual;
+    layer6_residual -> layer6_moe_residual;
+    
+    layer6_moe_residual -> output;
+}
