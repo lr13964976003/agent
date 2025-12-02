@@ -24,4 +24,17 @@
 * **Hidden size of MOE**: The hidden is of MOE is 2048
 
 
+
+---
+
+
+## **Baseline**
+
+* **PP**: 2
+* **TP**: 8
+* **DP**: 8
+* **EP**: 8
+* **SP**: 8
+
+
 ```
