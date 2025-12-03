@@ -20,9 +20,15 @@ You are tested to completed the following tasks:
 
 Gain a deep understanding of the deployment condition file . <<<要求理解部署条件>>> 
 
+The performance evaluation metrics of the model are as follows: the smaller the model's latency and the larger its throughput, the better the model's performance. <<<模型的性能评价指标>>>
+
 Request to propose a parallel strategy that optimizes the model's performance under the current hardware environment. <<<要求提出当前硬件环境下该模型最优的并行策略>>>
 
-The performance evaluation metrics of the model are as follows: the smaller the model's latency and the larger its throughput, the better the model's performance. <<<模型的性能评价指标>>>
+Parallel strategies should first conform to the current hardware conditions, and secondly, strive to optimize the model's performance (latency, throughput) as much as possible. <<<并行策略首先要符合当前的硬件条件，其次要尽量使模型的性能（时延，吞吐）达到最优>>>
+
+
+
+
 
 
 
