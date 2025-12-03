@@ -1,0 +1,108 @@
+// Hybrid Tensor-Parallel Pipeline Deployment Strategy
+digraph {
+	dpi=300 rankdir=TB size="20,30"
+	node [fontname=Arial fontsize=10]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	subgraph cluster_stage0 {
+		fillcolor=lightgray label="Stage 0: GPU 0 - Input Processing" style="rounded,filled"
+		input [label="Input
+Input: [batch_size=1, seq_len=1024]
+Output: [batch_size=1, seq_len=1024]" fillcolor=lightblue shape=ellipse]
+		tokenize [label="Tokenize
+Input: [batch_size=1, seq_len=1024]
+Output: [batch_size=1, seq_len=1024, vocab_size]" fillcolor=lightgreen shape=rectangle]
+		embed [label="Embedding
+Input: [batch_size=1, seq_len=1024, vocab_size]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+		pos_enc [label="Position Encoding
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	}
+	comm_stage0_to_1 [label="Send to Stage 1
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightblue shape=ellipse]
+	subgraph cluster_stage1 {
+		fillcolor=lightgray label="Stage 1: GPUs 1-2 - Expert Layer (Tensor Parallel)" style="rounded,filled"
+		subgraph cluster_gpu1 {
+			fillcolor=lightcyan label="GPU 1 - Tensor Parallel Part 1" style="rounded,filled"
+			ln_gpu1 [label="LayerNorm
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+			linear1_gpu1 [label="Linear1 (Col-Parallel)
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, ffn=8192/2]" fillcolor=lightgreen shape=rectangle]
+			gelu_gpu1 [label="GELU
+Input: [batch_size=1, seq_len=1024, ffn=4096]
+Output: [batch_size=1, seq_len=1024, ffn=4096]" fillcolor=lightgreen shape=rectangle]
+			linear2_gpu1 [label="Linear2 (Row-Parallel)
+Input: [batch_size=1, seq_len=1024, ffn=4096]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_gpu2 {
+			fillcolor=lightcyan label="GPU 2 - Tensor Parallel Part 2" style="rounded,filled"
+			ln_gpu2 [label="LayerNorm
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+			linear1_gpu2 [label="Linear1 (Col-Parallel)
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, ffn=8192/2]" fillcolor=lightgreen shape=rectangle]
+			gelu_gpu2 [label="GELU
+Input: [batch_size=1, seq_len=1024, ffn=4096]
+Output: [batch_size=1, seq_len=1024, ffn=4096]" fillcolor=lightgreen shape=rectangle]
+			linear2_gpu2 [label="Linear2 (Row-Parallel)
+Input: [batch_size=1, seq_len=1024, ffn=4096]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+		}
+	}
+	all_reduce [label="All-Reduce Sum
+Input: [batch_size=1, seq_len=1024, hidden=4096] x2
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightblue shape=ellipse]
+	agg [label="Aggregate
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightyellow shape=parallelogram]
+	comm_stage1_to_2 [label="Send to Stage 2
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightblue shape=ellipse]
+	subgraph cluster_stage2 {
+		fillcolor=lightgray label="Stage 2: GPU 0 - Aggregation and Output" style="rounded,filled"
+		residual [label="Residual Add
+Input: [batch_size=1, seq_len=1024, hidden=4096] x2
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightyellow shape=parallelogram]
+		final_ln [label="Final LayerNorm
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+		output_proj [label="Output Projection
+Input: [batch_size=1, seq_len=1024, hidden=4096]
+Output: [batch_size=1, seq_len=1024, vocab_size]" fillcolor=lightgreen shape=rectangle]
+		softmax [label="Softmax
+Input: [batch_size=1, seq_len=1024, vocab_size]
+Output: [batch_size=1, seq_len=1024, vocab_size]" fillcolor=lightgreen shape=rectangle]
+	}
+	output [label="Output
+Input: [batch_size=1, seq_len=1024, vocab_size]
+Output: [batch_size=1, seq_len=1024, vocab_size]" fillcolor=lightblue shape=ellipse]
+	input -> tokenize
+	tokenize -> embed
+	embed -> pos_enc
+	pos_enc -> comm_stage0_to_1
+	comm_stage0_to_1 -> ln_gpu1
+	comm_stage0_to_1 -> ln_gpu2
+	ln_gpu1 -> linear1_gpu1
+	linear1_gpu1 -> gelu_gpu1
+	gelu_gpu1 -> linear2_gpu1
+	ln_gpu2 -> linear1_gpu2
+	linear1_gpu2 -> gelu_gpu2
+	gelu_gpu2 -> linear2_gpu2
+	linear2_gpu1 -> all_reduce
+	linear2_gpu2 -> all_reduce
+	all_reduce -> agg
+	agg -> comm_stage1_to_2
+	comm_stage1_to_2 -> residual
+	pos_enc -> residual [label=residual_connection style=dashed]
+	residual -> final_ln
+	final_ln -> output_proj
+	output_proj -> softmax
+	softmax -> output
+}
