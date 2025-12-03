@@ -1,0 +1,90 @@
+// MoE EP16+TP4+PP2 Parallel Strategy DAG
+digraph {
+	rankdir=TB size="100,200"
+	node [fontsize=10]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Total Input\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightgray shape=box]
+	embed_0 [label="Token Embedding PP0\nInput: [batch_size=128, seq_len=10240]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightgreen shape=box]
+	qkv_tp_0 [label="QKV Projection TP\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=256]" fillcolor=lightgreen shape=box]
+	qkv_comm_0 [label="QKV All-Gather\nInput: [batch_size=128, seq_len=10240, hidden=256]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	attn_scale_0 [label="Attention Scale\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightgreen shape=box]
+	attn_score_0 [label="Attention Score\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, seq_len=10240]" fillcolor=lightgreen shape=box]
+	attn_softmax_0 [label="Attention Softmax\nInput: [batch_size=128, seq_len=10240, seq_len=10240]\nOutput: [batch_size=128, seq_len=10240, seq_len=10240]" fillcolor=lightgreen shape=box]
+	attn_weight_0 [label="Attention Weight\nInput: [batch_size=128, seq_len=10240, seq_len=10240]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightgreen shape=box]
+	attn_out_tp_0 [label="Attention Output TP\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=256]" fillcolor=lightgreen shape=box]
+	attn_out_comm_0 [label="Attention Out All-Reduce\nInput: [batch_size=128, seq_len=10240, hidden=256]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	attn_res_0 [label="Attention Residual Add\nInput: [batch_size=128, seq_len=10240, hidden=1024], [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	ln1_0 [label="Layer Norm 1\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightgreen shape=box]
+	gate_0 [label="MoE Gate\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, experts=64]" fillcolor=lightgreen shape=box]
+	route_0 [label="Expert Routing\nInput: [batch_size=128, seq_len=10240, experts=64]\nOutput: [batch_size=128, seq_len=10240, top_k=2]" fillcolor=lightyellow shape=parallelogram]
+	gate_0 -> route_0 [style=dashed]
+	dispatch_0 [label="Expert Dispatch All-to-All\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	expert_0_0 [label="Expert 0\nInput: [batch_size=8, seq_len=640, hidden=1024]\nOutput: [batch_size=8, seq_len=640, hidden=1024]" fillcolor=lightgreen shape=box]
+	expert_0_ffn1_0 [label="Expert 0 FFN1\nInput: [batch_size=8, seq_len=640, hidden=1024]\nOutput: [batch_size=8, seq_len=640, hidden=512]" fillcolor=lightgreen shape=box]
+	expert_0_gelu_0 [label="Expert 0 GELU\nInput: [batch_size=8, seq_len=640, hidden=512]\nOutput: [batch_size=8, seq_len=640, hidden=512]" fillcolor=lightgreen shape=box]
+	expert_0_ffn2_0 [label="Expert 0 FFN2\nInput: [batch_size=8, seq_len=640, hidden=512]\nOutput: [batch_size=8, seq_len=640, hidden=1024]" fillcolor=lightgreen shape=box]
+	expert_0_0 -> expert_0_ffn1_0
+	expert_0_ffn1_0 -> expert_0_gelu_0
+	expert_0_gelu_0 -> expert_0_ffn2_0
+	expert_1_0 [label="Expert 1\nInput: [batch_size=8, seq_len=640, hidden=1024]\nOutput: [batch_size=8, seq_len=640, hidden=1024]" fillcolor=lightgreen shape=box]
+	expert_1_ffn1_0 [label="Expert 1 FFN1\nInput: [batch_size=8, seq_len=640, hidden=1024]\nOutput: [batch_size=8, seq_len=640, hidden=512]" fillcolor=lightgreen shape=box]
+	expert_1_gelu_0 [label="Expert 1 GELU\nInput: [batch_size=8, seq_len=640, hidden=512]\nOutput: [batch_size=8, seq_len=640, hidden=512]" fillcolor=lightgreen shape=box]
+	expert_1_ffn2_0 [label="Expert 1 FFN2\nInput: [batch_size=8, seq_len=640, hidden=512]\nOutput: [batch_size=8, seq_len=640, hidden=1024]" fillcolor=lightgreen shape=box]
+	expert_1_0 -> expert_1_ffn1_0
+	expert_1_ffn1_0 -> expert_1_gelu_0
+	expert_1_gelu_0 -> expert_1_ffn2_0
+	expert_2_0 [label="Expert 2\nInput: [batch_size=8, seq_len=640, hidden=1024]\nOutput: [batch_size=8, seq_len=640, hidden=1024]" fillcolor=lightgreen shape=box]
+	expert_2_ffn1_0 [label="Expert 2 FFN1\nInput: [batch_size=8, seq_len=640, hidden=1024]\nOutput: [batch_size=8, seq_len=640, hidden=512]" fillcolor=lightgreen shape=box]
+	expert_2_gelu_0 [label="Expert 2 GELU\nInput: [batch_size=8, seq_len=640, hidden=512]\nOutput: [batch_size=8, seq_len=640, hidden=512]" fillcolor=lightgreen shape=box]
+	expert_2_ffn2_0 [label="Expert 2 FFN2\nInput: [batch_size=8, seq_len=640, hidden=512]\nOutput: [batch_size=8, seq_len=640, hidden=1024]" fillcolor=lightgreen shape=box]
+	expert_2_0 -> expert_2_ffn1_0
+	expert_2_ffn1_0 -> expert_2_gelu_0
+	expert_2_gelu_0 -> expert_2_ffn2_0
+	expert_3_0 [label="Expert 3\nInput: [batch_size=8, seq_len=640, hidden=1024]\nOutput: [batch_size=8, seq_len=640, hidden=1024]" fillcolor=lightgreen shape=box]
+	expert_3_ffn1_0 [label="Expert 3 FFN1\nInput: [batch_size=8, seq_len=640, hidden=1024]\nOutput: [batch_size=8, seq_len=640, hidden=512]" fillcolor=lightgreen shape=box]
+	expert_3_gelu_0 [label="Expert 3 GELU\nInput: [batch_size=8, seq_len=640, hidden=512]\nOutput: [batch_size=8, seq_len=640, hidden=512]" fillcolor=lightgreen shape=box]
+	expert_3_ffn2_0 [label="Expert 3 FFN2\nInput: [batch_size=8, seq_len=640, hidden=512]\nOutput: [batch_size=8, seq_len=640, hidden=1024]" fillcolor=lightgreen shape=box]
+	expert_3_0 -> expert_3_ffn1_0
+	expert_3_ffn1_0 -> expert_3_gelu_0
+	expert_3_gelu_0 -> expert_3_ffn2_0
+	expert_agg_0 [label="Expert Aggregation\nInput: [batch_size=8, seq_len=640, hidden=1024] × 4\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	combine_0 [label="Expert Combine All-to-All\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	moe_out_0 [label="MoE Output Projection\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightgreen shape=box]
+	moe_res_0 [label="MoE Residual Add\nInput: [batch_size=128, seq_len=10240, hidden=1024], [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	ln2_0 [label="Layer Norm 2\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightgreen shape=box]
+	input -> embed_0
+	embed_0 -> qkv_tp_0
+	qkv_tp_0 -> qkv_comm_0
+	qkv_comm_0 -> attn_scale_0
+	attn_scale_0 -> attn_score_0
+	attn_score_0 -> attn_softmax_0
+	attn_softmax_0 -> attn_weight_0
+	attn_weight_0 -> attn_out_tp_0
+	attn_out_tp_0 -> attn_out_comm_0
+	attn_out_comm_0 -> attn_res_0
+	embed_0 -> attn_res_0
+	attn_res_0 -> ln1_0
+	ln1_0 -> gate_0
+	gate_0 -> route_0
+	route_0 -> dispatch_0
+	ln1_0 -> dispatch_0
+	dispatch_0 -> expert_0_0
+	dispatch_0 -> expert_1_0
+	dispatch_0 -> expert_2_0
+	dispatch_0 -> expert_3_0
+	expert_0_ffn2_0 -> expert_agg_0
+	expert_1_ffn2_0 -> expert_agg_0
+	expert_2_ffn2_0 -> expert_agg_0
+	expert_3_ffn2_0 -> expert_agg_0
+	expert_agg_0 -> combine_0
+	combine_0 -> moe_out_0
+	moe_out_0 -> moe_res_0
+	ln1_0 -> moe_res_0
+	moe_res_0 -> ln2_0
+	pp_transition [label="Pipeline Stage Transition\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	output [label="Total Output\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightgray shape=box]
+	ln2_0 -> pp_transition
+	pp_transition -> output
+}
