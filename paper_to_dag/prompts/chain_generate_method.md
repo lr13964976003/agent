@@ -26,6 +26,8 @@ Request to propose a parallel strategy that optimizes the model's performance un
 
 Parallel strategies should first conform to the current hardware conditions, and secondly, strive to optimize the model's performance (latency, throughput) as much as possible. <<<并行策略首先要符合当前的硬件条件，其次要尽量使模型的性能（时延，吞吐）达到最优>>>
 
+Make full use of hardware resources and leverage the advantages of current deployment conditions. <<<要求充分利用硬件资源>>>
+
 
 
 
@@ -70,5 +72,6 @@ Accuracy: We will verify whether your deployment method meets all the requiremen
 
 Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
 
+Performance: We will rigorously evaluate whether the parallel strategies you generate are the optimal solutions under current deployment conditions.
 
 
