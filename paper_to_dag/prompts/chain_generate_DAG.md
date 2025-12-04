@@ -49,6 +49,8 @@ The generated DAG must not contain any cycles.<<<禁止有环>>>
 
 Except for the input node, each node must have a preceding input node; except for the output node, each node must output to another node. <<<禁止有空悬的节点>>>
 
+Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
+
 The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
 
  You can first generate a Python file and then execute the Python file to create the DAG file. <<<提醒可以生成python文件来生成dag>>>
