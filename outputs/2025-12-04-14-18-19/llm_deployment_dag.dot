@@ -1,0 +1,68 @@
+// LLM 30B MoE Deployment DAG
+digraph {
+	rankdir=TB size="20,30"
+	node [fontsize=9]
+	edge [fontsize=8]
+	input [label="Input\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightpink shape=ellipse style=filled]
+	token_embedding [label="Token Embedding\nVocab:32K→Hidden:1024\n[batch_size=128, seq_len=1024, heads=1, d_k=1]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	input -> token_embedding
+	position_embedding [label="Position Embedding\nSeq:1024→Hidden:1024\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	token_embedding -> position_embedding
+	layer_norm_1 [label="Layer Norm\nHidden:1024\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	position_embedding -> layer_norm_1
+	q_projection [label="Q Projection\nTP: Hidden:1024→Heads:2×64\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	layer_norm_1 -> q_projection
+	k_projection [label="K Projection\nTP: Hidden:1024→Heads:2×64\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	layer_norm_1 -> k_projection
+	v_projection [label="V Projection\nTP: Hidden:1024→Heads:2×64\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	layer_norm_1 -> v_projection
+	attention [label="Attention\nQK^T V: Softmax\n[batch_size=128, seq_len=1024, heads=2, d_k=64]\n[batch_size=128, seq_len=1024, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	q_projection -> attention
+	k_projection -> attention
+	v_projection -> attention
+	attention_output [label="Attention Output\nTP: Heads:2×64→Hidden:1024\n[batch_size=128, seq_len=1024, heads=2, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attention -> attention_output
+	attention_allreduce [label="All-Reduce\nAttention Output\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightyellow shape=ellipse style=dashed]
+	attention_output -> attention_allreduce
+	residual_1 [label="Residual Add\nHidden:1024\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attention_allreduce -> residual_1
+	position_embedding -> residual_1
+	layer_norm_2 [label="Layer Norm\nHidden:1024\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	residual_1 -> layer_norm_2
+	expert_router [label="Expert Router\nTop-K:2 Selection\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightgreen shape=parallelogram style=filled]
+	layer_norm_2 -> expert_router
+	expert_0 [label="Expert 0\nMLP: 1024→2048→1024\n[batch_size=32, seq_len=1024, heads=16, d_k=64]\n[batch_size=32, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	expert_router -> expert_0
+	expert_all2all_0 [label="All-to-All\nExpert 0\n[batch_size=32, seq_len=1024, heads=16, d_k=64]\n[batch_size=32, seq_len=1024, heads=16, d_k=64]" fillcolor=lightyellow shape=ellipse style=dashed]
+	expert_0 -> expert_all2all_0
+	expert_1 [label="Expert 1\nMLP: 1024→2048→1024\n[batch_size=32, seq_len=1024, heads=16, d_k=64]\n[batch_size=32, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	expert_router -> expert_1
+	expert_all2all_1 [label="All-to-All\nExpert 1\n[batch_size=32, seq_len=1024, heads=16, d_k=64]\n[batch_size=32, seq_len=1024, heads=16, d_k=64]" fillcolor=lightyellow shape=ellipse style=dashed]
+	expert_1 -> expert_all2all_1
+	expert_2 [label="Expert 2\nMLP: 1024→2048→1024\n[batch_size=32, seq_len=1024, heads=16, d_k=64]\n[batch_size=32, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	expert_router -> expert_2
+	expert_all2all_2 [label="All-to-All\nExpert 2\n[batch_size=32, seq_len=1024, heads=16, d_k=64]\n[batch_size=32, seq_len=1024, heads=16, d_k=64]" fillcolor=lightyellow shape=ellipse style=dashed]
+	expert_2 -> expert_all2all_2
+	expert_3 [label="Expert 3\nMLP: 1024→2048→1024\n[batch_size=32, seq_len=1024, heads=16, d_k=64]\n[batch_size=32, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	expert_router -> expert_3
+	expert_all2all_3 [label="All-to-All\nExpert 3\n[batch_size=32, seq_len=1024, heads=16, d_k=64]\n[batch_size=32, seq_len=1024, heads=16, d_k=64]" fillcolor=lightyellow shape=ellipse style=dashed]
+	expert_3 -> expert_all2all_3
+	expert_aggregation [label="Expert Aggregation\nWeighted Sum\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightgreen shape=parallelogram style=filled]
+	expert_all2all_0 -> expert_aggregation
+	expert_all2all_1 -> expert_aggregation
+	expert_all2all_2 -> expert_aggregation
+	expert_all2all_3 -> expert_aggregation
+	mlp_output [label="MLP Output\nTP: Hidden:1024→Hidden:1024\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	expert_aggregation -> mlp_output
+	mlp_allreduce [label="All-Reduce\nMLP Output\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightyellow shape=ellipse style=dashed]
+	mlp_output -> mlp_allreduce
+	residual_2 [label="Residual Add\nHidden:1024\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_allreduce -> residual_2
+	residual_1 -> residual_2
+	final_layer_norm [label="Final Layer Norm\nHidden:1024\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=16, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	residual_2 -> final_layer_norm
+	output_projection [label="Output Projection\nHidden:1024→Vocab:32K\n[batch_size=128, seq_len=1024, heads=16, d_k=64]\n[batch_size=128, seq_len=1024, heads=1, d_k=32000]" fillcolor=lightblue shape=rectangle style=filled]
+	final_layer_norm -> output_projection
+	output [label="Output\nLogits:32K\n[batch_size=128, seq_len=1024, heads=1, d_k=32000]\n[batch_size=128, seq_len=1024, heads=1, d_k=32000]" fillcolor=orange shape=ellipse style=filled]
+	output_projection -> output
+}
