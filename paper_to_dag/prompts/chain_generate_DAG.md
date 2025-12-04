@@ -26,7 +26,7 @@ Divide boundaries according to different GPUs, and label each node on the DAG gr
 
 Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
 
-Require all communication activities to be identified. <<<要求把所有通信行为都标识出来>>>
+Require that all communication behaviors be represented in the DAG graph. <<<要求把所有通信行为都在DAG图中体现出来>>>
 
 Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
 
@@ -46,6 +46,8 @@ NOTE
 
 You need to follow the following constraints:
 
+This will be a task with many steps. Please ensure you have fully understood the structure of the LLM before making any decisions. <<<这是一个多步任务，不要急于求成>>>
+
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
 
 The generated DAG must not contain any cycles.<<<禁止有环>>>
@@ -56,7 +58,7 @@ Except for the input node, each node must have a preceding input node; except fo
 
 By executing Python, you need to generate images and .dot files.<<<图像和dot文件都需要生成>>>
 
-This will be a task with many steps. Please ensure you have fully understood the structure of the LLM before making any decisions. <<<这是一个多步任务，不要急于求成>>>
+
 
 
 
