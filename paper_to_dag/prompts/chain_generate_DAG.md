@@ -25,7 +25,7 @@ Divide boundaries according to different GPUs, and label each node on the DAG gr
 
 Display communication between different GPUs, such as all-reduce, all-gather, all-scatter, etc., represented by dashed lines. <<<显示不同GPU间的通信>>>
 
-Require all communications to be identified. <<<要求把所有通信都标识出来>>>
+Require all communication activities to be identified. <<<要求把所有通信行为都标识出来>>>
 
 Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
 
