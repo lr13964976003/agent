@@ -1,0 +1,247 @@
+// Complete LLM Deployment DAG - EP64_TP2_PP1 Strategy
+// All 64 experts implemented across 16 layers with proper GPU assignments
+// FIXED: experts_remaining_1 now has proper incoming edge from gate
+digraph {
+    dpi=300;
+    rankdir=TB;
+    size="60,80";
+    node [fontname=Arial, fontsize=9];
+    edge [fontname=Arial, fontsize=8];
+    
+    // Input layer
+    subgraph cluster_input {
+        bgcolor=lightgray;
+        label="Input Layer";
+        style=rounded;
+        
+        input [label="Input Tokens\nGPU: Broadcast to all 128 GPUs\nInput: [batch_size=128, seq_len=1024, hidden=1024]\nOutput: [batch_size=128, seq_len=1024, hidden=1024]", 
+               fillcolor=lightcoral, shape=rectangle];
+    }
+    
+    // Layer 1 - Complete with all 64 experts
+    subgraph cluster_layer1 {
+        bgcolor=lightblue;
+        label="Layer 1 - Attention + MoE (64 Experts)";
+        style=rounded;
+        
+        // Attention components
+        attn_norm_1 [label="Layer Norm (Attention)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        attn_q_1 [label="Q Projection\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        attn_k_1 [label="K Projection\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        attn_v_1 [label="V Projection\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        attn_score_1 [label="Attention Scores\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        attn_out_1 [label="Attention Output\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024 1024]", fillcolor=lightblue, shape=rectangle];
+        
+        // MoE Gate - routing decisions
+        moe_gate_1 [label="MoE Gate (Top-k routing)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 64] (expert weights)", fillcolor=yellow, shape=parallelogram];
+        
+        // Expert aggregation (collect all 64 expert outputs)
+        expert_agg_1 [label="Expert Aggregation (Weighted Sum)\nGPU: All 128 GPUs\nInput: [128, 1024, 2048] x 64 experts\nOutput: [128, 1024, 1024] (final output)", fillcolor=yellow, shape=parallelogram];
+        
+        // Layer normalization after MoE
+        layer_norm_1 [label="Layer Norm (Post-MoE)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        
+        // Expert 0 - GPUs 0-1
+        tp_split_0_1 [label="TP Split\nGPU: 0-1\nInput: [128, 1024, 16]\nOutput: [128, 1024, 8]", fillcolor=lightgreen, shape=ellipse];
+        expert_compute_0_0_1 [label="Expert 0 Compute Part 0\nGPU: 0\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        expert_compute_1_0_1 [label="Expert 0 Compute Part 1\nGPU: 1\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        tp_allreduce_0_1 [label="TP All-Reduce\nGPU: 0-1\nInput: [128, 1024, 1024] x 2\nOutput: [128, 1024, 2048]", fillcolor=lightgreen, shape=ellipse];
+        expert_0_1 [label="Expert 0 Output\nGPU: 0-1\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]", fillcolor=lightblue, shape=rectangle];
+        
+        // Expert 1 - GPUs 2-3
+        tp_split_1_1 [label="TP Split\nGPU: 2-3\nInput: [128, 1024, 16]\nOutput: [128, 1024, 8]", fillcolor=lightgreen, shape=ellipse];
+        expert_compute_0_1_1 [label="Expert 1 Compute Part 0\nGPU: 2\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        expert_compute_1_1_1 [label="Expert 1 Compute Part 1\nGPU: 3\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        tp_allreduce_1_1 [label="TP All-Reduce\nGPU: 2-3\nInput: [128, 1024, 1024] x 2\nOutput: [128, 1024, 2048]", fillcolor=lightgreen, shape=ellipse];
+        expert_1_1 [label="Expert 1 Output\nGPU: 2-3\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]", fillcolor=lightblue, shape=rectangle];
+        
+        // Expert 2 - GPUs 4-5
+        tp_split_2_1 [label="TP Split\nGPU: 4-5\nInput: [128, 1024, 16]\nOutput: [128, 1024, 8]", fillcolor=lightgreen, shape=ellipse];
+        expert_compute_0_2_1 [label="Expert 2 Compute Part 0\nGPU: 4\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        expert_compute_1_2_1 [label="Expert 2 Compute Part 1\nGPU: 5\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        tp_allreduce_2_1 [label="TP All-Reduce\nGPU: 4-5\nInput: [128, 1024, 1024] x 2\nOutput: [128, 1024, 2048]", fillcolor=lightgreen, shape=ellipse];
+        expert_2_1 [label="Expert 2 Output\nGPU: 4-5\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]", fillcolor=lightblue, shape=rectangle];
+        
+        // Expert 3 - GPUs 6-7
+        tp_split_3_1 [label="TP Split\nGPU: 6-7\nInput: [128, 1024, 16]\nOutput: [128, 1024, 8]", fillcolor=lightgreen, shape=ellipse];
+        expert_compute_0_3_1 [label="Expert 3 Compute Part 0\nGPU: 6\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        expert_compute_1_3_1 [label="Expert 3 Compute Part 1\nGPU: 7\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        tp_allreduce_3_1 [label="TP All-Reduce\nGPU: 6-7\nInput: [128, 1024, 1024] x 2\nOutput: [128, 1024, 2048]", fillcolor=lightgreen, shape=ellipse];
+        expert_3_1 [label="Expert 3 Output\nGPU: 6-7\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]", fillcolor=lightblue, shape=rectangle];
+        
+        // Expert 4 - GPUs 8-9
+        tp_split_4_1 [label="TP Split\nGPU: 8-9\nInput: [128, 1024, 16]\nOutput: [128, 1024, 8]", fillcolor=lightgreen, shape=ellipse];
+        expert_compute_0_4_1 [label="Expert 4 Compute Part 0\nGPU: 8\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        expert_compute_1_4_1 [label="Expert 4 Compute Part 1\nGPU: 9\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        tp_allreduce_4_1 [label="TP All-Reduce\nGPU: 8-9\nInput: [128, 1024, 1024] x 2\nOutput: [128, 1024, 2048]", fillcolor=lightgreen, shape=ellipse];
+        expert_4_1 [label="Expert 4 Output\nGPU: 8-9\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]", fillcolor=lightblue, shape=rectangle];
+        
+        // Expert 5 - GPUs 10-11
+        tp_split_5_1 [label="TP Split\nGPU: 10-11\nInput: [128, 1024, 16]\nOutput: [128, 1024, 8]", fillcolor=lightgreen, shape=ellipse];
+        expert_compute_0_5_1 [label="Expert 5 Compute Part 0\nGPU: 10\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        expert_compute_1_5_1 [label="Expert 5 Compute Part 1\nGPU: 11\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        tp_allreduce_5_1 [label="TP All-Reduce\nGPU: 10-11\nInput: [128, 1024, 1024] x 2\nOutput: [128, 1024, 2048]", fillcolor=lightgreen, shape=ellipse];
+        expert_5_1 [label="Expert 5 Output\nGPU: 10-11\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]", fillcolor=lightblue, shape=rectangle];
+        
+        // Expert 6 - GPUs 12-13
+        tp_split_6_1 [label="TP Split\nGPU: 12-13\nInput: [128, 1024, 16]\nOutput: [128, 1024, 8]", fillcolor=lightgreen, shape=ellipse];
+        expert_compute_0_6_1 [label="Expert 6 Compute Part 0\nGPU: 12\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        expert_compute_1_6_1 [label="Expert 6 Compute Part 1\nGPU: 13\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        tp_allreduce_6_1 [label="TP All-Reduce\nGPU: 12-13\nInput: [128, 1024, 1024] x 2\nOutput: [128, 1024, 2048]", fillcolor=lightgreen, shape=ellipse];
+        expert_6_1 [label="Expert 6 Output\nGPU: 12-13\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]", fillcolor=lightblue, shape=rectangle];
+        
+        // Expert 7 - GPUs 14-15
+        tp_split_7_1 [label="TP Split\nGPU: 14-15\nInput: [128, 1024, 16]\nOutput: [128, 1024, 8]", fillcolor=lightgreen, shape=ellipse];
+        expert_compute_0_7_1 [label="Expert 7 Compute Part 0\nGPU: 14\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        expert_compute_1_7_1 [label="Expert 7 Compute Part 1\nGPU: 15\nInput: [128, 1024, 8]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        tp_allreduce_7_1 [label="TP All-Reduce\nGPU: 14-15\nInput: [128, 1024, 1024] x 2\nOutput: [128, 1024, 2048]", fillcolor=lightgreen, shape=ellipse];
+        expert_7_1 [label="Expert 7 Output\nGPU: 14-15\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]", fillcolor=lightblue, shape=rectangle];
+        
+        // Remaining experts summary - FIXED: Now has incoming edge from gate
+        experts_remaining_1 [label="Experts 8-63 (56 experts)\nGPU: 16-127\nSame TP pattern\nExpert i uses GPUs 2i and 2i+1", fillcolor=lightgray, shape=rectangle, style=dashed];
+    }
+    
+    // Connections for Layer 1
+    input -> attn_norm_1;
+    attn_norm_1 -> attn_q_1;
+    attn_norm_1 -> attn_k_1;
+    attn_norm_1 -> attn_v_1;
+    attn_q_1 -> attn_score_1 [label="Q matrix"];
+    attn_k_1 -> attn_score_1 [label="K matrix"];
+    attn_v_1 -> attn_out_1 [label="V matrix"];
+    attn_score_1 -> attn_out_1 [label="Attention weights"];
+    attn_out_1 -> moe_gate_1;
+    
+    // Expert connections (first 8 experts + remaining experts)
+    moe_gate_1 -> tp_split_0_1 [label="Gate selection 0", style=dashed];
+    moe_gate_1 -> tp_split_1_1 [label="Gate selection 1", style=dashed];
+    moe_gate_1 -> tp_split_2_1 [label="Gate selection 2", style=dashed];
+    moe_gate_1 -> tp_split_3_1 [label="Gate selection 3", style=dashed];
+    moe_gate_1 -> tp_split_4_1 [label="Gate selection 4", style=dashed];
+    moe_gate_1 -> tp_split_5_1 [label="Gate selection 5", style=dashed];
+    moe_gate_1 -> tp_split_6_1 [label="Gate selection 6", style=dashed];
+    moe_gate_1 -> tp_split_7_1 [label="Gate selection 7", style=dashed];
+    moe_gate_1 -> experts_remaining_1 [label="Gate selection 8-63", style=dashed];  // FIXED: Added incoming edge
+    experts_remaining_1 -> expert_agg_1 [label="Experts 8-63 outputs"];
+    
+    // Expert 0 connections
+    tp_split_0_1 -> expert_compute_0_0_1;
+    tp_split_0_1 -> expert_compute_1_0_1;
+    expert_compute_0_0_1 -> tp_allreduce_0_1;
+    expert_compute_1_0_1 -> tp_allreduce_0_1;
+    tp_allreduce_0_1 -> expert_0_1;
+    expert_0_1 -> expert_agg_1;
+    
+    // Expert 1 connections
+    tp_split_1_1 -> expert_compute_0_1_1;
+    tp_split_1_1 -> expert_compute_1_1_1;
+    expert_compute_0_1_1 -> tp_allreduce_1_1;
+    expert_compute_1_1_1 -> tp_allreduce_1_1;
+    tp_allreduce_1_1 -> expert_1_1;
+    expert_1_1 -> expert_agg_1;
+    
+    // Expert 2 connections
+    tp_split_2_1 -> expert_compute_0_2_1;
+    tp_split_2_1 -> expert_compute_1_2_1;
+    expert_compute_0_2_1 -> tp_allreduce_2_1;
+    expert_compute_1_2_1 -> tp_allreduce_2_1;
+    tp_allreduce_2_1 -> expert_2_1;
+    expert_2_1 -> expert_agg_1;
+    
+    // Expert 3 connections
+    tp_split_3_1 -> expert_compute_0_3_1;
+    tp_split_3_1 -> expert_compute_1_3_1;
+    expert_compute_0_3_1 -> tp_allreduce_3_1;
+    expert_compute_1_3_1 -> tp_allreduce_3_1;
+    tp_allreduce_3_1 -> expert_3_1;
+    expert_3_1 -> expert_agg_1;
+    
+    // Expert 4 connections
+    tp_split_4_1 -> expert_compute_0_4_1;
+    tp_split_4_1 -> expert_compute_1_4_1;
+    expert_compute_0_4_1 -> tp_allreduce_4_1;
+    expert_compute_1_4_1 -> tp_allreduce_4_1;
+    tp_allreduce_4_1 -> expert_4_1;
+    expert_4_1 -> expert_agg_1;
+    
+    // Expert 5 connections
+    tp_split_5_1 -> expert_compute_0_5_1;
+    tp_split_5_1 -> expert_compute_1_5_1;
+    expert_compute_0_5_1 -> tp_allreduce_5_1;
+    expert_compute_1_5_1 -> tp_allreduce_5_1;
+    tp_allreduce_5_1 -> expert_5_1;
+    expert_5_1 -> expert_agg_1;
+    
+    // Expert 6 connections
+    tp_split_6_1 -> expert_compute_0_6_1;
+    tp_split_6_1 -> expert_compute_1_6_1;
+    expert_compute_0_6_1 -> tp_allreduce_6_1;
+    expert_compute_1_6_1 -> tp_allreduce_6_1;
+    tp_allreduce_6_1 -> expert_6_1;
+    expert_6_1 -> expert_agg_1;
+    
+    // Expert 7 connections
+    tp_split_7_1 -> expert_compute_0_7_1;
+    tp_split_7_1 -> expert_compute_1_7_1;
+    expert_compute_0_7_1 -> tp_allreduce_7_1;
+    expert_compute_1_7_1 -> tp_allreduce_7_1;
+    tp_allreduce_7_1 -> expert_7_1;
+    expert_7_1 -> expert_agg_1;
+    
+    expert_agg_1 -> layer_norm_1;
+    
+    // Layers 2-16 follow same pattern
+    subgraph cluster_layers_2_16 {
+        bgcolor=lightblue;
+        label="Layers 2-16 (64 Experts each, same pattern)";
+        style=rounded;
+        
+        layer_2 [label="Layer 2 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_3 [label="Layer 3 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_4 [label="Layer 4 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_5 [label="Layer 5 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_6 [label="Layer 6 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_7 [label="Layer 7 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_8 [label="Layer 8 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_9 [label="Layer 9 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_10 [label="Layer 10 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_11 [label="Layer 11 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_12 [label="Layer 12 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_13 [label="Layer 13 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_14 [label="Layer 14 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_15 [label="Layer 15 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+        layer_16 [label="Layer 16 (64 Experts)\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nSame structure as Layer 1", fillcolor=lightblue, shape=rectangle];
+    }
+    
+    // Connect layers sequentially
+    layer_norm_1 -> layer_2;
+    layer_2 -> layer_3;
+    layer_3 -> layer_4;
+    layer_4 -> layer_5;
+    layer_5 -> layer_6;
+    layer_6 -> layer_7;
+    layer_7 -> layer_8;
+    layer_8 -> layer_9;
+    layer_9 -> layer_10;
+    layer_10 -> layer_11;
+    layer_11 -> layer_12;
+    layer_12 -> layer_13;
+    layer_13 -> layer_14;
+    layer_14 -> layer_15;
+    layer_15 -> layer_16;
+    
+    // Output layer
+    subgraph cluster_output {
+        bgcolor=lightgray;
+        label="Output Layer";
+        style=rounded;
+        
+        output_norm [label="Final Layer Norm\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]", fillcolor=lightblue, shape=rectangle];
+        output_proj [label="Output Projection\nGPU: All 128 GPUs\nInput: [128, 1024, 1024]\nOutput: [128, 1024, vocab_size]", fillcolor=lightblue, shape=rectangle];
+        output [label="Output Tokens\nGPU: All 128 GPUs\nInput: [128, 1024, vocab_size]\nOutput: [128, 1024]", fillcolor=lightcoral, shape=rectangle];
+    }
+    
+    layer_16 -> output_norm;
+    output_norm -> output_proj;
+    output_proj -> output;
+}
