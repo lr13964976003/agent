@@ -1,0 +1,21 @@
+// LLM Deployment DAG - Simplified View
+digraph {
+	dpi=300 rankdir=TB size="50,50"
+	node [fontname=Arial fontsize=12]
+	input [label="Input Tokens\n[128, 10000]" fillcolor=lightblue shape=ellipse]
+	embedding [label="Token Embedding\n[128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+	subgraph cluster_layer {
+		label="Transformer Layer (×16)" style=dashed
+		mha [label="Multi-Head Attention\nTP=2 on GPUs 0,1" fillcolor=lightgreen shape=rectangle]
+		moe [label="Mixture of Experts\nEP=64, TP=2\n64 experts on 128 GPUs" fillcolor=lightgreen shape=rectangle]
+		gate [label="Expert Router\nSelects 1-2 experts per token" fillcolor=yellow shape=parallelogram style=dashed]
+		comm [label="All-to-All Communication\nToken redistribution" fillcolor=lightcoral shape=ellipse]
+	}
+	output [label="Output Logits\n[128, 10000, 51200]" fillcolor=lightblue shape=ellipse]
+	input -> embedding
+	embedding -> mha
+	mha -> gate [color=red style=dashed]
+	gate -> comm [color=red style=dashed]
+	comm -> moe
+	moe -> output
+}

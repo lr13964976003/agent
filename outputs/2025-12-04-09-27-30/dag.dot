@@ -1,0 +1,47 @@
+// LLM Deployment DAG - EP64_TP2 Final Submission
+digraph {
+	dpi=300 rankdir=TB size="60,60"
+	node [fontname=Arial fontsize=10]
+	input [label="Model Input\n[batch=128, seq=10000, d_model=4096]" fillcolor=lightblue shape=ellipse style=filled]
+	embedding [label="Token Embedding\n[128, 10000, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+	subgraph cluster_transformer {
+		label="Transformer Layers (×16)" style=dashed
+		prenorm [label="Pre-LayerNorm\n[128, 10000, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+		subgraph cluster_mha {
+			label="Multi-Head Attention (TP=2)" style=dotted
+			mha_gpu0 [label="MHA_GPU0\n[128, 10000, 2048]" fillcolor=lightgreen shape=rectangle style=filled]
+			mha_gpu1 [label="MHA_GPU1\n[128, 10000, 2048]" fillcolor=lightgreen shape=rectangle style=filled]
+			mha_merge [label="MHA_Merge\n[128, 10000, 4096]" fillcolor=yellow shape=parallelogram style=filled]
+		}
+		postnorm [label="Post-LayerNorm\n[128, 10000, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+		gate [label="Expert Router\n[128, 10000, 4096]" fillcolor=yellow shape=parallelogram style=dashed]
+		token_dist [label="Token Distribution\nAll-to-All Comm" fillcolor=lightcoral shape=ellipse style=filled]
+		subgraph cluster_moe {
+			label="MoE Experts (EP=64, TP=2)" style=dotted
+			expert_0 [label="Expert 0\nGPUs 0,1\n[tokens, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			expert_1 [label="Expert 1\nGPUs 2,3\n[tokens, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			expert_2 [label="Expert 2\nGPUs 4,5\n[tokens, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			expert_3 [label="Expert 3\nGPUs 6,7\n[tokens, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			expert_agg [label="Expert Aggregation\n[128, 10000, 4096]" fillcolor=yellow shape=parallelogram style=filled]
+		}
+	}
+	output [label="Model Output\n[128, 10000, 51200]" fillcolor=lightblue shape=ellipse style=filled]
+	input -> embedding
+	embedding -> prenorm
+	prenorm -> mha_gpu0
+	prenorm -> mha_gpu1
+	mha_gpu0 -> mha_merge
+	mha_gpu1 -> mha_merge
+	mha_merge -> postnorm
+	postnorm -> gate
+	gate -> token_dist [color=red style=dashed]
+	token_dist -> expert_0
+	token_dist -> expert_1
+	token_dist -> expert_2
+	token_dist -> expert_3
+	expert_0 -> expert_agg
+	expert_1 -> expert_agg
+	expert_2 -> expert_agg
+	expert_3 -> expert_agg
+	expert_agg -> output
+}

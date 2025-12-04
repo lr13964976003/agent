@@ -1,0 +1,1217 @@
+// LLM Deployment DAG - EP64_TP2 Configuration
+digraph {
+	dpi=300 rankdir=TB size="100,100"
+	node [fontname=Arial fontsize=10]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=yellow shape=parallelogram style=filled]
+	node [fillcolor=lightcoral shape=ellipse style=filled]
+	output [label="Output\nInput: [batch_size=128, seq_len=10000, d_model=4096]\nOutput: [batch_size=128, seq_len=10000, vocab_size=51200]" fillcolor=lightblue shape=ellipse]
+	subgraph cluster_main {
+		fontname="Arial Bold" fontsize=16 label="LLM Model - 16 Layers with EP64_TP2"
+		input [label="Input\nInput: [batch_size=128, seq_len=10000, d_model=4096]\nOutput: [batch_size=128, seq_len=10000, d_model=4096]" fillcolor=lightblue shape=ellipse]
+		subgraph cluster_layer_0 {
+			fillcolor=lightgray label="Layer 0" style=rounded
+			layer_norm_0 [label="LayerNorm_0\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_0 {
+				label="MHA Layer 0 (TP=2)" style=dashed
+				mha_split_0 [label="MHA_Split_0\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_0_gpu0 [label="QKV_Proj_0_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_0_gpu1 [label="QKV_Proj_0_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_0_gpu0 [label="Attention_0_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_0_gpu1 [label="Attention_0_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_0_gpu0 [label="Output_Proj_0_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_0_gpu1 [label="Output_Proj_0_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_0 [label="MHA_Merge_0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_0 [label="Add&Norm1_0\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_0 [label="Expert_Gate_0\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_0 {
+				label="MoE Layer 0 (EP=64, TP=2)" style=dashed
+				token_dist_0 [label="Token_Distribution_0\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_0_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_0_0_gpu0 [label="Expert_0_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_0_0_gpu1 [label="Expert_0_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_0_0 [label="Expert_Merge_0_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_0_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_0_1_gpu0 [label="Expert_0_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_0_1_gpu1 [label="Expert_0_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_0_1 [label="Expert_Merge_0_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_0_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_0_2_gpu0 [label="Expert_0_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_0_2_gpu1 [label="Expert_0_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_0_2 [label="Expert_Merge_0_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_0_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_0_3_gpu0 [label="Expert_0_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_0_3_gpu1 [label="Expert_0_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_0_3 [label="Expert_Merge_0_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_0_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_0_62_gpu0 [label="Expert_0_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_0_62_gpu1 [label="Expert_0_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_0_62 [label="Expert_Merge_0_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_0_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_0_63_gpu0 [label="Expert_0_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_0_63_gpu1 [label="Expert_0_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_0_63 [label="Expert_Merge_0_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_0 [label="Expert_Aggregation_0\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_0 [label="Add&Norm2_0\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_1 {
+			fillcolor=lightgray label="Layer 1" style=rounded
+			layer_norm_1 [label="LayerNorm_1\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_1 {
+				label="MHA Layer 1 (TP=2)" style=dashed
+				mha_split_1 [label="MHA_Split_1\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_1_gpu0 [label="QKV_Proj_1_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_1_gpu1 [label="QKV_Proj_1_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_1_gpu0 [label="Attention_1_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_1_gpu1 [label="Attention_1_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_1_gpu0 [label="Output_Proj_1_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_1_gpu1 [label="Output_Proj_1_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_1 [label="MHA_Merge_1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_1 [label="Add&Norm1_1\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_1 [label="Expert_Gate_1\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_1 {
+				label="MoE Layer 1 (EP=64, TP=2)" style=dashed
+				token_dist_1 [label="Token_Distribution_1\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_1_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_1_0_gpu0 [label="Expert_1_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_1_0_gpu1 [label="Expert_1_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_1_0 [label="Expert_Merge_1_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_1_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_1_1_gpu0 [label="Expert_1_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_1_1_gpu1 [label="Expert_1_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_1_1 [label="Expert_Merge_1_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_1_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_1_2_gpu0 [label="Expert_1_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_1_2_gpu1 [label="Expert_1_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_1_2 [label="Expert_Merge_1_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_1_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_1_3_gpu0 [label="Expert_1_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_1_3_gpu1 [label="Expert_1_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_1_3 [label="Expert_Merge_1_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_1_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_1_62_gpu0 [label="Expert_1_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_1_62_gpu1 [label="Expert_1_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_1_62 [label="Expert_Merge_1_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_1_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_1_63_gpu0 [label="Expert_1_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_1_63_gpu1 [label="Expert_1_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_1_63 [label="Expert_Merge_1_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_1 [label="Expert_Aggregation_1\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_1 [label="Add&Norm2_1\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_2 {
+			fillcolor=lightgray label="Layer 2" style=rounded
+			layer_norm_2 [label="LayerNorm_2\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_2 {
+				label="MHA Layer 2 (TP=2)" style=dashed
+				mha_split_2 [label="MHA_Split_2\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_2_gpu0 [label="QKV_Proj_2_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_2_gpu1 [label="QKV_Proj_2_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_2_gpu0 [label="Attention_2_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_2_gpu1 [label="Attention_2_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_2_gpu0 [label="Output_Proj_2_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_2_gpu1 [label="Output_Proj_2_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_2 [label="MHA_Merge_2\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_2 [label="Add&Norm1_2\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_2 [label="Expert_Gate_2\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_2 {
+				label="MoE Layer 2 (EP=64, TP=2)" style=dashed
+				token_dist_2 [label="Token_Distribution_2\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_2_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_2_0_gpu0 [label="Expert_2_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_2_0_gpu1 [label="Expert_2_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_2_0 [label="Expert_Merge_2_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_2_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_2_1_gpu0 [label="Expert_2_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_2_1_gpu1 [label="Expert_2_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_2_1 [label="Expert_Merge_2_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_2_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_2_2_gpu0 [label="Expert_2_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_2_2_gpu1 [label="Expert_2_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_2_2 [label="Expert_Merge_2_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_2_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_2_3_gpu0 [label="Expert_2_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_2_3_gpu1 [label="Expert_2_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_2_3 [label="Expert_Merge_2_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_2_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_2_62_gpu0 [label="Expert_2_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_2_62_gpu1 [label="Expert_2_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_2_62 [label="Expert_Merge_2_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_2_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_2_63_gpu0 [label="Expert_2_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_2_63_gpu1 [label="Expert_2_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_2_63 [label="Expert_Merge_2_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_2 [label="Expert_Aggregation_2\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_2 [label="Add&Norm2_2\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_3 {
+			fillcolor=lightgray label="Layer 3" style=rounded
+			layer_norm_3 [label="LayerNorm_3\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_3 {
+				label="MHA Layer 3 (TP=2)" style=dashed
+				mha_split_3 [label="MHA_Split_3\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_3_gpu0 [label="QKV_Proj_3_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_3_gpu1 [label="QKV_Proj_3_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_3_gpu0 [label="Attention_3_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_3_gpu1 [label="Attention_3_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_3_gpu0 [label="Output_Proj_3_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_3_gpu1 [label="Output_Proj_3_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_3 [label="MHA_Merge_3\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_3 [label="Add&Norm1_3\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_3 [label="Expert_Gate_3\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_3 {
+				label="MoE Layer 3 (EP=64, TP=2)" style=dashed
+				token_dist_3 [label="Token_Distribution_3\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_3_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_3_0_gpu0 [label="Expert_3_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_3_0_gpu1 [label="Expert_3_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_3_0 [label="Expert_Merge_3_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_3_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_3_1_gpu0 [label="Expert_3_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_3_1_gpu1 [label="Expert_3_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_3_1 [label="Expert_Merge_3_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_3_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_3_2_gpu0 [label="Expert_3_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_3_2_gpu1 [label="Expert_3_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_3_2 [label="Expert_Merge_3_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_3_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_3_3_gpu0 [label="Expert_3_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_3_3_gpu1 [label="Expert_3_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_3_3 [label="Expert_Merge_3_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_3_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_3_62_gpu0 [label="Expert_3_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_3_62_gpu1 [label="Expert_3_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_3_62 [label="Expert_Merge_3_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_3_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_3_63_gpu0 [label="Expert_3_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_3_63_gpu1 [label="Expert_3_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_3_63 [label="Expert_Merge_3_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_3 [label="Expert_Aggregation_3\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_3 [label="Add&Norm2_3\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_4 {
+			fillcolor=lightgray label="Layer 4" style=rounded
+			layer_norm_4 [label="LayerNorm_4\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_4 {
+				label="MHA Layer 4 (TP=2)" style=dashed
+				mha_split_4 [label="MHA_Split_4\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_4_gpu0 [label="QKV_Proj_4_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_4_gpu1 [label="QKV_Proj_4_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_4_gpu0 [label="Attention_4_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_4_gpu1 [label="Attention_4_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_4_gpu0 [label="Output_Proj_4_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_4_gpu1 [label="Output_Proj_4_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_4 [label="MHA_Merge_4\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_4 [label="Add&Norm1_4\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_4 [label="Expert_Gate_4\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_4 {
+				label="MoE Layer 4 (EP=64, TP=2)" style=dashed
+				token_dist_4 [label="Token_Distribution_4\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_4_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_4_0_gpu0 [label="Expert_4_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_4_0_gpu1 [label="Expert_4_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_4_0 [label="Expert_Merge_4_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_4_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_4_1_gpu0 [label="Expert_4_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_4_1_gpu1 [label="Expert_4_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_4_1 [label="Expert_Merge_4_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_4_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_4_2_gpu0 [label="Expert_4_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_4_2_gpu1 [label="Expert_4_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_4_2 [label="Expert_Merge_4_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_4_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_4_3_gpu0 [label="Expert_4_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_4_3_gpu1 [label="Expert_4_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_4_3 [label="Expert_Merge_4_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_4_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_4_62_gpu0 [label="Expert_4_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_4_62_gpu1 [label="Expert_4_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_4_62 [label="Expert_Merge_4_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_4_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_4_63_gpu0 [label="Expert_4_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_4_63_gpu1 [label="Expert_4_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_4_63 [label="Expert_Merge_4_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_4 [label="Expert_Aggregation_4\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_4 [label="Add&Norm2_4\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_5 {
+			fillcolor=lightgray label="Layer 5" style=rounded
+			layer_norm_5 [label="LayerNorm_5\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_5 {
+				label="MHA Layer 5 (TP=2)" style=dashed
+				mha_split_5 [label="MHA_Split_5\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_5_gpu0 [label="QKV_Proj_5_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_5_gpu1 [label="QKV_Proj_5_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_5_gpu0 [label="Attention_5_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_5_gpu1 [label="Attention_5_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_5_gpu0 [label="Output_Proj_5_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_5_gpu1 [label="Output_Proj_5_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_5 [label="MHA_Merge_5\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_5 [label="Add&Norm1_5\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_5 [label="Expert_Gate_5\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_5 {
+				label="MoE Layer 5 (EP=64, TP=2)" style=dashed
+				token_dist_5 [label="Token_Distribution_5\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_5_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_5_0_gpu0 [label="Expert_5_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_5_0_gpu1 [label="Expert_5_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_5_0 [label="Expert_Merge_5_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_5_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_5_1_gpu0 [label="Expert_5_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_5_1_gpu1 [label="Expert_5_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_5_1 [label="Expert_Merge_5_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_5_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_5_2_gpu0 [label="Expert_5_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_5_2_gpu1 [label="Expert_5_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_5_2 [label="Expert_Merge_5_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_5_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_5_3_gpu0 [label="Expert_5_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_5_3_gpu1 [label="Expert_5_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_5_3 [label="Expert_Merge_5_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_5_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_5_62_gpu0 [label="Expert_5_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_5_62_gpu1 [label="Expert_5_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_5_62 [label="Expert_Merge_5_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_5_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_5_63_gpu0 [label="Expert_5_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_5_63_gpu1 [label="Expert_5_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_5_63 [label="Expert_Merge_5_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_5 [label="Expert_Aggregation_5\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_5 [label="Add&Norm2_5\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_6 {
+			fillcolor=lightgray label="Layer 6" style=rounded
+			layer_norm_6 [label="LayerNorm_6\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_6 {
+				label="MHA Layer 6 (TP=2)" style=dashed
+				mha_split_6 [label="MHA_Split_6\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_6_gpu0 [label="QKV_Proj_6_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_6_gpu1 [label="QKV_Proj_6_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_6_gpu0 [label="Attention_6_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_6_gpu1 [label="Attention_6_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_6_gpu0 [label="Output_Proj_6_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_6_gpu1 [label="Output_Proj_6_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_6 [label="MHA_Merge_6\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_6 [label="Add&Norm1_6\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_6 [label="Expert_Gate_6\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_6 {
+				label="MoE Layer 6 (EP=64, TP=2)" style=dashed
+				token_dist_6 [label="Token_Distribution_6\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_6_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_6_0_gpu0 [label="Expert_6_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_6_0_gpu1 [label="Expert_6_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_6_0 [label="Expert_Merge_6_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_6_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_6_1_gpu0 [label="Expert_6_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_6_1_gpu1 [label="Expert_6_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_6_1 [label="Expert_Merge_6_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_6_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_6_2_gpu0 [label="Expert_6_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_6_2_gpu1 [label="Expert_6_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_6_2 [label="Expert_Merge_6_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_6_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_6_3_gpu0 [label="Expert_6_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_6_3_gpu1 [label="Expert_6_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_6_3 [label="Expert_Merge_6_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_6_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_6_62_gpu0 [label="Expert_6_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_6_62_gpu1 [label="Expert_6_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_6_62 [label="Expert_Merge_6_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_6_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_6_63_gpu0 [label="Expert_6_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_6_63_gpu1 [label="Expert_6_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_6_63 [label="Expert_Merge_6_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_6 [label="Expert_Aggregation_6\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_6 [label="Add&Norm2_6\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_7 {
+			fillcolor=lightgray label="Layer 7" style=rounded
+			layer_norm_7 [label="LayerNorm_7\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_7 {
+				label="MHA Layer 7 (TP=2)" style=dashed
+				mha_split_7 [label="MHA_Split_7\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_7_gpu0 [label="QKV_Proj_7_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_7_gpu1 [label="QKV_Proj_7_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_7_gpu0 [label="Attention_7_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_7_gpu1 [label="Attention_7_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_7_gpu0 [label="Output_Proj_7_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_7_gpu1 [label="Output_Proj_7_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_7 [label="MHA_Merge_7\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_7 [label="Add&Norm1_7\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_7 [label="Expert_Gate_7\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_7 {
+				label="MoE Layer 7 (EP=64, TP=2)" style=dashed
+				token_dist_7 [label="Token_Distribution_7\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_7_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_7_0_gpu0 [label="Expert_7_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_7_0_gpu1 [label="Expert_7_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_7_0 [label="Expert_Merge_7_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_7_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_7_1_gpu0 [label="Expert_7_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_7_1_gpu1 [label="Expert_7_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_7_1 [label="Expert_Merge_7_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_7_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_7_2_gpu0 [label="Expert_7_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_7_2_gpu1 [label="Expert_7_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_7_2 [label="Expert_Merge_7_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_7_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_7_3_gpu0 [label="Expert_7_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_7_3_gpu1 [label="Expert_7_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_7_3 [label="Expert_Merge_7_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_7_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_7_62_gpu0 [label="Expert_7_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_7_62_gpu1 [label="Expert_7_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_7_62 [label="Expert_Merge_7_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_7_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_7_63_gpu0 [label="Expert_7_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_7_63_gpu1 [label="Expert_7_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_7_63 [label="Expert_Merge_7_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_7 [label="Expert_Aggregation_7\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_7 [label="Add&Norm2_7\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_8 {
+			fillcolor=lightgray label="Layer 8" style=rounded
+			layer_norm_8 [label="LayerNorm_8\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_8 {
+				label="MHA Layer 8 (TP=2)" style=dashed
+				mha_split_8 [label="MHA_Split_8\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_8_gpu0 [label="QKV_Proj_8_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_8_gpu1 [label="QKV_Proj_8_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_8_gpu0 [label="Attention_8_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_8_gpu1 [label="Attention_8_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_8_gpu0 [label="Output_Proj_8_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_8_gpu1 [label="Output_Proj_8_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_8 [label="MHA_Merge_8\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_8 [label="Add&Norm1_8\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_8 [label="Expert_Gate_8\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_8 {
+				label="MoE Layer 8 (EP=64, TP=2)" style=dashed
+				token_dist_8 [label="Token_Distribution_8\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_8_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_8_0_gpu0 [label="Expert_8_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_8_0_gpu1 [label="Expert_8_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_8_0 [label="Expert_Merge_8_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_8_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_8_1_gpu0 [label="Expert_8_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_8_1_gpu1 [label="Expert_8_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_8_1 [label="Expert_Merge_8_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_8_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_8_2_gpu0 [label="Expert_8_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_8_2_gpu1 [label="Expert_8_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_8_2 [label="Expert_Merge_8_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_8_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_8_3_gpu0 [label="Expert_8_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_8_3_gpu1 [label="Expert_8_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_8_3 [label="Expert_Merge_8_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_8_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_8_62_gpu0 [label="Expert_8_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_8_62_gpu1 [label="Expert_8_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_8_62 [label="Expert_Merge_8_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_8_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_8_63_gpu0 [label="Expert_8_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_8_63_gpu1 [label="Expert_8_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_8_63 [label="Expert_Merge_8_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_8 [label="Expert_Aggregation_8\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_8 [label="Add&Norm2_8\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_9 {
+			fillcolor=lightgray label="Layer 9" style=rounded
+			layer_norm_9 [label="LayerNorm_9\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_9 {
+				label="MHA Layer 9 (TP=2)" style=dashed
+				mha_split_9 [label="MHA_Split_9\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_9_gpu0 [label="QKV_Proj_9_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_9_gpu1 [label="QKV_Proj_9_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_9_gpu0 [label="Attention_9_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_9_gpu1 [label="Attention_9_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_9_gpu0 [label="Output_Proj_9_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_9_gpu1 [label="Output_Proj_9_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_9 [label="MHA_Merge_9\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_9 [label="Add&Norm1_9\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_9 [label="Expert_Gate_9\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_9 {
+				label="MoE Layer 9 (EP=64, TP=2)" style=dashed
+				token_dist_9 [label="Token_Distribution_9\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_9_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_9_0_gpu0 [label="Expert_9_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_9_0_gpu1 [label="Expert_9_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_9_0 [label="Expert_Merge_9_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_9_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_9_1_gpu0 [label="Expert_9_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_9_1_gpu1 [label="Expert_9_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_9_1 [label="Expert_Merge_9_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_9_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_9_2_gpu0 [label="Expert_9_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_9_2_gpu1 [label="Expert_9_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_9_2 [label="Expert_Merge_9_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_9_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_9_3_gpu0 [label="Expert_9_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_9_3_gpu1 [label="Expert_9_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_9_3 [label="Expert_Merge_9_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_9_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_9_62_gpu0 [label="Expert_9_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_9_62_gpu1 [label="Expert_9_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_9_62 [label="Expert_Merge_9_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_9_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_9_63_gpu0 [label="Expert_9_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_9_63_gpu1 [label="Expert_9_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_9_63 [label="Expert_Merge_9_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_9 [label="Expert_Aggregation_9\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_9 [label="Add&Norm2_9\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_10 {
+			fillcolor=lightgray label="Layer 10" style=rounded
+			layer_norm_10 [label="LayerNorm_10\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_10 {
+				label="MHA Layer 10 (TP=2)" style=dashed
+				mha_split_10 [label="MHA_Split_10\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_10_gpu0 [label="QKV_Proj_10_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_10_gpu1 [label="QKV_Proj_10_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_10_gpu0 [label="Attention_10_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_10_gpu1 [label="Attention_10_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_10_gpu0 [label="Output_Proj_10_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_10_gpu1 [label="Output_Proj_10_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_10 [label="MHA_Merge_10\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_10 [label="Add&Norm1_10\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_10 [label="Expert_Gate_10\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_10 {
+				label="MoE Layer 10 (EP=64, TP=2)" style=dashed
+				token_dist_10 [label="Token_Distribution_10\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_10_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_10_0_gpu0 [label="Expert_10_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_10_0_gpu1 [label="Expert_10_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_10_0 [label="Expert_Merge_10_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_10_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_10_1_gpu0 [label="Expert_10_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_10_1_gpu1 [label="Expert_10_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_10_1 [label="Expert_Merge_10_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_10_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_10_2_gpu0 [label="Expert_10_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_10_2_gpu1 [label="Expert_10_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_10_2 [label="Expert_Merge_10_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_10_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_10_3_gpu0 [label="Expert_10_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_10_3_gpu1 [label="Expert_10_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_10_3 [label="Expert_Merge_10_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_10_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_10_62_gpu0 [label="Expert_10_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_10_62_gpu1 [label="Expert_10_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_10_62 [label="Expert_Merge_10_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_10_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_10_63_gpu0 [label="Expert_10_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_10_63_gpu1 [label="Expert_10_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_10_63 [label="Expert_Merge_10_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_10 [label="Expert_Aggregation_10\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_10 [label="Add&Norm2_10\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_11 {
+			fillcolor=lightgray label="Layer 11" style=rounded
+			layer_norm_11 [label="LayerNorm_11\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_11 {
+				label="MHA Layer 11 (TP=2)" style=dashed
+				mha_split_11 [label="MHA_Split_11\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_11_gpu0 [label="QKV_Proj_11_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_11_gpu1 [label="QKV_Proj_11_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_11_gpu0 [label="Attention_11_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_11_gpu1 [label="Attention_11_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_11_gpu0 [label="Output_Proj_11_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_11_gpu1 [label="Output_Proj_11_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_11 [label="MHA_Merge_11\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_11 [label="Add&Norm1_11\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_11 [label="Expert_Gate_11\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_11 {
+				label="MoE Layer 11 (EP=64, TP=2)" style=dashed
+				token_dist_11 [label="Token_Distribution_11\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_11_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_11_0_gpu0 [label="Expert_11_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_11_0_gpu1 [label="Expert_11_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_11_0 [label="Expert_Merge_11_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_11_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_11_1_gpu0 [label="Expert_11_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_11_1_gpu1 [label="Expert_11_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_11_1 [label="Expert_Merge_11_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_11_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_11_2_gpu0 [label="Expert_11_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_11_2_gpu1 [label="Expert_11_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_11_2 [label="Expert_Merge_11_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_11_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_11_3_gpu0 [label="Expert_11_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_11_3_gpu1 [label="Expert_11_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_11_3 [label="Expert_Merge_11_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_11_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_11_62_gpu0 [label="Expert_11_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_11_62_gpu1 [label="Expert_11_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_11_62 [label="Expert_Merge_11_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_11_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_11_63_gpu0 [label="Expert_11_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_11_63_gpu1 [label="Expert_11_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_11_63 [label="Expert_Merge_11_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_11 [label="Expert_Aggregation_11\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_11 [label="Add&Norm2_11\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_12 {
+			fillcolor=lightgray label="Layer 12" style=rounded
+			layer_norm_12 [label="LayerNorm_12\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_12 {
+				label="MHA Layer 12 (TP=2)" style=dashed
+				mha_split_12 [label="MHA_Split_12\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_12_gpu0 [label="QKV_Proj_12_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_12_gpu1 [label="QKV_Proj_12_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_12_gpu0 [label="Attention_12_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_12_gpu1 [label="Attention_12_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_12_gpu0 [label="Output_Proj_12_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_12_gpu1 [label="Output_Proj_12_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_12 [label="MHA_Merge_12\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_12 [label="Add&Norm1_12\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_12 [label="Expert_Gate_12\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_12 {
+				label="MoE Layer 12 (EP=64, TP=2)" style=dashed
+				token_dist_12 [label="Token_Distribution_12\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_12_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_12_0_gpu0 [label="Expert_12_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_12_0_gpu1 [label="Expert_12_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_12_0 [label="Expert_Merge_12_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_12_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_12_1_gpu0 [label="Expert_12_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_12_1_gpu1 [label="Expert_12_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_12_1 [label="Expert_Merge_12_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_12_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_12_2_gpu0 [label="Expert_12_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_12_2_gpu1 [label="Expert_12_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_12_2 [label="Expert_Merge_12_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_12_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_12_3_gpu0 [label="Expert_12_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_12_3_gpu1 [label="Expert_12_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_12_3 [label="Expert_Merge_12_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_12_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_12_62_gpu0 [label="Expert_12_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_12_62_gpu1 [label="Expert_12_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_12_62 [label="Expert_Merge_12_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_12_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_12_63_gpu0 [label="Expert_12_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_12_63_gpu1 [label="Expert_12_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_12_63 [label="Expert_Merge_12_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_12 [label="Expert_Aggregation_12\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_12 [label="Add&Norm2_12\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_13 {
+			fillcolor=lightgray label="Layer 13" style=rounded
+			layer_norm_13 [label="LayerNorm_13\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_13 {
+				label="MHA Layer 13 (TP=2)" style=dashed
+				mha_split_13 [label="MHA_Split_13\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_13_gpu0 [label="QKV_Proj_13_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_13_gpu1 [label="QKV_Proj_13_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_13_gpu0 [label="Attention_13_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_13_gpu1 [label="Attention_13_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_13_gpu0 [label="Output_Proj_13_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_13_gpu1 [label="Output_Proj_13_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_13 [label="MHA_Merge_13\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_13 [label="Add&Norm1_13\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_13 [label="Expert_Gate_13\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_13 {
+				label="MoE Layer 13 (EP=64, TP=2)" style=dashed
+				token_dist_13 [label="Token_Distribution_13\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_13_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_13_0_gpu0 [label="Expert_13_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_13_0_gpu1 [label="Expert_13_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_13_0 [label="Expert_Merge_13_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_13_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_13_1_gpu0 [label="Expert_13_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_13_1_gpu1 [label="Expert_13_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_13_1 [label="Expert_Merge_13_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_13_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_13_2_gpu0 [label="Expert_13_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_13_2_gpu1 [label="Expert_13_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_13_2 [label="Expert_Merge_13_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_13_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_13_3_gpu0 [label="Expert_13_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_13_3_gpu1 [label="Expert_13_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_13_3 [label="Expert_Merge_13_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_13_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_13_62_gpu0 [label="Expert_13_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_13_62_gpu1 [label="Expert_13_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_13_62 [label="Expert_Merge_13_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_13_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_13_63_gpu0 [label="Expert_13_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_13_63_gpu1 [label="Expert_13_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_13_63 [label="Expert_Merge_13_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_13 [label="Expert_Aggregation_13\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_13 [label="Add&Norm2_13\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_14 {
+			fillcolor=lightgray label="Layer 14" style=rounded
+			layer_norm_14 [label="LayerNorm_14\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_14 {
+				label="MHA Layer 14 (TP=2)" style=dashed
+				mha_split_14 [label="MHA_Split_14\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_14_gpu0 [label="QKV_Proj_14_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_14_gpu1 [label="QKV_Proj_14_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_14_gpu0 [label="Attention_14_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_14_gpu1 [label="Attention_14_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_14_gpu0 [label="Output_Proj_14_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_14_gpu1 [label="Output_Proj_14_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_14 [label="MHA_Merge_14\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_14 [label="Add&Norm1_14\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_14 [label="Expert_Gate_14\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_14 {
+				label="MoE Layer 14 (EP=64, TP=2)" style=dashed
+				token_dist_14 [label="Token_Distribution_14\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_14_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_14_0_gpu0 [label="Expert_14_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_14_0_gpu1 [label="Expert_14_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_14_0 [label="Expert_Merge_14_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_14_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_14_1_gpu0 [label="Expert_14_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_14_1_gpu1 [label="Expert_14_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_14_1 [label="Expert_Merge_14_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_14_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_14_2_gpu0 [label="Expert_14_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_14_2_gpu1 [label="Expert_14_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_14_2 [label="Expert_Merge_14_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_14_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_14_3_gpu0 [label="Expert_14_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_14_3_gpu1 [label="Expert_14_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_14_3 [label="Expert_Merge_14_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_14_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_14_62_gpu0 [label="Expert_14_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_14_62_gpu1 [label="Expert_14_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_14_62 [label="Expert_Merge_14_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_14_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_14_63_gpu0 [label="Expert_14_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_14_63_gpu1 [label="Expert_14_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_14_63 [label="Expert_Merge_14_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_14 [label="Expert_Aggregation_14\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_14 [label="Add&Norm2_14\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+		subgraph cluster_layer_15 {
+			fillcolor=lightgray label="Layer 15" style=rounded
+			layer_norm_15 [label="LayerNorm_15\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			subgraph cluster_mha_15 {
+				label="MHA Layer 15 (TP=2)" style=dashed
+				mha_split_15 [label="MHA_Split_15\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 2048]" fillcolor=yellow shape=parallelogram]
+				qkv_proj_15_gpu0 [label="QKV_Proj_15_GPU0\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				qkv_proj_15_gpu1 [label="QKV_Proj_15_GPU1\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 192] (Q:64, K:64, V:64)" fillcolor=lightgreen shape=rectangle]
+				attn_15_gpu0 [label="Attention_15_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				attn_15_gpu1 [label="Attention_15_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 64]" fillcolor=lightgreen shape=rectangle]
+				out_proj_15_gpu0 [label="Output_Proj_15_GPU0\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				out_proj_15_gpu1 [label="Output_Proj_15_GPU1\nInput: [128, 10000, 64]\nOutput: [128, 10000, 2048]" fillcolor=lightgreen shape=rectangle]
+				mha_merge_15 [label="MHA_Merge_15\nInput: [128, 10000, 2048]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_1_15 [label="Add&Norm1_15\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+			gate_15 [label="Expert_Gate_15\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096] + Routing_Weights" fillcolor=yellow shape=parallelogram style=dashed]
+			subgraph cluster_moe_15 {
+				label="MoE Layer 15 (EP=64, TP=2)" style=dashed
+				token_dist_15 [label="Token_Distribution_15\nInput: [128, 10000, 4096]\nOutput: Distributed_Tokens[64_experts]" fillcolor=yellow shape=parallelogram]
+				subgraph cluster_expert_15_0 {
+					label="Expert 0 (GPUs 0,1)" style=rounded
+					expert_15_0_gpu0 [label="Expert_15_0_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_15_0_gpu1 [label="Expert_15_0_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_15_0 [label="Expert_Merge_15_0\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_15_1 {
+					label="Expert 1 (GPUs 2,3)" style=rounded
+					expert_15_1_gpu0 [label="Expert_15_1_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_15_1_gpu1 [label="Expert_15_1_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_15_1 [label="Expert_Merge_15_1\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_15_2 {
+					label="Expert 2 (GPUs 4,5)" style=rounded
+					expert_15_2_gpu0 [label="Expert_15_2_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_15_2_gpu1 [label="Expert_15_2_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_15_2 [label="Expert_Merge_15_2\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_15_3 {
+					label="Expert 3 (GPUs 6,7)" style=rounded
+					expert_15_3_gpu0 [label="Expert_15_3_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_15_3_gpu1 [label="Expert_15_3_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_15_3 [label="Expert_Merge_15_3\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_15_62 {
+					label="Expert 62 (GPUs 124,125)" style=rounded
+					expert_15_62_gpu0 [label="Expert_15_62_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_15_62_gpu1 [label="Expert_15_62_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_15_62 [label="Expert_Merge_15_62\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				subgraph cluster_expert_15_63 {
+					label="Expert 63 (GPUs 126,127)" style=rounded
+					expert_15_63_gpu0 [label="Expert_15_63_GPU0\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_15_63_gpu1 [label="Expert_15_63_GPU1\nInput: [tokens, 4096]\nOutput: [tokens, 8192]" fillcolor=lightgreen shape=rectangle]
+					expert_merge_15_63 [label="Expert_Merge_15_63\nInput: [tokens, 8192]\nOutput: [tokens, 4096]" fillcolor=yellow shape=parallelogram]
+				}
+				expert_agg_15 [label="Expert_Aggregation_15\nInput: [64_expert_outputs, 4096]\nOutput: [128, 10000, 4096]" fillcolor=yellow shape=parallelogram]
+			}
+			add_norm_2_15 [label="Add&Norm2_15\nInput: [128, 10000, 4096]\nOutput: [128, 10000, 4096]" fillcolor=lightgreen shape=rectangle]
+		}
+	}
+	edge [color=black style=solid]
+	edge [color=red style=dashed]
+	input -> layer_norm_0
+	layer_norm_0 -> mha_split_0
+	mha_split_0 -> qkv_proj_0_gpu0
+	mha_split_0 -> qkv_proj_0_gpu1
+	qkv_proj_0_gpu0 -> attn_0_gpu0
+	qkv_proj_0_gpu1 -> attn_0_gpu1
+	attn_0_gpu0 -> out_proj_0_gpu0
+	attn_0_gpu1 -> out_proj_0_gpu1
+	out_proj_0_gpu0 -> mha_merge_0
+	out_proj_0_gpu1 -> mha_merge_0
+	mha_merge_0 -> add_norm_1_0
+	add_norm_1_0 -> gate_0
+	gate_0 -> token_dist_0 [color=red style=dashed]
+	token_dist_0 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_0 -> add_norm_2_0
+	add_norm_2_0 -> layer_norm_1
+	layer_norm_1 -> mha_split_1
+	mha_split_1 -> qkv_proj_1_gpu0
+	mha_split_1 -> qkv_proj_1_gpu1
+	qkv_proj_1_gpu0 -> attn_1_gpu0
+	qkv_proj_1_gpu1 -> attn_1_gpu1
+	attn_1_gpu0 -> out_proj_1_gpu0
+	attn_1_gpu1 -> out_proj_1_gpu1
+	out_proj_1_gpu0 -> mha_merge_1
+	out_proj_1_gpu1 -> mha_merge_1
+	mha_merge_1 -> add_norm_1_1
+	add_norm_1_1 -> gate_1
+	gate_1 -> token_dist_1 [color=red style=dashed]
+	token_dist_1 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_1 -> add_norm_2_1
+	add_norm_2_1 -> layer_norm_2
+	layer_norm_2 -> mha_split_2
+	mha_split_2 -> qkv_proj_2_gpu0
+	mha_split_2 -> qkv_proj_2_gpu1
+	qkv_proj_2_gpu0 -> attn_2_gpu0
+	qkv_proj_2_gpu1 -> attn_2_gpu1
+	attn_2_gpu0 -> out_proj_2_gpu0
+	attn_2_gpu1 -> out_proj_2_gpu1
+	out_proj_2_gpu0 -> mha_merge_2
+	out_proj_2_gpu1 -> mha_merge_2
+	mha_merge_2 -> add_norm_1_2
+	add_norm_1_2 -> gate_2
+	gate_2 -> token_dist_2 [color=red style=dashed]
+	token_dist_2 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_2 -> add_norm_2_2
+	add_norm_2_2 -> layer_norm_3
+	layer_norm_3 -> mha_split_3
+	mha_split_3 -> qkv_proj_3_gpu0
+	mha_split_3 -> qkv_proj_3_gpu1
+	qkv_proj_3_gpu0 -> attn_3_gpu0
+	qkv_proj_3_gpu1 -> attn_3_gpu1
+	attn_3_gpu0 -> out_proj_3_gpu0
+	attn_3_gpu1 -> out_proj_3_gpu1
+	out_proj_3_gpu0 -> mha_merge_3
+	out_proj_3_gpu1 -> mha_merge_3
+	mha_merge_3 -> add_norm_1_3
+	add_norm_1_3 -> gate_3
+	gate_3 -> token_dist_3 [color=red style=dashed]
+	token_dist_3 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_3 -> add_norm_2_3
+	add_norm_2_3 -> layer_norm_4
+	layer_norm_4 -> mha_split_4
+	mha_split_4 -> qkv_proj_4_gpu0
+	mha_split_4 -> qkv_proj_4_gpu1
+	qkv_proj_4_gpu0 -> attn_4_gpu0
+	qkv_proj_4_gpu1 -> attn_4_gpu1
+	attn_4_gpu0 -> out_proj_4_gpu0
+	attn_4_gpu1 -> out_proj_4_gpu1
+	out_proj_4_gpu0 -> mha_merge_4
+	out_proj_4_gpu1 -> mha_merge_4
+	mha_merge_4 -> add_norm_1_4
+	add_norm_1_4 -> gate_4
+	gate_4 -> token_dist_4 [color=red style=dashed]
+	token_dist_4 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_4 -> add_norm_2_4
+	add_norm_2_4 -> layer_norm_5
+	layer_norm_5 -> mha_split_5
+	mha_split_5 -> qkv_proj_5_gpu0
+	mha_split_5 -> qkv_proj_5_gpu1
+	qkv_proj_5_gpu0 -> attn_5_gpu0
+	qkv_proj_5_gpu1 -> attn_5_gpu1
+	attn_5_gpu0 -> out_proj_5_gpu0
+	attn_5_gpu1 -> out_proj_5_gpu1
+	out_proj_5_gpu0 -> mha_merge_5
+	out_proj_5_gpu1 -> mha_merge_5
+	mha_merge_5 -> add_norm_1_5
+	add_norm_1_5 -> gate_5
+	gate_5 -> token_dist_5 [color=red style=dashed]
+	token_dist_5 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_5 -> add_norm_2_5
+	add_norm_2_5 -> layer_norm_6
+	layer_norm_6 -> mha_split_6
+	mha_split_6 -> qkv_proj_6_gpu0
+	mha_split_6 -> qkv_proj_6_gpu1
+	qkv_proj_6_gpu0 -> attn_6_gpu0
+	qkv_proj_6_gpu1 -> attn_6_gpu1
+	attn_6_gpu0 -> out_proj_6_gpu0
+	attn_6_gpu1 -> out_proj_6_gpu1
+	out_proj_6_gpu0 -> mha_merge_6
+	out_proj_6_gpu1 -> mha_merge_6
+	mha_merge_6 -> add_norm_1_6
+	add_norm_1_6 -> gate_6
+	gate_6 -> token_dist_6 [color=red style=dashed]
+	token_dist_6 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_6 -> add_norm_2_6
+	add_norm_2_6 -> layer_norm_7
+	layer_norm_7 -> mha_split_7
+	mha_split_7 -> qkv_proj_7_gpu0
+	mha_split_7 -> qkv_proj_7_gpu1
+	qkv_proj_7_gpu0 -> attn_7_gpu0
+	qkv_proj_7_gpu1 -> attn_7_gpu1
+	attn_7_gpu0 -> out_proj_7_gpu0
+	attn_7_gpu1 -> out_proj_7_gpu1
+	out_proj_7_gpu0 -> mha_merge_7
+	out_proj_7_gpu1 -> mha_merge_7
+	mha_merge_7 -> add_norm_1_7
+	add_norm_1_7 -> gate_7
+	gate_7 -> token_dist_7 [color=red style=dashed]
+	token_dist_7 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_7 -> add_norm_2_7
+	add_norm_2_7 -> layer_norm_8
+	layer_norm_8 -> mha_split_8
+	mha_split_8 -> qkv_proj_8_gpu0
+	mha_split_8 -> qkv_proj_8_gpu1
+	qkv_proj_8_gpu0 -> attn_8_gpu0
+	qkv_proj_8_gpu1 -> attn_8_gpu1
+	attn_8_gpu0 -> out_proj_8_gpu0
+	attn_8_gpu1 -> out_proj_8_gpu1
+	out_proj_8_gpu0 -> mha_merge_8
+	out_proj_8_gpu1 -> mha_merge_8
+	mha_merge_8 -> add_norm_1_8
+	add_norm_1_8 -> gate_8
+	gate_8 -> token_dist_8 [color=red style=dashed]
+	token_dist_8 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_8 -> add_norm_2_8
+	add_norm_2_8 -> layer_norm_9
+	layer_norm_9 -> mha_split_9
+	mha_split_9 -> qkv_proj_9_gpu0
+	mha_split_9 -> qkv_proj_9_gpu1
+	qkv_proj_9_gpu0 -> attn_9_gpu0
+	qkv_proj_9_gpu1 -> attn_9_gpu1
+	attn_9_gpu0 -> out_proj_9_gpu0
+	attn_9_gpu1 -> out_proj_9_gpu1
+	out_proj_9_gpu0 -> mha_merge_9
+	out_proj_9_gpu1 -> mha_merge_9
+	mha_merge_9 -> add_norm_1_9
+	add_norm_1_9 -> gate_9
+	gate_9 -> token_dist_9 [color=red style=dashed]
+	token_dist_9 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_9 -> add_norm_2_9
+	add_norm_2_9 -> layer_norm_10
+	layer_norm_10 -> mha_split_10
+	mha_split_10 -> qkv_proj_10_gpu0
+	mha_split_10 -> qkv_proj_10_gpu1
+	qkv_proj_10_gpu0 -> attn_10_gpu0
+	qkv_proj_10_gpu1 -> attn_10_gpu1
+	attn_10_gpu0 -> out_proj_10_gpu0
+	attn_10_gpu1 -> out_proj_10_gpu1
+	out_proj_10_gpu0 -> mha_merge_10
+	out_proj_10_gpu1 -> mha_merge_10
+	mha_merge_10 -> add_norm_1_10
+	add_norm_1_10 -> gate_10
+	gate_10 -> token_dist_10 [color=red style=dashed]
+	token_dist_10 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_10 -> add_norm_2_10
+	add_norm_2_10 -> layer_norm_11
+	layer_norm_11 -> mha_split_11
+	mha_split_11 -> qkv_proj_11_gpu0
+	mha_split_11 -> qkv_proj_11_gpu1
+	qkv_proj_11_gpu0 -> attn_11_gpu0
+	qkv_proj_11_gpu1 -> attn_11_gpu1
+	attn_11_gpu0 -> out_proj_11_gpu0
+	attn_11_gpu1 -> out_proj_11_gpu1
+	out_proj_11_gpu0 -> mha_merge_11
+	out_proj_11_gpu1 -> mha_merge_11
+	mha_merge_11 -> add_norm_1_11
+	add_norm_1_11 -> gate_11
+	gate_11 -> token_dist_11 [color=red style=dashed]
+	token_dist_11 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_11 -> add_norm_2_11
+	add_norm_2_11 -> layer_norm_12
+	layer_norm_12 -> mha_split_12
+	mha_split_12 -> qkv_proj_12_gpu0
+	mha_split_12 -> qkv_proj_12_gpu1
+	qkv_proj_12_gpu0 -> attn_12_gpu0
+	qkv_proj_12_gpu1 -> attn_12_gpu1
+	attn_12_gpu0 -> out_proj_12_gpu0
+	attn_12_gpu1 -> out_proj_12_gpu1
+	out_proj_12_gpu0 -> mha_merge_12
+	out_proj_12_gpu1 -> mha_merge_12
+	mha_merge_12 -> add_norm_1_12
+	add_norm_1_12 -> gate_12
+	gate_12 -> token_dist_12 [color=red style=dashed]
+	token_dist_12 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_12 -> add_norm_2_12
+	add_norm_2_12 -> layer_norm_13
+	layer_norm_13 -> mha_split_13
+	mha_split_13 -> qkv_proj_13_gpu0
+	mha_split_13 -> qkv_proj_13_gpu1
+	qkv_proj_13_gpu0 -> attn_13_gpu0
+	qkv_proj_13_gpu1 -> attn_13_gpu1
+	attn_13_gpu0 -> out_proj_13_gpu0
+	attn_13_gpu1 -> out_proj_13_gpu1
+	out_proj_13_gpu0 -> mha_merge_13
+	out_proj_13_gpu1 -> mha_merge_13
+	mha_merge_13 -> add_norm_1_13
+	add_norm_1_13 -> gate_13
+	gate_13 -> token_dist_13 [color=red style=dashed]
+	token_dist_13 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_13 -> add_norm_2_13
+	add_norm_2_13 -> layer_norm_14
+	layer_norm_14 -> mha_split_14
+	mha_split_14 -> qkv_proj_14_gpu0
+	mha_split_14 -> qkv_proj_14_gpu1
+	qkv_proj_14_gpu0 -> attn_14_gpu0
+	qkv_proj_14_gpu1 -> attn_14_gpu1
+	attn_14_gpu0 -> out_proj_14_gpu0
+	attn_14_gpu1 -> out_proj_14_gpu1
+	out_proj_14_gpu0 -> mha_merge_14
+	out_proj_14_gpu1 -> mha_merge_14
+	mha_merge_14 -> add_norm_1_14
+	add_norm_1_14 -> gate_14
+	gate_14 -> token_dist_14 [color=red style=dashed]
+	token_dist_14 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_14 -> add_norm_2_14
+	add_norm_2_14 -> layer_norm_15
+	layer_norm_15 -> mha_split_15
+	mha_split_15 -> qkv_proj_15_gpu0
+	mha_split_15 -> qkv_proj_15_gpu1
+	qkv_proj_15_gpu0 -> attn_15_gpu0
+	qkv_proj_15_gpu1 -> attn_15_gpu1
+	attn_15_gpu0 -> out_proj_15_gpu0
+	attn_15_gpu1 -> out_proj_15_gpu1
+	out_proj_15_gpu0 -> mha_merge_15
+	out_proj_15_gpu1 -> mha_merge_15
+	mha_merge_15 -> add_norm_1_15
+	add_norm_1_15 -> gate_15
+	gate_15 -> token_dist_15 [color=red style=dashed]
+	token_dist_15 -> expert_0_0
+	expert_merge_0_0 -> expert_agg_0
+	expert_agg_15 -> add_norm_2_15
+	add_norm_2_15 -> output
+}
