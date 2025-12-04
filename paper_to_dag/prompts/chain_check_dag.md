@@ -34,6 +34,8 @@ You need to follow the following constraints:
 
 Do not make any changes to the original file.<<<禁止修改源文件>>>
 
+Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
+
 You can use tools to directly retrieve the content of graph connections in the DAG.<<<提醒可以用工具直接获取图的连接方式>>>
 
 This will be a task with many steps. Please ensure you have fully understood the dag.
@@ -53,5 +55,6 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
+
 
 
