@@ -1,0 +1,496 @@
+digraph MoE_EP64_Layer {
+    rankdir=TB;
+    bgcolor=white;
+    node [shape=record, fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=9];
+
+    /* ---------- Input from previous layer (all GPUs hold full tensor) ---------- */
+    Input [shape=box, label="Input
+GPU:all
+Input:[batch_size=?,seq_len=4096,hidden=4096]
+Output:[batch_size=?,seq_len=4096,hidden=4096]"];
+
+    /* ---------- Attention block (identical on every GPU, data-parallel) ---------- */
+    subgraph cluster_attn {
+        label="Attention (identical on all GPUs)";
+        style=dashed;
+
+        LN1 [shape=box, label="LayerNorm
+GPU:all
+Input:[B,S,4096]
+Output:[B,S,4096]"];
+        QKV [shape=box, label="Linear QKV
+GPU:all
+Input:[B,S,4096]
+Output:[B,S,12288]"];
+        Reshape [shape=box, label="Reshape→[B,S,32,128]
+GPU:all
+Input:[B,S,12288]
+Output:[B,S,32,128]"];
+        Attn [shape=box, label="Attention(32 heads)
+GPU:all
+Input:[B,S,32,128]
+Output:[B,S,32,128]"];
+        Proj [shape=box, label="Linear Proj
+GPU:all
+Input:[B,S,4096]
+Output:[B,S,4096]"];
+        Add1 [shape=box, label="Add
+GPU:all
+Input:[B,S,4096]
+Output:[B,S,4096]"];
+        LN2 [shape=box, label="LayerNorm
+GPU:all
+Input:[B,S,4096]
+Output:[B,S,4096]"];
+    }
+
+    /* ---------- Gate network (identical on every GPU) ---------- */
+    Gate [shape=box, label="Gate Linear(4096→64)
+GPU:all
+Input:[B,S,4096]
+Output:[B,S,64]"];
+    Softmax [shape=box, label="Softmax(top-k=2)
+GPU:all
+Input:[B,S,64]
+Output:[B,S,64]"];
+
+    /* ---------- Expert scatter (routing) – dashed ellipse ---------- */
+    Scatter [shape=ellipse, style=dashed, label="All-to-All Scatter
+GPU:all→target
+Input:[B,S,4096]
+Output:[tokens_per_expert,4096]"];
+
+    /* ---------- Expert MLPs (one rectangle per GPU, only local expert) ---------- */
+    subgraph cluster_experts {
+        label="Experts (one per GPU)";
+        style=solid;
+        Exp0 [shape=box, label="Expert-0 MLP
+GPU:0
+Input:[T0,4096]
+Output:[T0,4096]"];
+        Exp1 [shape=box, label="Expert-1 MLP
+GPU:1
+Input:[T1,4096]
+Output:[T1,4096]"];
+        Exp2 [shape=box, label="Expert-2 MLP
+GPU:2
+Input:[T2,4096]
+Output:[T2,4096]"];
+        Exp3 [shape=box, label="Expert-3 MLP
+GPU:3
+Input:[T3,4096]
+Output:[T3,4096]"];
+        Exp4 [shape=box, label="Expert-4 MLP
+GPU:4
+Input:[T4,4096]
+Output:[T4,4096]"];
+        Exp5 [shape=box, label="Expert-5 MLP
+GPU:5
+Input:[T5,4096]
+Output:[T5,4096]"];
+        Exp6 [shape=box, label="Expert-6 MLP
+GPU:6
+Input:[T6,4096]
+Output:[T6,4096]"];
+        Exp7 [shape=box, label="Expert-7 MLP
+GPU:7
+Input:[T7,4096]
+Output:[T7,4096]"];
+        Exp8 [shape=box, label="Expert-8 MLP
+GPU:8
+Input:[T8,4096]
+Output:[T8,4096]"];
+        Exp9 [shape=box, label="Expert-9 MLP
+GPU:9
+Input:[T9,4096]
+Output:[T9,4096]"];
+        Exp10 [shape=box, label="Expert-10 MLP
+GPU:10
+Input:[T10,4096]
+Output:[T10,4096]"];
+        Exp11 [shape=box, label="Expert-11 MLP
+GPU:11
+Input:[T11,4096]
+Output:[T11,4096]"];
+        Exp12 [shape=box, label="Expert-12 MLP
+GPU:12
+Input:[T12,4096]
+Output:[T12,4096]"];
+        Exp13 [shape=box, label="Expert-13 MLP
+GPU:13
+Input:[T13,4096]
+Output:[T13,4096]"];
+        Exp14 [shape=box, label="Expert-14 MLP
+GPU:14
+Input:[T14,4096]
+Output:[T14,4096]"];
+        Exp15 [shape=box, label="Expert-15 MLP
+GPU:15
+Input:[T15,4096]
+Output:[T15,4096]"];
+        Exp16 [shape=box, label="Expert-16 MLP
+GPU:16
+Input:[T16,4096]
+Output:[T16,4096]"];
+        Exp17 [shape=box, label="Expert-17 MLP
+GPU:17
+Input:[T17,4096]
+Output:[T17,4096]"];
+        Exp18 [shape=box, label="Expert-18 MLP
+GPU:18
+Input:[T18,4096]
+Output:[T18,4096]"];
+        Exp19 [shape=box, label="Expert-19 MLP
+GPU:19
+Input:[T19,4096]
+Output:[T19,4096]"];
+        Exp20 [shape=box, label="Expert-20 MLP
+GPU:20
+Input:[T20,4096]
+Output:[T20,4096]"];
+        Exp21 [shape=box, label="Expert-21 MLP
+GPU:21
+Input:[T21,4096]
+Output:[T21,4096]"];
+        Exp22 [shape=box, label="Expert-22 MLP
+GPU:22
+Input:[T22,4096]
+Output:[T22,4096]"];
+        Exp23 [shape=box, label="Expert-23 MLP
+GPU:23
+Input:[T23,4096]
+Output:[T23,4096]"];
+        Exp24 [shape=box, label="Expert-24 MLP
+GPU:24
+Input:[T24,4096]
+Output:[T24,4096]"];
+        Exp25 [shape=box, label="Expert-25 MLP
+GPU:25
+Input:[T25,4096]
+Output:[T25,4096]"];
+        Exp26 [shape=box, label="Expert-26 MLP
+GPU:26
+Input:[T26,4096]
+Output:[T26,4096]"];
+        Exp27 [shape=box, label="Expert-27 MLP
+GPU:27
+Input:[T27,4096]
+Output:[T27,4096]"];
+        Exp28 [shape=box, label="Expert-28 MLP
+GPU:28
+Input:[T28,4096]
+Output:[T28,4096]"];
+        Exp29 [shape=box, label="Expert-29 MLP
+GPU:29
+Input:[T29,4096]
+Output:[T29,4096]"];
+        Exp30 [shape=box, label="Expert-30 MLP
+GPU:30
+Input:[T30,4096]
+Output:[T30,4096]"];
+        Exp31 [shape=box, label="Expert-31 MLP
+GPU:31
+Input:[T31,4096]
+Output:[T31,4096]"];
+        Exp32 [shape=box, label="Expert-32 MLP
+GPU:32
+Input:[T32,4096]
+Output:[T32,4096]"];
+        Exp33 [shape=box, label="Expert-33 MLP
+GPU:33
+Input:[T33,4096]
+Output:[T33,4096]"];
+        Exp34 [shape=box, label="Expert-34 MLP
+GPU:34
+Input:[T34,4096]
+Output:[T34,4096]"];
+        Exp35 [shape=box, label="Expert-35 MLP
+GPU:35
+Input:[T35,4096]
+Output:[T35,4096]"];
+        Exp36 [shape=box, label="Expert-36 MLP
+GPU:36
+Input:[T36,4096]
+Output:[T36,4096]"];
+        Exp37 [shape=box, label="Expert-37 MLP
+GPU:37
+Input:[T37,4096]
+Output:[T37,4096]"];
+        Exp38 [shape=box, label="Expert-38 MLP
+GPU:38
+Input:[T38,4096]
+Output:[T38,4096]"];
+        Exp39 [shape=box, label="Expert-39 MLP
+GPU:39
+Input:[T39,4096]
+Output:[T39,4096]"];
+        Exp40 [shape=box, label="Expert-40 MLP
+GPU:40
+Input:[T40,4096]
+Output:[T40,4096]"];
+        Exp41 [shape=box, label="Expert-41 MLP
+GPU:41
+Input:[T41,4096]
+Output:[T41,4096]"];
+        Exp42 [shape=box, label="Expert-42 MLP
+GPU:42
+Input:[T42,4096]
+Output:[T42,4096]"];
+        Exp43 [shape=box, label="Expert-43 MLP
+GPU:43
+Input:[T43,4096]
+Output:[T43,4096]"];
+        Exp44 [shape=box, label="Expert-44 MLP
+GPU:44
+Input:[T44,4096]
+Output:[T44,4096]"];
+        Exp45 [shape=box, label="Expert-45 MLP
+GPU:45
+Input:[T45,4096]
+Output:[T45,4096]"];
+        Exp46 [shape=box, label="Expert-46 MLP
+GPU:46
+Input:[T46,4096]
+Output:[T46,4096]"];
+        Exp47 [shape=box, label="Expert-47 MLP
+GPU:47
+Input:[T47,4096]
+Output:[T47,4096]"];
+        Exp48 [shape=box, label="Expert-48 MLP
+GPU:48
+Input:[T48,4096]
+Output:[T48,4096]"];
+        Exp49 [shape=box, label="Expert-49 MLP
+GPU:49
+Input:[T49,4096]
+Output:[T49,4096]"];
+        Exp50 [shape=box, label="Expert-50 MLP
+GPU:50
+Input:[T50,4096]
+Output:[T50,4096]"];
+        Exp51 [shape=box, label="Expert-51 MLP
+GPU:51
+Input:[T51,4096]
+Output:[T51,4096]"];
+        Exp52 [shape=box, label="Expert-52 MLP
+GPU:52
+Input:[T52,4096]
+Output:[T52,4096]"];
+        Exp53 [shape=box, label="Expert-53 MLP
+GPU:53
+Input:[T53,4096]
+Output:[T53,4096]"];
+        Exp54 [shape=box, label="Expert-54 MLP
+GPU:54
+Input:[T54,4096]
+Output:[T54,4096]"];
+        Exp55 [shape=box, label="Expert-55 MLP
+GPU:55
+Input:[T55,4096]
+Output:[T55,4096]"];
+        Exp56 [shape=box, label="Expert-56 MLP
+GPU:56
+Input:[T56,4096]
+Output:[T56,4096]"];
+        Exp57 [shape=box, label="Expert-57 MLP
+GPU:57
+Input:[T57,4096]
+Output:[T57,4096]"];
+        Exp58 [shape=box, label="Expert-58 MLP
+GPU:58
+Input:[T58,4096]
+Output:[T58,4096]"];
+        Exp59 [shape=box, label="Expert-59 MLP
+GPU:59
+Input:[T59,4096]
+Output:[T59,4096]"];
+        Exp60 [shape=box, label="Expert-60 MLP
+GPU:60
+Input:[T60,4096]
+Output:[T60,4096]"];
+        Exp61 [shape=box, label="Expert-61 MLP
+GPU:61
+Input:[T61,4096]
+Output:[T61,4096]"];
+        Exp62 [shape=box, label="Expert-62 MLP
+GPU:62
+Input:[T62,4096]
+Output:[T62,4096]"];
+        Exp63 [shape=box, label="Expert-63 MLP
+GPU:63
+Input:[T63,4096]
+Output:[T63,4096]"];
+
+    }
+
+    /* ---------- Expert gather (aggregation) – dashed ellipse ---------- */
+    Gather [shape=ellipse, style=dashed, label="All-to-All Gather
+GPU:target→all
+Input:[tokens_per_expert,4096]
+Output:[B,S,4096]"];
+
+    /* ---------- Weighted sum (identical on every GPU) ---------- */
+    WeightedSum [shape=parallelogram, label="Weighted Sum
+GPU:all
+Input:[B,S,4096]
+Output:[B,S,4096]"];
+    Add2 [shape=box, label="Add
+GPU:all
+Input:[B,S,4096]
+Output:[B,S,4096]"];
+
+    /* ---------- Output to next layer ---------- */
+    Output [shape=box, label="Output
+GPU:all
+Input:[B,S,4096]
+Output:[B,S,4096]"];
+
+    /* ---------- Edges ---------- */
+    Input -> LN1;
+    LN1 -> QKV;
+    QKV -> Reshape;
+    Reshape -> Attn;
+    Attn -> Proj;
+    Proj -> Add1;
+    Add1 -> LN2;
+
+    LN2 -> Gate;
+    Gate -> Softmax;
+    LN2 -> Scatter;
+    Softmax -> Scatter;   /* gate controls scatter */
+
+    Scatter -> Exp0;
+    Scatter -> Exp1;
+    Scatter -> Exp2;
+    Scatter -> Exp3;
+    Scatter -> Exp4;
+    Scatter -> Exp5;
+    Scatter -> Exp6;
+    Scatter -> Exp7;
+    Scatter -> Exp8;
+    Scatter -> Exp9;
+    Scatter -> Exp10;
+    Scatter -> Exp11;
+    Scatter -> Exp12;
+    Scatter -> Exp13;
+    Scatter -> Exp14;
+    Scatter -> Exp15;
+    Scatter -> Exp16;
+    Scatter -> Exp17;
+    Scatter -> Exp18;
+    Scatter -> Exp19;
+    Scatter -> Exp20;
+    Scatter -> Exp21;
+    Scatter -> Exp22;
+    Scatter -> Exp23;
+    Scatter -> Exp24;
+    Scatter -> Exp25;
+    Scatter -> Exp26;
+    Scatter -> Exp27;
+    Scatter -> Exp28;
+    Scatter -> Exp29;
+    Scatter -> Exp30;
+    Scatter -> Exp31;
+    Scatter -> Exp32;
+    Scatter -> Exp33;
+    Scatter -> Exp34;
+    Scatter -> Exp35;
+    Scatter -> Exp36;
+    Scatter -> Exp37;
+    Scatter -> Exp38;
+    Scatter -> Exp39;
+    Scatter -> Exp40;
+    Scatter -> Exp41;
+    Scatter -> Exp42;
+    Scatter -> Exp43;
+    Scatter -> Exp44;
+    Scatter -> Exp45;
+    Scatter -> Exp46;
+    Scatter -> Exp47;
+    Scatter -> Exp48;
+    Scatter -> Exp49;
+    Scatter -> Exp50;
+    Scatter -> Exp51;
+    Scatter -> Exp52;
+    Scatter -> Exp53;
+    Scatter -> Exp54;
+    Scatter -> Exp55;
+    Scatter -> Exp56;
+    Scatter -> Exp57;
+    Scatter -> Exp58;
+    Scatter -> Exp59;
+    Scatter -> Exp60;
+    Scatter -> Exp61;
+    Scatter -> Exp62;
+    Scatter -> Exp63;
+    Exp0 -> Gather;
+    Exp1 -> Gather;
+    Exp2 -> Gather;
+    Exp3 -> Gather;
+    Exp4 -> Gather;
+    Exp5 -> Gather;
+    Exp6 -> Gather;
+    Exp7 -> Gather;
+    Exp8 -> Gather;
+    Exp9 -> Gather;
+    Exp10 -> Gather;
+    Exp11 -> Gather;
+    Exp12 -> Gather;
+    Exp13 -> Gather;
+    Exp14 -> Gather;
+    Exp15 -> Gather;
+    Exp16 -> Gather;
+    Exp17 -> Gather;
+    Exp18 -> Gather;
+    Exp19 -> Gather;
+    Exp20 -> Gather;
+    Exp21 -> Gather;
+    Exp22 -> Gather;
+    Exp23 -> Gather;
+    Exp24 -> Gather;
+    Exp25 -> Gather;
+    Exp26 -> Gather;
+    Exp27 -> Gather;
+    Exp28 -> Gather;
+    Exp29 -> Gather;
+    Exp30 -> Gather;
+    Exp31 -> Gather;
+    Exp32 -> Gather;
+    Exp33 -> Gather;
+    Exp34 -> Gather;
+    Exp35 -> Gather;
+    Exp36 -> Gather;
+    Exp37 -> Gather;
+    Exp38 -> Gather;
+    Exp39 -> Gather;
+    Exp40 -> Gather;
+    Exp41 -> Gather;
+    Exp42 -> Gather;
+    Exp43 -> Gather;
+    Exp44 -> Gather;
+    Exp45 -> Gather;
+    Exp46 -> Gather;
+    Exp47 -> Gather;
+    Exp48 -> Gather;
+    Exp49 -> Gather;
+    Exp50 -> Gather;
+    Exp51 -> Gather;
+    Exp52 -> Gather;
+    Exp53 -> Gather;
+    Exp54 -> Gather;
+    Exp55 -> Gather;
+    Exp56 -> Gather;
+    Exp57 -> Gather;
+    Exp58 -> Gather;
+    Exp59 -> Gather;
+    Exp60 -> Gather;
+    Exp61 -> Gather;
+    Exp62 -> Gather;
+    Exp63 -> Gather;
+
+    Gather -> WeightedSum;
+    Softmax -> WeightedSum;   /* provide weights */
+    WeightedSum -> Add2;
+    Add2 -> Output;
+}

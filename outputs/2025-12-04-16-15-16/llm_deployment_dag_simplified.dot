@@ -1,0 +1,177 @@
+// LLM Deployment DAG - Simplified View
+digraph {
+	dpi=300 rankdir=TB size="20,30"
+	node [fontsize=10 margin="0.1,0.05"]
+	input [label="Input\nDP Replica\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	layernorm_l0 [label="LayerNorm L0\nTP Split\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_q_l0 [label="Attention Query\nL0 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_k_l0 [label="Attention Key\nL0 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_v_l0 [label="Attention Value\nL0 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_score_l0 [label="Attention Score\nL0\nInput: [batch=?, seq=?, heads=2, d_k=64]\nOutput: [batch=?, seq=?, heads=2, seq=?]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_softmax_l0 [label="Attention Softmax\nL0\nInput: [batch=?, seq=?, heads=2, seq=?]\nOutput: [batch=?, seq=?, heads=2, seq=?]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_out_l0 [label="Attention Output\nL0 Row-Parallel\nInput: [batch=?, seq=?, heads=2, d_k=64]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_allreduce_l0 [label="All-Reduce\nAttention L0\nTP Group\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	mlp_gate_l0 [label="MLP Gate\nL0\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, experts=4]" fillcolor=yellow shape=parallelogram style=filled]
+	expert0_l0 [label="Expert 0\nL0\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert1_l0 [label="Expert 1\nL0\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert2_l0 [label="Expert 2\nL0\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert3_l0 [label="Expert 3\nL0\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert_agg_l0 [label="Expert Aggregation\nL0\nInput: [batch=?, seq=?, experts=4, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=yellow shape=parallelogram style=filled]
+	mlp_fc1_l0 [label="MLP FC1\nL0 Col-Parallel\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, ffn=512]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_gelu_l0 [label="MLP GELU\nL0\nInput: [batch=?, seq=?, ffn=512]\nOutput: [batch=?, seq=?, ffn=512]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_fc2_l0 [label="MLP FC2\nL0 Row-Parallel\nInput: [batch=?, seq=?, ffn=512]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_allreduce_l0 [label="All-Reduce\nMLP L0\nTP Group\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	layernorm_l1 [label="LayerNorm L1\nTP Split\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_q_l1 [label="Attention Query\nL1 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_k_l1 [label="Attention Key\nL1 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_v_l1 [label="Attention Value\nL1 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_score_l1 [label="Attention Score\nL1\nInput: [batch=?, seq=?, heads=2, d_k=64]\nOutput: [batch=?, seq=?, heads=2, seq=?]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_softmax_l1 [label="Attention Softmax\nL1\nInput: [batch=?, seq=?, heads=2, seq=?]\nOutput: [batch=?, seq=?, heads=2, seq=?]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_out_l1 [label="Attention Output\nL1 Row-Parallel\nInput: [batch=?, seq=?, heads=2, d_k=64]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_allreduce_l1 [label="All-Reduce\nAttention L1\nTP Group\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	mlp_gate_l1 [label="MLP Gate\nL1\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, experts=4]" fillcolor=yellow shape=parallelogram style=filled]
+	expert0_l1 [label="Expert 0\nL1\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert1_l1 [label="Expert 1\nL1\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert2_l1 [label="Expert 2\nL1\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert3_l1 [label="Expert 3\nL1\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert_agg_l1 [label="Expert Aggregation\nL1\nInput: [batch=?, seq=?, experts=4, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=yellow shape=parallelogram style=filled]
+	mlp_fc1_l1 [label="MLP FC1\nL1 Col-Parallel\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, ffn=512]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_gelu_l1 [label="MLP GELU\nL1\nInput: [batch=?, seq=?, ffn=512]\nOutput: [batch=?, seq=?, ffn=512]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_fc2_l1 [label="MLP FC2\nL1 Row-Parallel\nInput: [batch=?, seq=?, ffn=512]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_allreduce_l1 [label="All-Reduce\nMLP L1\nTP Group\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	layernorm_l2 [label="LayerNorm L2\nTP Split\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_q_l2 [label="Attention Query\nL2 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_k_l2 [label="Attention Key\nL2 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_v_l2 [label="Attention Value\nL2 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_score_l2 [label="Attention Score\nL2\nInput: [batch=?, seq=?, heads=2, d_k=64]\nOutput: [batch=?, seq=?, heads=2, seq=?]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_softmax_l2 [label="Attention Softmax\nL2\nInput: [batch=?, seq=?, heads=2, seq=?]\nOutput: [batch=?, seq=?, heads=2, seq=?]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_out_l2 [label="Attention Output\nL2 Row-Parallel\nInput: [batch=?, seq=?, heads=2, d_k=64]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_allreduce_l2 [label="All-Reduce\nAttention L2\nTP Group\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	mlp_gate_l2 [label="MLP Gate\nL2\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, experts=4]" fillcolor=yellow shape=parallelogram style=filled]
+	expert0_l2 [label="Expert 0\nL2\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert1_l2 [label="Expert 1\nL2\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert2_l2 [label="Expert 2\nL2\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert3_l2 [label="Expert 3\nL2\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert_agg_l2 [label="Expert Aggregation\nL2\nInput: [batch=?, seq=?, experts=4, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=yellow shape=parallelogram style=filled]
+	mlp_fc1_l2 [label="MLP FC1\nL2 Col-Parallel\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, ffn=512]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_gelu_l2 [label="MLP GELU\nL2\nInput: [batch=?, seq=?, ffn=512]\nOutput: [batch=?, seq=?, ffn=512]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_fc2_l2 [label="MLP FC2\nL2 Row-Parallel\nInput: [batch=?, seq=?, ffn=512]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_allreduce_l2 [label="All-Reduce\nMLP L2\nTP Group\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	layernorm_l3 [label="LayerNorm L3\nTP Split\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_q_l3 [label="Attention Query\nL3 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_k_l3 [label="Attention Key\nL3 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_v_l3 [label="Attention Value\nL3 Col-Parallel\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, heads=2, d_k=64]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_score_l3 [label="Attention Score\nL3\nInput: [batch=?, seq=?, heads=2, d_k=64]\nOutput: [batch=?, seq=?, heads=2, seq=?]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_softmax_l3 [label="Attention Softmax\nL3\nInput: [batch=?, seq=?, heads=2, seq=?]\nOutput: [batch=?, seq=?, heads=2, seq=?]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_out_l3 [label="Attention Output\nL3 Row-Parallel\nInput: [batch=?, seq=?, heads=2, d_k=64]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	attn_allreduce_l3 [label="All-Reduce\nAttention L3\nTP Group\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	mlp_gate_l3 [label="MLP Gate\nL3\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, experts=4]" fillcolor=yellow shape=parallelogram style=filled]
+	expert0_l3 [label="Expert 0\nL3\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert1_l3 [label="Expert 1\nL3\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert2_l3 [label="Expert 2\nL3\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert3_l3 [label="Expert 3\nL3\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	expert_agg_l3 [label="Expert Aggregation\nL3\nInput: [batch=?, seq=?, experts=4, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=yellow shape=parallelogram style=filled]
+	mlp_fc1_l3 [label="MLP FC1\nL3 Col-Parallel\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, ffn=512]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_gelu_l3 [label="MLP GELU\nL3\nInput: [batch=?, seq=?, ffn=512]\nOutput: [batch=?, seq=?, ffn=512]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_fc2_l3 [label="MLP FC2\nL3 Row-Parallel\nInput: [batch=?, seq=?, ffn=512]\nOutput: [batch=?, seq=?, hidden=128]" fillcolor=lightblue shape=rectangle style=filled]
+	mlp_allreduce_l3 [label="All-Reduce\nMLP L3\nTP Group\nInput: [batch=?, seq=?, hidden=128]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	more_layers [label="...\n12 More Layers\n(Similar Pattern)" fillcolor=white shape=rectangle style=dashed]
+	output [label="Output\nDP Replica\nInput: [batch=?, seq=?, hidden=1024]\nOutput: [batch=?, seq=?, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	input -> layernorm_l0
+	layernorm_l0 -> attn_q_l0
+	layernorm_l0 -> attn_k_l0
+	layernorm_l0 -> attn_v_l0
+	attn_q_l0 -> attn_score_l0
+	attn_k_l0 -> attn_score_l0
+	attn_score_l0 -> attn_softmax_l0
+	attn_softmax_l0 -> attn_out_l0
+	attn_v_l0 -> attn_out_l0
+	attn_out_l0 -> attn_allreduce_l0
+	attn_allreduce_l0 -> mlp_gate_l0
+	mlp_gate_l0 -> expert0_l0 [style=dashed]
+	expert0_l0 -> expert_agg_l0
+	mlp_gate_l0 -> expert1_l0 [style=dashed]
+	expert1_l0 -> expert_agg_l0
+	mlp_gate_l0 -> expert2_l0 [style=dashed]
+	expert2_l0 -> expert_agg_l0
+	mlp_gate_l0 -> expert3_l0 [style=dashed]
+	expert3_l0 -> expert_agg_l0
+	expert_agg_l0 -> mlp_fc1_l0
+	mlp_fc1_l0 -> mlp_gelu_l0
+	mlp_gelu_l0 -> mlp_fc2_l0
+	mlp_fc2_l0 -> mlp_allreduce_l0
+	mlp_allreduce_l0 -> layernorm_l1
+	layernorm_l1 -> attn_q_l1
+	layernorm_l1 -> attn_k_l1
+	layernorm_l1 -> attn_v_l1
+	attn_q_l1 -> attn_score_l1
+	attn_k_l1 -> attn_score_l1
+	attn_score_l1 -> attn_softmax_l1
+	attn_softmax_l1 -> attn_out_l1
+	attn_v_l1 -> attn_out_l1
+	attn_out_l1 -> attn_allreduce_l1
+	attn_allreduce_l1 -> mlp_gate_l1
+	mlp_gate_l1 -> expert0_l1 [style=dashed]
+	expert0_l1 -> expert_agg_l1
+	mlp_gate_l1 -> expert1_l1 [style=dashed]
+	expert1_l1 -> expert_agg_l1
+	mlp_gate_l1 -> expert2_l1 [style=dashed]
+	expert2_l1 -> expert_agg_l1
+	mlp_gate_l1 -> expert3_l1 [style=dashed]
+	expert3_l1 -> expert_agg_l1
+	expert_agg_l1 -> mlp_fc1_l1
+	mlp_fc1_l1 -> mlp_gelu_l1
+	mlp_gelu_l1 -> mlp_fc2_l1
+	mlp_fc2_l1 -> mlp_allreduce_l1
+	mlp_allreduce_l1 -> layernorm_l2
+	layernorm_l2 -> attn_q_l2
+	layernorm_l2 -> attn_k_l2
+	layernorm_l2 -> attn_v_l2
+	attn_q_l2 -> attn_score_l2
+	attn_k_l2 -> attn_score_l2
+	attn_score_l2 -> attn_softmax_l2
+	attn_softmax_l2 -> attn_out_l2
+	attn_v_l2 -> attn_out_l2
+	attn_out_l2 -> attn_allreduce_l2
+	attn_allreduce_l2 -> mlp_gate_l2
+	mlp_gate_l2 -> expert0_l2 [style=dashed]
+	expert0_l2 -> expert_agg_l2
+	mlp_gate_l2 -> expert1_l2 [style=dashed]
+	expert1_l2 -> expert_agg_l2
+	mlp_gate_l2 -> expert2_l2 [style=dashed]
+	expert2_l2 -> expert_agg_l2
+	mlp_gate_l2 -> expert3_l2 [style=dashed]
+	expert3_l2 -> expert_agg_l2
+	expert_agg_l2 -> mlp_fc1_l2
+	mlp_fc1_l2 -> mlp_gelu_l2
+	mlp_gelu_l2 -> mlp_fc2_l2
+	mlp_fc2_l2 -> mlp_allreduce_l2
+	mlp_allreduce_l2 -> layernorm_l3
+	layernorm_l3 -> attn_q_l3
+	layernorm_l3 -> attn_k_l3
+	layernorm_l3 -> attn_v_l3
+	attn_q_l3 -> attn_score_l3
+	attn_k_l3 -> attn_score_l3
+	attn_score_l3 -> attn_softmax_l3
+	attn_softmax_l3 -> attn_out_l3
+	attn_v_l3 -> attn_out_l3
+	attn_out_l3 -> attn_allreduce_l3
+	attn_allreduce_l3 -> mlp_gate_l3
+	mlp_gate_l3 -> expert0_l3 [style=dashed]
+	expert0_l3 -> expert_agg_l3
+	mlp_gate_l3 -> expert1_l3 [style=dashed]
+	expert1_l3 -> expert_agg_l3
+	mlp_gate_l3 -> expert2_l3 [style=dashed]
+	expert2_l3 -> expert_agg_l3
+	mlp_gate_l3 -> expert3_l3 [style=dashed]
+	expert3_l3 -> expert_agg_l3
+	expert_agg_l3 -> mlp_fc1_l3
+	mlp_fc1_l3 -> mlp_gelu_l3
+	mlp_gelu_l3 -> mlp_fc2_l3
+	mlp_fc2_l3 -> mlp_allreduce_l3
+	mlp_allreduce_l3 -> more_layers
+	more_layers -> output
+	tp_comm [label="Tensor Parallel\nAll-Reduce Communications" fillcolor=lightgreen shape=ellipse style=filled]
+	ep_comm [label="Expert Parallel\nRouting Communications" fillcolor=lightgreen shape=ellipse style=filled]
+	dp_comm [label="Data Parallel\nGradient Sync" fillcolor=lightgreen shape=ellipse style=filled]
+}

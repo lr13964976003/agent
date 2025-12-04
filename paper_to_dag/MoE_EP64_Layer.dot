@@ -1,0 +1,86 @@
+digraph MoE_EP64_Layer {
+    rankdir=TB;
+    bgcolor=white;
+    node [shape=record, fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=9];
+
+    /* ---------- Input from previous layer (all GPUs hold full tensor) ---------- */
+    Input [shape=box, label="Input\nGPU:all\nInput:[batch_size=?,seq_len=4096,hidden=4096]\nOutput:[batch_size=?,seq_len=4096,hidden=4096]"];
+
+    /* ---------- Attention block (identical on every GPU, data-parallel) ---------- */
+    subgraph cluster_attn {
+        label="Attention (identical on all GPUs)";
+        style=dashed;
+
+        LN1 [shape=box, label="LayerNorm\nGPU:all\nInput:[B,S,4096]\nOutput:[B,S,4096]"];
+        QKV [shape=box, label="Linear QKV\nGPU:all\nInput:[B,S,4096]\nOutput:[B,S,12288]"];
+        Reshape [shape=box, label="Reshape→[B,S,32,128]\nGPU:all\nInput:[B,S,12288]\nOutput:[B,S,32,128]"];
+        Attn [shape=box, label="Attention(32 heads)\nGPU:all\nInput:[B,S,32,128]\nOutput:[B,S,32,128]"];
+        Proj [shape=box, label="Linear Proj\nGPU:all\nInput:[B,S,4096]\nOutput:[B,S,4096]"];
+        Add1 [shape=box, label="Add\nGPU:all\nInput:[B,S,4096]\nOutput:[B,S,4096]"];
+        LN2 [shape=box, label="LayerNorm\nGPU:all\nInput:[B,S,4096]\nOutput:[B,S,4096]"];
+    }
+
+    /* ---------- Gate network (identical on every GPU) ---------- */
+    Gate [shape=box, label="Gate Linear(4096→64)\nGPU:all\nInput:[B,S,4096]\nOutput:[B,S,64]"];
+    Softmax [shape=box, label="Softmax(top-k=2)\nGPU:all\nInput:[B,S,64]\nOutput:[B,S,64]"];
+
+    /* ---------- Expert scatter (routing) – dashed ellipse ---------- */
+    Scatter [shape=ellipse, style=dashed, label="All-to-All Scatter\nGPU:all→target\nInput:[B,S,4096]\nOutput:[tokens_per_expert,4096]"];
+
+    /* ---------- Expert MLPs (one rectangle per GPU, only local expert) ---------- */
+    subgraph cluster_experts {
+        label="Experts (one per GPU)";
+        style=solid;
+
+        Exp0 [shape=box, label="Expert-0 MLP\nGPU:0\nInput:[T0,4096]\nOutput:[T0,4096]"];
+        Exp1 [shape=box, label="Expert-1 MLP\nGPU:1\nInput:[T1,4096]\nOutput:[T1,4096]"];
+        Exp2 [shape=box, label="Expert-2 MLP\nGPU:2\nInput:[T2,4096]\nOutput:[T2,4096]"];
+        Exp3 [shape=box, label="Expert-3 MLP\nGPU:3\nInput:[T3,4096]\nOutput:[T3,4096]"];
+        /* … continue pattern … */
+        Exp63 [shape=box, label="Expert-63 MLP\nGPU:63\nInput:[T63,4096]\nOutput:[T63,4096]"];
+    }
+
+    /* ---------- Expert gather (aggregation) – dashed ellipse ---------- */
+    Gather [shape=ellipse, style=dashed, label="All-to-All Gather\nGPU:target→all\nInput:[tokens_per_expert,4096]\nOutput:[B,S,4096]"];
+
+    /* ---------- Weighted sum (identical on every GPU) ---------- */
+    WeightedSum [shape=parallelogram, label="Weighted Sum\nGPU:all\nInput:[B,S,4096]\nOutput:[B,S,4096]"];
+    Add2 [shape=box, label="Add\nGPU:all\nInput:[B,S,4096]\nOutput:[B,S,4096]"];
+
+    /* ---------- Output to next layer ---------- */
+    Output [shape=box, label="Output\nGPU:all\nInput:[B,S,4096]\nOutput:[B,S,4096]"];
+
+    /* ---------- Edges ---------- */
+    Input -> LN1;
+    LN1 -> QKV;
+    QKV -> Reshape;
+    Reshape -> Attn;
+    Attn -> Proj;
+    Proj -> Add1;
+    Add1 -> LN2;
+
+    LN2 -> Gate;
+    Gate -> Softmax;
+    LN2 -> Scatter;
+    Softmax -> Scatter;   /* gate controls scatter */
+
+    Scatter -> Exp0;
+    Scatter -> Exp1;
+    Scatter -> Exp2;
+    Scatter -> Exp3;
+    /* … continue pattern … */
+    Scatter -> Exp63;
+
+    Exp0 -> Gather;
+    Exp1 -> Gather;
+    Exp2 -> Gather;
+    Exp3 -> Gather;
+    /* … continue pattern … */
+    Exp63 -> Gather;
+
+    Gather -> WeightedSum;
+    Softmax -> WeightedSum;   /* provide weights */
+    WeightedSum -> Add2;
+    Add2 -> Output;
+}

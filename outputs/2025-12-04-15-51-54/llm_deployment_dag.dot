@@ -1,0 +1,67 @@
+// 30B MoE Model Deployment DAG
+digraph {
+	dpi=300 rankdir=TB size="100,100"
+	node [fontname=Arial fontsize=10]
+	edge [fontname=Arial fontsize=9]
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	input [label="Input\nInput: [batch_size=128, seq_len=10240, hidden=1024]\nOutput: [batch_size=128, seq_len=10240, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	subgraph cluster_stage0 {
+		fillcolor=lightgray label="Pipeline Stage 0: Layers 0-3\nGPUs 0-31" style="rounded,filled"
+		layer0_attn_norm [label="Layer 0 Attention Norm\nGPU: 0-31\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" shape=rectangle]
+		layer0_qkv_proj [label="Layer 0 QKV Projection\nGPU: 0-31\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 3072]" shape=rectangle]
+		layer0_attn_score [label="Layer 0 Attention Score\nGPU: 0-31\nInput: [128, 16, 10240, 64]\nOutput: [128, 16, 10240, 10240]" shape=rectangle]
+		layer0_attn_softmax [label="Layer 0 Attention Softmax\nGPU: 0-31\nInput: [128, 16, 10240, 10240]\nOutput: [128, 16, 10240, 10240]" shape=rectangle]
+		layer0_attn_output [label="Layer 0 Attention Output\nGPU: 0-31\nInput: [128, 16, 10240, 64]\nOutput: [128, 10240, 1024]" shape=rectangle]
+		layer0_moe_norm [label="Layer 0 MoE Norm\nGPU: 0-31\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" shape=rectangle]
+		layer0_gate [label="Layer 0 Expert Gate\nGPU: 0-31\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 64]" fillcolor=lightyellow shape=parallelogram]
+		layer0_exp0_gpu0_col [label="Expert 0 Col Linear GPU0\nGPU: 0\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" fillcolor=lightcoral shape=rectangle]
+		layer0_exp0_gpu1_col [label="Expert 0 Col Linear GPU1\nGPU: 1\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" fillcolor=lightcoral shape=rectangle]
+		layer0_exp0_allreduce [label="Expert 0 All-Reduce\nGPU: 0,1\nInput: [128, 10240, 2048]\nOutput: [128, 10240, 2048]" fillcolor=lightgreen shape=ellipse]
+		layer0_exp0_gpu0_gelu [label="Expert 0 GELU GPU0\nGPU: 0\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" fillcolor=lightcoral shape=rectangle]
+		layer0_exp0_gpu1_gelu [label="Expert 0 GELU GPU1\nGPU: 1\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" fillcolor=lightcoral shape=rectangle]
+		layer0_exp0_gpu0_row [label="Expert 0 Row Linear GPU0\nGPU: 0\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 512]" fillcolor=lightcoral shape=rectangle]
+		layer0_exp0_gpu1_row [label="Expert 0 Row Linear GPU1\nGPU: 1\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 512]" fillcolor=lightcoral shape=rectangle]
+		layer0_exp0_allreduce2 [label="Expert 0 Final All-Reduce\nGPU: 0,1\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" fillcolor=lightgreen shape=ellipse]
+		layer0_exp_agg [label="Layer 0 Expert Aggregation\nGPU: 0-31\nInput: [128, 10240, 1024, 64]\nOutput: [128, 10240, 1024]" fillcolor=lightyellow shape=parallelogram]
+		layer0_output [label="Layer 0 Output\nGPU: 0-31\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" shape=rectangle]
+	}
+	subgraph cluster_stage1 {
+		fillcolor=lightgray label="Pipeline Stage 1: Layers 4-7\nGPUs 32-63" style="rounded,filled"
+		layer4_attn_norm [label="Layer 4 Attention Norm\nGPU: 32-63\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" shape=rectangle]
+		layer4_output [label="Layer 4 Output\nGPU: 32-63\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" shape=rectangle]
+	}
+	subgraph cluster_stage2 {
+		fillcolor=lightgray label="Pipeline Stage 2: Layers 8-11\nGPUs 64-95" style="rounded,filled"
+		layer8_attn_norm [label="Layer 8 Attention Norm\nGPU: 64-95\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" shape=rectangle]
+		layer8_output [label="Layer 8 Output\nGPU: 64-95\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" shape=rectangle]
+	}
+	subgraph cluster_stage3 {
+		fillcolor=lightgray label="Pipeline Stage 3: Layers 12-15\nGPUs 96-127" style="rounded,filled"
+		layer12_attn_norm [label="Layer 12 Attention Norm\nGPU: 96-127\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" shape=rectangle]
+		layer12_output [label="Layer 12 Output\nGPU: 96-127\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" shape=rectangle]
+	}
+	output [label="Final Output\nInput: [128, 10240, 1024]\nOutput: [128, 10240, 1024]" fillcolor=lightgreen shape=ellipse]
+	input -> layer0_attn_norm
+	layer0_attn_norm -> layer0_qkv_proj
+	layer0_qkv_proj -> layer0_attn_score
+	layer0_attn_score -> layer0_attn_softmax
+	layer0_attn_softmax -> layer0_attn_output
+	layer0_attn_output -> layer0_moe_norm
+	layer0_moe_norm -> layer0_gate
+	layer0_gate -> layer0_exp0_gpu0_col [label=expert_select style=dashed]
+	layer0_gate -> layer0_exp0_gpu1_col [label=expert_select style=dashed]
+	layer0_exp0_gpu0_col -> layer0_exp0_allreduce
+	layer0_exp0_gpu1_col -> layer0_exp0_allreduce
+	layer0_exp0_allreduce -> layer0_exp0_gpu0_gelu
+	layer0_exp0_allreduce -> layer0_exp0_gpu1_gelu
+	layer0_exp0_gpu0_gelu -> layer0_exp0_gpu0_row
+	layer0_exp0_gpu1_gelu -> layer0_exp0_gpu1_row
+	layer0_exp0_gpu0_row -> layer0_exp0_allreduce2
+	layer0_exp0_gpu1_row -> layer0_exp0_allreduce2
+	layer0_exp0_allreduce2 -> layer0_exp_agg
+	layer0_exp_agg -> layer0_output
+	layer0_output -> layer4_attn_norm [label=pipeline_send style=dashed]
+	layer4_output -> layer8_attn_norm [label=pipeline_send style=dashed]
+	layer8_output -> layer12_attn_norm [label=pipeline_send style=dashed]
+	layer12_output -> output
+}
