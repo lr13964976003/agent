@@ -36,7 +36,7 @@ def main():
                  "version": 1,
                  "inputs": {
 					 "environment_path": "../environment/EP/deployment.md",
-					 "knowledge_path": "../knowledges/llm_parallel_strategies.md",
+					 "knowledge_path": "../knowledges/llm_parallelism_classification_schema.json.md",
                      "save_path": f"../outputs/{submission_dir}"
                      },
                  "tools": [
