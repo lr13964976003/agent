@@ -20,6 +20,8 @@ Check whether all communication behaviors between GPUs are identified. <<<检查
 
 Check if the DAG contains a cycle. <<<检查dag中是否包含环>>>
 
+Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
+
 Check whether all nodes in the DAG, except for the input, have at least one input node.<<<检查是否除了input外，有节点没有输入>>>
 
 Check whether all nodes in the DAG, except for the output, have at least one output node.<<<检查是否除了output外，有节点没有输出>>>
@@ -33,8 +35,6 @@ NOTE
 You need to follow the following constraints:
 
 Do not make any changes to the original file.<<<禁止修改源文件>>>
-
-Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
 
 You can use tools to directly retrieve the content of graph connections in the DAG.<<<提醒可以用工具直接获取图的连接方式>>>
 
@@ -55,6 +55,7 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
+
 
 
 
