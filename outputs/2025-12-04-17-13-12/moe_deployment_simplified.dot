@@ -1,0 +1,53 @@
+// 30B MoE Model Deployment - Simplified View
+digraph {
+	rankdir=TB splines=ortho
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	node [fillcolor=lightgreen shape=ellipse style=filled]
+	node [fillcolor=yellow shape=parallelogram style=filled]
+	input [label="Input\n[batch=128, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	subgraph cluster_stage0 {
+		fillcolor=lightgray label="Pipeline Stage 0\nGPUs 0-127" style=filled
+		stage0_layer0 [label="Layer 0\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage0_layer1 [label="Layer 1\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage0_layer0 -> stage0_layer1
+		stage0_layer2 [label="Layer 2\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage0_layer1 -> stage0_layer2
+		stage0_layer3 [label="Layer 3\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage0_layer2 -> stage0_layer3
+	}
+	subgraph cluster_stage1 {
+		fillcolor=lightgray label="Pipeline Stage 1\nGPUs 128-255" style=filled
+		stage1_layer0 [label="Layer 4\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage1_layer1 [label="Layer 5\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage1_layer0 -> stage1_layer1
+		stage1_layer2 [label="Layer 6\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage1_layer1 -> stage1_layer2
+		stage1_layer3 [label="Layer 7\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage1_layer2 -> stage1_layer3
+	}
+	subgraph cluster_stage2 {
+		fillcolor=lightgray label="Pipeline Stage 2\nGPUs 256-383" style=filled
+		stage2_layer0 [label="Layer 8\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage2_layer1 [label="Layer 9\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage2_layer0 -> stage2_layer1
+		stage2_layer2 [label="Layer 10\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage2_layer1 -> stage2_layer2
+		stage2_layer3 [label="Layer 11\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage2_layer2 -> stage2_layer3
+	}
+	subgraph cluster_stage3 {
+		fillcolor=lightgray label="Pipeline Stage 3\nGPUs 384-511" style=filled
+		stage3_layer0 [label="Layer 12\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage3_layer1 [label="Layer 13\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage3_layer0 -> stage3_layer1
+		stage3_layer2 [label="Layer 14\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage3_layer1 -> stage3_layer2
+		stage3_layer3 [label="Layer 15\n4 Layers Total\nTP=4, EP=8, DP=4\n8 Experts/GPU" fillcolor=lightblue shape=rectangle]
+		stage3_layer2 -> stage3_layer3
+	}
+	stage0_layer3 -> stage1_layer0 [label="Pipeline Communication"]
+	stage1_layer3 -> stage2_layer0 [label="Pipeline Communication"]
+	stage2_layer3 -> stage3_layer0 [label="Pipeline Communication"]
+	output [label="Output\n[batch=128, seq=1024, vocab=51200]" fillcolor=lightgreen shape=ellipse]
+	stage3_layer3 -> output
+}

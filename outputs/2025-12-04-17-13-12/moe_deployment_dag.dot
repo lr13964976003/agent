@@ -1,0 +1,900 @@
+// 30B MoE Model Deployment DAG
+digraph {
+	nodesep=0.8 rankdir=TB ranksep=1.2 splines=ortho
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	node [fillcolor=lightgreen shape=ellipse style=filled]
+	node [fillcolor=yellow shape=parallelogram style=filled]
+	subgraph cluster_pipeline_stage_0 {
+		fillcolor=lightgray label="Pipeline Stage 0 (GPUs 0-127)" style=filled
+		stage0_input [label="Input\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer0_attention_start [label="Attention Start (Layer 0)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_qkv_proj [label="QKV Projection (TP-Column)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_attention_compute [label="Attention Compute (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_attention_out [label="Attention Output (TP-Row)\nGPU 0-31\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer0_attention_residual [label="Attention + Residual\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_layernorm2 [label="Layer Norm 2\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_moe_gate [label="MoE Gate (Routing Decision)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage0_layer0_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer0_experts_group0 [label="Experts Group 0\nGPU 0-3\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_experts_group1 [label="Experts Group 1\nGPU 4-7\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_experts_group2 [label="Experts Group 2\nGPU 8-11\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_experts_group3 [label="Experts Group 3\nGPU 12-15\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_experts_group4 [label="Experts Group 4\nGPU 16-19\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_experts_group5 [label="Experts Group 5\nGPU 20-23\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_experts_group6 [label="Experts Group 6\nGPU 24-27\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_experts_group7 [label="Experts Group 7\nGPU 28-31\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 0-31\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer0_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_mlp_gelu [label="MLP GELU\nGPU 0-31\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 0-31\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer0_mlp_end [label="MLP + Residual\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer0_moe_gate -> stage0_layer0_expert_dispatch [style=dashed]
+		stage0_layer0_expert_dispatch -> stage0_layer0_expert_combine
+		stage0_layer0_expert_dispatch -> stage0_layer0_experts_group0
+		stage0_layer0_experts_group0 -> stage0_layer0_expert_combine
+		stage0_layer0_expert_dispatch -> stage0_layer0_experts_group1
+		stage0_layer0_experts_group1 -> stage0_layer0_expert_combine
+		stage0_layer0_expert_dispatch -> stage0_layer0_experts_group2
+		stage0_layer0_experts_group2 -> stage0_layer0_expert_combine
+		stage0_layer0_expert_dispatch -> stage0_layer0_experts_group3
+		stage0_layer0_experts_group3 -> stage0_layer0_expert_combine
+		stage0_layer0_expert_dispatch -> stage0_layer0_experts_group4
+		stage0_layer0_experts_group4 -> stage0_layer0_expert_combine
+		stage0_layer0_expert_dispatch -> stage0_layer0_experts_group5
+		stage0_layer0_experts_group5 -> stage0_layer0_expert_combine
+		stage0_layer0_expert_dispatch -> stage0_layer0_experts_group6
+		stage0_layer0_experts_group6 -> stage0_layer0_expert_combine
+		stage0_layer0_expert_dispatch -> stage0_layer0_experts_group7
+		stage0_layer0_experts_group7 -> stage0_layer0_expert_combine
+		stage0_layer0_attention_start -> stage0_layer0_qkv_proj
+		stage0_layer0_qkv_proj -> stage0_layer0_attention_compute
+		stage0_layer0_attention_compute -> stage0_layer0_attention_out
+		stage0_layer0_attention_out -> stage0_layer0_attention_allreduce
+		stage0_layer0_attention_allreduce -> stage0_layer0_attention_residual
+		stage0_layer0_attention_residual -> stage0_layer0_layernorm2
+		stage0_layer0_layernorm2 -> stage0_layer0_moe_gate
+		stage0_layer0_expert_combine -> stage0_layer0_mlp_fc1
+		stage0_layer0_mlp_fc1 -> stage0_layer0_mlp_gelu
+		stage0_layer0_mlp_gelu -> stage0_layer0_mlp_fc2
+		stage0_layer0_mlp_fc2 -> stage0_layer0_mlp_allreduce
+		stage0_layer0_mlp_allreduce -> stage0_layer0_mlp_end
+		stage0_input -> stage0_layer0_attention_start
+		stage0_layer1_attention_start [label="Attention Start (Layer 1)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_qkv_proj [label="QKV Projection (TP-Column)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_attention_compute [label="Attention Compute (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_attention_out [label="Attention Output (TP-Row)\nGPU 0-31\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer1_attention_residual [label="Attention + Residual\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_layernorm2 [label="Layer Norm 2\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_moe_gate [label="MoE Gate (Routing Decision)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage0_layer1_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer1_experts_group0 [label="Experts Group 0\nGPU 0-3\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_experts_group1 [label="Experts Group 1\nGPU 4-7\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_experts_group2 [label="Experts Group 2\nGPU 8-11\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_experts_group3 [label="Experts Group 3\nGPU 12-15\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_experts_group4 [label="Experts Group 4\nGPU 16-19\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_experts_group5 [label="Experts Group 5\nGPU 20-23\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_experts_group6 [label="Experts Group 6\nGPU 24-27\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_experts_group7 [label="Experts Group 7\nGPU 28-31\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 0-31\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer1_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_mlp_gelu [label="MLP GELU\nGPU 0-31\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 0-31\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer1_mlp_end [label="MLP + Residual\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer1_moe_gate -> stage0_layer1_expert_dispatch [style=dashed]
+		stage0_layer1_expert_dispatch -> stage0_layer1_expert_combine
+		stage0_layer1_expert_dispatch -> stage0_layer1_experts_group0
+		stage0_layer1_experts_group0 -> stage0_layer1_expert_combine
+		stage0_layer1_expert_dispatch -> stage0_layer1_experts_group1
+		stage0_layer1_experts_group1 -> stage0_layer1_expert_combine
+		stage0_layer1_expert_dispatch -> stage0_layer1_experts_group2
+		stage0_layer1_experts_group2 -> stage0_layer1_expert_combine
+		stage0_layer1_expert_dispatch -> stage0_layer1_experts_group3
+		stage0_layer1_experts_group3 -> stage0_layer1_expert_combine
+		stage0_layer1_expert_dispatch -> stage0_layer1_experts_group4
+		stage0_layer1_experts_group4 -> stage0_layer1_expert_combine
+		stage0_layer1_expert_dispatch -> stage0_layer1_experts_group5
+		stage0_layer1_experts_group5 -> stage0_layer1_expert_combine
+		stage0_layer1_expert_dispatch -> stage0_layer1_experts_group6
+		stage0_layer1_experts_group6 -> stage0_layer1_expert_combine
+		stage0_layer1_expert_dispatch -> stage0_layer1_experts_group7
+		stage0_layer1_experts_group7 -> stage0_layer1_expert_combine
+		stage0_layer1_attention_start -> stage0_layer1_qkv_proj
+		stage0_layer1_qkv_proj -> stage0_layer1_attention_compute
+		stage0_layer1_attention_compute -> stage0_layer1_attention_out
+		stage0_layer1_attention_out -> stage0_layer1_attention_allreduce
+		stage0_layer1_attention_allreduce -> stage0_layer1_attention_residual
+		stage0_layer1_attention_residual -> stage0_layer1_layernorm2
+		stage0_layer1_layernorm2 -> stage0_layer1_moe_gate
+		stage0_layer1_expert_combine -> stage0_layer1_mlp_fc1
+		stage0_layer1_mlp_fc1 -> stage0_layer1_mlp_gelu
+		stage0_layer1_mlp_gelu -> stage0_layer1_mlp_fc2
+		stage0_layer1_mlp_fc2 -> stage0_layer1_mlp_allreduce
+		stage0_layer1_mlp_allreduce -> stage0_layer1_mlp_end
+		stage0_layer0_mlp_end -> stage0_layer1_attention_start
+		stage0_layer2_attention_start [label="Attention Start (Layer 2)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_qkv_proj [label="QKV Projection (TP-Column)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_attention_compute [label="Attention Compute (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_attention_out [label="Attention Output (TP-Row)\nGPU 0-31\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer2_attention_residual [label="Attention + Residual\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_layernorm2 [label="Layer Norm 2\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_moe_gate [label="MoE Gate (Routing Decision)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage0_layer2_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer2_experts_group0 [label="Experts Group 0\nGPU 0-3\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_experts_group1 [label="Experts Group 1\nGPU 4-7\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_experts_group2 [label="Experts Group 2\nGPU 8-11\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_experts_group3 [label="Experts Group 3\nGPU 12-15\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_experts_group4 [label="Experts Group 4\nGPU 16-19\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_experts_group5 [label="Experts Group 5\nGPU 20-23\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_experts_group6 [label="Experts Group 6\nGPU 24-27\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_experts_group7 [label="Experts Group 7\nGPU 28-31\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 0-31\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer2_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_mlp_gelu [label="MLP GELU\nGPU 0-31\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 0-31\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer2_mlp_end [label="MLP + Residual\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer2_moe_gate -> stage0_layer2_expert_dispatch [style=dashed]
+		stage0_layer2_expert_dispatch -> stage0_layer2_expert_combine
+		stage0_layer2_expert_dispatch -> stage0_layer2_experts_group0
+		stage0_layer2_experts_group0 -> stage0_layer2_expert_combine
+		stage0_layer2_expert_dispatch -> stage0_layer2_experts_group1
+		stage0_layer2_experts_group1 -> stage0_layer2_expert_combine
+		stage0_layer2_expert_dispatch -> stage0_layer2_experts_group2
+		stage0_layer2_experts_group2 -> stage0_layer2_expert_combine
+		stage0_layer2_expert_dispatch -> stage0_layer2_experts_group3
+		stage0_layer2_experts_group3 -> stage0_layer2_expert_combine
+		stage0_layer2_expert_dispatch -> stage0_layer2_experts_group4
+		stage0_layer2_experts_group4 -> stage0_layer2_expert_combine
+		stage0_layer2_expert_dispatch -> stage0_layer2_experts_group5
+		stage0_layer2_experts_group5 -> stage0_layer2_expert_combine
+		stage0_layer2_expert_dispatch -> stage0_layer2_experts_group6
+		stage0_layer2_experts_group6 -> stage0_layer2_expert_combine
+		stage0_layer2_expert_dispatch -> stage0_layer2_experts_group7
+		stage0_layer2_experts_group7 -> stage0_layer2_expert_combine
+		stage0_layer2_attention_start -> stage0_layer2_qkv_proj
+		stage0_layer2_qkv_proj -> stage0_layer2_attention_compute
+		stage0_layer2_attention_compute -> stage0_layer2_attention_out
+		stage0_layer2_attention_out -> stage0_layer2_attention_allreduce
+		stage0_layer2_attention_allreduce -> stage0_layer2_attention_residual
+		stage0_layer2_attention_residual -> stage0_layer2_layernorm2
+		stage0_layer2_layernorm2 -> stage0_layer2_moe_gate
+		stage0_layer2_expert_combine -> stage0_layer2_mlp_fc1
+		stage0_layer2_mlp_fc1 -> stage0_layer2_mlp_gelu
+		stage0_layer2_mlp_gelu -> stage0_layer2_mlp_fc2
+		stage0_layer2_mlp_fc2 -> stage0_layer2_mlp_allreduce
+		stage0_layer2_mlp_allreduce -> stage0_layer2_mlp_end
+		stage0_layer1_mlp_end -> stage0_layer2_attention_start
+		stage0_layer3_attention_start [label="Attention Start (Layer 3)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_qkv_proj [label="QKV Projection (TP-Column)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_attention_compute [label="Attention Compute (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_attention_out [label="Attention Output (TP-Row)\nGPU 0-31\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer3_attention_residual [label="Attention + Residual\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_layernorm2 [label="Layer Norm 2\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_moe_gate [label="MoE Gate (Routing Decision)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage0_layer3_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer3_experts_group0 [label="Experts Group 0\nGPU 0-3\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_experts_group1 [label="Experts Group 1\nGPU 4-7\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_experts_group2 [label="Experts Group 2\nGPU 8-11\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_experts_group3 [label="Experts Group 3\nGPU 12-15\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_experts_group4 [label="Experts Group 4\nGPU 16-19\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_experts_group5 [label="Experts Group 5\nGPU 20-23\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_experts_group6 [label="Experts Group 6\nGPU 24-27\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_experts_group7 [label="Experts Group 7\nGPU 28-31\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 0-31\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer3_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_mlp_gelu [label="MLP GELU\nGPU 0-31\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 0-31\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer3_mlp_end [label="MLP + Residual\nGPU 0-31\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage0_layer3_moe_gate -> stage0_layer3_expert_dispatch [style=dashed]
+		stage0_layer3_expert_dispatch -> stage0_layer3_expert_combine
+		stage0_layer3_expert_dispatch -> stage0_layer3_experts_group0
+		stage0_layer3_experts_group0 -> stage0_layer3_expert_combine
+		stage0_layer3_expert_dispatch -> stage0_layer3_experts_group1
+		stage0_layer3_experts_group1 -> stage0_layer3_expert_combine
+		stage0_layer3_expert_dispatch -> stage0_layer3_experts_group2
+		stage0_layer3_experts_group2 -> stage0_layer3_expert_combine
+		stage0_layer3_expert_dispatch -> stage0_layer3_experts_group3
+		stage0_layer3_experts_group3 -> stage0_layer3_expert_combine
+		stage0_layer3_expert_dispatch -> stage0_layer3_experts_group4
+		stage0_layer3_experts_group4 -> stage0_layer3_expert_combine
+		stage0_layer3_expert_dispatch -> stage0_layer3_experts_group5
+		stage0_layer3_experts_group5 -> stage0_layer3_expert_combine
+		stage0_layer3_expert_dispatch -> stage0_layer3_experts_group6
+		stage0_layer3_experts_group6 -> stage0_layer3_expert_combine
+		stage0_layer3_expert_dispatch -> stage0_layer3_experts_group7
+		stage0_layer3_experts_group7 -> stage0_layer3_expert_combine
+		stage0_layer3_attention_start -> stage0_layer3_qkv_proj
+		stage0_layer3_qkv_proj -> stage0_layer3_attention_compute
+		stage0_layer3_attention_compute -> stage0_layer3_attention_out
+		stage0_layer3_attention_out -> stage0_layer3_attention_allreduce
+		stage0_layer3_attention_allreduce -> stage0_layer3_attention_residual
+		stage0_layer3_attention_residual -> stage0_layer3_layernorm2
+		stage0_layer3_layernorm2 -> stage0_layer3_moe_gate
+		stage0_layer3_expert_combine -> stage0_layer3_mlp_fc1
+		stage0_layer3_mlp_fc1 -> stage0_layer3_mlp_gelu
+		stage0_layer3_mlp_gelu -> stage0_layer3_mlp_fc2
+		stage0_layer3_mlp_fc2 -> stage0_layer3_mlp_allreduce
+		stage0_layer3_mlp_allreduce -> stage0_layer3_mlp_end
+		stage0_layer2_mlp_end -> stage0_layer3_attention_start
+		stage0_output [label="Stage Output\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage0_layer3_mlp_end -> stage0_output
+	}
+	subgraph cluster_pipeline_stage_1 {
+		fillcolor=lightgray label="Pipeline Stage 1 (GPUs 128-255)" style=filled
+		stage1_input [label="Input\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer0_attention_start [label="Attention Start (Layer 0)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_qkv_proj [label="QKV Projection (TP-Column)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_attention_compute [label="Attention Compute (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_attention_out [label="Attention Output (TP-Row)\nGPU 128-159\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer0_attention_residual [label="Attention + Residual\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_layernorm2 [label="Layer Norm 2\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_moe_gate [label="MoE Gate (Routing Decision)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage1_layer0_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer0_experts_group0 [label="Experts Group 0\nGPU 128-131\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_experts_group1 [label="Experts Group 1\nGPU 132-135\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_experts_group2 [label="Experts Group 2\nGPU 136-139\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_experts_group3 [label="Experts Group 3\nGPU 140-143\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_experts_group4 [label="Experts Group 4\nGPU 144-147\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_experts_group5 [label="Experts Group 5\nGPU 148-151\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_experts_group6 [label="Experts Group 6\nGPU 152-155\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_experts_group7 [label="Experts Group 7\nGPU 156-159\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 128-159\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer0_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_mlp_gelu [label="MLP GELU\nGPU 128-159\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 128-159\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer0_mlp_end [label="MLP + Residual\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer0_moe_gate -> stage1_layer0_expert_dispatch [style=dashed]
+		stage1_layer0_expert_dispatch -> stage1_layer0_expert_combine
+		stage1_layer0_expert_dispatch -> stage1_layer0_experts_group0
+		stage1_layer0_experts_group0 -> stage1_layer0_expert_combine
+		stage1_layer0_expert_dispatch -> stage1_layer0_experts_group1
+		stage1_layer0_experts_group1 -> stage1_layer0_expert_combine
+		stage1_layer0_expert_dispatch -> stage1_layer0_experts_group2
+		stage1_layer0_experts_group2 -> stage1_layer0_expert_combine
+		stage1_layer0_expert_dispatch -> stage1_layer0_experts_group3
+		stage1_layer0_experts_group3 -> stage1_layer0_expert_combine
+		stage1_layer0_expert_dispatch -> stage1_layer0_experts_group4
+		stage1_layer0_experts_group4 -> stage1_layer0_expert_combine
+		stage1_layer0_expert_dispatch -> stage1_layer0_experts_group5
+		stage1_layer0_experts_group5 -> stage1_layer0_expert_combine
+		stage1_layer0_expert_dispatch -> stage1_layer0_experts_group6
+		stage1_layer0_experts_group6 -> stage1_layer0_expert_combine
+		stage1_layer0_expert_dispatch -> stage1_layer0_experts_group7
+		stage1_layer0_experts_group7 -> stage1_layer0_expert_combine
+		stage1_layer0_attention_start -> stage1_layer0_qkv_proj
+		stage1_layer0_qkv_proj -> stage1_layer0_attention_compute
+		stage1_layer0_attention_compute -> stage1_layer0_attention_out
+		stage1_layer0_attention_out -> stage1_layer0_attention_allreduce
+		stage1_layer0_attention_allreduce -> stage1_layer0_attention_residual
+		stage1_layer0_attention_residual -> stage1_layer0_layernorm2
+		stage1_layer0_layernorm2 -> stage1_layer0_moe_gate
+		stage1_layer0_expert_combine -> stage1_layer0_mlp_fc1
+		stage1_layer0_mlp_fc1 -> stage1_layer0_mlp_gelu
+		stage1_layer0_mlp_gelu -> stage1_layer0_mlp_fc2
+		stage1_layer0_mlp_fc2 -> stage1_layer0_mlp_allreduce
+		stage1_layer0_mlp_allreduce -> stage1_layer0_mlp_end
+		stage1_input -> stage1_layer0_attention_start
+		stage1_layer1_attention_start [label="Attention Start (Layer 1)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_qkv_proj [label="QKV Projection (TP-Column)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_attention_compute [label="Attention Compute (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_attention_out [label="Attention Output (TP-Row)\nGPU 128-159\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer1_attention_residual [label="Attention + Residual\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_layernorm2 [label="Layer Norm 2\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_moe_gate [label="MoE Gate (Routing Decision)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage1_layer1_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer1_experts_group0 [label="Experts Group 0\nGPU 128-131\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_experts_group1 [label="Experts Group 1\nGPU 132-135\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_experts_group2 [label="Experts Group 2\nGPU 136-139\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_experts_group3 [label="Experts Group 3\nGPU 140-143\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_experts_group4 [label="Experts Group 4\nGPU 144-147\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_experts_group5 [label="Experts Group 5\nGPU 148-151\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_experts_group6 [label="Experts Group 6\nGPU 152-155\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_experts_group7 [label="Experts Group 7\nGPU 156-159\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 128-159\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer1_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_mlp_gelu [label="MLP GELU\nGPU 128-159\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 128-159\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer1_mlp_end [label="MLP + Residual\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer1_moe_gate -> stage1_layer1_expert_dispatch [style=dashed]
+		stage1_layer1_expert_dispatch -> stage1_layer1_expert_combine
+		stage1_layer1_expert_dispatch -> stage1_layer1_experts_group0
+		stage1_layer1_experts_group0 -> stage1_layer1_expert_combine
+		stage1_layer1_expert_dispatch -> stage1_layer1_experts_group1
+		stage1_layer1_experts_group1 -> stage1_layer1_expert_combine
+		stage1_layer1_expert_dispatch -> stage1_layer1_experts_group2
+		stage1_layer1_experts_group2 -> stage1_layer1_expert_combine
+		stage1_layer1_expert_dispatch -> stage1_layer1_experts_group3
+		stage1_layer1_experts_group3 -> stage1_layer1_expert_combine
+		stage1_layer1_expert_dispatch -> stage1_layer1_experts_group4
+		stage1_layer1_experts_group4 -> stage1_layer1_expert_combine
+		stage1_layer1_expert_dispatch -> stage1_layer1_experts_group5
+		stage1_layer1_experts_group5 -> stage1_layer1_expert_combine
+		stage1_layer1_expert_dispatch -> stage1_layer1_experts_group6
+		stage1_layer1_experts_group6 -> stage1_layer1_expert_combine
+		stage1_layer1_expert_dispatch -> stage1_layer1_experts_group7
+		stage1_layer1_experts_group7 -> stage1_layer1_expert_combine
+		stage1_layer1_attention_start -> stage1_layer1_qkv_proj
+		stage1_layer1_qkv_proj -> stage1_layer1_attention_compute
+		stage1_layer1_attention_compute -> stage1_layer1_attention_out
+		stage1_layer1_attention_out -> stage1_layer1_attention_allreduce
+		stage1_layer1_attention_allreduce -> stage1_layer1_attention_residual
+		stage1_layer1_attention_residual -> stage1_layer1_layernorm2
+		stage1_layer1_layernorm2 -> stage1_layer1_moe_gate
+		stage1_layer1_expert_combine -> stage1_layer1_mlp_fc1
+		stage1_layer1_mlp_fc1 -> stage1_layer1_mlp_gelu
+		stage1_layer1_mlp_gelu -> stage1_layer1_mlp_fc2
+		stage1_layer1_mlp_fc2 -> stage1_layer1_mlp_allreduce
+		stage1_layer1_mlp_allreduce -> stage1_layer1_mlp_end
+		stage1_layer0_mlp_end -> stage1_layer1_attention_start
+		stage1_layer2_attention_start [label="Attention Start (Layer 2)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_qkv_proj [label="QKV Projection (TP-Column)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_attention_compute [label="Attention Compute (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_attention_out [label="Attention Output (TP-Row)\nGPU 128-159\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer2_attention_residual [label="Attention + Residual\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_layernorm2 [label="Layer Norm 2\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_moe_gate [label="MoE Gate (Routing Decision)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage1_layer2_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer2_experts_group0 [label="Experts Group 0\nGPU 128-131\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_experts_group1 [label="Experts Group 1\nGPU 132-135\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_experts_group2 [label="Experts Group 2\nGPU 136-139\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_experts_group3 [label="Experts Group 3\nGPU 140-143\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_experts_group4 [label="Experts Group 4\nGPU 144-147\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_experts_group5 [label="Experts Group 5\nGPU 148-151\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_experts_group6 [label="Experts Group 6\nGPU 152-155\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_experts_group7 [label="Experts Group 7\nGPU 156-159\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 128-159\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer2_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_mlp_gelu [label="MLP GELU\nGPU 128-159\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 128-159\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer2_mlp_end [label="MLP + Residual\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer2_moe_gate -> stage1_layer2_expert_dispatch [style=dashed]
+		stage1_layer2_expert_dispatch -> stage1_layer2_expert_combine
+		stage1_layer2_expert_dispatch -> stage1_layer2_experts_group0
+		stage1_layer2_experts_group0 -> stage1_layer2_expert_combine
+		stage1_layer2_expert_dispatch -> stage1_layer2_experts_group1
+		stage1_layer2_experts_group1 -> stage1_layer2_expert_combine
+		stage1_layer2_expert_dispatch -> stage1_layer2_experts_group2
+		stage1_layer2_experts_group2 -> stage1_layer2_expert_combine
+		stage1_layer2_expert_dispatch -> stage1_layer2_experts_group3
+		stage1_layer2_experts_group3 -> stage1_layer2_expert_combine
+		stage1_layer2_expert_dispatch -> stage1_layer2_experts_group4
+		stage1_layer2_experts_group4 -> stage1_layer2_expert_combine
+		stage1_layer2_expert_dispatch -> stage1_layer2_experts_group5
+		stage1_layer2_experts_group5 -> stage1_layer2_expert_combine
+		stage1_layer2_expert_dispatch -> stage1_layer2_experts_group6
+		stage1_layer2_experts_group6 -> stage1_layer2_expert_combine
+		stage1_layer2_expert_dispatch -> stage1_layer2_experts_group7
+		stage1_layer2_experts_group7 -> stage1_layer2_expert_combine
+		stage1_layer2_attention_start -> stage1_layer2_qkv_proj
+		stage1_layer2_qkv_proj -> stage1_layer2_attention_compute
+		stage1_layer2_attention_compute -> stage1_layer2_attention_out
+		stage1_layer2_attention_out -> stage1_layer2_attention_allreduce
+		stage1_layer2_attention_allreduce -> stage1_layer2_attention_residual
+		stage1_layer2_attention_residual -> stage1_layer2_layernorm2
+		stage1_layer2_layernorm2 -> stage1_layer2_moe_gate
+		stage1_layer2_expert_combine -> stage1_layer2_mlp_fc1
+		stage1_layer2_mlp_fc1 -> stage1_layer2_mlp_gelu
+		stage1_layer2_mlp_gelu -> stage1_layer2_mlp_fc2
+		stage1_layer2_mlp_fc2 -> stage1_layer2_mlp_allreduce
+		stage1_layer2_mlp_allreduce -> stage1_layer2_mlp_end
+		stage1_layer1_mlp_end -> stage1_layer2_attention_start
+		stage1_layer3_attention_start [label="Attention Start (Layer 3)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_qkv_proj [label="QKV Projection (TP-Column)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_attention_compute [label="Attention Compute (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_attention_out [label="Attention Output (TP-Row)\nGPU 128-159\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer3_attention_residual [label="Attention + Residual\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_layernorm2 [label="Layer Norm 2\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_moe_gate [label="MoE Gate (Routing Decision)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage1_layer3_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer3_experts_group0 [label="Experts Group 0\nGPU 128-131\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_experts_group1 [label="Experts Group 1\nGPU 132-135\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_experts_group2 [label="Experts Group 2\nGPU 136-139\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_experts_group3 [label="Experts Group 3\nGPU 140-143\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_experts_group4 [label="Experts Group 4\nGPU 144-147\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_experts_group5 [label="Experts Group 5\nGPU 148-151\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_experts_group6 [label="Experts Group 6\nGPU 152-155\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_experts_group7 [label="Experts Group 7\nGPU 156-159\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 128-159\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer3_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_mlp_gelu [label="MLP GELU\nGPU 128-159\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 128-159\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer3_mlp_end [label="MLP + Residual\nGPU 128-159\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage1_layer3_moe_gate -> stage1_layer3_expert_dispatch [style=dashed]
+		stage1_layer3_expert_dispatch -> stage1_layer3_expert_combine
+		stage1_layer3_expert_dispatch -> stage1_layer3_experts_group0
+		stage1_layer3_experts_group0 -> stage1_layer3_expert_combine
+		stage1_layer3_expert_dispatch -> stage1_layer3_experts_group1
+		stage1_layer3_experts_group1 -> stage1_layer3_expert_combine
+		stage1_layer3_expert_dispatch -> stage1_layer3_experts_group2
+		stage1_layer3_experts_group2 -> stage1_layer3_expert_combine
+		stage1_layer3_expert_dispatch -> stage1_layer3_experts_group3
+		stage1_layer3_experts_group3 -> stage1_layer3_expert_combine
+		stage1_layer3_expert_dispatch -> stage1_layer3_experts_group4
+		stage1_layer3_experts_group4 -> stage1_layer3_expert_combine
+		stage1_layer3_expert_dispatch -> stage1_layer3_experts_group5
+		stage1_layer3_experts_group5 -> stage1_layer3_expert_combine
+		stage1_layer3_expert_dispatch -> stage1_layer3_experts_group6
+		stage1_layer3_experts_group6 -> stage1_layer3_expert_combine
+		stage1_layer3_expert_dispatch -> stage1_layer3_experts_group7
+		stage1_layer3_experts_group7 -> stage1_layer3_expert_combine
+		stage1_layer3_attention_start -> stage1_layer3_qkv_proj
+		stage1_layer3_qkv_proj -> stage1_layer3_attention_compute
+		stage1_layer3_attention_compute -> stage1_layer3_attention_out
+		stage1_layer3_attention_out -> stage1_layer3_attention_allreduce
+		stage1_layer3_attention_allreduce -> stage1_layer3_attention_residual
+		stage1_layer3_attention_residual -> stage1_layer3_layernorm2
+		stage1_layer3_layernorm2 -> stage1_layer3_moe_gate
+		stage1_layer3_expert_combine -> stage1_layer3_mlp_fc1
+		stage1_layer3_mlp_fc1 -> stage1_layer3_mlp_gelu
+		stage1_layer3_mlp_gelu -> stage1_layer3_mlp_fc2
+		stage1_layer3_mlp_fc2 -> stage1_layer3_mlp_allreduce
+		stage1_layer3_mlp_allreduce -> stage1_layer3_mlp_end
+		stage1_layer2_mlp_end -> stage1_layer3_attention_start
+		stage1_output [label="Stage Output\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage1_layer3_mlp_end -> stage1_output
+	}
+	subgraph cluster_pipeline_stage_2 {
+		fillcolor=lightgray label="Pipeline Stage 2 (GPUs 256-383)" style=filled
+		stage2_input [label="Input\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer0_attention_start [label="Attention Start (Layer 0)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_qkv_proj [label="QKV Projection (TP-Column)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_attention_compute [label="Attention Compute (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_attention_out [label="Attention Output (TP-Row)\nGPU 256-287\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer0_attention_residual [label="Attention + Residual\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_layernorm2 [label="Layer Norm 2\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_moe_gate [label="MoE Gate (Routing Decision)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage2_layer0_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer0_experts_group0 [label="Experts Group 0\nGPU 256-259\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_experts_group1 [label="Experts Group 1\nGPU 260-263\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_experts_group2 [label="Experts Group 2\nGPU 264-267\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_experts_group3 [label="Experts Group 3\nGPU 268-271\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_experts_group4 [label="Experts Group 4\nGPU 272-275\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_experts_group5 [label="Experts Group 5\nGPU 276-279\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_experts_group6 [label="Experts Group 6\nGPU 280-283\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_experts_group7 [label="Experts Group 7\nGPU 284-287\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 256-287\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer0_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_mlp_gelu [label="MLP GELU\nGPU 256-287\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 256-287\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer0_mlp_end [label="MLP + Residual\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer0_moe_gate -> stage2_layer0_expert_dispatch [style=dashed]
+		stage2_layer0_expert_dispatch -> stage2_layer0_expert_combine
+		stage2_layer0_expert_dispatch -> stage2_layer0_experts_group0
+		stage2_layer0_experts_group0 -> stage2_layer0_expert_combine
+		stage2_layer0_expert_dispatch -> stage2_layer0_experts_group1
+		stage2_layer0_experts_group1 -> stage2_layer0_expert_combine
+		stage2_layer0_expert_dispatch -> stage2_layer0_experts_group2
+		stage2_layer0_experts_group2 -> stage2_layer0_expert_combine
+		stage2_layer0_expert_dispatch -> stage2_layer0_experts_group3
+		stage2_layer0_experts_group3 -> stage2_layer0_expert_combine
+		stage2_layer0_expert_dispatch -> stage2_layer0_experts_group4
+		stage2_layer0_experts_group4 -> stage2_layer0_expert_combine
+		stage2_layer0_expert_dispatch -> stage2_layer0_experts_group5
+		stage2_layer0_experts_group5 -> stage2_layer0_expert_combine
+		stage2_layer0_expert_dispatch -> stage2_layer0_experts_group6
+		stage2_layer0_experts_group6 -> stage2_layer0_expert_combine
+		stage2_layer0_expert_dispatch -> stage2_layer0_experts_group7
+		stage2_layer0_experts_group7 -> stage2_layer0_expert_combine
+		stage2_layer0_attention_start -> stage2_layer0_qkv_proj
+		stage2_layer0_qkv_proj -> stage2_layer0_attention_compute
+		stage2_layer0_attention_compute -> stage2_layer0_attention_out
+		stage2_layer0_attention_out -> stage2_layer0_attention_allreduce
+		stage2_layer0_attention_allreduce -> stage2_layer0_attention_residual
+		stage2_layer0_attention_residual -> stage2_layer0_layernorm2
+		stage2_layer0_layernorm2 -> stage2_layer0_moe_gate
+		stage2_layer0_expert_combine -> stage2_layer0_mlp_fc1
+		stage2_layer0_mlp_fc1 -> stage2_layer0_mlp_gelu
+		stage2_layer0_mlp_gelu -> stage2_layer0_mlp_fc2
+		stage2_layer0_mlp_fc2 -> stage2_layer0_mlp_allreduce
+		stage2_layer0_mlp_allreduce -> stage2_layer0_mlp_end
+		stage2_input -> stage2_layer0_attention_start
+		stage2_layer1_attention_start [label="Attention Start (Layer 1)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_qkv_proj [label="QKV Projection (TP-Column)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_attention_compute [label="Attention Compute (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_attention_out [label="Attention Output (TP-Row)\nGPU 256-287\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer1_attention_residual [label="Attention + Residual\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_layernorm2 [label="Layer Norm 2\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_moe_gate [label="MoE Gate (Routing Decision)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage2_layer1_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer1_experts_group0 [label="Experts Group 0\nGPU 256-259\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_experts_group1 [label="Experts Group 1\nGPU 260-263\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_experts_group2 [label="Experts Group 2\nGPU 264-267\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_experts_group3 [label="Experts Group 3\nGPU 268-271\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_experts_group4 [label="Experts Group 4\nGPU 272-275\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_experts_group5 [label="Experts Group 5\nGPU 276-279\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_experts_group6 [label="Experts Group 6\nGPU 280-283\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_experts_group7 [label="Experts Group 7\nGPU 284-287\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 256-287\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer1_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_mlp_gelu [label="MLP GELU\nGPU 256-287\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 256-287\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer1_mlp_end [label="MLP + Residual\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer1_moe_gate -> stage2_layer1_expert_dispatch [style=dashed]
+		stage2_layer1_expert_dispatch -> stage2_layer1_expert_combine
+		stage2_layer1_expert_dispatch -> stage2_layer1_experts_group0
+		stage2_layer1_experts_group0 -> stage2_layer1_expert_combine
+		stage2_layer1_expert_dispatch -> stage2_layer1_experts_group1
+		stage2_layer1_experts_group1 -> stage2_layer1_expert_combine
+		stage2_layer1_expert_dispatch -> stage2_layer1_experts_group2
+		stage2_layer1_experts_group2 -> stage2_layer1_expert_combine
+		stage2_layer1_expert_dispatch -> stage2_layer1_experts_group3
+		stage2_layer1_experts_group3 -> stage2_layer1_expert_combine
+		stage2_layer1_expert_dispatch -> stage2_layer1_experts_group4
+		stage2_layer1_experts_group4 -> stage2_layer1_expert_combine
+		stage2_layer1_expert_dispatch -> stage2_layer1_experts_group5
+		stage2_layer1_experts_group5 -> stage2_layer1_expert_combine
+		stage2_layer1_expert_dispatch -> stage2_layer1_experts_group6
+		stage2_layer1_experts_group6 -> stage2_layer1_expert_combine
+		stage2_layer1_expert_dispatch -> stage2_layer1_experts_group7
+		stage2_layer1_experts_group7 -> stage2_layer1_expert_combine
+		stage2_layer1_attention_start -> stage2_layer1_qkv_proj
+		stage2_layer1_qkv_proj -> stage2_layer1_attention_compute
+		stage2_layer1_attention_compute -> stage2_layer1_attention_out
+		stage2_layer1_attention_out -> stage2_layer1_attention_allreduce
+		stage2_layer1_attention_allreduce -> stage2_layer1_attention_residual
+		stage2_layer1_attention_residual -> stage2_layer1_layernorm2
+		stage2_layer1_layernorm2 -> stage2_layer1_moe_gate
+		stage2_layer1_expert_combine -> stage2_layer1_mlp_fc1
+		stage2_layer1_mlp_fc1 -> stage2_layer1_mlp_gelu
+		stage2_layer1_mlp_gelu -> stage2_layer1_mlp_fc2
+		stage2_layer1_mlp_fc2 -> stage2_layer1_mlp_allreduce
+		stage2_layer1_mlp_allreduce -> stage2_layer1_mlp_end
+		stage2_layer0_mlp_end -> stage2_layer1_attention_start
+		stage2_layer2_attention_start [label="Attention Start (Layer 2)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_qkv_proj [label="QKV Projection (TP-Column)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_attention_compute [label="Attention Compute (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_attention_out [label="Attention Output (TP-Row)\nGPU 256-287\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer2_attention_residual [label="Attention + Residual\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_layernorm2 [label="Layer Norm 2\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_moe_gate [label="MoE Gate (Routing Decision)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage2_layer2_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer2_experts_group0 [label="Experts Group 0\nGPU 256-259\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_experts_group1 [label="Experts Group 1\nGPU 260-263\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_experts_group2 [label="Experts Group 2\nGPU 264-267\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_experts_group3 [label="Experts Group 3\nGPU 268-271\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_experts_group4 [label="Experts Group 4\nGPU 272-275\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_experts_group5 [label="Experts Group 5\nGPU 276-279\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_experts_group6 [label="Experts Group 6\nGPU 280-283\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_experts_group7 [label="Experts Group 7\nGPU 284-287\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 256-287\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer2_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_mlp_gelu [label="MLP GELU\nGPU 256-287\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 256-287\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer2_mlp_end [label="MLP + Residual\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer2_moe_gate -> stage2_layer2_expert_dispatch [style=dashed]
+		stage2_layer2_expert_dispatch -> stage2_layer2_expert_combine
+		stage2_layer2_expert_dispatch -> stage2_layer2_experts_group0
+		stage2_layer2_experts_group0 -> stage2_layer2_expert_combine
+		stage2_layer2_expert_dispatch -> stage2_layer2_experts_group1
+		stage2_layer2_experts_group1 -> stage2_layer2_expert_combine
+		stage2_layer2_expert_dispatch -> stage2_layer2_experts_group2
+		stage2_layer2_experts_group2 -> stage2_layer2_expert_combine
+		stage2_layer2_expert_dispatch -> stage2_layer2_experts_group3
+		stage2_layer2_experts_group3 -> stage2_layer2_expert_combine
+		stage2_layer2_expert_dispatch -> stage2_layer2_experts_group4
+		stage2_layer2_experts_group4 -> stage2_layer2_expert_combine
+		stage2_layer2_expert_dispatch -> stage2_layer2_experts_group5
+		stage2_layer2_experts_group5 -> stage2_layer2_expert_combine
+		stage2_layer2_expert_dispatch -> stage2_layer2_experts_group6
+		stage2_layer2_experts_group6 -> stage2_layer2_expert_combine
+		stage2_layer2_expert_dispatch -> stage2_layer2_experts_group7
+		stage2_layer2_experts_group7 -> stage2_layer2_expert_combine
+		stage2_layer2_attention_start -> stage2_layer2_qkv_proj
+		stage2_layer2_qkv_proj -> stage2_layer2_attention_compute
+		stage2_layer2_attention_compute -> stage2_layer2_attention_out
+		stage2_layer2_attention_out -> stage2_layer2_attention_allreduce
+		stage2_layer2_attention_allreduce -> stage2_layer2_attention_residual
+		stage2_layer2_attention_residual -> stage2_layer2_layernorm2
+		stage2_layer2_layernorm2 -> stage2_layer2_moe_gate
+		stage2_layer2_expert_combine -> stage2_layer2_mlp_fc1
+		stage2_layer2_mlp_fc1 -> stage2_layer2_mlp_gelu
+		stage2_layer2_mlp_gelu -> stage2_layer2_mlp_fc2
+		stage2_layer2_mlp_fc2 -> stage2_layer2_mlp_allreduce
+		stage2_layer2_mlp_allreduce -> stage2_layer2_mlp_end
+		stage2_layer1_mlp_end -> stage2_layer2_attention_start
+		stage2_layer3_attention_start [label="Attention Start (Layer 3)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_qkv_proj [label="QKV Projection (TP-Column)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_attention_compute [label="Attention Compute (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_attention_out [label="Attention Output (TP-Row)\nGPU 256-287\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer3_attention_residual [label="Attention + Residual\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_layernorm2 [label="Layer Norm 2\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_moe_gate [label="MoE Gate (Routing Decision)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage2_layer3_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer3_experts_group0 [label="Experts Group 0\nGPU 256-259\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_experts_group1 [label="Experts Group 1\nGPU 260-263\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_experts_group2 [label="Experts Group 2\nGPU 264-267\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_experts_group3 [label="Experts Group 3\nGPU 268-271\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_experts_group4 [label="Experts Group 4\nGPU 272-275\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_experts_group5 [label="Experts Group 5\nGPU 276-279\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_experts_group6 [label="Experts Group 6\nGPU 280-283\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_experts_group7 [label="Experts Group 7\nGPU 284-287\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 256-287\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer3_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_mlp_gelu [label="MLP GELU\nGPU 256-287\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 256-287\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer3_mlp_end [label="MLP + Residual\nGPU 256-287\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage2_layer3_moe_gate -> stage2_layer3_expert_dispatch [style=dashed]
+		stage2_layer3_expert_dispatch -> stage2_layer3_expert_combine
+		stage2_layer3_expert_dispatch -> stage2_layer3_experts_group0
+		stage2_layer3_experts_group0 -> stage2_layer3_expert_combine
+		stage2_layer3_expert_dispatch -> stage2_layer3_experts_group1
+		stage2_layer3_experts_group1 -> stage2_layer3_expert_combine
+		stage2_layer3_expert_dispatch -> stage2_layer3_experts_group2
+		stage2_layer3_experts_group2 -> stage2_layer3_expert_combine
+		stage2_layer3_expert_dispatch -> stage2_layer3_experts_group3
+		stage2_layer3_experts_group3 -> stage2_layer3_expert_combine
+		stage2_layer3_expert_dispatch -> stage2_layer3_experts_group4
+		stage2_layer3_experts_group4 -> stage2_layer3_expert_combine
+		stage2_layer3_expert_dispatch -> stage2_layer3_experts_group5
+		stage2_layer3_experts_group5 -> stage2_layer3_expert_combine
+		stage2_layer3_expert_dispatch -> stage2_layer3_experts_group6
+		stage2_layer3_experts_group6 -> stage2_layer3_expert_combine
+		stage2_layer3_expert_dispatch -> stage2_layer3_experts_group7
+		stage2_layer3_experts_group7 -> stage2_layer3_expert_combine
+		stage2_layer3_attention_start -> stage2_layer3_qkv_proj
+		stage2_layer3_qkv_proj -> stage2_layer3_attention_compute
+		stage2_layer3_attention_compute -> stage2_layer3_attention_out
+		stage2_layer3_attention_out -> stage2_layer3_attention_allreduce
+		stage2_layer3_attention_allreduce -> stage2_layer3_attention_residual
+		stage2_layer3_attention_residual -> stage2_layer3_layernorm2
+		stage2_layer3_layernorm2 -> stage2_layer3_moe_gate
+		stage2_layer3_expert_combine -> stage2_layer3_mlp_fc1
+		stage2_layer3_mlp_fc1 -> stage2_layer3_mlp_gelu
+		stage2_layer3_mlp_gelu -> stage2_layer3_mlp_fc2
+		stage2_layer3_mlp_fc2 -> stage2_layer3_mlp_allreduce
+		stage2_layer3_mlp_allreduce -> stage2_layer3_mlp_end
+		stage2_layer2_mlp_end -> stage2_layer3_attention_start
+		stage2_output [label="Stage Output\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage2_layer3_mlp_end -> stage2_output
+	}
+	subgraph cluster_pipeline_stage_3 {
+		fillcolor=lightgray label="Pipeline Stage 3 (GPUs 384-511)" style=filled
+		stage3_input [label="Input\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer0_attention_start [label="Attention Start (Layer 0)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_qkv_proj [label="QKV Projection (TP-Column)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_attention_compute [label="Attention Compute (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_attention_out [label="Attention Output (TP-Row)\nGPU 384-415\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer0_attention_residual [label="Attention + Residual\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_layernorm2 [label="Layer Norm 2\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_moe_gate [label="MoE Gate (Routing Decision)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage3_layer0_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer0_experts_group0 [label="Experts Group 0\nGPU 384-387\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_experts_group1 [label="Experts Group 1\nGPU 388-391\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_experts_group2 [label="Experts Group 2\nGPU 392-395\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_experts_group3 [label="Experts Group 3\nGPU 396-399\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_experts_group4 [label="Experts Group 4\nGPU 400-403\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_experts_group5 [label="Experts Group 5\nGPU 404-407\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_experts_group6 [label="Experts Group 6\nGPU 408-411\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_experts_group7 [label="Experts Group 7\nGPU 412-415\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 384-415\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer0_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_mlp_gelu [label="MLP GELU\nGPU 384-415\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 384-415\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer0_mlp_end [label="MLP + Residual\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer0_moe_gate -> stage3_layer0_expert_dispatch [style=dashed]
+		stage3_layer0_expert_dispatch -> stage3_layer0_expert_combine
+		stage3_layer0_expert_dispatch -> stage3_layer0_experts_group0
+		stage3_layer0_experts_group0 -> stage3_layer0_expert_combine
+		stage3_layer0_expert_dispatch -> stage3_layer0_experts_group1
+		stage3_layer0_experts_group1 -> stage3_layer0_expert_combine
+		stage3_layer0_expert_dispatch -> stage3_layer0_experts_group2
+		stage3_layer0_experts_group2 -> stage3_layer0_expert_combine
+		stage3_layer0_expert_dispatch -> stage3_layer0_experts_group3
+		stage3_layer0_experts_group3 -> stage3_layer0_expert_combine
+		stage3_layer0_expert_dispatch -> stage3_layer0_experts_group4
+		stage3_layer0_experts_group4 -> stage3_layer0_expert_combine
+		stage3_layer0_expert_dispatch -> stage3_layer0_experts_group5
+		stage3_layer0_experts_group5 -> stage3_layer0_expert_combine
+		stage3_layer0_expert_dispatch -> stage3_layer0_experts_group6
+		stage3_layer0_experts_group6 -> stage3_layer0_expert_combine
+		stage3_layer0_expert_dispatch -> stage3_layer0_experts_group7
+		stage3_layer0_experts_group7 -> stage3_layer0_expert_combine
+		stage3_layer0_attention_start -> stage3_layer0_qkv_proj
+		stage3_layer0_qkv_proj -> stage3_layer0_attention_compute
+		stage3_layer0_attention_compute -> stage3_layer0_attention_out
+		stage3_layer0_attention_out -> stage3_layer0_attention_allreduce
+		stage3_layer0_attention_allreduce -> stage3_layer0_attention_residual
+		stage3_layer0_attention_residual -> stage3_layer0_layernorm2
+		stage3_layer0_layernorm2 -> stage3_layer0_moe_gate
+		stage3_layer0_expert_combine -> stage3_layer0_mlp_fc1
+		stage3_layer0_mlp_fc1 -> stage3_layer0_mlp_gelu
+		stage3_layer0_mlp_gelu -> stage3_layer0_mlp_fc2
+		stage3_layer0_mlp_fc2 -> stage3_layer0_mlp_allreduce
+		stage3_layer0_mlp_allreduce -> stage3_layer0_mlp_end
+		stage3_input -> stage3_layer0_attention_start
+		stage3_layer1_attention_start [label="Attention Start (Layer 1)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_qkv_proj [label="QKV Projection (TP-Column)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_attention_compute [label="Attention Compute (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_attention_out [label="Attention Output (TP-Row)\nGPU 384-415\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer1_attention_residual [label="Attention + Residual\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_layernorm2 [label="Layer Norm 2\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_moe_gate [label="MoE Gate (Routing Decision)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage3_layer1_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer1_experts_group0 [label="Experts Group 0\nGPU 384-387\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_experts_group1 [label="Experts Group 1\nGPU 388-391\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_experts_group2 [label="Experts Group 2\nGPU 392-395\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_experts_group3 [label="Experts Group 3\nGPU 396-399\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_experts_group4 [label="Experts Group 4\nGPU 400-403\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_experts_group5 [label="Experts Group 5\nGPU 404-407\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_experts_group6 [label="Experts Group 6\nGPU 408-411\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_experts_group7 [label="Experts Group 7\nGPU 412-415\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 384-415\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer1_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_mlp_gelu [label="MLP GELU\nGPU 384-415\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 384-415\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer1_mlp_end [label="MLP + Residual\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer1_moe_gate -> stage3_layer1_expert_dispatch [style=dashed]
+		stage3_layer1_expert_dispatch -> stage3_layer1_expert_combine
+		stage3_layer1_expert_dispatch -> stage3_layer1_experts_group0
+		stage3_layer1_experts_group0 -> stage3_layer1_expert_combine
+		stage3_layer1_expert_dispatch -> stage3_layer1_experts_group1
+		stage3_layer1_experts_group1 -> stage3_layer1_expert_combine
+		stage3_layer1_expert_dispatch -> stage3_layer1_experts_group2
+		stage3_layer1_experts_group2 -> stage3_layer1_expert_combine
+		stage3_layer1_expert_dispatch -> stage3_layer1_experts_group3
+		stage3_layer1_experts_group3 -> stage3_layer1_expert_combine
+		stage3_layer1_expert_dispatch -> stage3_layer1_experts_group4
+		stage3_layer1_experts_group4 -> stage3_layer1_expert_combine
+		stage3_layer1_expert_dispatch -> stage3_layer1_experts_group5
+		stage3_layer1_experts_group5 -> stage3_layer1_expert_combine
+		stage3_layer1_expert_dispatch -> stage3_layer1_experts_group6
+		stage3_layer1_experts_group6 -> stage3_layer1_expert_combine
+		stage3_layer1_expert_dispatch -> stage3_layer1_experts_group7
+		stage3_layer1_experts_group7 -> stage3_layer1_expert_combine
+		stage3_layer1_attention_start -> stage3_layer1_qkv_proj
+		stage3_layer1_qkv_proj -> stage3_layer1_attention_compute
+		stage3_layer1_attention_compute -> stage3_layer1_attention_out
+		stage3_layer1_attention_out -> stage3_layer1_attention_allreduce
+		stage3_layer1_attention_allreduce -> stage3_layer1_attention_residual
+		stage3_layer1_attention_residual -> stage3_layer1_layernorm2
+		stage3_layer1_layernorm2 -> stage3_layer1_moe_gate
+		stage3_layer1_expert_combine -> stage3_layer1_mlp_fc1
+		stage3_layer1_mlp_fc1 -> stage3_layer1_mlp_gelu
+		stage3_layer1_mlp_gelu -> stage3_layer1_mlp_fc2
+		stage3_layer1_mlp_fc2 -> stage3_layer1_mlp_allreduce
+		stage3_layer1_mlp_allreduce -> stage3_layer1_mlp_end
+		stage3_layer0_mlp_end -> stage3_layer1_attention_start
+		stage3_layer2_attention_start [label="Attention Start (Layer 2)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_qkv_proj [label="QKV Projection (TP-Column)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_attention_compute [label="Attention Compute (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_attention_out [label="Attention Output (TP-Row)\nGPU 384-415\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer2_attention_residual [label="Attention + Residual\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_layernorm2 [label="Layer Norm 2\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_moe_gate [label="MoE Gate (Routing Decision)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage3_layer2_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer2_experts_group0 [label="Experts Group 0\nGPU 384-387\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_experts_group1 [label="Experts Group 1\nGPU 388-391\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_experts_group2 [label="Experts Group 2\nGPU 392-395\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_experts_group3 [label="Experts Group 3\nGPU 396-399\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_experts_group4 [label="Experts Group 4\nGPU 400-403\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_experts_group5 [label="Experts Group 5\nGPU 404-407\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_experts_group6 [label="Experts Group 6\nGPU 408-411\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_experts_group7 [label="Experts Group 7\nGPU 412-415\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 384-415\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer2_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_mlp_gelu [label="MLP GELU\nGPU 384-415\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 384-415\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer2_mlp_end [label="MLP + Residual\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer2_moe_gate -> stage3_layer2_expert_dispatch [style=dashed]
+		stage3_layer2_expert_dispatch -> stage3_layer2_expert_combine
+		stage3_layer2_expert_dispatch -> stage3_layer2_experts_group0
+		stage3_layer2_experts_group0 -> stage3_layer2_expert_combine
+		stage3_layer2_expert_dispatch -> stage3_layer2_experts_group1
+		stage3_layer2_experts_group1 -> stage3_layer2_expert_combine
+		stage3_layer2_expert_dispatch -> stage3_layer2_experts_group2
+		stage3_layer2_experts_group2 -> stage3_layer2_expert_combine
+		stage3_layer2_expert_dispatch -> stage3_layer2_experts_group3
+		stage3_layer2_experts_group3 -> stage3_layer2_expert_combine
+		stage3_layer2_expert_dispatch -> stage3_layer2_experts_group4
+		stage3_layer2_experts_group4 -> stage3_layer2_expert_combine
+		stage3_layer2_expert_dispatch -> stage3_layer2_experts_group5
+		stage3_layer2_experts_group5 -> stage3_layer2_expert_combine
+		stage3_layer2_expert_dispatch -> stage3_layer2_experts_group6
+		stage3_layer2_experts_group6 -> stage3_layer2_expert_combine
+		stage3_layer2_expert_dispatch -> stage3_layer2_experts_group7
+		stage3_layer2_experts_group7 -> stage3_layer2_expert_combine
+		stage3_layer2_attention_start -> stage3_layer2_qkv_proj
+		stage3_layer2_qkv_proj -> stage3_layer2_attention_compute
+		stage3_layer2_attention_compute -> stage3_layer2_attention_out
+		stage3_layer2_attention_out -> stage3_layer2_attention_allreduce
+		stage3_layer2_attention_allreduce -> stage3_layer2_attention_residual
+		stage3_layer2_attention_residual -> stage3_layer2_layernorm2
+		stage3_layer2_layernorm2 -> stage3_layer2_moe_gate
+		stage3_layer2_expert_combine -> stage3_layer2_mlp_fc1
+		stage3_layer2_mlp_fc1 -> stage3_layer2_mlp_gelu
+		stage3_layer2_mlp_gelu -> stage3_layer2_mlp_fc2
+		stage3_layer2_mlp_fc2 -> stage3_layer2_mlp_allreduce
+		stage3_layer2_mlp_allreduce -> stage3_layer2_mlp_end
+		stage3_layer1_mlp_end -> stage3_layer2_attention_start
+		stage3_layer3_attention_start [label="Attention Start (Layer 3)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_qkv_proj [label="QKV Projection (TP-Column)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_attention_compute [label="Attention Compute (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, heads=4, d_k=64]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_attention_out [label="Attention Output (TP-Row)\nGPU 384-415\nInput: [batch=32, seq=1024, heads=4, d_k=64]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_attention_allreduce [label="Attention All-Reduce (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer3_attention_residual [label="Attention + Residual\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_layernorm2 [label="Layer Norm 2\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_moe_gate [label="MoE Gate (Routing Decision)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, top_k=2]" fillcolor=yellow shape=parallelogram]
+		stage3_layer3_expert_dispatch [label="Expert Dispatch (EP All-to-All)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer3_experts_group0 [label="Experts Group 0\nGPU 384-387\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_experts_group1 [label="Experts Group 1\nGPU 388-391\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_experts_group2 [label="Experts Group 2\nGPU 392-395\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_experts_group3 [label="Experts Group 3\nGPU 396-399\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_experts_group4 [label="Experts Group 4\nGPU 400-403\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_experts_group5 [label="Experts Group 5\nGPU 404-407\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_experts_group6 [label="Experts Group 6\nGPU 408-411\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_experts_group7 [label="Experts Group 7\nGPU 412-415\n8 Experts per GPU\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_expert_combine [label="Expert Combine (EP All-to-All)\nGPU 384-415\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer3_mlp_fc1 [label="MLP FC1 (TP-Column)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_mlp_gelu [label="MLP GELU\nGPU 384-415\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, ffn=512]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_mlp_fc2 [label="MLP FC2 (TP-Row)\nGPU 384-415\nInput: [batch=32, seq=1024, ffn=512]\nOutput: [batch=32, seq=1024, hidden=256]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_mlp_allreduce [label="MLP All-Reduce (TP)\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=256]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer3_mlp_end [label="MLP + Residual\nGPU 384-415\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+		stage3_layer3_moe_gate -> stage3_layer3_expert_dispatch [style=dashed]
+		stage3_layer3_expert_dispatch -> stage3_layer3_expert_combine
+		stage3_layer3_expert_dispatch -> stage3_layer3_experts_group0
+		stage3_layer3_experts_group0 -> stage3_layer3_expert_combine
+		stage3_layer3_expert_dispatch -> stage3_layer3_experts_group1
+		stage3_layer3_experts_group1 -> stage3_layer3_expert_combine
+		stage3_layer3_expert_dispatch -> stage3_layer3_experts_group2
+		stage3_layer3_experts_group2 -> stage3_layer3_expert_combine
+		stage3_layer3_expert_dispatch -> stage3_layer3_experts_group3
+		stage3_layer3_experts_group3 -> stage3_layer3_expert_combine
+		stage3_layer3_expert_dispatch -> stage3_layer3_experts_group4
+		stage3_layer3_experts_group4 -> stage3_layer3_expert_combine
+		stage3_layer3_expert_dispatch -> stage3_layer3_experts_group5
+		stage3_layer3_experts_group5 -> stage3_layer3_expert_combine
+		stage3_layer3_expert_dispatch -> stage3_layer3_experts_group6
+		stage3_layer3_experts_group6 -> stage3_layer3_expert_combine
+		stage3_layer3_expert_dispatch -> stage3_layer3_experts_group7
+		stage3_layer3_experts_group7 -> stage3_layer3_expert_combine
+		stage3_layer3_attention_start -> stage3_layer3_qkv_proj
+		stage3_layer3_qkv_proj -> stage3_layer3_attention_compute
+		stage3_layer3_attention_compute -> stage3_layer3_attention_out
+		stage3_layer3_attention_out -> stage3_layer3_attention_allreduce
+		stage3_layer3_attention_allreduce -> stage3_layer3_attention_residual
+		stage3_layer3_attention_residual -> stage3_layer3_layernorm2
+		stage3_layer3_layernorm2 -> stage3_layer3_moe_gate
+		stage3_layer3_expert_combine -> stage3_layer3_mlp_fc1
+		stage3_layer3_mlp_fc1 -> stage3_layer3_mlp_gelu
+		stage3_layer3_mlp_gelu -> stage3_layer3_mlp_fc2
+		stage3_layer3_mlp_fc2 -> stage3_layer3_mlp_allreduce
+		stage3_layer3_mlp_allreduce -> stage3_layer3_mlp_end
+		stage3_layer2_mlp_end -> stage3_layer3_attention_start
+		stage3_output [label="Stage Output\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+		stage3_layer3_mlp_end -> stage3_output
+	}
+	stage0_output -> stage1_input [label="Pipeline Communication\n[batch=32, seq=1024, hidden=1024]"]
+	stage1_output -> stage2_input [label="Pipeline Communication\n[batch=32, seq=1024, hidden=1024]"]
+	stage2_output -> stage3_input [label="Pipeline Communication\n[batch=32, seq=1024, hidden=1024]"]
+	final_output [label="Final Output\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, vocab=51200]" fillcolor=lightgreen shape=ellipse]
+	stage3_output -> final_output
+}
