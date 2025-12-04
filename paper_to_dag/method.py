@@ -36,7 +36,6 @@ def main():
                  "version": 1,
                  "inputs": {
 					 "environment_path": "../environment/EP/deployment.md",
-					 "knowledge_path": "../knowledges/llm_parallelism_classification_schema.json",
                      "save_path": f"../outputs/{submission_dir}"
                      },
                  "tools": [
@@ -52,7 +51,6 @@ def main():
                  "version": 1,
                  "inputs": {
                      "save_path": f"../outputs/{submission_dir}",
-					 "knowledge_path": "../knowledges/llm_module_optimization_classification_schema.json"
                      },
                  "tools": [
                      ExtractEdgeFromDAGTool(),
@@ -66,7 +64,6 @@ def main():
                 "slug": "chain_generate_DAG",
                 "version": 15,
                 "inputs": {
-                    "knowledge_path": "../knowledges/llm_parallel_strategies.md",
                     "save_path": f"../outputs/{submission_dir}"
                     },
                 "tools": [
