@@ -1,0 +1,219 @@
+digraph MoE_EP8_TP4_PP4_Layer {
+rankdir=TB;
+bgcolor=white;
+node [fontsize=10, margin=0.04];
+
+inp [shape=rectangle, label="LayerInput\nGPU 0-127\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+
+ln_0 [shape=rectangle, label="LayerNorm\nGPU 0\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+ln_1 [shape=rectangle, label="LayerNorm\nGPU 1\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+ln_2 [shape=rectangle, label="LayerNorm\nGPU 2\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+ln_3 [shape=rectangle, label="LayerNorm\nGPU 3\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+inp -> ln_0;
+inp -> ln_1;
+inp -> ln_2;
+inp -> ln_3;
+
+qkv_0 [shape=rectangle, label="QKV_Proj(col)\nGPU 0\nIn: [b,s,h=1024]\nOut: [b,s,3h/4=768]"];
+qkv_1 [shape=rectangle, label="QKV_Proj(col)\nGPU 1\nIn: [b,s,h=1024]\nOut: [b,s,3h/4=768]"];
+qkv_2 [shape=rectangle, label="QKV_Proj(col)\nGPU 2\nIn: [b,s,h=1024]\nOut: [b,s,3h/4=768]"];
+qkv_3 [shape=rectangle, label="QKV_Proj(col)\nGPU 3\nIn: [b,s,h=1024]\nOut: [b,s,3h/4=768]"];
+ln_0 -> qkv_0;
+ln_1 -> qkv_1;
+ln_2 -> qkv_2;
+ln_3 -> qkv_3;
+
+ag_qkv [shape=ellipse, label="AllGather(QKV)\nIn: [b,s,3h/4=768]\nOut: [b,s,3h=3072]"];
+qkv_0 -> ag_qkv;
+qkv_1 -> ag_qkv;
+qkv_2 -> ag_qkv;
+qkv_3 -> ag_qkv;
+
+n0_qkv_full [shape=rectangle, label="QKV_full\nGPU 0\nIn: [b,s,3h=3072]\nOut: [b,s,3h=3072]"];
+n1_qkv_full [shape=rectangle, label="QKV_full\nGPU 1\nIn: [b,s,3h=3072]\nOut: [b,s,3h=3072]"];
+n2_qkv_full [shape=rectangle, label="QKV_full\nGPU 2\nIn: [b,s,3h=3072]\nOut: [b,s,3h=3072]"];
+n3_qkv_full [shape=rectangle, label="QKV_full\nGPU 3\nIn: [b,s,3h=3072]\nOut: [b,s,3h=3072]"];
+ag_qkv -> n0_qkv_full;
+ag_qkv -> n1_qkv_full;
+ag_qkv -> n2_qkv_full;
+ag_qkv -> n3_qkv_full;
+
+attn_0 [shape=rectangle, label="Attention(heads=16/4=4)\nGPU 0\nIn: [b,s,3h=3072]\nOut: [b,s,h=1024]"];
+attn_1 [shape=rectangle, label="Attention(heads=16/4=4)\nGPU 1\nIn: [b,s,3h=3072]\nOut: [b,s,h=1024]"];
+attn_2 [shape=rectangle, label="Attention(heads=16/4=4)\nGPU 2\nIn: [b,s,3h=3072]\nOut: [b,s,h=1024]"];
+attn_3 [shape=rectangle, label="Attention(heads=16/4=4)\nGPU 3\nIn: [b,s,3h=3072]\nOut: [b,s,h=1024]"];
+n0_qkv_full -> attn_0;
+n1_qkv_full -> attn_1;
+n2_qkv_full -> attn_2;
+n3_qkv_full -> attn_3;
+
+attn_out_0 [shape=rectangle, label="AttnOut(row)\nGPU 0\nIn: [b,s,h=1024]\nOut: [b,s,h/4=256]"];
+attn_out_1 [shape=rectangle, label="AttnOut(row)\nGPU 1\nIn: [b,s,h=1024]\nOut: [b,s,h/4=256]"];
+attn_out_2 [shape=rectangle, label="AttnOut(row)\nGPU 2\nIn: [b,s,h=1024]\nOut: [b,s,h/4=256]"];
+attn_out_3 [shape=rectangle, label="AttnOut(row)\nGPU 3\nIn: [b,s,h=1024]\nOut: [b,s,h/4=256]"];
+attn_0 -> attn_out_0;
+attn_1 -> attn_out_1;
+attn_2 -> attn_out_2;
+attn_3 -> attn_out_3;
+
+ar_attn [shape=ellipse, label="AllReduce(AttnOut)\nIn: [b,s,h/4=256]\nOut: [b,s,h=1024]"];
+attn_out_0 -> ar_attn;
+attn_out_1 -> ar_attn;
+attn_out_2 -> ar_attn;
+attn_out_3 -> ar_attn;
+
+n0_attn_resid [shape=rectangle, label="Attn+Residual\nGPU 0\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+n1_attn_resid [shape=rectangle, label="Attn+Residual\nGPU 1\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+n2_attn_resid [shape=rectangle, label="Attn+Residual\nGPU 2\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+n3_attn_resid [shape=rectangle, label="Attn+Residual\nGPU 3\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+ar_attn -> n0_attn_resid;
+ar_attn -> n1_attn_resid;
+ar_attn -> n2_attn_resid;
+ar_attn -> n3_attn_resid;
+inp -> n0_attn_resid [style=dashed, color=gray];
+inp -> n1_attn_resid [style=dashed, color=gray];
+inp -> n2_attn_resid [style=dashed, color=gray];
+inp -> n3_attn_resid [style=dashed, color=gray];
+
+ln_moe_0 [shape=rectangle, label="LayerNorm\nGPU 0\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+ln_moe_1 [shape=rectangle, label="LayerNorm\nGPU 1\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+ln_moe_2 [shape=rectangle, label="LayerNorm\nGPU 2\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+ln_moe_3 [shape=rectangle, label="LayerNorm\nGPU 3\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+n0_attn_resid -> ln_moe_0;
+n1_attn_resid -> ln_moe_1;
+n2_attn_resid -> ln_moe_2;
+n3_attn_resid -> ln_moe_3;
+
+gate_0 [shape=rectangle, label="Gate(h->64E)\nGPU 0\nIn: [b,s,h=1024]\nOut: [b,s,64E=64*64]"];
+gate_1 [shape=rectangle, label="Gate(h->64E)\nGPU 1\nIn: [b,s,h=1024]\nOut: [b,s,64E=64*64]"];
+gate_2 [shape=rectangle, label="Gate(h->64E)\nGPU 2\nIn: [b,s,h=1024]\nOut: [b,s,64E=64*64]"];
+gate_3 [shape=rectangle, label="Gate(h->64E)\nGPU 3\nIn: [b,s,h=1024]\nOut: [b,s,64E=64*64]"];
+ln_moe_0 -> gate_0;
+ln_moe_1 -> gate_1;
+ln_moe_2 -> gate_2;
+ln_moe_3 -> gate_3;
+
+top2_0 [shape=rectangle, label="Top2ExpertSelect\nGPU 0\nIn: [b,s,64E]\nOut: [b,s,2] (indices+weight)"];
+top2_1 [shape=rectangle, label="Top2ExpertSelect\nGPU 1\nIn: [b,s,64E]\nOut: [b,s,2] (indices+weight)"];
+top2_2 [shape=rectangle, label="Top2ExpertSelect\nGPU 2\nIn: [b,s,64E]\nOut: [b,s,2] (indices+weight)"];
+top2_3 [shape=rectangle, label="Top2ExpertSelect\nGPU 3\nIn: [b,s,64E]\nOut: [b,s,2] (indices+weight)"];
+gate_0 -> top2_0;
+gate_1 -> top2_1;
+gate_2 -> top2_2;
+gate_3 -> top2_3;
+
+a2a_disp [shape=ellipse, label="AllToAll(Dispatch)\nIn: [b,s,h=1024] + indices\nOut: [b,s,h=1024] (routed)"];
+ln_moe_0 -> a2a_disp;
+ln_moe_1 -> a2a_disp;
+ln_moe_2 -> a2a_disp;
+ln_moe_3 -> a2a_disp;
+top2_0 -> a2a_disp [style=dashed];
+top2_1 -> a2a_disp [style=dashed];
+top2_2 -> a2a_disp [style=dashed];
+top2_3 -> a2a_disp [style=dashed];
+
+n0_disp [shape=rectangle, label="DispatchedTokens\nGPU 0\nIn: [b,s,h=1024]\nOut: [b,s_per_expert,h=1024]"];
+n1_disp [shape=rectangle, label="DispatchedTokens\nGPU 1\nIn: [b,s,h=1024]\nOut: [b,s_per_expert,h=1024]"];
+n2_disp [shape=rectangle, label="DispatchedTokens\nGPU 2\nIn: [b,s,h=1024]\nOut: [b,s_per_expert,h=1024]"];
+n3_disp [shape=rectangle, label="DispatchedTokens\nGPU 3\nIn: [b,s,h=1024]\nOut: [b,s_per_expert,h=1024]"];
+a2a_disp -> n0_disp;
+a2a_disp -> n1_disp;
+a2a_disp -> n2_disp;
+a2a_disp -> n3_disp;
+
+exp0_1 [shape=rectangle, label="Expert0MLP1(col)\nGPU 0\nIn: [b,s_e,h=1024]\nOut: [b,s_e,ffn/4=1024]"];
+exp0_2 [shape=rectangle, label="Expert0MLP2(row)\nGPU 0\nIn: [b,s_e,ffn/4=1024]\nOut: [b,s_e,h/4=256]"];
+n0_disp -> exp0_1;
+exp0_1 -> exp0_2;
+
+exp1_1 [shape=rectangle, label="Expert1MLP1(col)\nGPU 0\nIn: [b,s_e,h=1024]\nOut: [b,s_e,ffn/4=1024]"];
+exp1_2 [shape=rectangle, label="Expert1MLP2(row)\nGPU 0\nIn: [b,s_e,ffn/4=1024]\nOut: [b,s_e,h/4=256]"];
+n0_disp -> exp1_1;
+exp1_1 -> exp1_2;
+
+exp2_1 [shape=rectangle, label="Expert2MLP1(col)\nGPU 1\nIn: [b,s_e,h=1024]\nOut: [b,s_e,ffn/4=1024]"];
+exp2_2 [shape=rectangle, label="Expert2MLP2(row)\nGPU 1\nIn: [b,s_e,ffn/4=1024]\nOut: [b,s_e,h/4=256]"];
+n1_disp -> exp2_1;
+exp2_1 -> exp2_2;
+
+exp3_1 [shape=rectangle, label="Expert3MLP1(col)\nGPU 1\nIn: [b,s_e,h=1024]\nOut: [b,s_e,ffn/4=1024]"];
+exp3_2 [shape=rectangle, label="Expert3MLP2(row)\nGPU 1\nIn: [b,s_e,ffn/4=1024]\nOut: [b,s_e,h/4=256]"];
+n1_disp -> exp3_1;
+exp3_1 -> exp3_2;
+
+exp4_1 [shape=rectangle, label="Expert4MLP1(col)\nGPU 2\nIn: [b,s_e,h=1024]\nOut: [b,s_e,ffn/4=1024]"];
+exp4_2 [shape=rectangle, label="Expert4MLP2(row)\nGPU 2\nIn: [b,s_e,ffn/4=1024]\nOut: [b,s_e,h/4=256]"];
+n2_disp -> exp4_1;
+exp4_1 -> exp4_2;
+
+exp5_1 [shape=rectangle, label="Expert5MLP1(col)\nGPU 2\nIn: [b,s_e,h=1024]\nOut: [b,s_e,ffn/4=1024]"];
+exp5_2 [shape=rectangle, label="Expert5MLP2(row)\nGPU 2\nIn: [b,s_e,ffn/4=1024]\nOut: [b,s_e,h/4=256]"];
+n2_disp -> exp5_1;
+exp5_1 -> exp5_2;
+
+exp6_1 [shape=rectangle, label="Expert6MLP1(col)\nGPU 3\nIn: [b,s_e,h=1024]\nOut: [b,s_e,ffn/4=1024]"];
+exp6_2 [shape=rectangle, label="Expert6MLP2(row)\nGPU 3\nIn: [b,s_e,ffn/4=1024]\nOut: [b,s_e,h/4=256]"];
+n3_disp -> exp6_1;
+exp6_1 -> exp6_2;
+
+exp7_1 [shape=rectangle, label="Expert7MLP1(col)\nGPU 3\nIn: [b,s_e,h=1024]\nOut: [b,s_e,ffn/4=1024]"];
+exp7_2 [shape=rectangle, label="Expert7MLP2(row)\nGPU 3\nIn: [b,s_e,ffn/4=1024]\nOut: [b,s_e,h/4=256]"];
+n3_disp -> exp7_1;
+exp7_1 -> exp7_2;
+
+ar_exp_0 [shape=ellipse, label="AllReduce(ExpertOut)\nIn: [b,s_e,h/4=256]\nOut: [b,s_e,h=1024]"];
+ar_exp_1 [shape=ellipse, label="AllReduce(ExpertOut)\nIn: [b,s_e,h/4=256]\nOut: [b,s_e,h=1024]"];
+ar_exp_2 [shape=ellipse, label="AllReduce(ExpertOut)\nIn: [b,s_e,h/4=256]\nOut: [b,s_e,h=1024]"];
+ar_exp_3 [shape=ellipse, label="AllReduce(ExpertOut)\nIn: [b,s_e,h/4=256]\nOut: [b,s_e,h=1024]"];
+exp0_2 -> ar_exp_0;
+exp1_2 -> ar_exp_0;
+exp2_2 -> ar_exp_1;
+exp3_2 -> ar_exp_1;
+exp4_2 -> ar_exp_2;
+exp5_2 -> ar_exp_2;
+exp6_2 -> ar_exp_3;
+exp7_2 -> ar_exp_3;
+
+n0_exp_aggr [shape=parallelogram, label="AggregateExpertOut\nIn: [b,s_e,h=1024]\nOut: [b,s,h=1024]"];
+n1_exp_aggr [shape=parallelogram, label="AggregateExpertOut\nIn: [b,s_e,h=1024]\nOut: [b,s,h=1024]"];
+n2_exp_aggr [shape=parallelogram, label="AggregateExpertOut\nIn: [b,s_e,h=1024]\nOut: [b,s,h=1024]"];
+n3_exp_aggr [shape=parallelogram, label="AggregateExpertOut\nIn: [b,s_e,h=1024]\nOut: [b,s,h=1024]"];
+ar_exp_0 -> n0_exp_aggr;
+ar_exp_1 -> n1_exp_aggr;
+ar_exp_2 -> n2_exp_aggr;
+ar_exp_3 -> n3_exp_aggr;
+
+a2a_comb [shape=ellipse, label="AllToAll(Combine)\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+n0_exp_aggr -> a2a_comb;
+n1_exp_aggr -> a2a_comb;
+n2_exp_aggr -> a2a_comb;
+n3_exp_aggr -> a2a_comb;
+
+n0_comb [shape=rectangle, label="CombinedTokens\nGPU 0\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+n1_comb [shape=rectangle, label="CombinedTokens\nGPU 1\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+n2_comb [shape=rectangle, label="CombinedTokens\nGPU 2\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+n3_comb [shape=rectangle, label="CombinedTokens\nGPU 3\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+a2a_comb -> n0_comb;
+a2a_comb -> n1_comb;
+a2a_comb -> n2_comb;
+a2a_comb -> n3_comb;
+
+out_0 [shape=rectangle, label="MoE+Residual\nGPU 0\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+out_1 [shape=rectangle, label="MoE+Residual\nGPU 1\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+out_2 [shape=rectangle, label="MoE+Residual\nGPU 2\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+out_3 [shape=rectangle, label="MoE+Residual\nGPU 3\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+n0_attn_resid -> out_0 [style=dashed, color=gray];
+n1_attn_resid -> out_1 [style=dashed, color=gray];
+n2_attn_resid -> out_2 [style=dashed, color=gray];
+n3_attn_resid -> out_3 [style=dashed, color=gray];
+n0_comb -> out_0;
+n1_comb -> out_1;
+n2_comb -> out_2;
+n3_comb -> out_3;
+
+output [shape=parallelogram, label="LayerOutput\nIn: [b,s,h=1024]\nOut: [b,s,h=1024]"];
+out_0 -> output;
+out_1 -> output;
+out_2 -> output;
+out_3 -> output;
+}
