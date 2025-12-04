@@ -1,0 +1,72 @@
+// Enhanced LLM Deployment Summary - EP64_TP2
+digraph {
+	dpi=300 rankdir=TB size="60,60"
+	node [fontname=Arial fontsize=10]
+	input [label="Model Input
+[batch=128, seq=10000, d_model=4096]
+Async Prefetch" fillcolor=lightblue shape=ellipse style=filled]
+	embedding [label="Token Embedding
+[128, 10000, 4096]
+Memory Pooling" fillcolor=lightgreen shape=rectangle style=filled]
+	subgraph cluster_transformer_enhanced {
+		label="Enhanced Transformer Layers (×16)" style=dashed
+		prenorm [label="Pre-LayerNorm
+[128, 10000, 4096]
+Fused RMSNorm" fillcolor=lightgreen shape=rectangle style=filled]
+		subgraph cluster_mha_enhanced {
+			label="Enhanced MHA (TP=2, Flash v2)" style=dotted
+			mha_gpu0 [label="MHA_GPU0
+[128, 10000, 2048]
+Fused Kernel" fillcolor=lightgreen shape=rectangle style=filled]
+			mha_gpu1 [label="MHA_GPU1
+[128, 10000, 2048]
+Fused Kernel" fillcolor=lightgreen shape=rectangle style=filled]
+			mha_merge [label="MHA_Merge
+[128, 10000, 4096]
+Priority Queue" fillcolor=yellow shape=parallelogram style=filled]
+		}
+		gate_enhanced [label="Enhanced Expert Router
+[128, 10000, 4096]
+Dynamic Load Balanced" fillcolor=yellow shape=parallelogram style=dashed]
+		token_dist_hierarchical [label="Hierarchical Token Distribution
+NVLink + InfiniBand" fillcolor=lightcoral shape=ellipse style=filled]
+		subgraph cluster_moe_enhanced {
+			label="Enhanced MoE (EP=64, TP=2)" style=dotted
+			expert_enhanced_0 [label="Expert 0
+Node 0, GPUs 0,1
+[tokens, 4096]→Fused MLP" fillcolor=lightgreen shape=rectangle style=filled]
+			expert_enhanced_1 [label="Expert 1
+Node 0, GPUs 2,3
+[tokens, 4096]→Fused MLP" fillcolor=lightgreen shape=rectangle style=filled]
+			expert_enhanced_2 [label="Expert 2
+Node 1, GPUs 4,5
+[tokens, 4096]→Fused MLP" fillcolor=lightgreen shape=rectangle style=filled]
+			expert_enhanced_3 [label="Expert 3
+Node 1, GPUs 6,7
+[tokens, 4096]→Fused MLP" fillcolor=lightgreen shape=rectangle style=filled]
+			expert_agg_enhanced [label="Expert Aggregation
+[128, 10000, 4096]
+Priority" fillcolor=yellow shape=parallelogram style=filled]
+		}
+	}
+	output_enhanced [label="Model Output
+[128, 10000, 51200]
+Async Writeback" fillcolor=lightblue shape=ellipse style=filled]
+	input -> embedding [label=async_prefetch]
+	embedding -> prenorm [label=overlap_ready]
+	prenorm -> mha_gpu0 [label=broadcast]
+	prenorm -> mha_gpu1 [label=broadcast]
+	mha_gpu0 -> mha_merge [label=flash]
+	mha_gpu1 -> mha_merge [label=flash]
+	mha_merge -> gate_enhanced [label=dynamic]
+	gate_enhanced -> token_dist_hierarchical [label=hierarchical color=red style=dashed]
+	token_dist_hierarchical -> expert_enhanced_0 [label=nvlink]
+	token_dist_hierarchical -> expert_enhanced_1 [label=nvlink]
+	token_dist_hierarchical -> expert_enhanced_2 [label=infiniband]
+	token_dist_hierarchical -> expert_enhanced_3 [label=infiniband]
+	expert_enhanced_0 -> expert_agg_enhanced [label=priority]
+	expert_enhanced_1 -> expert_agg_enhanced [label=priority]
+	expert_enhanced_2 -> expert_agg_enhanced [label=priority]
+	expert_enhanced_3 -> expert_agg_enhanced [label=priority]
+	expert_agg_enhanced -> output_enhanced [label=async_writeback]
+}

@@ -1,0 +1,71 @@
+// LLM Deployment DAG - Simplified View
+digraph {
+	bgcolor=white rankdir=TB size="20,15"
+	node [fontname=Arial fontsize=12]
+	edge [fontname=Arial fontsize=10]
+	input [label="Input Tokens\n[batch_size=128, seq_len=10000]" fillcolor=lightcoral shape=ellipse]
+	embed [label="Embedding\n[batch_size=128, seq_len=10000, hidden_size=4096]" fillcolor=lightgreen shape=rectangle]
+	input -> embed
+	ln_0 [label=LayerNorm_0 fillcolor=lightgreen shape=rectangle]
+	mha_0 [label="MHA_0\n(Tensor Parallel)" fillcolor=lightgreen shape=rectangle]
+	ar_mha_0 [label="AllReduce\nMHA_0" fillcolor=lightblue shape=ellipse style=dashed]
+	gate_0 [label="Expert Gate_0" fillcolor=lightyellow shape=parallelogram]
+	expert_0_0 [label="Expert_0\nGPU0-1" fillcolor=lightgreen shape=rectangle]
+	gate_0 -> expert_0_0 [label=route_to_expert_0 style=dashed]
+	expert_0_1 [label="Expert_1\nGPU2-3" fillcolor=lightgreen shape=rectangle]
+	gate_0 -> expert_0_1 [label=route_to_expert_1 style=dashed]
+	expert_0_2 [label="Expert_2\nGPU4-5" fillcolor=lightgreen shape=rectangle]
+	gate_0 -> expert_0_2 [label=route_to_expert_2 style=dashed]
+	expert_0_3 [label="Expert_3\nGPU6-7" fillcolor=lightgreen shape=rectangle]
+	gate_0 -> expert_0_3 [label=route_to_expert_3 style=dashed]
+	agg_0 [label="Expert\nAggregate_0" fillcolor=lightyellow shape=parallelogram]
+	all2all_0 [label="All2All\nExperts_0" fillcolor=lightblue shape=ellipse style=dashed]
+	res_0 [label=Residual_0 fillcolor=lightyellow shape=parallelogram]
+	embed -> ln_0
+	ln_0 -> mha_0
+	mha_0 -> ar_mha_0
+	ar_mha_0 -> gate_0
+	ar_mha_0 -> expert_0_0
+	expert_0_0 -> agg_0
+	ar_mha_0 -> expert_0_1
+	expert_0_1 -> agg_0
+	ar_mha_0 -> expert_0_2
+	expert_0_2 -> agg_0
+	ar_mha_0 -> expert_0_3
+	expert_0_3 -> agg_0
+	agg_0 -> all2all_0
+	all2all_0 -> res_0
+	ar_mha_0 -> res_0
+	ln_1 [label=LayerNorm_1 fillcolor=lightgreen shape=rectangle]
+	mha_1 [label="MHA_1\n(Tensor Parallel)" fillcolor=lightgreen shape=rectangle]
+	ar_mha_1 [label="AllReduce\nMHA_1" fillcolor=lightblue shape=ellipse style=dashed]
+	gate_1 [label="Expert Gate_1" fillcolor=lightyellow shape=parallelogram]
+	expert_1_0 [label="Expert_4\nGPU8-9" fillcolor=lightgreen shape=rectangle]
+	gate_1 -> expert_1_0 [label=route_to_expert_4 style=dashed]
+	expert_1_1 [label="Expert_5\nGPU10-11" fillcolor=lightgreen shape=rectangle]
+	gate_1 -> expert_1_1 [label=route_to_expert_5 style=dashed]
+	expert_1_2 [label="Expert_6\nGPU12-13" fillcolor=lightgreen shape=rectangle]
+	gate_1 -> expert_1_2 [label=route_to_expert_6 style=dashed]
+	expert_1_3 [label="Expert_7\nGPU14-15" fillcolor=lightgreen shape=rectangle]
+	gate_1 -> expert_1_3 [label=route_to_expert_7 style=dashed]
+	agg_1 [label="Expert\nAggregate_1" fillcolor=lightyellow shape=parallelogram]
+	all2all_1 [label="All2All\nExperts_1" fillcolor=lightblue shape=ellipse style=dashed]
+	res_1 [label=Residual_1 fillcolor=lightyellow shape=parallelogram]
+	res_0 -> ln_1
+	ln_1 -> mha_1
+	mha_1 -> ar_mha_1
+	ar_mha_1 -> gate_1
+	ar_mha_1 -> expert_1_0
+	expert_1_0 -> agg_1
+	ar_mha_1 -> expert_1_1
+	expert_1_1 -> agg_1
+	ar_mha_1 -> expert_1_2
+	expert_1_2 -> agg_1
+	ar_mha_1 -> expert_1_3
+	expert_1_3 -> agg_1
+	agg_1 -> all2all_1
+	all2all_1 -> res_1
+	ar_mha_1 -> res_1
+	output [label="Output\n[batch_size=128, seq_len=10000, hidden_size=4096]" fillcolor=lightcoral shape=ellipse]
+	res_1 -> output
+}
