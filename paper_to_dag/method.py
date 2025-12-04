@@ -51,7 +51,7 @@ def main():
                  "slug": "chain_check_method",
                  "version": 1,
                  "inputs": {
-                     "save_path": f"../outputs/{submission_dir}"
+                     "save_path": f"../outputs/{submission_dir}",
 					 "knowledge_path": "../knowledges/llm_module_optimization_classification_schema.json"
                      },
                  "tools": [
