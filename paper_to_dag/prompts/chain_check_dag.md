@@ -16,6 +16,8 @@ You are tested to completed the following tasks:
 
 Check if there are any errors in the DAG. The specific inspection items are as follows:<<<任务内容>>>
 
+Check whether all communication behaviors between GPUs are identified. <<<检查是否把GPU间所有的通信行为标识出来>>>
+
 Check if the DAG contains a cycle. <<<检查dag中是否包含环>>>
 
 Check whether all nodes in the DAG, except for the input, have at least one input node.<<<检查是否除了input外，有节点没有输入>>>
@@ -51,4 +53,5 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
+
 
