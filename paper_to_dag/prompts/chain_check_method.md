@@ -44,4 +44,6 @@ Understand: We will check whether you have read and understood the the deploymen
 
 Result: We will check whether your conclusion meets the expected standards.
 
+Performance: We will rigorously evaluate whether the parallel strategies you generate are the optimal solutions under current deployment conditions.
+
 
