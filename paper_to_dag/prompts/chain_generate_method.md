@@ -25,7 +25,7 @@ The performance evaluation metrics of the model are as follows: the smaller the 
 
 Request to propose a parallel strategy that optimizes the model's performance under the current hardware environment. <<<要求提出当前硬件环境下该模型最优的并行策略>>>
 
-Parallel strategies should first conform to the current hardware conditions, and secondly, strive to optimize the model's performance (latency, throughput) as much as possible. <<<并行策略首先要符合当前的硬件条件，其次要尽量使模型的性能（时延，吞吐）达到最优>>>
+Parallel strategies should strive to optimize the model's performance (latency, throughput) as much as possible. <<<并行策略要尽量使模型的性能（时延，吞吐）达到最优>>>
 
 Make full use of hardware resources and leverage the advantages of current deployment conditions. <<<要求充分利用硬件资源>>>
 
@@ -67,11 +67,7 @@ Rigor: Your results will be applied in the project, and we will evaluate whether
 
 Understand: We will check whether you have read and understood ALL the sections of the deployment condition file.
 
-Attitude: We will check whether you have strictly adhered to the restrictions in the Note.
-
 Accuracy: We will verify whether your deployment method meets all the requirements.
-
-Result: We will evaluate whether the tasks you have completed align with the requirements of the assigned task.
 
 Performance: We will rigorously evaluate whether the parallel strategies you generate are the optimal solutions under current deployment conditions.
 
