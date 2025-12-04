@@ -36,6 +36,7 @@ def main():
                  "version": 1,
                  "inputs": {
 					 "environment_path": "../environment/EP/deployment.md",
+					 "knowledge_path": "../knowledges/llm_parallel_strategies.md",
                      "save_path": f"../outputs/{submission_dir}"
                      },
                  "tools": [
@@ -64,7 +65,8 @@ def main():
                 "slug": "chain_generate_DAG",
                 "version": 15,
                 "inputs": {
-                    "save_path": f"../outputs/{submission_dir}"
+                    "save_path": f"../outputs/{submission_dir}",
+					"knowledge_path": "../knowledges/llm_parallel_strategies.md"
                     },
                 "tools": [
                     FileReadTool(),
