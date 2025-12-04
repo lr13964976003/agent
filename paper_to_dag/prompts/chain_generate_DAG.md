@@ -23,7 +23,7 @@ Generate one complete model deployment DAG(directed acyclic graph) according to 
 
 Divide boundaries according to different GPUs, and label each node on the DAG graph with the corresponding GPU. <<<按不同GPU划分边界>>>
 
-Display communication between different GPUs, such as all-reduce, all-gather, all-scatter, etc., represented by dashed lines. <<<显示不同GPU间的通信>>>
+Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
 
 Require all communication activities to be identified. <<<要求把所有通信行为都标识出来>>>
 
@@ -34,6 +34,8 @@ Use ellipses to represent communication, rectangles for computation, and paralle
 The aggregation and split of data need to be represented by nodes. <<<显示数据聚合与分割>>>
 
 Each nodes in DAG must have the attributions: INPUT DIMENSION and OUTPUT DIMENSION. Sample: Input: \[batch\_size=?, seq\_len=?, heads=?, d\_k=?],Output:\[batch\_size=?, seq\_len=?, heads=?, d\_k=?]<<<每个计算节点必须注明输入维度和输出维度>>>
+
+The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
 
 
 
@@ -48,10 +50,6 @@ Do not make any changes to the original file. <<<禁止修改原始文件>>>
 The generated DAG must not contain any cycles.<<<禁止有环>>>
 
 Except for the input node, each node must have a preceding input node; except for the output node, each node must output to another node. <<<禁止有空悬的节点>>>
-
-Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
-
-The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
 
  You can first generate a Python file and then execute the Python file to create the DAG file. <<<提醒可以生成python文件来生成dag>>>
 
