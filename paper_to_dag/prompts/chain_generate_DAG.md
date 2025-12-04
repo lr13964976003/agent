@@ -21,9 +21,9 @@ Gain a deep understanding of the methods proposed in the deployment method file.
 
 Generate one complete model deployment DAG(directed acyclic graph) according to deployment method by calling tools to generate graphviz code, meet the following conditions: <<<要求生成一个DAG，并遵守以下要求>>>
 
-Card Boundary Division (specify which GPU each node is on) <<<按不同GPU划分边界>>>
+Divide boundaries according to different GPUs, and label each node on the DAG graph with the corresponding GPU. <<<按不同GPU划分边界>>>
 
-Multi-Card Communication Path Simulation (show data flow across cards as nodes) <<<显示不同GPU间的通信>>>
+Display communication between different GPUs, such as all-reduce, all-gather, all-scatter, etc., represented by dashed lines. <<<显示不同GPU间的通信>>>
 
 Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
 
