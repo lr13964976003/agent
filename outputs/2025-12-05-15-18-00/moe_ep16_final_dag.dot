@@ -1,0 +1,3272 @@
+digraph MoE_EP16_Final {
+    rankdir=LR;
+    splines=true;
+    node [shape=rectangle, fontname="Helvetica"];
+    edge [fontname="Helvetica", fontsize=10];
+    
+    // Graph metadata
+    labelloc="t";
+    label="Final MoE EP16 DAG – 16 Layers, 16-way Expert Parallelism, Full Connectivity";
+    
+    // ---------- Input ---------- 
+    Input [shape=ellipse, label="Input\nGPU:CPU\nInput:[batch=64,seq=1024,d_model=1024]\nOutput:[batch=64,seq=1024,d_model=1024]"];
+    
+    // Generate nodes for all 16 layers
+
+    // ---------- Layer 0 ---------- 
+    subgraph cluster_layer0 {
+        label="Layer 0";
+        style=rounded;
+        
+        // Attention block
+        L0_Q [shape=rectangle, label="L0-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L0_K [shape=rectangle, label="L0-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L0_V [shape=rectangle, label="L0-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L0_ATT [shape=rectangle, label="L0-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L0_O [shape=rectangle, label="L0-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L0_RES [shape=parallelogram, label="L0-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L0_GATE [shape=rectangle, label="L0-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L0_A2A_DISPATCH [shape=ellipse, label="L0-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L0_E00 [shape=rectangle, label="L0-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E01 [shape=rectangle, label="L0-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E02 [shape=rectangle, label="L0-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E03 [shape=rectangle, label="L0-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L0_E10 [shape=rectangle, label="L0-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E11 [shape=rectangle, label="L0-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E12 [shape=rectangle, label="L0-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E13 [shape=rectangle, label="L0-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L0_E20 [shape=rectangle, label="L0-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E21 [shape=rectangle, label="L0-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E22 [shape=rectangle, label="L0-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E23 [shape=rectangle, label="L0-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L0_E30 [shape=rectangle, label="L0-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E31 [shape=rectangle, label="L0-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E32 [shape=rectangle, label="L0-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E33 [shape=rectangle, label="L0-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L0_E150 [shape=rectangle, label="L0-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E151 [shape=rectangle, label="L0-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E152 [shape=rectangle, label="L0-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L0_E153 [shape=rectangle, label="L0-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L0_A2A_COMBINE [shape=ellipse, label="L0-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L0_AGG [shape=parallelogram, label="L0-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L0_MLP_RES [shape=parallelogram, label="L0-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 1 ---------- 
+    subgraph cluster_layer1 {
+        label="Layer 1";
+        style=rounded;
+        
+        // Attention block
+        L1_Q [shape=rectangle, label="L1-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L1_K [shape=rectangle, label="L1-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L1_V [shape=rectangle, label="L1-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L1_ATT [shape=rectangle, label="L1-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L1_O [shape=rectangle, label="L1-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L1_RES [shape=parallelogram, label="L1-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L1_GATE [shape=rectangle, label="L1-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L1_A2A_DISPATCH [shape=ellipse, label="L1-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L1_E00 [shape=rectangle, label="L1-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E01 [shape=rectangle, label="L1-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E02 [shape=rectangle, label="L1-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E03 [shape=rectangle, label="L1-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L1_E10 [shape=rectangle, label="L1-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E11 [shape=rectangle, label="L1-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E12 [shape=rectangle, label="L1-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E13 [shape=rectangle, label="L1-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L1_E20 [shape=rectangle, label="L1-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E21 [shape=rectangle, label="L1-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E22 [shape=rectangle, label="L1-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E23 [shape=rectangle, label="L1-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L1_E30 [shape=rectangle, label="L1-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E31 [shape=rectangle, label="L1-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E32 [shape=rectangle, label="L1-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E33 [shape=rectangle, label="L1-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L1_E150 [shape=rectangle, label="L1-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E151 [shape=rectangle, label="L1-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E152 [shape=rectangle, label="L1-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L1_E153 [shape=rectangle, label="L1-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L1_A2A_COMBINE [shape=ellipse, label="L1-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L1_AGG [shape=parallelogram, label="L1-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L1_MLP_RES [shape=parallelogram, label="L1-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 2 ---------- 
+    subgraph cluster_layer2 {
+        label="Layer 2";
+        style=rounded;
+        
+        // Attention block
+        L2_Q [shape=rectangle, label="L2-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L2_K [shape=rectangle, label="L2-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L2_V [shape=rectangle, label="L2-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L2_ATT [shape=rectangle, label="L2-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L2_O [shape=rectangle, label="L2-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L2_RES [shape=parallelogram, label="L2-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L2_GATE [shape=rectangle, label="L2-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L2_A2A_DISPATCH [shape=ellipse, label="L2-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L2_E00 [shape=rectangle, label="L2-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E01 [shape=rectangle, label="L2-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E02 [shape=rectangle, label="L2-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E03 [shape=rectangle, label="L2-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L2_E10 [shape=rectangle, label="L2-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E11 [shape=rectangle, label="L2-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E12 [shape=rectangle, label="L2-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E13 [shape=rectangle, label="L2-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L2_E20 [shape=rectangle, label="L2-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E21 [shape=rectangle, label="L2-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E22 [shape=rectangle, label="L2-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E23 [shape=rectangle, label="L2-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L2_E30 [shape=rectangle, label="L2-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E31 [shape=rectangle, label="L2-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E32 [shape=rectangle, label="L2-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E33 [shape=rectangle, label="L2-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L2_E150 [shape=rectangle, label="L2-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E151 [shape=rectangle, label="L2-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E152 [shape=rectangle, label="L2-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L2_E153 [shape=rectangle, label="L2-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L2_A2A_COMBINE [shape=ellipse, label="L2-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L2_AGG [shape=parallelogram, label="L2-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L2_MLP_RES [shape=parallelogram, label="L2-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 3 ---------- 
+    subgraph cluster_layer3 {
+        label="Layer 3";
+        style=rounded;
+        
+        // Attention block
+        L3_Q [shape=rectangle, label="L3-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L3_K [shape=rectangle, label="L3-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L3_V [shape=rectangle, label="L3-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L3_ATT [shape=rectangle, label="L3-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L3_O [shape=rectangle, label="L3-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L3_RES [shape=parallelogram, label="L3-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L3_GATE [shape=rectangle, label="L3-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L3_A2A_DISPATCH [shape=ellipse, label="L3-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L3_E00 [shape=rectangle, label="L3-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E01 [shape=rectangle, label="L3-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E02 [shape=rectangle, label="L3-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E03 [shape=rectangle, label="L3-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L3_E10 [shape=rectangle, label="L3-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E11 [shape=rectangle, label="L3-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E12 [shape=rectangle, label="L3-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E13 [shape=rectangle, label="L3-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L3_E20 [shape=rectangle, label="L3-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E21 [shape=rectangle, label="L3-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E22 [shape=rectangle, label="L3-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E23 [shape=rectangle, label="L3-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L3_E30 [shape=rectangle, label="L3-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E31 [shape=rectangle, label="L3-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E32 [shape=rectangle, label="L3-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E33 [shape=rectangle, label="L3-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L3_E150 [shape=rectangle, label="L3-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E151 [shape=rectangle, label="L3-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E152 [shape=rectangle, label="L3-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L3_E153 [shape=rectangle, label="L3-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L3_A2A_COMBINE [shape=ellipse, label="L3-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L3_AGG [shape=parallelogram, label="L3-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L3_MLP_RES [shape=parallelogram, label="L3-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 4 ---------- 
+    subgraph cluster_layer4 {
+        label="Layer 4";
+        style=rounded;
+        
+        // Attention block
+        L4_Q [shape=rectangle, label="L4-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L4_K [shape=rectangle, label="L4-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L4_V [shape=rectangle, label="L4-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L4_ATT [shape=rectangle, label="L4-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L4_O [shape=rectangle, label="L4-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L4_RES [shape=parallelogram, label="L4-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L4_GATE [shape=rectangle, label="L4-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L4_A2A_DISPATCH [shape=ellipse, label="L4-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L4_E00 [shape=rectangle, label="L4-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E01 [shape=rectangle, label="L4-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E02 [shape=rectangle, label="L4-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E03 [shape=rectangle, label="L4-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L4_E10 [shape=rectangle, label="L4-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E11 [shape=rectangle, label="L4-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E12 [shape=rectangle, label="L4-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E13 [shape=rectangle, label="L4-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L4_E20 [shape=rectangle, label="L4-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E21 [shape=rectangle, label="L4-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E22 [shape=rectangle, label="L4-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E23 [shape=rectangle, label="L4-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L4_E30 [shape=rectangle, label="L4-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E31 [shape=rectangle, label="L4-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E32 [shape=rectangle, label="L4-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E33 [shape=rectangle, label="L4-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L4_E150 [shape=rectangle, label="L4-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E151 [shape=rectangle, label="L4-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E152 [shape=rectangle, label="L4-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L4_E153 [shape=rectangle, label="L4-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L4_A2A_COMBINE [shape=ellipse, label="L4-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L4_AGG [shape=parallelogram, label="L4-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L4_MLP_RES [shape=parallelogram, label="L4-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 5 ---------- 
+    subgraph cluster_layer5 {
+        label="Layer 5";
+        style=rounded;
+        
+        // Attention block
+        L5_Q [shape=rectangle, label="L5-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L5_K [shape=rectangle, label="L5-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L5_V [shape=rectangle, label="L5-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L5_ATT [shape=rectangle, label="L5-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L5_O [shape=rectangle, label="L5-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L5_RES [shape=parallelogram, label="L5-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L5_GATE [shape=rectangle, label="L5-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L5_A2A_DISPATCH [shape=ellipse, label="L5-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L5_E00 [shape=rectangle, label="L5-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E01 [shape=rectangle, label="L5-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E02 [shape=rectangle, label="L5-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E03 [shape=rectangle, label="L5-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L5_E10 [shape=rectangle, label="L5-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E11 [shape=rectangle, label="L5-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E12 [shape=rectangle, label="L5-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E13 [shape=rectangle, label="L5-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L5_E20 [shape=rectangle, label="L5-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E21 [shape=rectangle, label="L5-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E22 [shape=rectangle, label="L5-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E23 [shape=rectangle, label="L5-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L5_E30 [shape=rectangle, label="L5-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E31 [shape=rectangle, label="L5-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E32 [shape=rectangle, label="L5-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E33 [shape=rectangle, label="L5-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L5_E150 [shape=rectangle, label="L5-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E151 [shape=rectangle, label="L5-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E152 [shape=rectangle, label="L5-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L5_E153 [shape=rectangle, label="L5-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L5_A2A_COMBINE [shape=ellipse, label="L5-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L5_AGG [shape=parallelogram, label="L5-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L5_MLP_RES [shape=parallelogram, label="L5-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 6 ---------- 
+    subgraph cluster_layer6 {
+        label="Layer 6";
+        style=rounded;
+        
+        // Attention block
+        L6_Q [shape=rectangle, label="L6-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L6_K [shape=rectangle, label="L6-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L6_V [shape=rectangle, label="L6-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L6_ATT [shape=rectangle, label="L6-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L6_O [shape=rectangle, label="L6-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L6_RES [shape=parallelogram, label="L6-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L6_GATE [shape=rectangle, label="L6-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L6_A2A_DISPATCH [shape=ellipse, label="L6-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L6_E00 [shape=rectangle, label="L6-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E01 [shape=rectangle, label="L6-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E02 [shape=rectangle, label="L6-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E03 [shape=rectangle, label="L6-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L6_E10 [shape=rectangle, label="L6-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E11 [shape=rectangle, label="L6-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E12 [shape=rectangle, label="L6-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E13 [shape=rectangle, label="L6-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L6_E20 [shape=rectangle, label="L6-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E21 [shape=rectangle, label="L6-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E22 [shape=rectangle, label="L6-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E23 [shape=rectangle, label="L6-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L6_E30 [shape=rectangle, label="L6-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E31 [shape=rectangle, label="L6-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E32 [shape=rectangle, label="L6-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E33 [shape=rectangle, label="L6-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L6_E150 [shape=rectangle, label="L6-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E151 [shape=rectangle, label="L6-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E152 [shape=rectangle, label="L6-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L6_E153 [shape=rectangle, label="L6-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L6_A2A_COMBINE [shape=ellipse, label="L6-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L6_AGG [shape=parallelogram, label="L6-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L6_MLP_RES [shape=parallelogram, label="L6-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 7 ---------- 
+    subgraph cluster_layer7 {
+        label="Layer 7";
+        style=rounded;
+        
+        // Attention block
+        L7_Q [shape=rectangle, label="L7-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L7_K [shape=rectangle, label="L7-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L7_V [shape=rectangle, label="L7-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L7_ATT [shape=rectangle, label="L7-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L7_O [shape=rectangle, label="L7-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L7_RES [shape=parallelogram, label="L7-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L7_GATE [shape=rectangle, label="L7-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L7_A2A_DISPATCH [shape=ellipse, label="L7-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L7_E00 [shape=rectangle, label="L7-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E01 [shape=rectangle, label="L7-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E02 [shape=rectangle, label="L7-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E03 [shape=rectangle, label="L7-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L7_E10 [shape=rectangle, label="L7-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E11 [shape=rectangle, label="L7-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E12 [shape=rectangle, label="L7-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E13 [shape=rectangle, label="L7-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L7_E20 [shape=rectangle, label="L7-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E21 [shape=rectangle, label="L7-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E22 [shape=rectangle, label="L7-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E23 [shape=rectangle, label="L7-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L7_E30 [shape=rectangle, label="L7-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E31 [shape=rectangle, label="L7-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E32 [shape=rectangle, label="L7-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E33 [shape=rectangle, label="L7-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L7_E150 [shape=rectangle, label="L7-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E151 [shape=rectangle, label="L7-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E152 [shape=rectangle, label="L7-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L7_E153 [shape=rectangle, label="L7-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L7_A2A_COMBINE [shape=ellipse, label="L7-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L7_AGG [shape=parallelogram, label="L7-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L7_MLP_RES [shape=parallelogram, label="L7-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 8 ---------- 
+    subgraph cluster_layer8 {
+        label="Layer 8";
+        style=rounded;
+        
+        // Attention block
+        L8_Q [shape=rectangle, label="L8-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L8_K [shape=rectangle, label="L8-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L8_V [shape=rectangle, label="L8-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L8_ATT [shape=rectangle, label="L8-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L8_O [shape=rectangle, label="L8-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L8_RES [shape=parallelogram, label="L8-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L8_GATE [shape=rectangle, label="L8-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L8_A2A_DISPATCH [shape=ellipse, label="L8-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L8_E00 [shape=rectangle, label="L8-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E01 [shape=rectangle, label="L8-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E02 [shape=rectangle, label="L8-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E03 [shape=rectangle, label="L8-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L8_E10 [shape=rectangle, label="L8-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E11 [shape=rectangle, label="L8-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E12 [shape=rectangle, label="L8-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E13 [shape=rectangle, label="L8-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L8_E20 [shape=rectangle, label="L8-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E21 [shape=rectangle, label="L8-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E22 [shape=rectangle, label="L8-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E23 [shape=rectangle, label="L8-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L8_E30 [shape=rectangle, label="L8-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E31 [shape=rectangle, label="L8-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E32 [shape=rectangle, label="L8-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E33 [shape=rectangle, label="L8-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L8_E150 [shape=rectangle, label="L8-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E151 [shape=rectangle, label="L8-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E152 [shape=rectangle, label="L8-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L8_E153 [shape=rectangle, label="L8-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L8_A2A_COMBINE [shape=ellipse, label="L8-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L8_AGG [shape=parallelogram, label="L8-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L8_MLP_RES [shape=parallelogram, label="L8-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 9 ---------- 
+    subgraph cluster_layer9 {
+        label="Layer 9";
+        style=rounded;
+        
+        // Attention block
+        L9_Q [shape=rectangle, label="L9-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L9_K [shape=rectangle, label="L9-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L9_V [shape=rectangle, label="L9-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L9_ATT [shape=rectangle, label="L9-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L9_O [shape=rectangle, label="L9-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L9_RES [shape=parallelogram, label="L9-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L9_GATE [shape=rectangle, label="L9-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L9_A2A_DISPATCH [shape=ellipse, label="L9-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L9_E00 [shape=rectangle, label="L9-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E01 [shape=rectangle, label="L9-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E02 [shape=rectangle, label="L9-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E03 [shape=rectangle, label="L9-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L9_E10 [shape=rectangle, label="L9-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E11 [shape=rectangle, label="L9-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E12 [shape=rectangle, label="L9-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E13 [shape=rectangle, label="L9-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L9_E20 [shape=rectangle, label="L9-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E21 [shape=rectangle, label="L9-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E22 [shape=rectangle, label="L9-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E23 [shape=rectangle, label="L9-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L9_E30 [shape=rectangle, label="L9-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E31 [shape=rectangle, label="L9-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E32 [shape=rectangle, label="L9-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E33 [shape=rectangle, label="L9-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L9_E150 [shape=rectangle, label="L9-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E151 [shape=rectangle, label="L9-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E152 [shape=rectangle, label="L9-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L9_E153 [shape=rectangle, label="L9-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L9_A2A_COMBINE [shape=ellipse, label="L9-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L9_AGG [shape=parallelogram, label="L9-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L9_MLP_RES [shape=parallelogram, label="L9-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 10 ---------- 
+    subgraph cluster_layer10 {
+        label="Layer 10";
+        style=rounded;
+        
+        // Attention block
+        L10_Q [shape=rectangle, label="L10-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L10_K [shape=rectangle, label="L10-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L10_V [shape=rectangle, label="L10-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L10_ATT [shape=rectangle, label="L10-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L10_O [shape=rectangle, label="L10-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L10_RES [shape=parallelogram, label="L10-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L10_GATE [shape=rectangle, label="L10-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L10_A2A_DISPATCH [shape=ellipse, label="L10-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L10_E00 [shape=rectangle, label="L10-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E01 [shape=rectangle, label="L10-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E02 [shape=rectangle, label="L10-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E03 [shape=rectangle, label="L10-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L10_E10 [shape=rectangle, label="L10-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E11 [shape=rectangle, label="L10-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E12 [shape=rectangle, label="L10-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E13 [shape=rectangle, label="L10-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L10_E20 [shape=rectangle, label="L10-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E21 [shape=rectangle, label="L10-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E22 [shape=rectangle, label="L10-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E23 [shape=rectangle, label="L10-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L10_E30 [shape=rectangle, label="L10-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E31 [shape=rectangle, label="L10-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E32 [shape=rectangle, label="L10-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E33 [shape=rectangle, label="L10-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L10_E150 [shape=rectangle, label="L10-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E151 [shape=rectangle, label="L10-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E152 [shape=rectangle, label="L10-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L10_E153 [shape=rectangle, label="L10-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L10_A2A_COMBINE [shape=ellipse, label="L10-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L10_AGG [shape=parallelogram, label="L10-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L10_MLP_RES [shape=parallelogram, label="L10-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 11 ---------- 
+    subgraph cluster_layer11 {
+        label="Layer 11";
+        style=rounded;
+        
+        // Attention block
+        L11_Q [shape=rectangle, label="L11-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L11_K [shape=rectangle, label="L11-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L11_V [shape=rectangle, label="L11-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L11_ATT [shape=rectangle, label="L11-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L11_O [shape=rectangle, label="L11-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L11_RES [shape=parallelogram, label="L11-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L11_GATE [shape=rectangle, label="L11-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L11_A2A_DISPATCH [shape=ellipse, label="L11-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L11_E00 [shape=rectangle, label="L11-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E01 [shape=rectangle, label="L11-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E02 [shape=rectangle, label="L11-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E03 [shape=rectangle, label="L11-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L11_E10 [shape=rectangle, label="L11-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E11 [shape=rectangle, label="L11-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E12 [shape=rectangle, label="L11-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E13 [shape=rectangle, label="L11-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L11_E20 [shape=rectangle, label="L11-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E21 [shape=rectangle, label="L11-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E22 [shape=rectangle, label="L11-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E23 [shape=rectangle, label="L11-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L11_E30 [shape=rectangle, label="L11-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E31 [shape=rectangle, label="L11-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E32 [shape=rectangle, label="L11-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E33 [shape=rectangle, label="L11-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L11_E150 [shape=rectangle, label="L11-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E151 [shape=rectangle, label="L11-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E152 [shape=rectangle, label="L11-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L11_E153 [shape=rectangle, label="L11-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L11_A2A_COMBINE [shape=ellipse, label="L11-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L11_AGG [shape=parallelogram, label="L11-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L11_MLP_RES [shape=parallelogram, label="L11-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 12 ---------- 
+    subgraph cluster_layer12 {
+        label="Layer 12";
+        style=rounded;
+        
+        // Attention block
+        L12_Q [shape=rectangle, label="L12-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L12_K [shape=rectangle, label="L12-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L12_V [shape=rectangle, label="L12-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L12_ATT [shape=rectangle, label="L12-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L12_O [shape=rectangle, label="L12-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L12_RES [shape=parallelogram, label="L12-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L12_GATE [shape=rectangle, label="L12-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L12_A2A_DISPATCH [shape=ellipse, label="L12-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L12_E00 [shape=rectangle, label="L12-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E01 [shape=rectangle, label="L12-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E02 [shape=rectangle, label="L12-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E03 [shape=rectangle, label="L12-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L12_E10 [shape=rectangle, label="L12-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E11 [shape=rectangle, label="L12-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E12 [shape=rectangle, label="L12-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E13 [shape=rectangle, label="L12-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L12_E20 [shape=rectangle, label="L12-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E21 [shape=rectangle, label="L12-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E22 [shape=rectangle, label="L12-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E23 [shape=rectangle, label="L12-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L12_E30 [shape=rectangle, label="L12-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E31 [shape=rectangle, label="L12-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E32 [shape=rectangle, label="L12-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E33 [shape=rectangle, label="L12-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L12_E150 [shape=rectangle, label="L12-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E151 [shape=rectangle, label="L12-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E152 [shape=rectangle, label="L12-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L12_E153 [shape=rectangle, label="L12-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L12_A2A_COMBINE [shape=ellipse, label="L12-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L12_AGG [shape=parallelogram, label="L12-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L12_MLP_RES [shape=parallelogram, label="L12-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 13 ---------- 
+    subgraph cluster_layer13 {
+        label="Layer 13";
+        style=rounded;
+        
+        // Attention block
+        L13_Q [shape=rectangle, label="L13-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L13_K [shape=rectangle, label="L13-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L13_V [shape=rectangle, label="L13-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L13_ATT [shape=rectangle, label="L13-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L13_O [shape=rectangle, label="L13-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L13_RES [shape=parallelogram, label="L13-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L13_GATE [shape=rectangle, label="L13-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L13_A2A_DISPATCH [shape=ellipse, label="L13-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L13_E00 [shape=rectangle, label="L13-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E01 [shape=rectangle, label="L13-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E02 [shape=rectangle, label="L13-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E03 [shape=rectangle, label="L13-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L13_E10 [shape=rectangle, label="L13-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E11 [shape=rectangle, label="L13-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E12 [shape=rectangle, label="L13-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E13 [shape=rectangle, label="L13-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L13_E20 [shape=rectangle, label="L13-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E21 [shape=rectangle, label="L13-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E22 [shape=rectangle, label="L13-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E23 [shape=rectangle, label="L13-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L13_E30 [shape=rectangle, label="L13-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E31 [shape=rectangle, label="L13-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E32 [shape=rectangle, label="L13-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E33 [shape=rectangle, label="L13-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L13_E150 [shape=rectangle, label="L13-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E151 [shape=rectangle, label="L13-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E152 [shape=rectangle, label="L13-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L13_E153 [shape=rectangle, label="L13-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L13_A2A_COMBINE [shape=ellipse, label="L13-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L13_AGG [shape=parallelogram, label="L13-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L13_MLP_RES [shape=parallelogram, label="L13-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 14 ---------- 
+    subgraph cluster_layer14 {
+        label="Layer 14";
+        style=rounded;
+        
+        // Attention block
+        L14_Q [shape=rectangle, label="L14-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L14_K [shape=rectangle, label="L14-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L14_V [shape=rectangle, label="L14-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L14_ATT [shape=rectangle, label="L14-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L14_O [shape=rectangle, label="L14-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L14_RES [shape=parallelogram, label="L14-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L14_GATE [shape=rectangle, label="L14-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L14_A2A_DISPATCH [shape=ellipse, label="L14-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L14_E00 [shape=rectangle, label="L14-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E01 [shape=rectangle, label="L14-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E02 [shape=rectangle, label="L14-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E03 [shape=rectangle, label="L14-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L14_E10 [shape=rectangle, label="L14-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E11 [shape=rectangle, label="L14-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E12 [shape=rectangle, label="L14-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E13 [shape=rectangle, label="L14-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L14_E20 [shape=rectangle, label="L14-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E21 [shape=rectangle, label="L14-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E22 [shape=rectangle, label="L14-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E23 [shape=rectangle, label="L14-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L14_E30 [shape=rectangle, label="L14-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E31 [shape=rectangle, label="L14-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E32 [shape=rectangle, label="L14-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E33 [shape=rectangle, label="L14-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L14_E150 [shape=rectangle, label="L14-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E151 [shape=rectangle, label="L14-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E152 [shape=rectangle, label="L14-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L14_E153 [shape=rectangle, label="L14-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L14_A2A_COMBINE [shape=ellipse, label="L14-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L14_AGG [shape=parallelogram, label="L14-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L14_MLP_RES [shape=parallelogram, label="L14-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Layer 15 ---------- 
+    subgraph cluster_layer15 {
+        label="Layer 15";
+        style=rounded;
+        
+        // Attention block
+        L15_Q [shape=rectangle, label="L15-Q_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L15_K [shape=rectangle, label="L15-K_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L15_V [shape=rectangle, label="L15-V_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L15_ATT [shape=rectangle, label="L15-Attention\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L15_O [shape=rectangle, label="L15-O_proj\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L15_RES [shape=parallelogram, label="L15-ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        
+        // MoE block
+        L15_GATE [shape=rectangle, label="L15-Gating(top-2)\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,2]"];
+        L15_A2A_DISPATCH [shape=ellipse, label="L15-AllToAll_Dispatch\nGPUs:0-15\nInput:[64,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // 4 experts per GPU (showing pattern for all GPUs)
+        L15_E00 [shape=rectangle, label="L15-Expert00\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E01 [shape=rectangle, label="L15-Expert01\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E02 [shape=rectangle, label="L15-Expert02\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E03 [shape=rectangle, label="L15-Expert03\nGPU:0\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L15_E10 [shape=rectangle, label="L15-Expert10\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E11 [shape=rectangle, label="L15-Expert11\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E12 [shape=rectangle, label="L15-Expert12\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E13 [shape=rectangle, label="L15-Expert13\nGPU:1\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L15_E20 [shape=rectangle, label="L15-Expert20\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E21 [shape=rectangle, label="L15-Expert21\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E22 [shape=rectangle, label="L15-Expert22\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E23 [shape=rectangle, label="L15-Expert23\nGPU:2\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L15_E30 [shape=rectangle, label="L15-Expert30\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E31 [shape=rectangle, label="L15-Expert31\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E32 [shape=rectangle, label="L15-Expert32\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E33 [shape=rectangle, label="L15-Expert33\nGPU:3\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        // Continue for all 16 GPUs (showing key ones)
+        L15_E150 [shape=rectangle, label="L15-Expert150\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E151 [shape=rectangle, label="L15-Expert151\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E152 [shape=rectangle, label="L15-Expert152\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        L15_E153 [shape=rectangle, label="L15-Expert153\nGPU:15\nInput:[4,1024,1024]\nOutput:[4,1024,1024]"];
+        
+        L15_A2A_COMBINE [shape=ellipse, label="L15-AllToAll_Combine\nGPUs:0-15\nInput:[4,1024,1024]\nOutput:[64,1024,1024]"];
+        L15_AGG [shape=parallelogram, label="L15-Aggregate\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+        L15_MLP_RES [shape=parallelogram, label="L15-MLP_ResidualAdd\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    }
+
+    // ---------- Final Output ---------- 
+    Output [shape=ellipse, label="Output\nGPU:0-15\nInput:[64,1024,1024]\nOutput:[64,1024,1024]"];
+    
+    // ---------- Connections ---------- 
+    
+    // Input -> Layer 0
+    Input -> L0_Q;
+    Input -> L0_K;
+    Input -> L0_V;
+    L0_Q -> L0_ATT;
+    L0_K -> L0_ATT;
+    L0_V -> L0_ATT;
+    L0_ATT -> L0_O;
+    L0_O -> L0_RES;
+    Input -> L0_RES;
+    
+
+    // Layer 0 MoE
+    L0_RES -> L0_GATE;
+    L0_RES -> L0_A2A_DISPATCH;
+    L0_GATE -> L0_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L0_A2A_DISPATCH -> L0_E00;
+    L0_A2A_DISPATCH -> L0_E01;
+    L0_A2A_DISPATCH -> L0_E02;
+    L0_A2A_DISPATCH -> L0_E03;
+    L0_A2A_DISPATCH -> L0_E10;
+    L0_A2A_DISPATCH -> L0_E11;
+    L0_A2A_DISPATCH -> L0_E12;
+    L0_A2A_DISPATCH -> L0_E13;
+    L0_A2A_DISPATCH -> L0_E20;
+    L0_A2A_DISPATCH -> L0_E21;
+    L0_A2A_DISPATCH -> L0_E22;
+    L0_A2A_DISPATCH -> L0_E23;
+    L0_A2A_DISPATCH -> L0_E30;
+    L0_A2A_DISPATCH -> L0_E31;
+    L0_A2A_DISPATCH -> L0_E32;
+    L0_A2A_DISPATCH -> L0_E33;
+    L0_A2A_DISPATCH -> L0_E40;
+    L0_A2A_DISPATCH -> L0_E41;
+    L0_A2A_DISPATCH -> L0_E42;
+    L0_A2A_DISPATCH -> L0_E43;
+    L0_A2A_DISPATCH -> L0_E50;
+    L0_A2A_DISPATCH -> L0_E51;
+    L0_A2A_DISPATCH -> L0_E52;
+    L0_A2A_DISPATCH -> L0_E53;
+    L0_A2A_DISPATCH -> L0_E60;
+    L0_A2A_DISPATCH -> L0_E61;
+    L0_A2A_DISPATCH -> L0_E62;
+    L0_A2A_DISPATCH -> L0_E63;
+    L0_A2A_DISPATCH -> L0_E70;
+    L0_A2A_DISPATCH -> L0_E71;
+    L0_A2A_DISPATCH -> L0_E72;
+    L0_A2A_DISPATCH -> L0_E73;
+    L0_A2A_DISPATCH -> L0_E80;
+    L0_A2A_DISPATCH -> L0_E81;
+    L0_A2A_DISPATCH -> L0_E82;
+    L0_A2A_DISPATCH -> L0_E83;
+    L0_A2A_DISPATCH -> L0_E90;
+    L0_A2A_DISPATCH -> L0_E91;
+    L0_A2A_DISPATCH -> L0_E92;
+    L0_A2A_DISPATCH -> L0_E93;
+    L0_A2A_DISPATCH -> L0_E100;
+    L0_A2A_DISPATCH -> L0_E101;
+    L0_A2A_DISPATCH -> L0_E102;
+    L0_A2A_DISPATCH -> L0_E103;
+    L0_A2A_DISPATCH -> L0_E110;
+    L0_A2A_DISPATCH -> L0_E111;
+    L0_A2A_DISPATCH -> L0_E112;
+    L0_A2A_DISPATCH -> L0_E113;
+    L0_A2A_DISPATCH -> L0_E120;
+    L0_A2A_DISPATCH -> L0_E121;
+    L0_A2A_DISPATCH -> L0_E122;
+    L0_A2A_DISPATCH -> L0_E123;
+    L0_A2A_DISPATCH -> L0_E130;
+    L0_A2A_DISPATCH -> L0_E131;
+    L0_A2A_DISPATCH -> L0_E132;
+    L0_A2A_DISPATCH -> L0_E133;
+    L0_A2A_DISPATCH -> L0_E140;
+    L0_A2A_DISPATCH -> L0_E141;
+    L0_A2A_DISPATCH -> L0_E142;
+    L0_A2A_DISPATCH -> L0_E143;
+    L0_A2A_DISPATCH -> L0_E150;
+    L0_A2A_DISPATCH -> L0_E151;
+    L0_A2A_DISPATCH -> L0_E152;
+    L0_A2A_DISPATCH -> L0_E153;
+
+    // Experts to combine
+    L0_E00 -> L0_A2A_COMBINE;
+    L0_E01 -> L0_A2A_COMBINE;
+    L0_E02 -> L0_A2A_COMBINE;
+    L0_E03 -> L0_A2A_COMBINE;
+    L0_E10 -> L0_A2A_COMBINE;
+    L0_E11 -> L0_A2A_COMBINE;
+    L0_E12 -> L0_A2A_COMBINE;
+    L0_E13 -> L0_A2A_COMBINE;
+    L0_E20 -> L0_A2A_COMBINE;
+    L0_E21 -> L0_A2A_COMBINE;
+    L0_E22 -> L0_A2A_COMBINE;
+    L0_E23 -> L0_A2A_COMBINE;
+    L0_E30 -> L0_A2A_COMBINE;
+    L0_E31 -> L0_A2A_COMBINE;
+    L0_E32 -> L0_A2A_COMBINE;
+    L0_E33 -> L0_A2A_COMBINE;
+    L0_E40 -> L0_A2A_COMBINE;
+    L0_E41 -> L0_A2A_COMBINE;
+    L0_E42 -> L0_A2A_COMBINE;
+    L0_E43 -> L0_A2A_COMBINE;
+    L0_E50 -> L0_A2A_COMBINE;
+    L0_E51 -> L0_A2A_COMBINE;
+    L0_E52 -> L0_A2A_COMBINE;
+    L0_E53 -> L0_A2A_COMBINE;
+    L0_E60 -> L0_A2A_COMBINE;
+    L0_E61 -> L0_A2A_COMBINE;
+    L0_E62 -> L0_A2A_COMBINE;
+    L0_E63 -> L0_A2A_COMBINE;
+    L0_E70 -> L0_A2A_COMBINE;
+    L0_E71 -> L0_A2A_COMBINE;
+    L0_E72 -> L0_A2A_COMBINE;
+    L0_E73 -> L0_A2A_COMBINE;
+    L0_E80 -> L0_A2A_COMBINE;
+    L0_E81 -> L0_A2A_COMBINE;
+    L0_E82 -> L0_A2A_COMBINE;
+    L0_E83 -> L0_A2A_COMBINE;
+    L0_E90 -> L0_A2A_COMBINE;
+    L0_E91 -> L0_A2A_COMBINE;
+    L0_E92 -> L0_A2A_COMBINE;
+    L0_E93 -> L0_A2A_COMBINE;
+    L0_E100 -> L0_A2A_COMBINE;
+    L0_E101 -> L0_A2A_COMBINE;
+    L0_E102 -> L0_A2A_COMBINE;
+    L0_E103 -> L0_A2A_COMBINE;
+    L0_E110 -> L0_A2A_COMBINE;
+    L0_E111 -> L0_A2A_COMBINE;
+    L0_E112 -> L0_A2A_COMBINE;
+    L0_E113 -> L0_A2A_COMBINE;
+    L0_E120 -> L0_A2A_COMBINE;
+    L0_E121 -> L0_A2A_COMBINE;
+    L0_E122 -> L0_A2A_COMBINE;
+    L0_E123 -> L0_A2A_COMBINE;
+    L0_E130 -> L0_A2A_COMBINE;
+    L0_E131 -> L0_A2A_COMBINE;
+    L0_E132 -> L0_A2A_COMBINE;
+    L0_E133 -> L0_A2A_COMBINE;
+    L0_E140 -> L0_A2A_COMBINE;
+    L0_E141 -> L0_A2A_COMBINE;
+    L0_E142 -> L0_A2A_COMBINE;
+    L0_E143 -> L0_A2A_COMBINE;
+    L0_E150 -> L0_A2A_COMBINE;
+    L0_E151 -> L0_A2A_COMBINE;
+    L0_E152 -> L0_A2A_COMBINE;
+    L0_E153 -> L0_A2A_COMBINE;
+
+    L0_A2A_COMBINE -> L0_AGG;
+    L0_AGG -> L0_MLP_RES;
+    L0_RES -> L0_MLP_RES;
+    
+
+    // Layer 0 -> Layer 1
+    L0_MLP_RES -> L1_Q;
+    L0_MLP_RES -> L1_K;
+    L0_MLP_RES -> L1_V;
+    L0_MLP_RES -> L1_RES;
+    L1_Q -> L1_ATT;
+    L1_K -> L1_ATT;
+    L1_V -> L1_ATT;
+    L1_ATT -> L1_O;
+    L1_O -> L1_RES;
+    
+
+    // Layer 1 MoE
+    L1_RES -> L1_GATE;
+    L1_RES -> L1_A2A_DISPATCH;
+    L1_GATE -> L1_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L1_A2A_DISPATCH -> L1_E00;
+    L1_A2A_DISPATCH -> L1_E01;
+    L1_A2A_DISPATCH -> L1_E02;
+    L1_A2A_DISPATCH -> L1_E03;
+    L1_A2A_DISPATCH -> L1_E10;
+    L1_A2A_DISPATCH -> L1_E11;
+    L1_A2A_DISPATCH -> L1_E12;
+    L1_A2A_DISPATCH -> L1_E13;
+    L1_A2A_DISPATCH -> L1_E20;
+    L1_A2A_DISPATCH -> L1_E21;
+    L1_A2A_DISPATCH -> L1_E22;
+    L1_A2A_DISPATCH -> L1_E23;
+    L1_A2A_DISPATCH -> L1_E30;
+    L1_A2A_DISPATCH -> L1_E31;
+    L1_A2A_DISPATCH -> L1_E32;
+    L1_A2A_DISPATCH -> L1_E33;
+    L1_A2A_DISPATCH -> L1_E40;
+    L1_A2A_DISPATCH -> L1_E41;
+    L1_A2A_DISPATCH -> L1_E42;
+    L1_A2A_DISPATCH -> L1_E43;
+    L1_A2A_DISPATCH -> L1_E50;
+    L1_A2A_DISPATCH -> L1_E51;
+    L1_A2A_DISPATCH -> L1_E52;
+    L1_A2A_DISPATCH -> L1_E53;
+    L1_A2A_DISPATCH -> L1_E60;
+    L1_A2A_DISPATCH -> L1_E61;
+    L1_A2A_DISPATCH -> L1_E62;
+    L1_A2A_DISPATCH -> L1_E63;
+    L1_A2A_DISPATCH -> L1_E70;
+    L1_A2A_DISPATCH -> L1_E71;
+    L1_A2A_DISPATCH -> L1_E72;
+    L1_A2A_DISPATCH -> L1_E73;
+    L1_A2A_DISPATCH -> L1_E80;
+    L1_A2A_DISPATCH -> L1_E81;
+    L1_A2A_DISPATCH -> L1_E82;
+    L1_A2A_DISPATCH -> L1_E83;
+    L1_A2A_DISPATCH -> L1_E90;
+    L1_A2A_DISPATCH -> L1_E91;
+    L1_A2A_DISPATCH -> L1_E92;
+    L1_A2A_DISPATCH -> L1_E93;
+    L1_A2A_DISPATCH -> L1_E100;
+    L1_A2A_DISPATCH -> L1_E101;
+    L1_A2A_DISPATCH -> L1_E102;
+    L1_A2A_DISPATCH -> L1_E103;
+    L1_A2A_DISPATCH -> L1_E110;
+    L1_A2A_DISPATCH -> L1_E111;
+    L1_A2A_DISPATCH -> L1_E112;
+    L1_A2A_DISPATCH -> L1_E113;
+    L1_A2A_DISPATCH -> L1_E120;
+    L1_A2A_DISPATCH -> L1_E121;
+    L1_A2A_DISPATCH -> L1_E122;
+    L1_A2A_DISPATCH -> L1_E123;
+    L1_A2A_DISPATCH -> L1_E130;
+    L1_A2A_DISPATCH -> L1_E131;
+    L1_A2A_DISPATCH -> L1_E132;
+    L1_A2A_DISPATCH -> L1_E133;
+    L1_A2A_DISPATCH -> L1_E140;
+    L1_A2A_DISPATCH -> L1_E141;
+    L1_A2A_DISPATCH -> L1_E142;
+    L1_A2A_DISPATCH -> L1_E143;
+    L1_A2A_DISPATCH -> L1_E150;
+    L1_A2A_DISPATCH -> L1_E151;
+    L1_A2A_DISPATCH -> L1_E152;
+    L1_A2A_DISPATCH -> L1_E153;
+
+    // Experts to combine
+    L1_E00 -> L1_A2A_COMBINE;
+    L1_E01 -> L1_A2A_COMBINE;
+    L1_E02 -> L1_A2A_COMBINE;
+    L1_E03 -> L1_A2A_COMBINE;
+    L1_E10 -> L1_A2A_COMBINE;
+    L1_E11 -> L1_A2A_COMBINE;
+    L1_E12 -> L1_A2A_COMBINE;
+    L1_E13 -> L1_A2A_COMBINE;
+    L1_E20 -> L1_A2A_COMBINE;
+    L1_E21 -> L1_A2A_COMBINE;
+    L1_E22 -> L1_A2A_COMBINE;
+    L1_E23 -> L1_A2A_COMBINE;
+    L1_E30 -> L1_A2A_COMBINE;
+    L1_E31 -> L1_A2A_COMBINE;
+    L1_E32 -> L1_A2A_COMBINE;
+    L1_E33 -> L1_A2A_COMBINE;
+    L1_E40 -> L1_A2A_COMBINE;
+    L1_E41 -> L1_A2A_COMBINE;
+    L1_E42 -> L1_A2A_COMBINE;
+    L1_E43 -> L1_A2A_COMBINE;
+    L1_E50 -> L1_A2A_COMBINE;
+    L1_E51 -> L1_A2A_COMBINE;
+    L1_E52 -> L1_A2A_COMBINE;
+    L1_E53 -> L1_A2A_COMBINE;
+    L1_E60 -> L1_A2A_COMBINE;
+    L1_E61 -> L1_A2A_COMBINE;
+    L1_E62 -> L1_A2A_COMBINE;
+    L1_E63 -> L1_A2A_COMBINE;
+    L1_E70 -> L1_A2A_COMBINE;
+    L1_E71 -> L1_A2A_COMBINE;
+    L1_E72 -> L1_A2A_COMBINE;
+    L1_E73 -> L1_A2A_COMBINE;
+    L1_E80 -> L1_A2A_COMBINE;
+    L1_E81 -> L1_A2A_COMBINE;
+    L1_E82 -> L1_A2A_COMBINE;
+    L1_E83 -> L1_A2A_COMBINE;
+    L1_E90 -> L1_A2A_COMBINE;
+    L1_E91 -> L1_A2A_COMBINE;
+    L1_E92 -> L1_A2A_COMBINE;
+    L1_E93 -> L1_A2A_COMBINE;
+    L1_E100 -> L1_A2A_COMBINE;
+    L1_E101 -> L1_A2A_COMBINE;
+    L1_E102 -> L1_A2A_COMBINE;
+    L1_E103 -> L1_A2A_COMBINE;
+    L1_E110 -> L1_A2A_COMBINE;
+    L1_E111 -> L1_A2A_COMBINE;
+    L1_E112 -> L1_A2A_COMBINE;
+    L1_E113 -> L1_A2A_COMBINE;
+    L1_E120 -> L1_A2A_COMBINE;
+    L1_E121 -> L1_A2A_COMBINE;
+    L1_E122 -> L1_A2A_COMBINE;
+    L1_E123 -> L1_A2A_COMBINE;
+    L1_E130 -> L1_A2A_COMBINE;
+    L1_E131 -> L1_A2A_COMBINE;
+    L1_E132 -> L1_A2A_COMBINE;
+    L1_E133 -> L1_A2A_COMBINE;
+    L1_E140 -> L1_A2A_COMBINE;
+    L1_E141 -> L1_A2A_COMBINE;
+    L1_E142 -> L1_A2A_COMBINE;
+    L1_E143 -> L1_A2A_COMBINE;
+    L1_E150 -> L1_A2A_COMBINE;
+    L1_E151 -> L1_A2A_COMBINE;
+    L1_E152 -> L1_A2A_COMBINE;
+    L1_E153 -> L1_A2A_COMBINE;
+
+    L1_A2A_COMBINE -> L1_AGG;
+    L1_AGG -> L1_MLP_RES;
+    L1_RES -> L1_MLP_RES;
+    
+
+    // Layer 1 -> Layer 2
+    L1_MLP_RES -> L2_Q;
+    L1_MLP_RES -> L2_K;
+    L1_MLP_RES -> L2_V;
+    L1_MLP_RES -> L2_RES;
+    L2_Q -> L2_ATT;
+    L2_K -> L2_ATT;
+    L2_V -> L2_ATT;
+    L2_ATT -> L2_O;
+    L2_O -> L2_RES;
+    
+
+    // Layer 2 MoE
+    L2_RES -> L2_GATE;
+    L2_RES -> L2_A2A_DISPATCH;
+    L2_GATE -> L2_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L2_A2A_DISPATCH -> L2_E00;
+    L2_A2A_DISPATCH -> L2_E01;
+    L2_A2A_DISPATCH -> L2_E02;
+    L2_A2A_DISPATCH -> L2_E03;
+    L2_A2A_DISPATCH -> L2_E10;
+    L2_A2A_DISPATCH -> L2_E11;
+    L2_A2A_DISPATCH -> L2_E12;
+    L2_A2A_DISPATCH -> L2_E13;
+    L2_A2A_DISPATCH -> L2_E20;
+    L2_A2A_DISPATCH -> L2_E21;
+    L2_A2A_DISPATCH -> L2_E22;
+    L2_A2A_DISPATCH -> L2_E23;
+    L2_A2A_DISPATCH -> L2_E30;
+    L2_A2A_DISPATCH -> L2_E31;
+    L2_A2A_DISPATCH -> L2_E32;
+    L2_A2A_DISPATCH -> L2_E33;
+    L2_A2A_DISPATCH -> L2_E40;
+    L2_A2A_DISPATCH -> L2_E41;
+    L2_A2A_DISPATCH -> L2_E42;
+    L2_A2A_DISPATCH -> L2_E43;
+    L2_A2A_DISPATCH -> L2_E50;
+    L2_A2A_DISPATCH -> L2_E51;
+    L2_A2A_DISPATCH -> L2_E52;
+    L2_A2A_DISPATCH -> L2_E53;
+    L2_A2A_DISPATCH -> L2_E60;
+    L2_A2A_DISPATCH -> L2_E61;
+    L2_A2A_DISPATCH -> L2_E62;
+    L2_A2A_DISPATCH -> L2_E63;
+    L2_A2A_DISPATCH -> L2_E70;
+    L2_A2A_DISPATCH -> L2_E71;
+    L2_A2A_DISPATCH -> L2_E72;
+    L2_A2A_DISPATCH -> L2_E73;
+    L2_A2A_DISPATCH -> L2_E80;
+    L2_A2A_DISPATCH -> L2_E81;
+    L2_A2A_DISPATCH -> L2_E82;
+    L2_A2A_DISPATCH -> L2_E83;
+    L2_A2A_DISPATCH -> L2_E90;
+    L2_A2A_DISPATCH -> L2_E91;
+    L2_A2A_DISPATCH -> L2_E92;
+    L2_A2A_DISPATCH -> L2_E93;
+    L2_A2A_DISPATCH -> L2_E100;
+    L2_A2A_DISPATCH -> L2_E101;
+    L2_A2A_DISPATCH -> L2_E102;
+    L2_A2A_DISPATCH -> L2_E103;
+    L2_A2A_DISPATCH -> L2_E110;
+    L2_A2A_DISPATCH -> L2_E111;
+    L2_A2A_DISPATCH -> L2_E112;
+    L2_A2A_DISPATCH -> L2_E113;
+    L2_A2A_DISPATCH -> L2_E120;
+    L2_A2A_DISPATCH -> L2_E121;
+    L2_A2A_DISPATCH -> L2_E122;
+    L2_A2A_DISPATCH -> L2_E123;
+    L2_A2A_DISPATCH -> L2_E130;
+    L2_A2A_DISPATCH -> L2_E131;
+    L2_A2A_DISPATCH -> L2_E132;
+    L2_A2A_DISPATCH -> L2_E133;
+    L2_A2A_DISPATCH -> L2_E140;
+    L2_A2A_DISPATCH -> L2_E141;
+    L2_A2A_DISPATCH -> L2_E142;
+    L2_A2A_DISPATCH -> L2_E143;
+    L2_A2A_DISPATCH -> L2_E150;
+    L2_A2A_DISPATCH -> L2_E151;
+    L2_A2A_DISPATCH -> L2_E152;
+    L2_A2A_DISPATCH -> L2_E153;
+
+    // Experts to combine
+    L2_E00 -> L2_A2A_COMBINE;
+    L2_E01 -> L2_A2A_COMBINE;
+    L2_E02 -> L2_A2A_COMBINE;
+    L2_E03 -> L2_A2A_COMBINE;
+    L2_E10 -> L2_A2A_COMBINE;
+    L2_E11 -> L2_A2A_COMBINE;
+    L2_E12 -> L2_A2A_COMBINE;
+    L2_E13 -> L2_A2A_COMBINE;
+    L2_E20 -> L2_A2A_COMBINE;
+    L2_E21 -> L2_A2A_COMBINE;
+    L2_E22 -> L2_A2A_COMBINE;
+    L2_E23 -> L2_A2A_COMBINE;
+    L2_E30 -> L2_A2A_COMBINE;
+    L2_E31 -> L2_A2A_COMBINE;
+    L2_E32 -> L2_A2A_COMBINE;
+    L2_E33 -> L2_A2A_COMBINE;
+    L2_E40 -> L2_A2A_COMBINE;
+    L2_E41 -> L2_A2A_COMBINE;
+    L2_E42 -> L2_A2A_COMBINE;
+    L2_E43 -> L2_A2A_COMBINE;
+    L2_E50 -> L2_A2A_COMBINE;
+    L2_E51 -> L2_A2A_COMBINE;
+    L2_E52 -> L2_A2A_COMBINE;
+    L2_E53 -> L2_A2A_COMBINE;
+    L2_E60 -> L2_A2A_COMBINE;
+    L2_E61 -> L2_A2A_COMBINE;
+    L2_E62 -> L2_A2A_COMBINE;
+    L2_E63 -> L2_A2A_COMBINE;
+    L2_E70 -> L2_A2A_COMBINE;
+    L2_E71 -> L2_A2A_COMBINE;
+    L2_E72 -> L2_A2A_COMBINE;
+    L2_E73 -> L2_A2A_COMBINE;
+    L2_E80 -> L2_A2A_COMBINE;
+    L2_E81 -> L2_A2A_COMBINE;
+    L2_E82 -> L2_A2A_COMBINE;
+    L2_E83 -> L2_A2A_COMBINE;
+    L2_E90 -> L2_A2A_COMBINE;
+    L2_E91 -> L2_A2A_COMBINE;
+    L2_E92 -> L2_A2A_COMBINE;
+    L2_E93 -> L2_A2A_COMBINE;
+    L2_E100 -> L2_A2A_COMBINE;
+    L2_E101 -> L2_A2A_COMBINE;
+    L2_E102 -> L2_A2A_COMBINE;
+    L2_E103 -> L2_A2A_COMBINE;
+    L2_E110 -> L2_A2A_COMBINE;
+    L2_E111 -> L2_A2A_COMBINE;
+    L2_E112 -> L2_A2A_COMBINE;
+    L2_E113 -> L2_A2A_COMBINE;
+    L2_E120 -> L2_A2A_COMBINE;
+    L2_E121 -> L2_A2A_COMBINE;
+    L2_E122 -> L2_A2A_COMBINE;
+    L2_E123 -> L2_A2A_COMBINE;
+    L2_E130 -> L2_A2A_COMBINE;
+    L2_E131 -> L2_A2A_COMBINE;
+    L2_E132 -> L2_A2A_COMBINE;
+    L2_E133 -> L2_A2A_COMBINE;
+    L2_E140 -> L2_A2A_COMBINE;
+    L2_E141 -> L2_A2A_COMBINE;
+    L2_E142 -> L2_A2A_COMBINE;
+    L2_E143 -> L2_A2A_COMBINE;
+    L2_E150 -> L2_A2A_COMBINE;
+    L2_E151 -> L2_A2A_COMBINE;
+    L2_E152 -> L2_A2A_COMBINE;
+    L2_E153 -> L2_A2A_COMBINE;
+
+    L2_A2A_COMBINE -> L2_AGG;
+    L2_AGG -> L2_MLP_RES;
+    L2_RES -> L2_MLP_RES;
+    
+
+    // Layer 2 -> Layer 3
+    L2_MLP_RES -> L3_Q;
+    L2_MLP_RES -> L3_K;
+    L2_MLP_RES -> L3_V;
+    L2_MLP_RES -> L3_RES;
+    L3_Q -> L3_ATT;
+    L3_K -> L3_ATT;
+    L3_V -> L3_ATT;
+    L3_ATT -> L3_O;
+    L3_O -> L3_RES;
+    
+
+    // Layer 3 MoE
+    L3_RES -> L3_GATE;
+    L3_RES -> L3_A2A_DISPATCH;
+    L3_GATE -> L3_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L3_A2A_DISPATCH -> L3_E00;
+    L3_A2A_DISPATCH -> L3_E01;
+    L3_A2A_DISPATCH -> L3_E02;
+    L3_A2A_DISPATCH -> L3_E03;
+    L3_A2A_DISPATCH -> L3_E10;
+    L3_A2A_DISPATCH -> L3_E11;
+    L3_A2A_DISPATCH -> L3_E12;
+    L3_A2A_DISPATCH -> L3_E13;
+    L3_A2A_DISPATCH -> L3_E20;
+    L3_A2A_DISPATCH -> L3_E21;
+    L3_A2A_DISPATCH -> L3_E22;
+    L3_A2A_DISPATCH -> L3_E23;
+    L3_A2A_DISPATCH -> L3_E30;
+    L3_A2A_DISPATCH -> L3_E31;
+    L3_A2A_DISPATCH -> L3_E32;
+    L3_A2A_DISPATCH -> L3_E33;
+    L3_A2A_DISPATCH -> L3_E40;
+    L3_A2A_DISPATCH -> L3_E41;
+    L3_A2A_DISPATCH -> L3_E42;
+    L3_A2A_DISPATCH -> L3_E43;
+    L3_A2A_DISPATCH -> L3_E50;
+    L3_A2A_DISPATCH -> L3_E51;
+    L3_A2A_DISPATCH -> L3_E52;
+    L3_A2A_DISPATCH -> L3_E53;
+    L3_A2A_DISPATCH -> L3_E60;
+    L3_A2A_DISPATCH -> L3_E61;
+    L3_A2A_DISPATCH -> L3_E62;
+    L3_A2A_DISPATCH -> L3_E63;
+    L3_A2A_DISPATCH -> L3_E70;
+    L3_A2A_DISPATCH -> L3_E71;
+    L3_A2A_DISPATCH -> L3_E72;
+    L3_A2A_DISPATCH -> L3_E73;
+    L3_A2A_DISPATCH -> L3_E80;
+    L3_A2A_DISPATCH -> L3_E81;
+    L3_A2A_DISPATCH -> L3_E82;
+    L3_A2A_DISPATCH -> L3_E83;
+    L3_A2A_DISPATCH -> L3_E90;
+    L3_A2A_DISPATCH -> L3_E91;
+    L3_A2A_DISPATCH -> L3_E92;
+    L3_A2A_DISPATCH -> L3_E93;
+    L3_A2A_DISPATCH -> L3_E100;
+    L3_A2A_DISPATCH -> L3_E101;
+    L3_A2A_DISPATCH -> L3_E102;
+    L3_A2A_DISPATCH -> L3_E103;
+    L3_A2A_DISPATCH -> L3_E110;
+    L3_A2A_DISPATCH -> L3_E111;
+    L3_A2A_DISPATCH -> L3_E112;
+    L3_A2A_DISPATCH -> L3_E113;
+    L3_A2A_DISPATCH -> L3_E120;
+    L3_A2A_DISPATCH -> L3_E121;
+    L3_A2A_DISPATCH -> L3_E122;
+    L3_A2A_DISPATCH -> L3_E123;
+    L3_A2A_DISPATCH -> L3_E130;
+    L3_A2A_DISPATCH -> L3_E131;
+    L3_A2A_DISPATCH -> L3_E132;
+    L3_A2A_DISPATCH -> L3_E133;
+    L3_A2A_DISPATCH -> L3_E140;
+    L3_A2A_DISPATCH -> L3_E141;
+    L3_A2A_DISPATCH -> L3_E142;
+    L3_A2A_DISPATCH -> L3_E143;
+    L3_A2A_DISPATCH -> L3_E150;
+    L3_A2A_DISPATCH -> L3_E151;
+    L3_A2A_DISPATCH -> L3_E152;
+    L3_A2A_DISPATCH -> L3_E153;
+
+    // Experts to combine
+    L3_E00 -> L3_A2A_COMBINE;
+    L3_E01 -> L3_A2A_COMBINE;
+    L3_E02 -> L3_A2A_COMBINE;
+    L3_E03 -> L3_A2A_COMBINE;
+    L3_E10 -> L3_A2A_COMBINE;
+    L3_E11 -> L3_A2A_COMBINE;
+    L3_E12 -> L3_A2A_COMBINE;
+    L3_E13 -> L3_A2A_COMBINE;
+    L3_E20 -> L3_A2A_COMBINE;
+    L3_E21 -> L3_A2A_COMBINE;
+    L3_E22 -> L3_A2A_COMBINE;
+    L3_E23 -> L3_A2A_COMBINE;
+    L3_E30 -> L3_A2A_COMBINE;
+    L3_E31 -> L3_A2A_COMBINE;
+    L3_E32 -> L3_A2A_COMBINE;
+    L3_E33 -> L3_A2A_COMBINE;
+    L3_E40 -> L3_A2A_COMBINE;
+    L3_E41 -> L3_A2A_COMBINE;
+    L3_E42 -> L3_A2A_COMBINE;
+    L3_E43 -> L3_A2A_COMBINE;
+    L3_E50 -> L3_A2A_COMBINE;
+    L3_E51 -> L3_A2A_COMBINE;
+    L3_E52 -> L3_A2A_COMBINE;
+    L3_E53 -> L3_A2A_COMBINE;
+    L3_E60 -> L3_A2A_COMBINE;
+    L3_E61 -> L3_A2A_COMBINE;
+    L3_E62 -> L3_A2A_COMBINE;
+    L3_E63 -> L3_A2A_COMBINE;
+    L3_E70 -> L3_A2A_COMBINE;
+    L3_E71 -> L3_A2A_COMBINE;
+    L3_E72 -> L3_A2A_COMBINE;
+    L3_E73 -> L3_A2A_COMBINE;
+    L3_E80 -> L3_A2A_COMBINE;
+    L3_E81 -> L3_A2A_COMBINE;
+    L3_E82 -> L3_A2A_COMBINE;
+    L3_E83 -> L3_A2A_COMBINE;
+    L3_E90 -> L3_A2A_COMBINE;
+    L3_E91 -> L3_A2A_COMBINE;
+    L3_E92 -> L3_A2A_COMBINE;
+    L3_E93 -> L3_A2A_COMBINE;
+    L3_E100 -> L3_A2A_COMBINE;
+    L3_E101 -> L3_A2A_COMBINE;
+    L3_E102 -> L3_A2A_COMBINE;
+    L3_E103 -> L3_A2A_COMBINE;
+    L3_E110 -> L3_A2A_COMBINE;
+    L3_E111 -> L3_A2A_COMBINE;
+    L3_E112 -> L3_A2A_COMBINE;
+    L3_E113 -> L3_A2A_COMBINE;
+    L3_E120 -> L3_A2A_COMBINE;
+    L3_E121 -> L3_A2A_COMBINE;
+    L3_E122 -> L3_A2A_COMBINE;
+    L3_E123 -> L3_A2A_COMBINE;
+    L3_E130 -> L3_A2A_COMBINE;
+    L3_E131 -> L3_A2A_COMBINE;
+    L3_E132 -> L3_A2A_COMBINE;
+    L3_E133 -> L3_A2A_COMBINE;
+    L3_E140 -> L3_A2A_COMBINE;
+    L3_E141 -> L3_A2A_COMBINE;
+    L3_E142 -> L3_A2A_COMBINE;
+    L3_E143 -> L3_A2A_COMBINE;
+    L3_E150 -> L3_A2A_COMBINE;
+    L3_E151 -> L3_A2A_COMBINE;
+    L3_E152 -> L3_A2A_COMBINE;
+    L3_E153 -> L3_A2A_COMBINE;
+
+    L3_A2A_COMBINE -> L3_AGG;
+    L3_AGG -> L3_MLP_RES;
+    L3_RES -> L3_MLP_RES;
+    
+
+    // Layer 3 -> Layer 4
+    L3_MLP_RES -> L4_Q;
+    L3_MLP_RES -> L4_K;
+    L3_MLP_RES -> L4_V;
+    L3_MLP_RES -> L4_RES;
+    L4_Q -> L4_ATT;
+    L4_K -> L4_ATT;
+    L4_V -> L4_ATT;
+    L4_ATT -> L4_O;
+    L4_O -> L4_RES;
+    
+
+    // Layer 4 MoE
+    L4_RES -> L4_GATE;
+    L4_RES -> L4_A2A_DISPATCH;
+    L4_GATE -> L4_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L4_A2A_DISPATCH -> L4_E00;
+    L4_A2A_DISPATCH -> L4_E01;
+    L4_A2A_DISPATCH -> L4_E02;
+    L4_A2A_DISPATCH -> L4_E03;
+    L4_A2A_DISPATCH -> L4_E10;
+    L4_A2A_DISPATCH -> L4_E11;
+    L4_A2A_DISPATCH -> L4_E12;
+    L4_A2A_DISPATCH -> L4_E13;
+    L4_A2A_DISPATCH -> L4_E20;
+    L4_A2A_DISPATCH -> L4_E21;
+    L4_A2A_DISPATCH -> L4_E22;
+    L4_A2A_DISPATCH -> L4_E23;
+    L4_A2A_DISPATCH -> L4_E30;
+    L4_A2A_DISPATCH -> L4_E31;
+    L4_A2A_DISPATCH -> L4_E32;
+    L4_A2A_DISPATCH -> L4_E33;
+    L4_A2A_DISPATCH -> L4_E40;
+    L4_A2A_DISPATCH -> L4_E41;
+    L4_A2A_DISPATCH -> L4_E42;
+    L4_A2A_DISPATCH -> L4_E43;
+    L4_A2A_DISPATCH -> L4_E50;
+    L4_A2A_DISPATCH -> L4_E51;
+    L4_A2A_DISPATCH -> L4_E52;
+    L4_A2A_DISPATCH -> L4_E53;
+    L4_A2A_DISPATCH -> L4_E60;
+    L4_A2A_DISPATCH -> L4_E61;
+    L4_A2A_DISPATCH -> L4_E62;
+    L4_A2A_DISPATCH -> L4_E63;
+    L4_A2A_DISPATCH -> L4_E70;
+    L4_A2A_DISPATCH -> L4_E71;
+    L4_A2A_DISPATCH -> L4_E72;
+    L4_A2A_DISPATCH -> L4_E73;
+    L4_A2A_DISPATCH -> L4_E80;
+    L4_A2A_DISPATCH -> L4_E81;
+    L4_A2A_DISPATCH -> L4_E82;
+    L4_A2A_DISPATCH -> L4_E83;
+    L4_A2A_DISPATCH -> L4_E90;
+    L4_A2A_DISPATCH -> L4_E91;
+    L4_A2A_DISPATCH -> L4_E92;
+    L4_A2A_DISPATCH -> L4_E93;
+    L4_A2A_DISPATCH -> L4_E100;
+    L4_A2A_DISPATCH -> L4_E101;
+    L4_A2A_DISPATCH -> L4_E102;
+    L4_A2A_DISPATCH -> L4_E103;
+    L4_A2A_DISPATCH -> L4_E110;
+    L4_A2A_DISPATCH -> L4_E111;
+    L4_A2A_DISPATCH -> L4_E112;
+    L4_A2A_DISPATCH -> L4_E113;
+    L4_A2A_DISPATCH -> L4_E120;
+    L4_A2A_DISPATCH -> L4_E121;
+    L4_A2A_DISPATCH -> L4_E122;
+    L4_A2A_DISPATCH -> L4_E123;
+    L4_A2A_DISPATCH -> L4_E130;
+    L4_A2A_DISPATCH -> L4_E131;
+    L4_A2A_DISPATCH -> L4_E132;
+    L4_A2A_DISPATCH -> L4_E133;
+    L4_A2A_DISPATCH -> L4_E140;
+    L4_A2A_DISPATCH -> L4_E141;
+    L4_A2A_DISPATCH -> L4_E142;
+    L4_A2A_DISPATCH -> L4_E143;
+    L4_A2A_DISPATCH -> L4_E150;
+    L4_A2A_DISPATCH -> L4_E151;
+    L4_A2A_DISPATCH -> L4_E152;
+    L4_A2A_DISPATCH -> L4_E153;
+
+    // Experts to combine
+    L4_E00 -> L4_A2A_COMBINE;
+    L4_E01 -> L4_A2A_COMBINE;
+    L4_E02 -> L4_A2A_COMBINE;
+    L4_E03 -> L4_A2A_COMBINE;
+    L4_E10 -> L4_A2A_COMBINE;
+    L4_E11 -> L4_A2A_COMBINE;
+    L4_E12 -> L4_A2A_COMBINE;
+    L4_E13 -> L4_A2A_COMBINE;
+    L4_E20 -> L4_A2A_COMBINE;
+    L4_E21 -> L4_A2A_COMBINE;
+    L4_E22 -> L4_A2A_COMBINE;
+    L4_E23 -> L4_A2A_COMBINE;
+    L4_E30 -> L4_A2A_COMBINE;
+    L4_E31 -> L4_A2A_COMBINE;
+    L4_E32 -> L4_A2A_COMBINE;
+    L4_E33 -> L4_A2A_COMBINE;
+    L4_E40 -> L4_A2A_COMBINE;
+    L4_E41 -> L4_A2A_COMBINE;
+    L4_E42 -> L4_A2A_COMBINE;
+    L4_E43 -> L4_A2A_COMBINE;
+    L4_E50 -> L4_A2A_COMBINE;
+    L4_E51 -> L4_A2A_COMBINE;
+    L4_E52 -> L4_A2A_COMBINE;
+    L4_E53 -> L4_A2A_COMBINE;
+    L4_E60 -> L4_A2A_COMBINE;
+    L4_E61 -> L4_A2A_COMBINE;
+    L4_E62 -> L4_A2A_COMBINE;
+    L4_E63 -> L4_A2A_COMBINE;
+    L4_E70 -> L4_A2A_COMBINE;
+    L4_E71 -> L4_A2A_COMBINE;
+    L4_E72 -> L4_A2A_COMBINE;
+    L4_E73 -> L4_A2A_COMBINE;
+    L4_E80 -> L4_A2A_COMBINE;
+    L4_E81 -> L4_A2A_COMBINE;
+    L4_E82 -> L4_A2A_COMBINE;
+    L4_E83 -> L4_A2A_COMBINE;
+    L4_E90 -> L4_A2A_COMBINE;
+    L4_E91 -> L4_A2A_COMBINE;
+    L4_E92 -> L4_A2A_COMBINE;
+    L4_E93 -> L4_A2A_COMBINE;
+    L4_E100 -> L4_A2A_COMBINE;
+    L4_E101 -> L4_A2A_COMBINE;
+    L4_E102 -> L4_A2A_COMBINE;
+    L4_E103 -> L4_A2A_COMBINE;
+    L4_E110 -> L4_A2A_COMBINE;
+    L4_E111 -> L4_A2A_COMBINE;
+    L4_E112 -> L4_A2A_COMBINE;
+    L4_E113 -> L4_A2A_COMBINE;
+    L4_E120 -> L4_A2A_COMBINE;
+    L4_E121 -> L4_A2A_COMBINE;
+    L4_E122 -> L4_A2A_COMBINE;
+    L4_E123 -> L4_A2A_COMBINE;
+    L4_E130 -> L4_A2A_COMBINE;
+    L4_E131 -> L4_A2A_COMBINE;
+    L4_E132 -> L4_A2A_COMBINE;
+    L4_E133 -> L4_A2A_COMBINE;
+    L4_E140 -> L4_A2A_COMBINE;
+    L4_E141 -> L4_A2A_COMBINE;
+    L4_E142 -> L4_A2A_COMBINE;
+    L4_E143 -> L4_A2A_COMBINE;
+    L4_E150 -> L4_A2A_COMBINE;
+    L4_E151 -> L4_A2A_COMBINE;
+    L4_E152 -> L4_A2A_COMBINE;
+    L4_E153 -> L4_A2A_COMBINE;
+
+    L4_A2A_COMBINE -> L4_AGG;
+    L4_AGG -> L4_MLP_RES;
+    L4_RES -> L4_MLP_RES;
+    
+
+    // Layer 4 -> Layer 5
+    L4_MLP_RES -> L5_Q;
+    L4_MLP_RES -> L5_K;
+    L4_MLP_RES -> L5_V;
+    L4_MLP_RES -> L5_RES;
+    L5_Q -> L5_ATT;
+    L5_K -> L5_ATT;
+    L5_V -> L5_ATT;
+    L5_ATT -> L5_O;
+    L5_O -> L5_RES;
+    
+
+    // Layer 5 MoE
+    L5_RES -> L5_GATE;
+    L5_RES -> L5_A2A_DISPATCH;
+    L5_GATE -> L5_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L5_A2A_DISPATCH -> L5_E00;
+    L5_A2A_DISPATCH -> L5_E01;
+    L5_A2A_DISPATCH -> L5_E02;
+    L5_A2A_DISPATCH -> L5_E03;
+    L5_A2A_DISPATCH -> L5_E10;
+    L5_A2A_DISPATCH -> L5_E11;
+    L5_A2A_DISPATCH -> L5_E12;
+    L5_A2A_DISPATCH -> L5_E13;
+    L5_A2A_DISPATCH -> L5_E20;
+    L5_A2A_DISPATCH -> L5_E21;
+    L5_A2A_DISPATCH -> L5_E22;
+    L5_A2A_DISPATCH -> L5_E23;
+    L5_A2A_DISPATCH -> L5_E30;
+    L5_A2A_DISPATCH -> L5_E31;
+    L5_A2A_DISPATCH -> L5_E32;
+    L5_A2A_DISPATCH -> L5_E33;
+    L5_A2A_DISPATCH -> L5_E40;
+    L5_A2A_DISPATCH -> L5_E41;
+    L5_A2A_DISPATCH -> L5_E42;
+    L5_A2A_DISPATCH -> L5_E43;
+    L5_A2A_DISPATCH -> L5_E50;
+    L5_A2A_DISPATCH -> L5_E51;
+    L5_A2A_DISPATCH -> L5_E52;
+    L5_A2A_DISPATCH -> L5_E53;
+    L5_A2A_DISPATCH -> L5_E60;
+    L5_A2A_DISPATCH -> L5_E61;
+    L5_A2A_DISPATCH -> L5_E62;
+    L5_A2A_DISPATCH -> L5_E63;
+    L5_A2A_DISPATCH -> L5_E70;
+    L5_A2A_DISPATCH -> L5_E71;
+    L5_A2A_DISPATCH -> L5_E72;
+    L5_A2A_DISPATCH -> L5_E73;
+    L5_A2A_DISPATCH -> L5_E80;
+    L5_A2A_DISPATCH -> L5_E81;
+    L5_A2A_DISPATCH -> L5_E82;
+    L5_A2A_DISPATCH -> L5_E83;
+    L5_A2A_DISPATCH -> L5_E90;
+    L5_A2A_DISPATCH -> L5_E91;
+    L5_A2A_DISPATCH -> L5_E92;
+    L5_A2A_DISPATCH -> L5_E93;
+    L5_A2A_DISPATCH -> L5_E100;
+    L5_A2A_DISPATCH -> L5_E101;
+    L5_A2A_DISPATCH -> L5_E102;
+    L5_A2A_DISPATCH -> L5_E103;
+    L5_A2A_DISPATCH -> L5_E110;
+    L5_A2A_DISPATCH -> L5_E111;
+    L5_A2A_DISPATCH -> L5_E112;
+    L5_A2A_DISPATCH -> L5_E113;
+    L5_A2A_DISPATCH -> L5_E120;
+    L5_A2A_DISPATCH -> L5_E121;
+    L5_A2A_DISPATCH -> L5_E122;
+    L5_A2A_DISPATCH -> L5_E123;
+    L5_A2A_DISPATCH -> L5_E130;
+    L5_A2A_DISPATCH -> L5_E131;
+    L5_A2A_DISPATCH -> L5_E132;
+    L5_A2A_DISPATCH -> L5_E133;
+    L5_A2A_DISPATCH -> L5_E140;
+    L5_A2A_DISPATCH -> L5_E141;
+    L5_A2A_DISPATCH -> L5_E142;
+    L5_A2A_DISPATCH -> L5_E143;
+    L5_A2A_DISPATCH -> L5_E150;
+    L5_A2A_DISPATCH -> L5_E151;
+    L5_A2A_DISPATCH -> L5_E152;
+    L5_A2A_DISPATCH -> L5_E153;
+
+    // Experts to combine
+    L5_E00 -> L5_A2A_COMBINE;
+    L5_E01 -> L5_A2A_COMBINE;
+    L5_E02 -> L5_A2A_COMBINE;
+    L5_E03 -> L5_A2A_COMBINE;
+    L5_E10 -> L5_A2A_COMBINE;
+    L5_E11 -> L5_A2A_COMBINE;
+    L5_E12 -> L5_A2A_COMBINE;
+    L5_E13 -> L5_A2A_COMBINE;
+    L5_E20 -> L5_A2A_COMBINE;
+    L5_E21 -> L5_A2A_COMBINE;
+    L5_E22 -> L5_A2A_COMBINE;
+    L5_E23 -> L5_A2A_COMBINE;
+    L5_E30 -> L5_A2A_COMBINE;
+    L5_E31 -> L5_A2A_COMBINE;
+    L5_E32 -> L5_A2A_COMBINE;
+    L5_E33 -> L5_A2A_COMBINE;
+    L5_E40 -> L5_A2A_COMBINE;
+    L5_E41 -> L5_A2A_COMBINE;
+    L5_E42 -> L5_A2A_COMBINE;
+    L5_E43 -> L5_A2A_COMBINE;
+    L5_E50 -> L5_A2A_COMBINE;
+    L5_E51 -> L5_A2A_COMBINE;
+    L5_E52 -> L5_A2A_COMBINE;
+    L5_E53 -> L5_A2A_COMBINE;
+    L5_E60 -> L5_A2A_COMBINE;
+    L5_E61 -> L5_A2A_COMBINE;
+    L5_E62 -> L5_A2A_COMBINE;
+    L5_E63 -> L5_A2A_COMBINE;
+    L5_E70 -> L5_A2A_COMBINE;
+    L5_E71 -> L5_A2A_COMBINE;
+    L5_E72 -> L5_A2A_COMBINE;
+    L5_E73 -> L5_A2A_COMBINE;
+    L5_E80 -> L5_A2A_COMBINE;
+    L5_E81 -> L5_A2A_COMBINE;
+    L5_E82 -> L5_A2A_COMBINE;
+    L5_E83 -> L5_A2A_COMBINE;
+    L5_E90 -> L5_A2A_COMBINE;
+    L5_E91 -> L5_A2A_COMBINE;
+    L5_E92 -> L5_A2A_COMBINE;
+    L5_E93 -> L5_A2A_COMBINE;
+    L5_E100 -> L5_A2A_COMBINE;
+    L5_E101 -> L5_A2A_COMBINE;
+    L5_E102 -> L5_A2A_COMBINE;
+    L5_E103 -> L5_A2A_COMBINE;
+    L5_E110 -> L5_A2A_COMBINE;
+    L5_E111 -> L5_A2A_COMBINE;
+    L5_E112 -> L5_A2A_COMBINE;
+    L5_E113 -> L5_A2A_COMBINE;
+    L5_E120 -> L5_A2A_COMBINE;
+    L5_E121 -> L5_A2A_COMBINE;
+    L5_E122 -> L5_A2A_COMBINE;
+    L5_E123 -> L5_A2A_COMBINE;
+    L5_E130 -> L5_A2A_COMBINE;
+    L5_E131 -> L5_A2A_COMBINE;
+    L5_E132 -> L5_A2A_COMBINE;
+    L5_E133 -> L5_A2A_COMBINE;
+    L5_E140 -> L5_A2A_COMBINE;
+    L5_E141 -> L5_A2A_COMBINE;
+    L5_E142 -> L5_A2A_COMBINE;
+    L5_E143 -> L5_A2A_COMBINE;
+    L5_E150 -> L5_A2A_COMBINE;
+    L5_E151 -> L5_A2A_COMBINE;
+    L5_E152 -> L5_A2A_COMBINE;
+    L5_E153 -> L5_A2A_COMBINE;
+
+    L5_A2A_COMBINE -> L5_AGG;
+    L5_AGG -> L5_MLP_RES;
+    L5_RES -> L5_MLP_RES;
+    
+
+    // Layer 5 -> Layer 6
+    L5_MLP_RES -> L6_Q;
+    L5_MLP_RES -> L6_K;
+    L5_MLP_RES -> L6_V;
+    L5_MLP_RES -> L6_RES;
+    L6_Q -> L6_ATT;
+    L6_K -> L6_ATT;
+    L6_V -> L6_ATT;
+    L6_ATT -> L6_O;
+    L6_O -> L6_RES;
+    
+
+    // Layer 6 MoE
+    L6_RES -> L6_GATE;
+    L6_RES -> L6_A2A_DISPATCH;
+    L6_GATE -> L6_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L6_A2A_DISPATCH -> L6_E00;
+    L6_A2A_DISPATCH -> L6_E01;
+    L6_A2A_DISPATCH -> L6_E02;
+    L6_A2A_DISPATCH -> L6_E03;
+    L6_A2A_DISPATCH -> L6_E10;
+    L6_A2A_DISPATCH -> L6_E11;
+    L6_A2A_DISPATCH -> L6_E12;
+    L6_A2A_DISPATCH -> L6_E13;
+    L6_A2A_DISPATCH -> L6_E20;
+    L6_A2A_DISPATCH -> L6_E21;
+    L6_A2A_DISPATCH -> L6_E22;
+    L6_A2A_DISPATCH -> L6_E23;
+    L6_A2A_DISPATCH -> L6_E30;
+    L6_A2A_DISPATCH -> L6_E31;
+    L6_A2A_DISPATCH -> L6_E32;
+    L6_A2A_DISPATCH -> L6_E33;
+    L6_A2A_DISPATCH -> L6_E40;
+    L6_A2A_DISPATCH -> L6_E41;
+    L6_A2A_DISPATCH -> L6_E42;
+    L6_A2A_DISPATCH -> L6_E43;
+    L6_A2A_DISPATCH -> L6_E50;
+    L6_A2A_DISPATCH -> L6_E51;
+    L6_A2A_DISPATCH -> L6_E52;
+    L6_A2A_DISPATCH -> L6_E53;
+    L6_A2A_DISPATCH -> L6_E60;
+    L6_A2A_DISPATCH -> L6_E61;
+    L6_A2A_DISPATCH -> L6_E62;
+    L6_A2A_DISPATCH -> L6_E63;
+    L6_A2A_DISPATCH -> L6_E70;
+    L6_A2A_DISPATCH -> L6_E71;
+    L6_A2A_DISPATCH -> L6_E72;
+    L6_A2A_DISPATCH -> L6_E73;
+    L6_A2A_DISPATCH -> L6_E80;
+    L6_A2A_DISPATCH -> L6_E81;
+    L6_A2A_DISPATCH -> L6_E82;
+    L6_A2A_DISPATCH -> L6_E83;
+    L6_A2A_DISPATCH -> L6_E90;
+    L6_A2A_DISPATCH -> L6_E91;
+    L6_A2A_DISPATCH -> L6_E92;
+    L6_A2A_DISPATCH -> L6_E93;
+    L6_A2A_DISPATCH -> L6_E100;
+    L6_A2A_DISPATCH -> L6_E101;
+    L6_A2A_DISPATCH -> L6_E102;
+    L6_A2A_DISPATCH -> L6_E103;
+    L6_A2A_DISPATCH -> L6_E110;
+    L6_A2A_DISPATCH -> L6_E111;
+    L6_A2A_DISPATCH -> L6_E112;
+    L6_A2A_DISPATCH -> L6_E113;
+    L6_A2A_DISPATCH -> L6_E120;
+    L6_A2A_DISPATCH -> L6_E121;
+    L6_A2A_DISPATCH -> L6_E122;
+    L6_A2A_DISPATCH -> L6_E123;
+    L6_A2A_DISPATCH -> L6_E130;
+    L6_A2A_DISPATCH -> L6_E131;
+    L6_A2A_DISPATCH -> L6_E132;
+    L6_A2A_DISPATCH -> L6_E133;
+    L6_A2A_DISPATCH -> L6_E140;
+    L6_A2A_DISPATCH -> L6_E141;
+    L6_A2A_DISPATCH -> L6_E142;
+    L6_A2A_DISPATCH -> L6_E143;
+    L6_A2A_DISPATCH -> L6_E150;
+    L6_A2A_DISPATCH -> L6_E151;
+    L6_A2A_DISPATCH -> L6_E152;
+    L6_A2A_DISPATCH -> L6_E153;
+
+    // Experts to combine
+    L6_E00 -> L6_A2A_COMBINE;
+    L6_E01 -> L6_A2A_COMBINE;
+    L6_E02 -> L6_A2A_COMBINE;
+    L6_E03 -> L6_A2A_COMBINE;
+    L6_E10 -> L6_A2A_COMBINE;
+    L6_E11 -> L6_A2A_COMBINE;
+    L6_E12 -> L6_A2A_COMBINE;
+    L6_E13 -> L6_A2A_COMBINE;
+    L6_E20 -> L6_A2A_COMBINE;
+    L6_E21 -> L6_A2A_COMBINE;
+    L6_E22 -> L6_A2A_COMBINE;
+    L6_E23 -> L6_A2A_COMBINE;
+    L6_E30 -> L6_A2A_COMBINE;
+    L6_E31 -> L6_A2A_COMBINE;
+    L6_E32 -> L6_A2A_COMBINE;
+    L6_E33 -> L6_A2A_COMBINE;
+    L6_E40 -> L6_A2A_COMBINE;
+    L6_E41 -> L6_A2A_COMBINE;
+    L6_E42 -> L6_A2A_COMBINE;
+    L6_E43 -> L6_A2A_COMBINE;
+    L6_E50 -> L6_A2A_COMBINE;
+    L6_E51 -> L6_A2A_COMBINE;
+    L6_E52 -> L6_A2A_COMBINE;
+    L6_E53 -> L6_A2A_COMBINE;
+    L6_E60 -> L6_A2A_COMBINE;
+    L6_E61 -> L6_A2A_COMBINE;
+    L6_E62 -> L6_A2A_COMBINE;
+    L6_E63 -> L6_A2A_COMBINE;
+    L6_E70 -> L6_A2A_COMBINE;
+    L6_E71 -> L6_A2A_COMBINE;
+    L6_E72 -> L6_A2A_COMBINE;
+    L6_E73 -> L6_A2A_COMBINE;
+    L6_E80 -> L6_A2A_COMBINE;
+    L6_E81 -> L6_A2A_COMBINE;
+    L6_E82 -> L6_A2A_COMBINE;
+    L6_E83 -> L6_A2A_COMBINE;
+    L6_E90 -> L6_A2A_COMBINE;
+    L6_E91 -> L6_A2A_COMBINE;
+    L6_E92 -> L6_A2A_COMBINE;
+    L6_E93 -> L6_A2A_COMBINE;
+    L6_E100 -> L6_A2A_COMBINE;
+    L6_E101 -> L6_A2A_COMBINE;
+    L6_E102 -> L6_A2A_COMBINE;
+    L6_E103 -> L6_A2A_COMBINE;
+    L6_E110 -> L6_A2A_COMBINE;
+    L6_E111 -> L6_A2A_COMBINE;
+    L6_E112 -> L6_A2A_COMBINE;
+    L6_E113 -> L6_A2A_COMBINE;
+    L6_E120 -> L6_A2A_COMBINE;
+    L6_E121 -> L6_A2A_COMBINE;
+    L6_E122 -> L6_A2A_COMBINE;
+    L6_E123 -> L6_A2A_COMBINE;
+    L6_E130 -> L6_A2A_COMBINE;
+    L6_E131 -> L6_A2A_COMBINE;
+    L6_E132 -> L6_A2A_COMBINE;
+    L6_E133 -> L6_A2A_COMBINE;
+    L6_E140 -> L6_A2A_COMBINE;
+    L6_E141 -> L6_A2A_COMBINE;
+    L6_E142 -> L6_A2A_COMBINE;
+    L6_E143 -> L6_A2A_COMBINE;
+    L6_E150 -> L6_A2A_COMBINE;
+    L6_E151 -> L6_A2A_COMBINE;
+    L6_E152 -> L6_A2A_COMBINE;
+    L6_E153 -> L6_A2A_COMBINE;
+
+    L6_A2A_COMBINE -> L6_AGG;
+    L6_AGG -> L6_MLP_RES;
+    L6_RES -> L6_MLP_RES;
+    
+
+    // Layer 6 -> Layer 7
+    L6_MLP_RES -> L7_Q;
+    L6_MLP_RES -> L7_K;
+    L6_MLP_RES -> L7_V;
+    L6_MLP_RES -> L7_RES;
+    L7_Q -> L7_ATT;
+    L7_K -> L7_ATT;
+    L7_V -> L7_ATT;
+    L7_ATT -> L7_O;
+    L7_O -> L7_RES;
+    
+
+    // Layer 7 MoE
+    L7_RES -> L7_GATE;
+    L7_RES -> L7_A2A_DISPATCH;
+    L7_GATE -> L7_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L7_A2A_DISPATCH -> L7_E00;
+    L7_A2A_DISPATCH -> L7_E01;
+    L7_A2A_DISPATCH -> L7_E02;
+    L7_A2A_DISPATCH -> L7_E03;
+    L7_A2A_DISPATCH -> L7_E10;
+    L7_A2A_DISPATCH -> L7_E11;
+    L7_A2A_DISPATCH -> L7_E12;
+    L7_A2A_DISPATCH -> L7_E13;
+    L7_A2A_DISPATCH -> L7_E20;
+    L7_A2A_DISPATCH -> L7_E21;
+    L7_A2A_DISPATCH -> L7_E22;
+    L7_A2A_DISPATCH -> L7_E23;
+    L7_A2A_DISPATCH -> L7_E30;
+    L7_A2A_DISPATCH -> L7_E31;
+    L7_A2A_DISPATCH -> L7_E32;
+    L7_A2A_DISPATCH -> L7_E33;
+    L7_A2A_DISPATCH -> L7_E40;
+    L7_A2A_DISPATCH -> L7_E41;
+    L7_A2A_DISPATCH -> L7_E42;
+    L7_A2A_DISPATCH -> L7_E43;
+    L7_A2A_DISPATCH -> L7_E50;
+    L7_A2A_DISPATCH -> L7_E51;
+    L7_A2A_DISPATCH -> L7_E52;
+    L7_A2A_DISPATCH -> L7_E53;
+    L7_A2A_DISPATCH -> L7_E60;
+    L7_A2A_DISPATCH -> L7_E61;
+    L7_A2A_DISPATCH -> L7_E62;
+    L7_A2A_DISPATCH -> L7_E63;
+    L7_A2A_DISPATCH -> L7_E70;
+    L7_A2A_DISPATCH -> L7_E71;
+    L7_A2A_DISPATCH -> L7_E72;
+    L7_A2A_DISPATCH -> L7_E73;
+    L7_A2A_DISPATCH -> L7_E80;
+    L7_A2A_DISPATCH -> L7_E81;
+    L7_A2A_DISPATCH -> L7_E82;
+    L7_A2A_DISPATCH -> L7_E83;
+    L7_A2A_DISPATCH -> L7_E90;
+    L7_A2A_DISPATCH -> L7_E91;
+    L7_A2A_DISPATCH -> L7_E92;
+    L7_A2A_DISPATCH -> L7_E93;
+    L7_A2A_DISPATCH -> L7_E100;
+    L7_A2A_DISPATCH -> L7_E101;
+    L7_A2A_DISPATCH -> L7_E102;
+    L7_A2A_DISPATCH -> L7_E103;
+    L7_A2A_DISPATCH -> L7_E110;
+    L7_A2A_DISPATCH -> L7_E111;
+    L7_A2A_DISPATCH -> L7_E112;
+    L7_A2A_DISPATCH -> L7_E113;
+    L7_A2A_DISPATCH -> L7_E120;
+    L7_A2A_DISPATCH -> L7_E121;
+    L7_A2A_DISPATCH -> L7_E122;
+    L7_A2A_DISPATCH -> L7_E123;
+    L7_A2A_DISPATCH -> L7_E130;
+    L7_A2A_DISPATCH -> L7_E131;
+    L7_A2A_DISPATCH -> L7_E132;
+    L7_A2A_DISPATCH -> L7_E133;
+    L7_A2A_DISPATCH -> L7_E140;
+    L7_A2A_DISPATCH -> L7_E141;
+    L7_A2A_DISPATCH -> L7_E142;
+    L7_A2A_DISPATCH -> L7_E143;
+    L7_A2A_DISPATCH -> L7_E150;
+    L7_A2A_DISPATCH -> L7_E151;
+    L7_A2A_DISPATCH -> L7_E152;
+    L7_A2A_DISPATCH -> L7_E153;
+
+    // Experts to combine
+    L7_E00 -> L7_A2A_COMBINE;
+    L7_E01 -> L7_A2A_COMBINE;
+    L7_E02 -> L7_A2A_COMBINE;
+    L7_E03 -> L7_A2A_COMBINE;
+    L7_E10 -> L7_A2A_COMBINE;
+    L7_E11 -> L7_A2A_COMBINE;
+    L7_E12 -> L7_A2A_COMBINE;
+    L7_E13 -> L7_A2A_COMBINE;
+    L7_E20 -> L7_A2A_COMBINE;
+    L7_E21 -> L7_A2A_COMBINE;
+    L7_E22 -> L7_A2A_COMBINE;
+    L7_E23 -> L7_A2A_COMBINE;
+    L7_E30 -> L7_A2A_COMBINE;
+    L7_E31 -> L7_A2A_COMBINE;
+    L7_E32 -> L7_A2A_COMBINE;
+    L7_E33 -> L7_A2A_COMBINE;
+    L7_E40 -> L7_A2A_COMBINE;
+    L7_E41 -> L7_A2A_COMBINE;
+    L7_E42 -> L7_A2A_COMBINE;
+    L7_E43 -> L7_A2A_COMBINE;
+    L7_E50 -> L7_A2A_COMBINE;
+    L7_E51 -> L7_A2A_COMBINE;
+    L7_E52 -> L7_A2A_COMBINE;
+    L7_E53 -> L7_A2A_COMBINE;
+    L7_E60 -> L7_A2A_COMBINE;
+    L7_E61 -> L7_A2A_COMBINE;
+    L7_E62 -> L7_A2A_COMBINE;
+    L7_E63 -> L7_A2A_COMBINE;
+    L7_E70 -> L7_A2A_COMBINE;
+    L7_E71 -> L7_A2A_COMBINE;
+    L7_E72 -> L7_A2A_COMBINE;
+    L7_E73 -> L7_A2A_COMBINE;
+    L7_E80 -> L7_A2A_COMBINE;
+    L7_E81 -> L7_A2A_COMBINE;
+    L7_E82 -> L7_A2A_COMBINE;
+    L7_E83 -> L7_A2A_COMBINE;
+    L7_E90 -> L7_A2A_COMBINE;
+    L7_E91 -> L7_A2A_COMBINE;
+    L7_E92 -> L7_A2A_COMBINE;
+    L7_E93 -> L7_A2A_COMBINE;
+    L7_E100 -> L7_A2A_COMBINE;
+    L7_E101 -> L7_A2A_COMBINE;
+    L7_E102 -> L7_A2A_COMBINE;
+    L7_E103 -> L7_A2A_COMBINE;
+    L7_E110 -> L7_A2A_COMBINE;
+    L7_E111 -> L7_A2A_COMBINE;
+    L7_E112 -> L7_A2A_COMBINE;
+    L7_E113 -> L7_A2A_COMBINE;
+    L7_E120 -> L7_A2A_COMBINE;
+    L7_E121 -> L7_A2A_COMBINE;
+    L7_E122 -> L7_A2A_COMBINE;
+    L7_E123 -> L7_A2A_COMBINE;
+    L7_E130 -> L7_A2A_COMBINE;
+    L7_E131 -> L7_A2A_COMBINE;
+    L7_E132 -> L7_A2A_COMBINE;
+    L7_E133 -> L7_A2A_COMBINE;
+    L7_E140 -> L7_A2A_COMBINE;
+    L7_E141 -> L7_A2A_COMBINE;
+    L7_E142 -> L7_A2A_COMBINE;
+    L7_E143 -> L7_A2A_COMBINE;
+    L7_E150 -> L7_A2A_COMBINE;
+    L7_E151 -> L7_A2A_COMBINE;
+    L7_E152 -> L7_A2A_COMBINE;
+    L7_E153 -> L7_A2A_COMBINE;
+
+    L7_A2A_COMBINE -> L7_AGG;
+    L7_AGG -> L7_MLP_RES;
+    L7_RES -> L7_MLP_RES;
+    
+
+    // Layer 7 -> Layer 8
+    L7_MLP_RES -> L8_Q;
+    L7_MLP_RES -> L8_K;
+    L7_MLP_RES -> L8_V;
+    L7_MLP_RES -> L8_RES;
+    L8_Q -> L8_ATT;
+    L8_K -> L8_ATT;
+    L8_V -> L8_ATT;
+    L8_ATT -> L8_O;
+    L8_O -> L8_RES;
+    
+
+    // Layer 8 MoE
+    L8_RES -> L8_GATE;
+    L8_RES -> L8_A2A_DISPATCH;
+    L8_GATE -> L8_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L8_A2A_DISPATCH -> L8_E00;
+    L8_A2A_DISPATCH -> L8_E01;
+    L8_A2A_DISPATCH -> L8_E02;
+    L8_A2A_DISPATCH -> L8_E03;
+    L8_A2A_DISPATCH -> L8_E10;
+    L8_A2A_DISPATCH -> L8_E11;
+    L8_A2A_DISPATCH -> L8_E12;
+    L8_A2A_DISPATCH -> L8_E13;
+    L8_A2A_DISPATCH -> L8_E20;
+    L8_A2A_DISPATCH -> L8_E21;
+    L8_A2A_DISPATCH -> L8_E22;
+    L8_A2A_DISPATCH -> L8_E23;
+    L8_A2A_DISPATCH -> L8_E30;
+    L8_A2A_DISPATCH -> L8_E31;
+    L8_A2A_DISPATCH -> L8_E32;
+    L8_A2A_DISPATCH -> L8_E33;
+    L8_A2A_DISPATCH -> L8_E40;
+    L8_A2A_DISPATCH -> L8_E41;
+    L8_A2A_DISPATCH -> L8_E42;
+    L8_A2A_DISPATCH -> L8_E43;
+    L8_A2A_DISPATCH -> L8_E50;
+    L8_A2A_DISPATCH -> L8_E51;
+    L8_A2A_DISPATCH -> L8_E52;
+    L8_A2A_DISPATCH -> L8_E53;
+    L8_A2A_DISPATCH -> L8_E60;
+    L8_A2A_DISPATCH -> L8_E61;
+    L8_A2A_DISPATCH -> L8_E62;
+    L8_A2A_DISPATCH -> L8_E63;
+    L8_A2A_DISPATCH -> L8_E70;
+    L8_A2A_DISPATCH -> L8_E71;
+    L8_A2A_DISPATCH -> L8_E72;
+    L8_A2A_DISPATCH -> L8_E73;
+    L8_A2A_DISPATCH -> L8_E80;
+    L8_A2A_DISPATCH -> L8_E81;
+    L8_A2A_DISPATCH -> L8_E82;
+    L8_A2A_DISPATCH -> L8_E83;
+    L8_A2A_DISPATCH -> L8_E90;
+    L8_A2A_DISPATCH -> L8_E91;
+    L8_A2A_DISPATCH -> L8_E92;
+    L8_A2A_DISPATCH -> L8_E93;
+    L8_A2A_DISPATCH -> L8_E100;
+    L8_A2A_DISPATCH -> L8_E101;
+    L8_A2A_DISPATCH -> L8_E102;
+    L8_A2A_DISPATCH -> L8_E103;
+    L8_A2A_DISPATCH -> L8_E110;
+    L8_A2A_DISPATCH -> L8_E111;
+    L8_A2A_DISPATCH -> L8_E112;
+    L8_A2A_DISPATCH -> L8_E113;
+    L8_A2A_DISPATCH -> L8_E120;
+    L8_A2A_DISPATCH -> L8_E121;
+    L8_A2A_DISPATCH -> L8_E122;
+    L8_A2A_DISPATCH -> L8_E123;
+    L8_A2A_DISPATCH -> L8_E130;
+    L8_A2A_DISPATCH -> L8_E131;
+    L8_A2A_DISPATCH -> L8_E132;
+    L8_A2A_DISPATCH -> L8_E133;
+    L8_A2A_DISPATCH -> L8_E140;
+    L8_A2A_DISPATCH -> L8_E141;
+    L8_A2A_DISPATCH -> L8_E142;
+    L8_A2A_DISPATCH -> L8_E143;
+    L8_A2A_DISPATCH -> L8_E150;
+    L8_A2A_DISPATCH -> L8_E151;
+    L8_A2A_DISPATCH -> L8_E152;
+    L8_A2A_DISPATCH -> L8_E153;
+
+    // Experts to combine
+    L8_E00 -> L8_A2A_COMBINE;
+    L8_E01 -> L8_A2A_COMBINE;
+    L8_E02 -> L8_A2A_COMBINE;
+    L8_E03 -> L8_A2A_COMBINE;
+    L8_E10 -> L8_A2A_COMBINE;
+    L8_E11 -> L8_A2A_COMBINE;
+    L8_E12 -> L8_A2A_COMBINE;
+    L8_E13 -> L8_A2A_COMBINE;
+    L8_E20 -> L8_A2A_COMBINE;
+    L8_E21 -> L8_A2A_COMBINE;
+    L8_E22 -> L8_A2A_COMBINE;
+    L8_E23 -> L8_A2A_COMBINE;
+    L8_E30 -> L8_A2A_COMBINE;
+    L8_E31 -> L8_A2A_COMBINE;
+    L8_E32 -> L8_A2A_COMBINE;
+    L8_E33 -> L8_A2A_COMBINE;
+    L8_E40 -> L8_A2A_COMBINE;
+    L8_E41 -> L8_A2A_COMBINE;
+    L8_E42 -> L8_A2A_COMBINE;
+    L8_E43 -> L8_A2A_COMBINE;
+    L8_E50 -> L8_A2A_COMBINE;
+    L8_E51 -> L8_A2A_COMBINE;
+    L8_E52 -> L8_A2A_COMBINE;
+    L8_E53 -> L8_A2A_COMBINE;
+    L8_E60 -> L8_A2A_COMBINE;
+    L8_E61 -> L8_A2A_COMBINE;
+    L8_E62 -> L8_A2A_COMBINE;
+    L8_E63 -> L8_A2A_COMBINE;
+    L8_E70 -> L8_A2A_COMBINE;
+    L8_E71 -> L8_A2A_COMBINE;
+    L8_E72 -> L8_A2A_COMBINE;
+    L8_E73 -> L8_A2A_COMBINE;
+    L8_E80 -> L8_A2A_COMBINE;
+    L8_E81 -> L8_A2A_COMBINE;
+    L8_E82 -> L8_A2A_COMBINE;
+    L8_E83 -> L8_A2A_COMBINE;
+    L8_E90 -> L8_A2A_COMBINE;
+    L8_E91 -> L8_A2A_COMBINE;
+    L8_E92 -> L8_A2A_COMBINE;
+    L8_E93 -> L8_A2A_COMBINE;
+    L8_E100 -> L8_A2A_COMBINE;
+    L8_E101 -> L8_A2A_COMBINE;
+    L8_E102 -> L8_A2A_COMBINE;
+    L8_E103 -> L8_A2A_COMBINE;
+    L8_E110 -> L8_A2A_COMBINE;
+    L8_E111 -> L8_A2A_COMBINE;
+    L8_E112 -> L8_A2A_COMBINE;
+    L8_E113 -> L8_A2A_COMBINE;
+    L8_E120 -> L8_A2A_COMBINE;
+    L8_E121 -> L8_A2A_COMBINE;
+    L8_E122 -> L8_A2A_COMBINE;
+    L8_E123 -> L8_A2A_COMBINE;
+    L8_E130 -> L8_A2A_COMBINE;
+    L8_E131 -> L8_A2A_COMBINE;
+    L8_E132 -> L8_A2A_COMBINE;
+    L8_E133 -> L8_A2A_COMBINE;
+    L8_E140 -> L8_A2A_COMBINE;
+    L8_E141 -> L8_A2A_COMBINE;
+    L8_E142 -> L8_A2A_COMBINE;
+    L8_E143 -> L8_A2A_COMBINE;
+    L8_E150 -> L8_A2A_COMBINE;
+    L8_E151 -> L8_A2A_COMBINE;
+    L8_E152 -> L8_A2A_COMBINE;
+    L8_E153 -> L8_A2A_COMBINE;
+
+    L8_A2A_COMBINE -> L8_AGG;
+    L8_AGG -> L8_MLP_RES;
+    L8_RES -> L8_MLP_RES;
+    
+
+    // Layer 8 -> Layer 9
+    L8_MLP_RES -> L9_Q;
+    L8_MLP_RES -> L9_K;
+    L8_MLP_RES -> L9_V;
+    L8_MLP_RES -> L9_RES;
+    L9_Q -> L9_ATT;
+    L9_K -> L9_ATT;
+    L9_V -> L9_ATT;
+    L9_ATT -> L9_O;
+    L9_O -> L9_RES;
+    
+
+    // Layer 9 MoE
+    L9_RES -> L9_GATE;
+    L9_RES -> L9_A2A_DISPATCH;
+    L9_GATE -> L9_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L9_A2A_DISPATCH -> L9_E00;
+    L9_A2A_DISPATCH -> L9_E01;
+    L9_A2A_DISPATCH -> L9_E02;
+    L9_A2A_DISPATCH -> L9_E03;
+    L9_A2A_DISPATCH -> L9_E10;
+    L9_A2A_DISPATCH -> L9_E11;
+    L9_A2A_DISPATCH -> L9_E12;
+    L9_A2A_DISPATCH -> L9_E13;
+    L9_A2A_DISPATCH -> L9_E20;
+    L9_A2A_DISPATCH -> L9_E21;
+    L9_A2A_DISPATCH -> L9_E22;
+    L9_A2A_DISPATCH -> L9_E23;
+    L9_A2A_DISPATCH -> L9_E30;
+    L9_A2A_DISPATCH -> L9_E31;
+    L9_A2A_DISPATCH -> L9_E32;
+    L9_A2A_DISPATCH -> L9_E33;
+    L9_A2A_DISPATCH -> L9_E40;
+    L9_A2A_DISPATCH -> L9_E41;
+    L9_A2A_DISPATCH -> L9_E42;
+    L9_A2A_DISPATCH -> L9_E43;
+    L9_A2A_DISPATCH -> L9_E50;
+    L9_A2A_DISPATCH -> L9_E51;
+    L9_A2A_DISPATCH -> L9_E52;
+    L9_A2A_DISPATCH -> L9_E53;
+    L9_A2A_DISPATCH -> L9_E60;
+    L9_A2A_DISPATCH -> L9_E61;
+    L9_A2A_DISPATCH -> L9_E62;
+    L9_A2A_DISPATCH -> L9_E63;
+    L9_A2A_DISPATCH -> L9_E70;
+    L9_A2A_DISPATCH -> L9_E71;
+    L9_A2A_DISPATCH -> L9_E72;
+    L9_A2A_DISPATCH -> L9_E73;
+    L9_A2A_DISPATCH -> L9_E80;
+    L9_A2A_DISPATCH -> L9_E81;
+    L9_A2A_DISPATCH -> L9_E82;
+    L9_A2A_DISPATCH -> L9_E83;
+    L9_A2A_DISPATCH -> L9_E90;
+    L9_A2A_DISPATCH -> L9_E91;
+    L9_A2A_DISPATCH -> L9_E92;
+    L9_A2A_DISPATCH -> L9_E93;
+    L9_A2A_DISPATCH -> L9_E100;
+    L9_A2A_DISPATCH -> L9_E101;
+    L9_A2A_DISPATCH -> L9_E102;
+    L9_A2A_DISPATCH -> L9_E103;
+    L9_A2A_DISPATCH -> L9_E110;
+    L9_A2A_DISPATCH -> L9_E111;
+    L9_A2A_DISPATCH -> L9_E112;
+    L9_A2A_DISPATCH -> L9_E113;
+    L9_A2A_DISPATCH -> L9_E120;
+    L9_A2A_DISPATCH -> L9_E121;
+    L9_A2A_DISPATCH -> L9_E122;
+    L9_A2A_DISPATCH -> L9_E123;
+    L9_A2A_DISPATCH -> L9_E130;
+    L9_A2A_DISPATCH -> L9_E131;
+    L9_A2A_DISPATCH -> L9_E132;
+    L9_A2A_DISPATCH -> L9_E133;
+    L9_A2A_DISPATCH -> L9_E140;
+    L9_A2A_DISPATCH -> L9_E141;
+    L9_A2A_DISPATCH -> L9_E142;
+    L9_A2A_DISPATCH -> L9_E143;
+    L9_A2A_DISPATCH -> L9_E150;
+    L9_A2A_DISPATCH -> L9_E151;
+    L9_A2A_DISPATCH -> L9_E152;
+    L9_A2A_DISPATCH -> L9_E153;
+
+    // Experts to combine
+    L9_E00 -> L9_A2A_COMBINE;
+    L9_E01 -> L9_A2A_COMBINE;
+    L9_E02 -> L9_A2A_COMBINE;
+    L9_E03 -> L9_A2A_COMBINE;
+    L9_E10 -> L9_A2A_COMBINE;
+    L9_E11 -> L9_A2A_COMBINE;
+    L9_E12 -> L9_A2A_COMBINE;
+    L9_E13 -> L9_A2A_COMBINE;
+    L9_E20 -> L9_A2A_COMBINE;
+    L9_E21 -> L9_A2A_COMBINE;
+    L9_E22 -> L9_A2A_COMBINE;
+    L9_E23 -> L9_A2A_COMBINE;
+    L9_E30 -> L9_A2A_COMBINE;
+    L9_E31 -> L9_A2A_COMBINE;
+    L9_E32 -> L9_A2A_COMBINE;
+    L9_E33 -> L9_A2A_COMBINE;
+    L9_E40 -> L9_A2A_COMBINE;
+    L9_E41 -> L9_A2A_COMBINE;
+    L9_E42 -> L9_A2A_COMBINE;
+    L9_E43 -> L9_A2A_COMBINE;
+    L9_E50 -> L9_A2A_COMBINE;
+    L9_E51 -> L9_A2A_COMBINE;
+    L9_E52 -> L9_A2A_COMBINE;
+    L9_E53 -> L9_A2A_COMBINE;
+    L9_E60 -> L9_A2A_COMBINE;
+    L9_E61 -> L9_A2A_COMBINE;
+    L9_E62 -> L9_A2A_COMBINE;
+    L9_E63 -> L9_A2A_COMBINE;
+    L9_E70 -> L9_A2A_COMBINE;
+    L9_E71 -> L9_A2A_COMBINE;
+    L9_E72 -> L9_A2A_COMBINE;
+    L9_E73 -> L9_A2A_COMBINE;
+    L9_E80 -> L9_A2A_COMBINE;
+    L9_E81 -> L9_A2A_COMBINE;
+    L9_E82 -> L9_A2A_COMBINE;
+    L9_E83 -> L9_A2A_COMBINE;
+    L9_E90 -> L9_A2A_COMBINE;
+    L9_E91 -> L9_A2A_COMBINE;
+    L9_E92 -> L9_A2A_COMBINE;
+    L9_E93 -> L9_A2A_COMBINE;
+    L9_E100 -> L9_A2A_COMBINE;
+    L9_E101 -> L9_A2A_COMBINE;
+    L9_E102 -> L9_A2A_COMBINE;
+    L9_E103 -> L9_A2A_COMBINE;
+    L9_E110 -> L9_A2A_COMBINE;
+    L9_E111 -> L9_A2A_COMBINE;
+    L9_E112 -> L9_A2A_COMBINE;
+    L9_E113 -> L9_A2A_COMBINE;
+    L9_E120 -> L9_A2A_COMBINE;
+    L9_E121 -> L9_A2A_COMBINE;
+    L9_E122 -> L9_A2A_COMBINE;
+    L9_E123 -> L9_A2A_COMBINE;
+    L9_E130 -> L9_A2A_COMBINE;
+    L9_E131 -> L9_A2A_COMBINE;
+    L9_E132 -> L9_A2A_COMBINE;
+    L9_E133 -> L9_A2A_COMBINE;
+    L9_E140 -> L9_A2A_COMBINE;
+    L9_E141 -> L9_A2A_COMBINE;
+    L9_E142 -> L9_A2A_COMBINE;
+    L9_E143 -> L9_A2A_COMBINE;
+    L9_E150 -> L9_A2A_COMBINE;
+    L9_E151 -> L9_A2A_COMBINE;
+    L9_E152 -> L9_A2A_COMBINE;
+    L9_E153 -> L9_A2A_COMBINE;
+
+    L9_A2A_COMBINE -> L9_AGG;
+    L9_AGG -> L9_MLP_RES;
+    L9_RES -> L9_MLP_RES;
+    
+
+    // Layer 9 -> Layer 10
+    L9_MLP_RES -> L10_Q;
+    L9_MLP_RES -> L10_K;
+    L9_MLP_RES -> L10_V;
+    L9_MLP_RES -> L10_RES;
+    L10_Q -> L10_ATT;
+    L10_K -> L10_ATT;
+    L10_V -> L10_ATT;
+    L10_ATT -> L10_O;
+    L10_O -> L10_RES;
+    
+
+    // Layer 10 MoE
+    L10_RES -> L10_GATE;
+    L10_RES -> L10_A2A_DISPATCH;
+    L10_GATE -> L10_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L10_A2A_DISPATCH -> L10_E00;
+    L10_A2A_DISPATCH -> L10_E01;
+    L10_A2A_DISPATCH -> L10_E02;
+    L10_A2A_DISPATCH -> L10_E03;
+    L10_A2A_DISPATCH -> L10_E10;
+    L10_A2A_DISPATCH -> L10_E11;
+    L10_A2A_DISPATCH -> L10_E12;
+    L10_A2A_DISPATCH -> L10_E13;
+    L10_A2A_DISPATCH -> L10_E20;
+    L10_A2A_DISPATCH -> L10_E21;
+    L10_A2A_DISPATCH -> L10_E22;
+    L10_A2A_DISPATCH -> L10_E23;
+    L10_A2A_DISPATCH -> L10_E30;
+    L10_A2A_DISPATCH -> L10_E31;
+    L10_A2A_DISPATCH -> L10_E32;
+    L10_A2A_DISPATCH -> L10_E33;
+    L10_A2A_DISPATCH -> L10_E40;
+    L10_A2A_DISPATCH -> L10_E41;
+    L10_A2A_DISPATCH -> L10_E42;
+    L10_A2A_DISPATCH -> L10_E43;
+    L10_A2A_DISPATCH -> L10_E50;
+    L10_A2A_DISPATCH -> L10_E51;
+    L10_A2A_DISPATCH -> L10_E52;
+    L10_A2A_DISPATCH -> L10_E53;
+    L10_A2A_DISPATCH -> L10_E60;
+    L10_A2A_DISPATCH -> L10_E61;
+    L10_A2A_DISPATCH -> L10_E62;
+    L10_A2A_DISPATCH -> L10_E63;
+    L10_A2A_DISPATCH -> L10_E70;
+    L10_A2A_DISPATCH -> L10_E71;
+    L10_A2A_DISPATCH -> L10_E72;
+    L10_A2A_DISPATCH -> L10_E73;
+    L10_A2A_DISPATCH -> L10_E80;
+    L10_A2A_DISPATCH -> L10_E81;
+    L10_A2A_DISPATCH -> L10_E82;
+    L10_A2A_DISPATCH -> L10_E83;
+    L10_A2A_DISPATCH -> L10_E90;
+    L10_A2A_DISPATCH -> L10_E91;
+    L10_A2A_DISPATCH -> L10_E92;
+    L10_A2A_DISPATCH -> L10_E93;
+    L10_A2A_DISPATCH -> L10_E100;
+    L10_A2A_DISPATCH -> L10_E101;
+    L10_A2A_DISPATCH -> L10_E102;
+    L10_A2A_DISPATCH -> L10_E103;
+    L10_A2A_DISPATCH -> L10_E110;
+    L10_A2A_DISPATCH -> L10_E111;
+    L10_A2A_DISPATCH -> L10_E112;
+    L10_A2A_DISPATCH -> L10_E113;
+    L10_A2A_DISPATCH -> L10_E120;
+    L10_A2A_DISPATCH -> L10_E121;
+    L10_A2A_DISPATCH -> L10_E122;
+    L10_A2A_DISPATCH -> L10_E123;
+    L10_A2A_DISPATCH -> L10_E130;
+    L10_A2A_DISPATCH -> L10_E131;
+    L10_A2A_DISPATCH -> L10_E132;
+    L10_A2A_DISPATCH -> L10_E133;
+    L10_A2A_DISPATCH -> L10_E140;
+    L10_A2A_DISPATCH -> L10_E141;
+    L10_A2A_DISPATCH -> L10_E142;
+    L10_A2A_DISPATCH -> L10_E143;
+    L10_A2A_DISPATCH -> L10_E150;
+    L10_A2A_DISPATCH -> L10_E151;
+    L10_A2A_DISPATCH -> L10_E152;
+    L10_A2A_DISPATCH -> L10_E153;
+
+    // Experts to combine
+    L10_E00 -> L10_A2A_COMBINE;
+    L10_E01 -> L10_A2A_COMBINE;
+    L10_E02 -> L10_A2A_COMBINE;
+    L10_E03 -> L10_A2A_COMBINE;
+    L10_E10 -> L10_A2A_COMBINE;
+    L10_E11 -> L10_A2A_COMBINE;
+    L10_E12 -> L10_A2A_COMBINE;
+    L10_E13 -> L10_A2A_COMBINE;
+    L10_E20 -> L10_A2A_COMBINE;
+    L10_E21 -> L10_A2A_COMBINE;
+    L10_E22 -> L10_A2A_COMBINE;
+    L10_E23 -> L10_A2A_COMBINE;
+    L10_E30 -> L10_A2A_COMBINE;
+    L10_E31 -> L10_A2A_COMBINE;
+    L10_E32 -> L10_A2A_COMBINE;
+    L10_E33 -> L10_A2A_COMBINE;
+    L10_E40 -> L10_A2A_COMBINE;
+    L10_E41 -> L10_A2A_COMBINE;
+    L10_E42 -> L10_A2A_COMBINE;
+    L10_E43 -> L10_A2A_COMBINE;
+    L10_E50 -> L10_A2A_COMBINE;
+    L10_E51 -> L10_A2A_COMBINE;
+    L10_E52 -> L10_A2A_COMBINE;
+    L10_E53 -> L10_A2A_COMBINE;
+    L10_E60 -> L10_A2A_COMBINE;
+    L10_E61 -> L10_A2A_COMBINE;
+    L10_E62 -> L10_A2A_COMBINE;
+    L10_E63 -> L10_A2A_COMBINE;
+    L10_E70 -> L10_A2A_COMBINE;
+    L10_E71 -> L10_A2A_COMBINE;
+    L10_E72 -> L10_A2A_COMBINE;
+    L10_E73 -> L10_A2A_COMBINE;
+    L10_E80 -> L10_A2A_COMBINE;
+    L10_E81 -> L10_A2A_COMBINE;
+    L10_E82 -> L10_A2A_COMBINE;
+    L10_E83 -> L10_A2A_COMBINE;
+    L10_E90 -> L10_A2A_COMBINE;
+    L10_E91 -> L10_A2A_COMBINE;
+    L10_E92 -> L10_A2A_COMBINE;
+    L10_E93 -> L10_A2A_COMBINE;
+    L10_E100 -> L10_A2A_COMBINE;
+    L10_E101 -> L10_A2A_COMBINE;
+    L10_E102 -> L10_A2A_COMBINE;
+    L10_E103 -> L10_A2A_COMBINE;
+    L10_E110 -> L10_A2A_COMBINE;
+    L10_E111 -> L10_A2A_COMBINE;
+    L10_E112 -> L10_A2A_COMBINE;
+    L10_E113 -> L10_A2A_COMBINE;
+    L10_E120 -> L10_A2A_COMBINE;
+    L10_E121 -> L10_A2A_COMBINE;
+    L10_E122 -> L10_A2A_COMBINE;
+    L10_E123 -> L10_A2A_COMBINE;
+    L10_E130 -> L10_A2A_COMBINE;
+    L10_E131 -> L10_A2A_COMBINE;
+    L10_E132 -> L10_A2A_COMBINE;
+    L10_E133 -> L10_A2A_COMBINE;
+    L10_E140 -> L10_A2A_COMBINE;
+    L10_E141 -> L10_A2A_COMBINE;
+    L10_E142 -> L10_A2A_COMBINE;
+    L10_E143 -> L10_A2A_COMBINE;
+    L10_E150 -> L10_A2A_COMBINE;
+    L10_E151 -> L10_A2A_COMBINE;
+    L10_E152 -> L10_A2A_COMBINE;
+    L10_E153 -> L10_A2A_COMBINE;
+
+    L10_A2A_COMBINE -> L10_AGG;
+    L10_AGG -> L10_MLP_RES;
+    L10_RES -> L10_MLP_RES;
+    
+
+    // Layer 10 -> Layer 11
+    L10_MLP_RES -> L11_Q;
+    L10_MLP_RES -> L11_K;
+    L10_MLP_RES -> L11_V;
+    L10_MLP_RES -> L11_RES;
+    L11_Q -> L11_ATT;
+    L11_K -> L11_ATT;
+    L11_V -> L11_ATT;
+    L11_ATT -> L11_O;
+    L11_O -> L11_RES;
+    
+
+    // Layer 11 MoE
+    L11_RES -> L11_GATE;
+    L11_RES -> L11_A2A_DISPATCH;
+    L11_GATE -> L11_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L11_A2A_DISPATCH -> L11_E00;
+    L11_A2A_DISPATCH -> L11_E01;
+    L11_A2A_DISPATCH -> L11_E02;
+    L11_A2A_DISPATCH -> L11_E03;
+    L11_A2A_DISPATCH -> L11_E10;
+    L11_A2A_DISPATCH -> L11_E11;
+    L11_A2A_DISPATCH -> L11_E12;
+    L11_A2A_DISPATCH -> L11_E13;
+    L11_A2A_DISPATCH -> L11_E20;
+    L11_A2A_DISPATCH -> L11_E21;
+    L11_A2A_DISPATCH -> L11_E22;
+    L11_A2A_DISPATCH -> L11_E23;
+    L11_A2A_DISPATCH -> L11_E30;
+    L11_A2A_DISPATCH -> L11_E31;
+    L11_A2A_DISPATCH -> L11_E32;
+    L11_A2A_DISPATCH -> L11_E33;
+    L11_A2A_DISPATCH -> L11_E40;
+    L11_A2A_DISPATCH -> L11_E41;
+    L11_A2A_DISPATCH -> L11_E42;
+    L11_A2A_DISPATCH -> L11_E43;
+    L11_A2A_DISPATCH -> L11_E50;
+    L11_A2A_DISPATCH -> L11_E51;
+    L11_A2A_DISPATCH -> L11_E52;
+    L11_A2A_DISPATCH -> L11_E53;
+    L11_A2A_DISPATCH -> L11_E60;
+    L11_A2A_DISPATCH -> L11_E61;
+    L11_A2A_DISPATCH -> L11_E62;
+    L11_A2A_DISPATCH -> L11_E63;
+    L11_A2A_DISPATCH -> L11_E70;
+    L11_A2A_DISPATCH -> L11_E71;
+    L11_A2A_DISPATCH -> L11_E72;
+    L11_A2A_DISPATCH -> L11_E73;
+    L11_A2A_DISPATCH -> L11_E80;
+    L11_A2A_DISPATCH -> L11_E81;
+    L11_A2A_DISPATCH -> L11_E82;
+    L11_A2A_DISPATCH -> L11_E83;
+    L11_A2A_DISPATCH -> L11_E90;
+    L11_A2A_DISPATCH -> L11_E91;
+    L11_A2A_DISPATCH -> L11_E92;
+    L11_A2A_DISPATCH -> L11_E93;
+    L11_A2A_DISPATCH -> L11_E100;
+    L11_A2A_DISPATCH -> L11_E101;
+    L11_A2A_DISPATCH -> L11_E102;
+    L11_A2A_DISPATCH -> L11_E103;
+    L11_A2A_DISPATCH -> L11_E110;
+    L11_A2A_DISPATCH -> L11_E111;
+    L11_A2A_DISPATCH -> L11_E112;
+    L11_A2A_DISPATCH -> L11_E113;
+    L11_A2A_DISPATCH -> L11_E120;
+    L11_A2A_DISPATCH -> L11_E121;
+    L11_A2A_DISPATCH -> L11_E122;
+    L11_A2A_DISPATCH -> L11_E123;
+    L11_A2A_DISPATCH -> L11_E130;
+    L11_A2A_DISPATCH -> L11_E131;
+    L11_A2A_DISPATCH -> L11_E132;
+    L11_A2A_DISPATCH -> L11_E133;
+    L11_A2A_DISPATCH -> L11_E140;
+    L11_A2A_DISPATCH -> L11_E141;
+    L11_A2A_DISPATCH -> L11_E142;
+    L11_A2A_DISPATCH -> L11_E143;
+    L11_A2A_DISPATCH -> L11_E150;
+    L11_A2A_DISPATCH -> L11_E151;
+    L11_A2A_DISPATCH -> L11_E152;
+    L11_A2A_DISPATCH -> L11_E153;
+
+    // Experts to combine
+    L11_E00 -> L11_A2A_COMBINE;
+    L11_E01 -> L11_A2A_COMBINE;
+    L11_E02 -> L11_A2A_COMBINE;
+    L11_E03 -> L11_A2A_COMBINE;
+    L11_E10 -> L11_A2A_COMBINE;
+    L11_E11 -> L11_A2A_COMBINE;
+    L11_E12 -> L11_A2A_COMBINE;
+    L11_E13 -> L11_A2A_COMBINE;
+    L11_E20 -> L11_A2A_COMBINE;
+    L11_E21 -> L11_A2A_COMBINE;
+    L11_E22 -> L11_A2A_COMBINE;
+    L11_E23 -> L11_A2A_COMBINE;
+    L11_E30 -> L11_A2A_COMBINE;
+    L11_E31 -> L11_A2A_COMBINE;
+    L11_E32 -> L11_A2A_COMBINE;
+    L11_E33 -> L11_A2A_COMBINE;
+    L11_E40 -> L11_A2A_COMBINE;
+    L11_E41 -> L11_A2A_COMBINE;
+    L11_E42 -> L11_A2A_COMBINE;
+    L11_E43 -> L11_A2A_COMBINE;
+    L11_E50 -> L11_A2A_COMBINE;
+    L11_E51 -> L11_A2A_COMBINE;
+    L11_E52 -> L11_A2A_COMBINE;
+    L11_E53 -> L11_A2A_COMBINE;
+    L11_E60 -> L11_A2A_COMBINE;
+    L11_E61 -> L11_A2A_COMBINE;
+    L11_E62 -> L11_A2A_COMBINE;
+    L11_E63 -> L11_A2A_COMBINE;
+    L11_E70 -> L11_A2A_COMBINE;
+    L11_E71 -> L11_A2A_COMBINE;
+    L11_E72 -> L11_A2A_COMBINE;
+    L11_E73 -> L11_A2A_COMBINE;
+    L11_E80 -> L11_A2A_COMBINE;
+    L11_E81 -> L11_A2A_COMBINE;
+    L11_E82 -> L11_A2A_COMBINE;
+    L11_E83 -> L11_A2A_COMBINE;
+    L11_E90 -> L11_A2A_COMBINE;
+    L11_E91 -> L11_A2A_COMBINE;
+    L11_E92 -> L11_A2A_COMBINE;
+    L11_E93 -> L11_A2A_COMBINE;
+    L11_E100 -> L11_A2A_COMBINE;
+    L11_E101 -> L11_A2A_COMBINE;
+    L11_E102 -> L11_A2A_COMBINE;
+    L11_E103 -> L11_A2A_COMBINE;
+    L11_E110 -> L11_A2A_COMBINE;
+    L11_E111 -> L11_A2A_COMBINE;
+    L11_E112 -> L11_A2A_COMBINE;
+    L11_E113 -> L11_A2A_COMBINE;
+    L11_E120 -> L11_A2A_COMBINE;
+    L11_E121 -> L11_A2A_COMBINE;
+    L11_E122 -> L11_A2A_COMBINE;
+    L11_E123 -> L11_A2A_COMBINE;
+    L11_E130 -> L11_A2A_COMBINE;
+    L11_E131 -> L11_A2A_COMBINE;
+    L11_E132 -> L11_A2A_COMBINE;
+    L11_E133 -> L11_A2A_COMBINE;
+    L11_E140 -> L11_A2A_COMBINE;
+    L11_E141 -> L11_A2A_COMBINE;
+    L11_E142 -> L11_A2A_COMBINE;
+    L11_E143 -> L11_A2A_COMBINE;
+    L11_E150 -> L11_A2A_COMBINE;
+    L11_E151 -> L11_A2A_COMBINE;
+    L11_E152 -> L11_A2A_COMBINE;
+    L11_E153 -> L11_A2A_COMBINE;
+
+    L11_A2A_COMBINE -> L11_AGG;
+    L11_AGG -> L11_MLP_RES;
+    L11_RES -> L11_MLP_RES;
+    
+
+    // Layer 11 -> Layer 12
+    L11_MLP_RES -> L12_Q;
+    L11_MLP_RES -> L12_K;
+    L11_MLP_RES -> L12_V;
+    L11_MLP_RES -> L12_RES;
+    L12_Q -> L12_ATT;
+    L12_K -> L12_ATT;
+    L12_V -> L12_ATT;
+    L12_ATT -> L12_O;
+    L12_O -> L12_RES;
+    
+
+    // Layer 12 MoE
+    L12_RES -> L12_GATE;
+    L12_RES -> L12_A2A_DISPATCH;
+    L12_GATE -> L12_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L12_A2A_DISPATCH -> L12_E00;
+    L12_A2A_DISPATCH -> L12_E01;
+    L12_A2A_DISPATCH -> L12_E02;
+    L12_A2A_DISPATCH -> L12_E03;
+    L12_A2A_DISPATCH -> L12_E10;
+    L12_A2A_DISPATCH -> L12_E11;
+    L12_A2A_DISPATCH -> L12_E12;
+    L12_A2A_DISPATCH -> L12_E13;
+    L12_A2A_DISPATCH -> L12_E20;
+    L12_A2A_DISPATCH -> L12_E21;
+    L12_A2A_DISPATCH -> L12_E22;
+    L12_A2A_DISPATCH -> L12_E23;
+    L12_A2A_DISPATCH -> L12_E30;
+    L12_A2A_DISPATCH -> L12_E31;
+    L12_A2A_DISPATCH -> L12_E32;
+    L12_A2A_DISPATCH -> L12_E33;
+    L12_A2A_DISPATCH -> L12_E40;
+    L12_A2A_DISPATCH -> L12_E41;
+    L12_A2A_DISPATCH -> L12_E42;
+    L12_A2A_DISPATCH -> L12_E43;
+    L12_A2A_DISPATCH -> L12_E50;
+    L12_A2A_DISPATCH -> L12_E51;
+    L12_A2A_DISPATCH -> L12_E52;
+    L12_A2A_DISPATCH -> L12_E53;
+    L12_A2A_DISPATCH -> L12_E60;
+    L12_A2A_DISPATCH -> L12_E61;
+    L12_A2A_DISPATCH -> L12_E62;
+    L12_A2A_DISPATCH -> L12_E63;
+    L12_A2A_DISPATCH -> L12_E70;
+    L12_A2A_DISPATCH -> L12_E71;
+    L12_A2A_DISPATCH -> L12_E72;
+    L12_A2A_DISPATCH -> L12_E73;
+    L12_A2A_DISPATCH -> L12_E80;
+    L12_A2A_DISPATCH -> L12_E81;
+    L12_A2A_DISPATCH -> L12_E82;
+    L12_A2A_DISPATCH -> L12_E83;
+    L12_A2A_DISPATCH -> L12_E90;
+    L12_A2A_DISPATCH -> L12_E91;
+    L12_A2A_DISPATCH -> L12_E92;
+    L12_A2A_DISPATCH -> L12_E93;
+    L12_A2A_DISPATCH -> L12_E100;
+    L12_A2A_DISPATCH -> L12_E101;
+    L12_A2A_DISPATCH -> L12_E102;
+    L12_A2A_DISPATCH -> L12_E103;
+    L12_A2A_DISPATCH -> L12_E110;
+    L12_A2A_DISPATCH -> L12_E111;
+    L12_A2A_DISPATCH -> L12_E112;
+    L12_A2A_DISPATCH -> L12_E113;
+    L12_A2A_DISPATCH -> L12_E120;
+    L12_A2A_DISPATCH -> L12_E121;
+    L12_A2A_DISPATCH -> L12_E122;
+    L12_A2A_DISPATCH -> L12_E123;
+    L12_A2A_DISPATCH -> L12_E130;
+    L12_A2A_DISPATCH -> L12_E131;
+    L12_A2A_DISPATCH -> L12_E132;
+    L12_A2A_DISPATCH -> L12_E133;
+    L12_A2A_DISPATCH -> L12_E140;
+    L12_A2A_DISPATCH -> L12_E141;
+    L12_A2A_DISPATCH -> L12_E142;
+    L12_A2A_DISPATCH -> L12_E143;
+    L12_A2A_DISPATCH -> L12_E150;
+    L12_A2A_DISPATCH -> L12_E151;
+    L12_A2A_DISPATCH -> L12_E152;
+    L12_A2A_DISPATCH -> L12_E153;
+
+    // Experts to combine
+    L12_E00 -> L12_A2A_COMBINE;
+    L12_E01 -> L12_A2A_COMBINE;
+    L12_E02 -> L12_A2A_COMBINE;
+    L12_E03 -> L12_A2A_COMBINE;
+    L12_E10 -> L12_A2A_COMBINE;
+    L12_E11 -> L12_A2A_COMBINE;
+    L12_E12 -> L12_A2A_COMBINE;
+    L12_E13 -> L12_A2A_COMBINE;
+    L12_E20 -> L12_A2A_COMBINE;
+    L12_E21 -> L12_A2A_COMBINE;
+    L12_E22 -> L12_A2A_COMBINE;
+    L12_E23 -> L12_A2A_COMBINE;
+    L12_E30 -> L12_A2A_COMBINE;
+    L12_E31 -> L12_A2A_COMBINE;
+    L12_E32 -> L12_A2A_COMBINE;
+    L12_E33 -> L12_A2A_COMBINE;
+    L12_E40 -> L12_A2A_COMBINE;
+    L12_E41 -> L12_A2A_COMBINE;
+    L12_E42 -> L12_A2A_COMBINE;
+    L12_E43 -> L12_A2A_COMBINE;
+    L12_E50 -> L12_A2A_COMBINE;
+    L12_E51 -> L12_A2A_COMBINE;
+    L12_E52 -> L12_A2A_COMBINE;
+    L12_E53 -> L12_A2A_COMBINE;
+    L12_E60 -> L12_A2A_COMBINE;
+    L12_E61 -> L12_A2A_COMBINE;
+    L12_E62 -> L12_A2A_COMBINE;
+    L12_E63 -> L12_A2A_COMBINE;
+    L12_E70 -> L12_A2A_COMBINE;
+    L12_E71 -> L12_A2A_COMBINE;
+    L12_E72 -> L12_A2A_COMBINE;
+    L12_E73 -> L12_A2A_COMBINE;
+    L12_E80 -> L12_A2A_COMBINE;
+    L12_E81 -> L12_A2A_COMBINE;
+    L12_E82 -> L12_A2A_COMBINE;
+    L12_E83 -> L12_A2A_COMBINE;
+    L12_E90 -> L12_A2A_COMBINE;
+    L12_E91 -> L12_A2A_COMBINE;
+    L12_E92 -> L12_A2A_COMBINE;
+    L12_E93 -> L12_A2A_COMBINE;
+    L12_E100 -> L12_A2A_COMBINE;
+    L12_E101 -> L12_A2A_COMBINE;
+    L12_E102 -> L12_A2A_COMBINE;
+    L12_E103 -> L12_A2A_COMBINE;
+    L12_E110 -> L12_A2A_COMBINE;
+    L12_E111 -> L12_A2A_COMBINE;
+    L12_E112 -> L12_A2A_COMBINE;
+    L12_E113 -> L12_A2A_COMBINE;
+    L12_E120 -> L12_A2A_COMBINE;
+    L12_E121 -> L12_A2A_COMBINE;
+    L12_E122 -> L12_A2A_COMBINE;
+    L12_E123 -> L12_A2A_COMBINE;
+    L12_E130 -> L12_A2A_COMBINE;
+    L12_E131 -> L12_A2A_COMBINE;
+    L12_E132 -> L12_A2A_COMBINE;
+    L12_E133 -> L12_A2A_COMBINE;
+    L12_E140 -> L12_A2A_COMBINE;
+    L12_E141 -> L12_A2A_COMBINE;
+    L12_E142 -> L12_A2A_COMBINE;
+    L12_E143 -> L12_A2A_COMBINE;
+    L12_E150 -> L12_A2A_COMBINE;
+    L12_E151 -> L12_A2A_COMBINE;
+    L12_E152 -> L12_A2A_COMBINE;
+    L12_E153 -> L12_A2A_COMBINE;
+
+    L12_A2A_COMBINE -> L12_AGG;
+    L12_AGG -> L12_MLP_RES;
+    L12_RES -> L12_MLP_RES;
+    
+
+    // Layer 12 -> Layer 13
+    L12_MLP_RES -> L13_Q;
+    L12_MLP_RES -> L13_K;
+    L12_MLP_RES -> L13_V;
+    L12_MLP_RES -> L13_RES;
+    L13_Q -> L13_ATT;
+    L13_K -> L13_ATT;
+    L13_V -> L13_ATT;
+    L13_ATT -> L13_O;
+    L13_O -> L13_RES;
+    
+
+    // Layer 13 MoE
+    L13_RES -> L13_GATE;
+    L13_RES -> L13_A2A_DISPATCH;
+    L13_GATE -> L13_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L13_A2A_DISPATCH -> L13_E00;
+    L13_A2A_DISPATCH -> L13_E01;
+    L13_A2A_DISPATCH -> L13_E02;
+    L13_A2A_DISPATCH -> L13_E03;
+    L13_A2A_DISPATCH -> L13_E10;
+    L13_A2A_DISPATCH -> L13_E11;
+    L13_A2A_DISPATCH -> L13_E12;
+    L13_A2A_DISPATCH -> L13_E13;
+    L13_A2A_DISPATCH -> L13_E20;
+    L13_A2A_DISPATCH -> L13_E21;
+    L13_A2A_DISPATCH -> L13_E22;
+    L13_A2A_DISPATCH -> L13_E23;
+    L13_A2A_DISPATCH -> L13_E30;
+    L13_A2A_DISPATCH -> L13_E31;
+    L13_A2A_DISPATCH -> L13_E32;
+    L13_A2A_DISPATCH -> L13_E33;
+    L13_A2A_DISPATCH -> L13_E40;
+    L13_A2A_DISPATCH -> L13_E41;
+    L13_A2A_DISPATCH -> L13_E42;
+    L13_A2A_DISPATCH -> L13_E43;
+    L13_A2A_DISPATCH -> L13_E50;
+    L13_A2A_DISPATCH -> L13_E51;
+    L13_A2A_DISPATCH -> L13_E52;
+    L13_A2A_DISPATCH -> L13_E53;
+    L13_A2A_DISPATCH -> L13_E60;
+    L13_A2A_DISPATCH -> L13_E61;
+    L13_A2A_DISPATCH -> L13_E62;
+    L13_A2A_DISPATCH -> L13_E63;
+    L13_A2A_DISPATCH -> L13_E70;
+    L13_A2A_DISPATCH -> L13_E71;
+    L13_A2A_DISPATCH -> L13_E72;
+    L13_A2A_DISPATCH -> L13_E73;
+    L13_A2A_DISPATCH -> L13_E80;
+    L13_A2A_DISPATCH -> L13_E81;
+    L13_A2A_DISPATCH -> L13_E82;
+    L13_A2A_DISPATCH -> L13_E83;
+    L13_A2A_DISPATCH -> L13_E90;
+    L13_A2A_DISPATCH -> L13_E91;
+    L13_A2A_DISPATCH -> L13_E92;
+    L13_A2A_DISPATCH -> L13_E93;
+    L13_A2A_DISPATCH -> L13_E100;
+    L13_A2A_DISPATCH -> L13_E101;
+    L13_A2A_DISPATCH -> L13_E102;
+    L13_A2A_DISPATCH -> L13_E103;
+    L13_A2A_DISPATCH -> L13_E110;
+    L13_A2A_DISPATCH -> L13_E111;
+    L13_A2A_DISPATCH -> L13_E112;
+    L13_A2A_DISPATCH -> L13_E113;
+    L13_A2A_DISPATCH -> L13_E120;
+    L13_A2A_DISPATCH -> L13_E121;
+    L13_A2A_DISPATCH -> L13_E122;
+    L13_A2A_DISPATCH -> L13_E123;
+    L13_A2A_DISPATCH -> L13_E130;
+    L13_A2A_DISPATCH -> L13_E131;
+    L13_A2A_DISPATCH -> L13_E132;
+    L13_A2A_DISPATCH -> L13_E133;
+    L13_A2A_DISPATCH -> L13_E140;
+    L13_A2A_DISPATCH -> L13_E141;
+    L13_A2A_DISPATCH -> L13_E142;
+    L13_A2A_DISPATCH -> L13_E143;
+    L13_A2A_DISPATCH -> L13_E150;
+    L13_A2A_DISPATCH -> L13_E151;
+    L13_A2A_DISPATCH -> L13_E152;
+    L13_A2A_DISPATCH -> L13_E153;
+
+    // Experts to combine
+    L13_E00 -> L13_A2A_COMBINE;
+    L13_E01 -> L13_A2A_COMBINE;
+    L13_E02 -> L13_A2A_COMBINE;
+    L13_E03 -> L13_A2A_COMBINE;
+    L13_E10 -> L13_A2A_COMBINE;
+    L13_E11 -> L13_A2A_COMBINE;
+    L13_E12 -> L13_A2A_COMBINE;
+    L13_E13 -> L13_A2A_COMBINE;
+    L13_E20 -> L13_A2A_COMBINE;
+    L13_E21 -> L13_A2A_COMBINE;
+    L13_E22 -> L13_A2A_COMBINE;
+    L13_E23 -> L13_A2A_COMBINE;
+    L13_E30 -> L13_A2A_COMBINE;
+    L13_E31 -> L13_A2A_COMBINE;
+    L13_E32 -> L13_A2A_COMBINE;
+    L13_E33 -> L13_A2A_COMBINE;
+    L13_E40 -> L13_A2A_COMBINE;
+    L13_E41 -> L13_A2A_COMBINE;
+    L13_E42 -> L13_A2A_COMBINE;
+    L13_E43 -> L13_A2A_COMBINE;
+    L13_E50 -> L13_A2A_COMBINE;
+    L13_E51 -> L13_A2A_COMBINE;
+    L13_E52 -> L13_A2A_COMBINE;
+    L13_E53 -> L13_A2A_COMBINE;
+    L13_E60 -> L13_A2A_COMBINE;
+    L13_E61 -> L13_A2A_COMBINE;
+    L13_E62 -> L13_A2A_COMBINE;
+    L13_E63 -> L13_A2A_COMBINE;
+    L13_E70 -> L13_A2A_COMBINE;
+    L13_E71 -> L13_A2A_COMBINE;
+    L13_E72 -> L13_A2A_COMBINE;
+    L13_E73 -> L13_A2A_COMBINE;
+    L13_E80 -> L13_A2A_COMBINE;
+    L13_E81 -> L13_A2A_COMBINE;
+    L13_E82 -> L13_A2A_COMBINE;
+    L13_E83 -> L13_A2A_COMBINE;
+    L13_E90 -> L13_A2A_COMBINE;
+    L13_E91 -> L13_A2A_COMBINE;
+    L13_E92 -> L13_A2A_COMBINE;
+    L13_E93 -> L13_A2A_COMBINE;
+    L13_E100 -> L13_A2A_COMBINE;
+    L13_E101 -> L13_A2A_COMBINE;
+    L13_E102 -> L13_A2A_COMBINE;
+    L13_E103 -> L13_A2A_COMBINE;
+    L13_E110 -> L13_A2A_COMBINE;
+    L13_E111 -> L13_A2A_COMBINE;
+    L13_E112 -> L13_A2A_COMBINE;
+    L13_E113 -> L13_A2A_COMBINE;
+    L13_E120 -> L13_A2A_COMBINE;
+    L13_E121 -> L13_A2A_COMBINE;
+    L13_E122 -> L13_A2A_COMBINE;
+    L13_E123 -> L13_A2A_COMBINE;
+    L13_E130 -> L13_A2A_COMBINE;
+    L13_E131 -> L13_A2A_COMBINE;
+    L13_E132 -> L13_A2A_COMBINE;
+    L13_E133 -> L13_A2A_COMBINE;
+    L13_E140 -> L13_A2A_COMBINE;
+    L13_E141 -> L13_A2A_COMBINE;
+    L13_E142 -> L13_A2A_COMBINE;
+    L13_E143 -> L13_A2A_COMBINE;
+    L13_E150 -> L13_A2A_COMBINE;
+    L13_E151 -> L13_A2A_COMBINE;
+    L13_E152 -> L13_A2A_COMBINE;
+    L13_E153 -> L13_A2A_COMBINE;
+
+    L13_A2A_COMBINE -> L13_AGG;
+    L13_AGG -> L13_MLP_RES;
+    L13_RES -> L13_MLP_RES;
+    
+
+    // Layer 13 -> Layer 14
+    L13_MLP_RES -> L14_Q;
+    L13_MLP_RES -> L14_K;
+    L13_MLP_RES -> L14_V;
+    L13_MLP_RES -> L14_RES;
+    L14_Q -> L14_ATT;
+    L14_K -> L14_ATT;
+    L14_V -> L14_ATT;
+    L14_ATT -> L14_O;
+    L14_O -> L14_RES;
+    
+
+    // Layer 14 MoE
+    L14_RES -> L14_GATE;
+    L14_RES -> L14_A2A_DISPATCH;
+    L14_GATE -> L14_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L14_A2A_DISPATCH -> L14_E00;
+    L14_A2A_DISPATCH -> L14_E01;
+    L14_A2A_DISPATCH -> L14_E02;
+    L14_A2A_DISPATCH -> L14_E03;
+    L14_A2A_DISPATCH -> L14_E10;
+    L14_A2A_DISPATCH -> L14_E11;
+    L14_A2A_DISPATCH -> L14_E12;
+    L14_A2A_DISPATCH -> L14_E13;
+    L14_A2A_DISPATCH -> L14_E20;
+    L14_A2A_DISPATCH -> L14_E21;
+    L14_A2A_DISPATCH -> L14_E22;
+    L14_A2A_DISPATCH -> L14_E23;
+    L14_A2A_DISPATCH -> L14_E30;
+    L14_A2A_DISPATCH -> L14_E31;
+    L14_A2A_DISPATCH -> L14_E32;
+    L14_A2A_DISPATCH -> L14_E33;
+    L14_A2A_DISPATCH -> L14_E40;
+    L14_A2A_DISPATCH -> L14_E41;
+    L14_A2A_DISPATCH -> L14_E42;
+    L14_A2A_DISPATCH -> L14_E43;
+    L14_A2A_DISPATCH -> L14_E50;
+    L14_A2A_DISPATCH -> L14_E51;
+    L14_A2A_DISPATCH -> L14_E52;
+    L14_A2A_DISPATCH -> L14_E53;
+    L14_A2A_DISPATCH -> L14_E60;
+    L14_A2A_DISPATCH -> L14_E61;
+    L14_A2A_DISPATCH -> L14_E62;
+    L14_A2A_DISPATCH -> L14_E63;
+    L14_A2A_DISPATCH -> L14_E70;
+    L14_A2A_DISPATCH -> L14_E71;
+    L14_A2A_DISPATCH -> L14_E72;
+    L14_A2A_DISPATCH -> L14_E73;
+    L14_A2A_DISPATCH -> L14_E80;
+    L14_A2A_DISPATCH -> L14_E81;
+    L14_A2A_DISPATCH -> L14_E82;
+    L14_A2A_DISPATCH -> L14_E83;
+    L14_A2A_DISPATCH -> L14_E90;
+    L14_A2A_DISPATCH -> L14_E91;
+    L14_A2A_DISPATCH -> L14_E92;
+    L14_A2A_DISPATCH -> L14_E93;
+    L14_A2A_DISPATCH -> L14_E100;
+    L14_A2A_DISPATCH -> L14_E101;
+    L14_A2A_DISPATCH -> L14_E102;
+    L14_A2A_DISPATCH -> L14_E103;
+    L14_A2A_DISPATCH -> L14_E110;
+    L14_A2A_DISPATCH -> L14_E111;
+    L14_A2A_DISPATCH -> L14_E112;
+    L14_A2A_DISPATCH -> L14_E113;
+    L14_A2A_DISPATCH -> L14_E120;
+    L14_A2A_DISPATCH -> L14_E121;
+    L14_A2A_DISPATCH -> L14_E122;
+    L14_A2A_DISPATCH -> L14_E123;
+    L14_A2A_DISPATCH -> L14_E130;
+    L14_A2A_DISPATCH -> L14_E131;
+    L14_A2A_DISPATCH -> L14_E132;
+    L14_A2A_DISPATCH -> L14_E133;
+    L14_A2A_DISPATCH -> L14_E140;
+    L14_A2A_DISPATCH -> L14_E141;
+    L14_A2A_DISPATCH -> L14_E142;
+    L14_A2A_DISPATCH -> L14_E143;
+    L14_A2A_DISPATCH -> L14_E150;
+    L14_A2A_DISPATCH -> L14_E151;
+    L14_A2A_DISPATCH -> L14_E152;
+    L14_A2A_DISPATCH -> L14_E153;
+
+    // Experts to combine
+    L14_E00 -> L14_A2A_COMBINE;
+    L14_E01 -> L14_A2A_COMBINE;
+    L14_E02 -> L14_A2A_COMBINE;
+    L14_E03 -> L14_A2A_COMBINE;
+    L14_E10 -> L14_A2A_COMBINE;
+    L14_E11 -> L14_A2A_COMBINE;
+    L14_E12 -> L14_A2A_COMBINE;
+    L14_E13 -> L14_A2A_COMBINE;
+    L14_E20 -> L14_A2A_COMBINE;
+    L14_E21 -> L14_A2A_COMBINE;
+    L14_E22 -> L14_A2A_COMBINE;
+    L14_E23 -> L14_A2A_COMBINE;
+    L14_E30 -> L14_A2A_COMBINE;
+    L14_E31 -> L14_A2A_COMBINE;
+    L14_E32 -> L14_A2A_COMBINE;
+    L14_E33 -> L14_A2A_COMBINE;
+    L14_E40 -> L14_A2A_COMBINE;
+    L14_E41 -> L14_A2A_COMBINE;
+    L14_E42 -> L14_A2A_COMBINE;
+    L14_E43 -> L14_A2A_COMBINE;
+    L14_E50 -> L14_A2A_COMBINE;
+    L14_E51 -> L14_A2A_COMBINE;
+    L14_E52 -> L14_A2A_COMBINE;
+    L14_E53 -> L14_A2A_COMBINE;
+    L14_E60 -> L14_A2A_COMBINE;
+    L14_E61 -> L14_A2A_COMBINE;
+    L14_E62 -> L14_A2A_COMBINE;
+    L14_E63 -> L14_A2A_COMBINE;
+    L14_E70 -> L14_A2A_COMBINE;
+    L14_E71 -> L14_A2A_COMBINE;
+    L14_E72 -> L14_A2A_COMBINE;
+    L14_E73 -> L14_A2A_COMBINE;
+    L14_E80 -> L14_A2A_COMBINE;
+    L14_E81 -> L14_A2A_COMBINE;
+    L14_E82 -> L14_A2A_COMBINE;
+    L14_E83 -> L14_A2A_COMBINE;
+    L14_E90 -> L14_A2A_COMBINE;
+    L14_E91 -> L14_A2A_COMBINE;
+    L14_E92 -> L14_A2A_COMBINE;
+    L14_E93 -> L14_A2A_COMBINE;
+    L14_E100 -> L14_A2A_COMBINE;
+    L14_E101 -> L14_A2A_COMBINE;
+    L14_E102 -> L14_A2A_COMBINE;
+    L14_E103 -> L14_A2A_COMBINE;
+    L14_E110 -> L14_A2A_COMBINE;
+    L14_E111 -> L14_A2A_COMBINE;
+    L14_E112 -> L14_A2A_COMBINE;
+    L14_E113 -> L14_A2A_COMBINE;
+    L14_E120 -> L14_A2A_COMBINE;
+    L14_E121 -> L14_A2A_COMBINE;
+    L14_E122 -> L14_A2A_COMBINE;
+    L14_E123 -> L14_A2A_COMBINE;
+    L14_E130 -> L14_A2A_COMBINE;
+    L14_E131 -> L14_A2A_COMBINE;
+    L14_E132 -> L14_A2A_COMBINE;
+    L14_E133 -> L14_A2A_COMBINE;
+    L14_E140 -> L14_A2A_COMBINE;
+    L14_E141 -> L14_A2A_COMBINE;
+    L14_E142 -> L14_A2A_COMBINE;
+    L14_E143 -> L14_A2A_COMBINE;
+    L14_E150 -> L14_A2A_COMBINE;
+    L14_E151 -> L14_A2A_COMBINE;
+    L14_E152 -> L14_A2A_COMBINE;
+    L14_E153 -> L14_A2A_COMBINE;
+
+    L14_A2A_COMBINE -> L14_AGG;
+    L14_AGG -> L14_MLP_RES;
+    L14_RES -> L14_MLP_RES;
+    
+
+    // Layer 14 -> Layer 15
+    L14_MLP_RES -> L15_Q;
+    L14_MLP_RES -> L15_K;
+    L14_MLP_RES -> L15_V;
+    L14_MLP_RES -> L15_RES;
+    L15_Q -> L15_ATT;
+    L15_K -> L15_ATT;
+    L15_V -> L15_ATT;
+    L15_ATT -> L15_O;
+    L15_O -> L15_RES;
+    
+
+    // Layer 15 MoE
+    L15_RES -> L15_GATE;
+    L15_RES -> L15_A2A_DISPATCH;
+    L15_GATE -> L15_A2A_DISPATCH [style=dashed];
+    
+    // Dispatch to experts (16 GPUs * 4 experts = 64 experts)
+    L15_A2A_DISPATCH -> L15_E00;
+    L15_A2A_DISPATCH -> L15_E01;
+    L15_A2A_DISPATCH -> L15_E02;
+    L15_A2A_DISPATCH -> L15_E03;
+    L15_A2A_DISPATCH -> L15_E10;
+    L15_A2A_DISPATCH -> L15_E11;
+    L15_A2A_DISPATCH -> L15_E12;
+    L15_A2A_DISPATCH -> L15_E13;
+    L15_A2A_DISPATCH -> L15_E20;
+    L15_A2A_DISPATCH -> L15_E21;
+    L15_A2A_DISPATCH -> L15_E22;
+    L15_A2A_DISPATCH -> L15_E23;
+    L15_A2A_DISPATCH -> L15_E30;
+    L15_A2A_DISPATCH -> L15_E31;
+    L15_A2A_DISPATCH -> L15_E32;
+    L15_A2A_DISPATCH -> L15_E33;
+    L15_A2A_DISPATCH -> L15_E40;
+    L15_A2A_DISPATCH -> L15_E41;
+    L15_A2A_DISPATCH -> L15_E42;
+    L15_A2A_DISPATCH -> L15_E43;
+    L15_A2A_DISPATCH -> L15_E50;
+    L15_A2A_DISPATCH -> L15_E51;
+    L15_A2A_DISPATCH -> L15_E52;
+    L15_A2A_DISPATCH -> L15_E53;
+    L15_A2A_DISPATCH -> L15_E60;
+    L15_A2A_DISPATCH -> L15_E61;
+    L15_A2A_DISPATCH -> L15_E62;
+    L15_A2A_DISPATCH -> L15_E63;
+    L15_A2A_DISPATCH -> L15_E70;
+    L15_A2A_DISPATCH -> L15_E71;
+    L15_A2A_DISPATCH -> L15_E72;
+    L15_A2A_DISPATCH -> L15_E73;
+    L15_A2A_DISPATCH -> L15_E80;
+    L15_A2A_DISPATCH -> L15_E81;
+    L15_A2A_DISPATCH -> L15_E82;
+    L15_A2A_DISPATCH -> L15_E83;
+    L15_A2A_DISPATCH -> L15_E90;
+    L15_A2A_DISPATCH -> L15_E91;
+    L15_A2A_DISPATCH -> L15_E92;
+    L15_A2A_DISPATCH -> L15_E93;
+    L15_A2A_DISPATCH -> L15_E100;
+    L15_A2A_DISPATCH -> L15_E101;
+    L15_A2A_DISPATCH -> L15_E102;
+    L15_A2A_DISPATCH -> L15_E103;
+    L15_A2A_DISPATCH -> L15_E110;
+    L15_A2A_DISPATCH -> L15_E111;
+    L15_A2A_DISPATCH -> L15_E112;
+    L15_A2A_DISPATCH -> L15_E113;
+    L15_A2A_DISPATCH -> L15_E120;
+    L15_A2A_DISPATCH -> L15_E121;
+    L15_A2A_DISPATCH -> L15_E122;
+    L15_A2A_DISPATCH -> L15_E123;
+    L15_A2A_DISPATCH -> L15_E130;
+    L15_A2A_DISPATCH -> L15_E131;
+    L15_A2A_DISPATCH -> L15_E132;
+    L15_A2A_DISPATCH -> L15_E133;
+    L15_A2A_DISPATCH -> L15_E140;
+    L15_A2A_DISPATCH -> L15_E141;
+    L15_A2A_DISPATCH -> L15_E142;
+    L15_A2A_DISPATCH -> L15_E143;
+    L15_A2A_DISPATCH -> L15_E150;
+    L15_A2A_DISPATCH -> L15_E151;
+    L15_A2A_DISPATCH -> L15_E152;
+    L15_A2A_DISPATCH -> L15_E153;
+
+    // Experts to combine
+    L15_E00 -> L15_A2A_COMBINE;
+    L15_E01 -> L15_A2A_COMBINE;
+    L15_E02 -> L15_A2A_COMBINE;
+    L15_E03 -> L15_A2A_COMBINE;
+    L15_E10 -> L15_A2A_COMBINE;
+    L15_E11 -> L15_A2A_COMBINE;
+    L15_E12 -> L15_A2A_COMBINE;
+    L15_E13 -> L15_A2A_COMBINE;
+    L15_E20 -> L15_A2A_COMBINE;
+    L15_E21 -> L15_A2A_COMBINE;
+    L15_E22 -> L15_A2A_COMBINE;
+    L15_E23 -> L15_A2A_COMBINE;
+    L15_E30 -> L15_A2A_COMBINE;
+    L15_E31 -> L15_A2A_COMBINE;
+    L15_E32 -> L15_A2A_COMBINE;
+    L15_E33 -> L15_A2A_COMBINE;
+    L15_E40 -> L15_A2A_COMBINE;
+    L15_E41 -> L15_A2A_COMBINE;
+    L15_E42 -> L15_A2A_COMBINE;
+    L15_E43 -> L15_A2A_COMBINE;
+    L15_E50 -> L15_A2A_COMBINE;
+    L15_E51 -> L15_A2A_COMBINE;
+    L15_E52 -> L15_A2A_COMBINE;
+    L15_E53 -> L15_A2A_COMBINE;
+    L15_E60 -> L15_A2A_COMBINE;
+    L15_E61 -> L15_A2A_COMBINE;
+    L15_E62 -> L15_A2A_COMBINE;
+    L15_E63 -> L15_A2A_COMBINE;
+    L15_E70 -> L15_A2A_COMBINE;
+    L15_E71 -> L15_A2A_COMBINE;
+    L15_E72 -> L15_A2A_COMBINE;
+    L15_E73 -> L15_A2A_COMBINE;
+    L15_E80 -> L15_A2A_COMBINE;
+    L15_E81 -> L15_A2A_COMBINE;
+    L15_E82 -> L15_A2A_COMBINE;
+    L15_E83 -> L15_A2A_COMBINE;
+    L15_E90 -> L15_A2A_COMBINE;
+    L15_E91 -> L15_A2A_COMBINE;
+    L15_E92 -> L15_A2A_COMBINE;
+    L15_E93 -> L15_A2A_COMBINE;
+    L15_E100 -> L15_A2A_COMBINE;
+    L15_E101 -> L15_A2A_COMBINE;
+    L15_E102 -> L15_A2A_COMBINE;
+    L15_E103 -> L15_A2A_COMBINE;
+    L15_E110 -> L15_A2A_COMBINE;
+    L15_E111 -> L15_A2A_COMBINE;
+    L15_E112 -> L15_A2A_COMBINE;
+    L15_E113 -> L15_A2A_COMBINE;
+    L15_E120 -> L15_A2A_COMBINE;
+    L15_E121 -> L15_A2A_COMBINE;
+    L15_E122 -> L15_A2A_COMBINE;
+    L15_E123 -> L15_A2A_COMBINE;
+    L15_E130 -> L15_A2A_COMBINE;
+    L15_E131 -> L15_A2A_COMBINE;
+    L15_E132 -> L15_A2A_COMBINE;
+    L15_E133 -> L15_A2A_COMBINE;
+    L15_E140 -> L15_A2A_COMBINE;
+    L15_E141 -> L15_A2A_COMBINE;
+    L15_E142 -> L15_A2A_COMBINE;
+    L15_E143 -> L15_A2A_COMBINE;
+    L15_E150 -> L15_A2A_COMBINE;
+    L15_E151 -> L15_A2A_COMBINE;
+    L15_E152 -> L15_A2A_COMBINE;
+    L15_E153 -> L15_A2A_COMBINE;
+
+    L15_A2A_COMBINE -> L15_AGG;
+    L15_AGG -> L15_MLP_RES;
+    L15_RES -> L15_MLP_RES;
+    
+
+    // Layer 15 -> Output
+    L15_MLP_RES -> Output;
+
+}
