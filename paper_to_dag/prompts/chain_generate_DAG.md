@@ -24,13 +24,13 @@ Generate one complete model deployment DAG(directed acyclic graph) according to 
 
 Divide boundaries according to different GPUs, and label each node on the DAG graph with the corresponding GPU. <<<按不同GPU划分边界>>>
 
-Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
-
-Require that all communication behaviors be represented in the DAG graph. <<<要求把所有通信行为都在DAG图中体现出来>>>
-
 Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
 
-Require that the attention and MOE components be broken down into multiple steps, prohibiting any single-step abbreviated representations. <<<要求将attention和MOE部分分解成多步，禁止出现一步省略表示>>>
+Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
+
+Require that the attention components be broken down into multiple steps, prohibiting any single-step abbreviated representations. <<<要求将attention部分分解成多步，禁止出现一步省略表示>>>
+
+Require that all communication behaviors be represented in the DAG graph. <<<要求把所有通信行为都在DAG图中体现出来>>>
 
 Use ellipses to represent communication, rectangles for computation, and parallelograms for routing/aggregation.<<<指定节点形状>>>
 
