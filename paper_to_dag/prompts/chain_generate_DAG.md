@@ -30,7 +30,7 @@ Require that all communication behaviors be represented in the DAG graph. <<<要
 
 Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
 
-Require that the attention components be broken down into multiple steps, prohibiting any single-step abbreviated representations. <<<要求将attention部分分解成多步，禁止出现一步省略表示>>>
+The attention part must be divided by operator granularity and cannot be omitted. <<<要求将attention部分按算子粒度划分，禁止省略表示>>>
 
 Each nodes in DAG must have the attributions: INPUT DIMENSION and OUTPUT DIMENSION. Sample: Input: \[batch\_size=?, seq\_len=?, heads=?, d\_k=?],Output:\[batch\_size=?, seq\_len=?, heads=?, d\_k=?]<<<每个计算节点必须注明输入维度和输出维度>>>
 
@@ -38,8 +38,7 @@ Use ellipses to represent communication, rectangles for computation, and paralle
 
 The aggregation and split of data need to be represented by nodes. <<<显示数据聚合与分割>>>
 
-
-
+The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
 
 
 NOTE
