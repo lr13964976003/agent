@@ -1,0 +1,1178 @@
+// MoE Hybrid Parallel DAG
+digraph {
+	dpi=300 rankdir=TB size="100,200"
+	node [fontname=Arial fontsize=10]
+	edge [fontname=Arial fontsize=8]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]" fillcolor=lightcoral shape=octagon]
+	dist_stage0_layer0 [label="Distribute Layer 0\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	input -> dist_stage0_layer0
+	qkv_stage0_layer0_tp0 [label="QKV Projection TP0\nGPU-0\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+	dist_stage0_layer0 -> qkv_stage0_layer0_tp0
+	qkv_stage0_layer0_tp1 [label="QKV Projection TP1\nGPU-1\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+	dist_stage0_layer0 -> qkv_stage0_layer0_tp1
+	score_stage0_layer0_tp0 [label="Attention Scores TP0\nGPU-0\nInput: [batch=32, seq=1024, heads=8, d_k=64]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	qkv_stage0_layer0_tp0 -> score_stage0_layer0_tp0
+	score_stage0_layer0_tp1 [label="Attention Scores TP1\nGPU-1\nInput: [batch=32, seq=1024, heads=8, d_k=64]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	qkv_stage0_layer0_tp1 -> score_stage0_layer0_tp1
+	softmax_stage0_layer0_tp0 [label="Attention Softmax TP0\nGPU-0\nInput: [batch=32, heads=8, seq=1024, seq=1024]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	score_stage0_layer0_tp1 -> softmax_stage0_layer0_tp0
+	softmax_stage0_layer0_tp1 [label="Attention Softmax TP1\nGPU-1\nInput: [batch=32, heads=8, seq=1024, seq=1024]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	score_stage0_layer0_tp1 -> softmax_stage0_layer0_tp1
+	attn_out_stage0_layer0_tp0 [label="Attention Output TP0\nGPU-0\nInput: [batch=32, heads=8, seq=1024, d_k=64]\nOutput: [batch=32, seq=1024, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	softmax_stage0_layer0_tp0 -> attn_out_stage0_layer0_tp0
+	qkv_stage0_layer0_tp0 -> attn_out_stage0_layer0_tp0
+	attn_out_stage0_layer0_tp1 [label="Attention Output TP1\nGPU-1\nInput: [batch=32, heads=8, seq=1024, d_k=64]\nOutput: [batch=32, seq=1024, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	softmax_stage0_layer0_tp1 -> attn_out_stage0_layer0_tp1
+	qkv_stage0_layer0_tp1 -> attn_out_stage0_layer0_tp1
+	attn_agg_stage0_layer0 [label="Attention Aggregation\nInput: [batch=32, seq=1024, hidden=512]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	attn_out_stage0_layer0_tp0 -> attn_agg_stage0_layer0
+	attn_out_stage0_layer0_tp1 -> attn_agg_stage0_layer0
+	gate_stage0_layer0 [label="MoE Gate (Top-2)\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, experts=2]" fillcolor=lightyellow shape=parallelogram style=dashed]
+	attn_agg_stage0_layer0 -> gate_stage0_layer0 [style=dashed]
+	expert_stage0_layer0_ep0_ex0 [label="Expert 0 EP0\nGPU-0\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep0_ex0 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep0_ex0
+	expert_stage0_layer0_ep0_ex1 [label="Expert 1 EP0\nGPU-1\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep0_ex1 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep0_ex1
+	expert_stage0_layer0_ep0_ex2 [label="Expert 2 EP0\nGPU-2\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep0_ex2 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep0_ex2
+	expert_stage0_layer0_ep0_ex3 [label="Expert 3 EP0\nGPU-3\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep0_ex3 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep0_ex3
+	expert_stage0_layer0_ep0_ex4 [label="Expert 4 EP0\nGPU-4\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep0_ex4 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep0_ex4
+	expert_stage0_layer0_ep0_ex5 [label="Expert 5 EP0\nGPU-5\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep0_ex5 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep0_ex5
+	expert_stage0_layer0_ep0_ex6 [label="Expert 6 EP0\nGPU-6\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep0_ex6 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep0_ex6
+	expert_stage0_layer0_ep0_ex7 [label="Expert 7 EP0\nGPU-7\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep0_ex7 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep0_ex7
+	expert_stage0_layer0_ep1_ex0 [label="Expert 0 EP1\nGPU-8\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep1_ex0 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep1_ex0
+	expert_stage0_layer0_ep1_ex1 [label="Expert 1 EP1\nGPU-9\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep1_ex1 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep1_ex1
+	expert_stage0_layer0_ep1_ex2 [label="Expert 2 EP1\nGPU-10\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep1_ex2 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep1_ex2
+	expert_stage0_layer0_ep1_ex3 [label="Expert 3 EP1\nGPU-11\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep1_ex3 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep1_ex3
+	expert_stage0_layer0_ep1_ex4 [label="Expert 4 EP1\nGPU-12\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep1_ex4 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep1_ex4
+	expert_stage0_layer0_ep1_ex5 [label="Expert 5 EP1\nGPU-13\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep1_ex5 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep1_ex5
+	expert_stage0_layer0_ep1_ex6 [label="Expert 6 EP1\nGPU-14\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep1_ex6 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep1_ex6
+	expert_stage0_layer0_ep1_ex7 [label="Expert 7 EP1\nGPU-15\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep1_ex7 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep1_ex7
+	expert_stage0_layer0_ep2_ex0 [label="Expert 0 EP2\nGPU-16\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep2_ex0 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep2_ex0
+	expert_stage0_layer0_ep2_ex1 [label="Expert 1 EP2\nGPU-17\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep2_ex1 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep2_ex1
+	expert_stage0_layer0_ep2_ex2 [label="Expert 2 EP2\nGPU-18\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep2_ex2 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep2_ex2
+	expert_stage0_layer0_ep2_ex3 [label="Expert 3 EP2\nGPU-19\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep2_ex3 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep2_ex3
+	expert_stage0_layer0_ep2_ex4 [label="Expert 4 EP2\nGPU-20\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep2_ex4 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep2_ex4
+	expert_stage0_layer0_ep2_ex5 [label="Expert 5 EP2\nGPU-21\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep2_ex5 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep2_ex5
+	expert_stage0_layer0_ep2_ex6 [label="Expert 6 EP2\nGPU-22\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep2_ex6 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep2_ex6
+	expert_stage0_layer0_ep2_ex7 [label="Expert 7 EP2\nGPU-23\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep2_ex7 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep2_ex7
+	expert_stage0_layer0_ep3_ex0 [label="Expert 0 EP3\nGPU-24\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep3_ex0 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep3_ex0
+	expert_stage0_layer0_ep3_ex1 [label="Expert 1 EP3\nGPU-25\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep3_ex1 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep3_ex1
+	expert_stage0_layer0_ep3_ex2 [label="Expert 2 EP3\nGPU-26\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep3_ex2 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep3_ex2
+	expert_stage0_layer0_ep3_ex3 [label="Expert 3 EP3\nGPU-27\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep3_ex3 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep3_ex3
+	expert_stage0_layer0_ep3_ex4 [label="Expert 4 EP3\nGPU-28\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep3_ex4 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep3_ex4
+	expert_stage0_layer0_ep3_ex5 [label="Expert 5 EP3\nGPU-29\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep3_ex5 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep3_ex5
+	expert_stage0_layer0_ep3_ex6 [label="Expert 6 EP3\nGPU-30\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep3_ex6 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep3_ex6
+	expert_stage0_layer0_ep3_ex7 [label="Expert 7 EP3\nGPU-31\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep3_ex7 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep3_ex7
+	expert_stage0_layer0_ep4_ex0 [label="Expert 0 EP4\nGPU-32\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep4_ex0 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep4_ex0
+	expert_stage0_layer0_ep4_ex1 [label="Expert 1 EP4\nGPU-33\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep4_ex1 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep4_ex1
+	expert_stage0_layer0_ep4_ex2 [label="Expert 2 EP4\nGPU-34\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep4_ex2 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep4_ex2
+	expert_stage0_layer0_ep4_ex3 [label="Expert 3 EP4\nGPU-35\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep4_ex3 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep4_ex3
+	expert_stage0_layer0_ep4_ex4 [label="Expert 4 EP4\nGPU-36\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep4_ex4 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep4_ex4
+	expert_stage0_layer0_ep4_ex5 [label="Expert 5 EP4\nGPU-37\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep4_ex5 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep4_ex5
+	expert_stage0_layer0_ep4_ex6 [label="Expert 6 EP4\nGPU-38\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep4_ex6 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep4_ex6
+	expert_stage0_layer0_ep4_ex7 [label="Expert 7 EP4\nGPU-39\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep4_ex7 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep4_ex7
+	expert_stage0_layer0_ep5_ex0 [label="Expert 0 EP5\nGPU-40\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep5_ex0 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep5_ex0
+	expert_stage0_layer0_ep5_ex1 [label="Expert 1 EP5\nGPU-41\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep5_ex1 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep5_ex1
+	expert_stage0_layer0_ep5_ex2 [label="Expert 2 EP5\nGPU-42\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep5_ex2 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep5_ex2
+	expert_stage0_layer0_ep5_ex3 [label="Expert 3 EP5\nGPU-43\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep5_ex3 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep5_ex3
+	expert_stage0_layer0_ep5_ex4 [label="Expert 4 EP5\nGPU-44\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep5_ex4 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep5_ex4
+	expert_stage0_layer0_ep5_ex5 [label="Expert 5 EP5\nGPU-45\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep5_ex5 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep5_ex5
+	expert_stage0_layer0_ep5_ex6 [label="Expert 6 EP5\nGPU-46\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep5_ex6 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep5_ex6
+	expert_stage0_layer0_ep5_ex7 [label="Expert 7 EP5\nGPU-47\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep5_ex7 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep5_ex7
+	expert_stage0_layer0_ep6_ex0 [label="Expert 0 EP6\nGPU-48\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep6_ex0 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep6_ex0
+	expert_stage0_layer0_ep6_ex1 [label="Expert 1 EP6\nGPU-49\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep6_ex1 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep6_ex1
+	expert_stage0_layer0_ep6_ex2 [label="Expert 2 EP6\nGPU-50\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep6_ex2 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep6_ex2
+	expert_stage0_layer0_ep6_ex3 [label="Expert 3 EP6\nGPU-51\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep6_ex3 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep6_ex3
+	expert_stage0_layer0_ep6_ex4 [label="Expert 4 EP6\nGPU-52\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep6_ex4 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep6_ex4
+	expert_stage0_layer0_ep6_ex5 [label="Expert 5 EP6\nGPU-53\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep6_ex5 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep6_ex5
+	expert_stage0_layer0_ep6_ex6 [label="Expert 6 EP6\nGPU-54\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep6_ex6 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep6_ex6
+	expert_stage0_layer0_ep6_ex7 [label="Expert 7 EP6\nGPU-55\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep6_ex7 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep6_ex7
+	expert_stage0_layer0_ep7_ex0 [label="Expert 0 EP7\nGPU-56\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep7_ex0 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep7_ex0
+	expert_stage0_layer0_ep7_ex1 [label="Expert 1 EP7\nGPU-57\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep7_ex1 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep7_ex1
+	expert_stage0_layer0_ep7_ex2 [label="Expert 2 EP7\nGPU-58\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep7_ex2 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep7_ex2
+	expert_stage0_layer0_ep7_ex3 [label="Expert 3 EP7\nGPU-59\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep7_ex3 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep7_ex3
+	expert_stage0_layer0_ep7_ex4 [label="Expert 4 EP7\nGPU-60\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep7_ex4 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep7_ex4
+	expert_stage0_layer0_ep7_ex5 [label="Expert 5 EP7\nGPU-61\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep7_ex5 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep7_ex5
+	expert_stage0_layer0_ep7_ex6 [label="Expert 6 EP7\nGPU-62\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep7_ex6 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep7_ex6
+	expert_stage0_layer0_ep7_ex7 [label="Expert 7 EP7\nGPU-63\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer0 -> expert_stage0_layer0_ep7_ex7 [style=dashed]
+	attn_agg_stage0_layer0 -> expert_stage0_layer0_ep7_ex7
+	expert_agg_stage0_layer0 [label="Expert Aggregation\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	expert_stage0_layer0_ep0_ex0 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep0_ex1 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep0_ex2 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep0_ex3 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep0_ex4 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep0_ex5 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep0_ex6 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep0_ex7 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep1_ex0 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep1_ex1 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep1_ex2 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep1_ex3 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep1_ex4 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep1_ex5 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep1_ex6 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep1_ex7 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep2_ex0 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep2_ex1 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep2_ex2 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep2_ex3 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep2_ex4 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep2_ex5 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep2_ex6 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep2_ex7 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep3_ex0 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep3_ex1 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep3_ex2 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep3_ex3 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep3_ex4 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep3_ex5 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep3_ex6 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep3_ex7 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep4_ex0 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep4_ex1 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep4_ex2 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep4_ex3 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep4_ex4 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep4_ex5 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep4_ex6 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep4_ex7 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep5_ex0 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep5_ex1 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep5_ex2 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep5_ex3 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep5_ex4 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep5_ex5 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep5_ex6 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep5_ex7 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep6_ex0 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep6_ex1 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep6_ex2 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep6_ex3 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep6_ex4 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep6_ex5 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep6_ex6 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep6_ex7 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep7_ex0 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep7_ex1 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep7_ex2 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep7_ex3 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep7_ex4 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep7_ex5 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep7_ex6 -> expert_agg_stage0_layer0
+	expert_stage0_layer0_ep7_ex7 -> expert_agg_stage0_layer0
+	mlp_stage0_layer0_tp0 [label="MLP Layer TP0\nGPU-0\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	expert_agg_stage0_layer0 -> mlp_stage0_layer0_tp0
+	mlp_stage0_layer0_tp1 [label="MLP Layer TP1\nGPU-1\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	expert_agg_stage0_layer0 -> mlp_stage0_layer0_tp1
+	mlp_agg_stage0_layer0 [label="MLP Aggregation\nInput: [batch=32, seq=1024, hidden=512]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	mlp_stage0_layer0_tp0 -> mlp_agg_stage0_layer0
+	mlp_stage0_layer0_tp1 -> mlp_agg_stage0_layer0
+	layernorm_stage0_layer0 [label="LayerNorm 0\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	mlp_agg_stage0_layer0 -> layernorm_stage0_layer0
+	dist_stage0_layer1 [label="Distribute Layer 1\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	layernorm_stage0_layer0 -> dist_stage0_layer1
+	qkv_stage0_layer1_tp0 [label="QKV Projection TP0\nGPU-0\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+	dist_stage0_layer1 -> qkv_stage0_layer1_tp0
+	qkv_stage0_layer1_tp1 [label="QKV Projection TP1\nGPU-1\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+	dist_stage0_layer1 -> qkv_stage0_layer1_tp1
+	score_stage0_layer1_tp0 [label="Attention Scores TP0\nGPU-0\nInput: [batch=32, seq=1024, heads=8, d_k=64]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	qkv_stage0_layer1_tp0 -> score_stage0_layer1_tp0
+	score_stage0_layer1_tp1 [label="Attention Scores TP1\nGPU-1\nInput: [batch=32, seq=1024, heads=8, d_k=64]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	qkv_stage0_layer1_tp1 -> score_stage0_layer1_tp1
+	softmax_stage0_layer1_tp0 [label="Attention Softmax TP0\nGPU-0\nInput: [batch=32, heads=8, seq=1024, seq=1024]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	score_stage0_layer1_tp1 -> softmax_stage0_layer1_tp0
+	softmax_stage0_layer1_tp1 [label="Attention Softmax TP1\nGPU-1\nInput: [batch=32, heads=8, seq=1024, seq=1024]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	score_stage0_layer1_tp1 -> softmax_stage0_layer1_tp1
+	attn_out_stage0_layer1_tp0 [label="Attention Output TP0\nGPU-0\nInput: [batch=32, heads=8, seq=1024, d_k=64]\nOutput: [batch=32, seq=1024, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	softmax_stage0_layer1_tp0 -> attn_out_stage0_layer1_tp0
+	qkv_stage0_layer1_tp0 -> attn_out_stage0_layer1_tp0
+	attn_out_stage0_layer1_tp1 [label="Attention Output TP1\nGPU-1\nInput: [batch=32, heads=8, seq=1024, d_k=64]\nOutput: [batch=32, seq=1024, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	softmax_stage0_layer1_tp1 -> attn_out_stage0_layer1_tp1
+	qkv_stage0_layer1_tp1 -> attn_out_stage0_layer1_tp1
+	attn_agg_stage0_layer1 [label="Attention Aggregation\nInput: [batch=32, seq=1024, hidden=512]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	attn_out_stage0_layer1_tp0 -> attn_agg_stage0_layer1
+	attn_out_stage0_layer1_tp1 -> attn_agg_stage0_layer1
+	gate_stage0_layer1 [label="MoE Gate (Top-2)\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, experts=2]" fillcolor=lightyellow shape=parallelogram style=dashed]
+	attn_agg_stage0_layer1 -> gate_stage0_layer1 [style=dashed]
+	expert_stage0_layer1_ep0_ex0 [label="Expert 0 EP0\nGPU-0\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep0_ex0 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep0_ex0
+	expert_stage0_layer1_ep0_ex1 [label="Expert 1 EP0\nGPU-1\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep0_ex1 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep0_ex1
+	expert_stage0_layer1_ep0_ex2 [label="Expert 2 EP0\nGPU-2\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep0_ex2 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep0_ex2
+	expert_stage0_layer1_ep0_ex3 [label="Expert 3 EP0\nGPU-3\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep0_ex3 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep0_ex3
+	expert_stage0_layer1_ep0_ex4 [label="Expert 4 EP0\nGPU-4\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep0_ex4 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep0_ex4
+	expert_stage0_layer1_ep0_ex5 [label="Expert 5 EP0\nGPU-5\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep0_ex5 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep0_ex5
+	expert_stage0_layer1_ep0_ex6 [label="Expert 6 EP0\nGPU-6\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep0_ex6 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep0_ex6
+	expert_stage0_layer1_ep0_ex7 [label="Expert 7 EP0\nGPU-7\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep0_ex7 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep0_ex7
+	expert_stage0_layer1_ep1_ex0 [label="Expert 0 EP1\nGPU-8\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep1_ex0 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep1_ex0
+	expert_stage0_layer1_ep1_ex1 [label="Expert 1 EP1\nGPU-9\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep1_ex1 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep1_ex1
+	expert_stage0_layer1_ep1_ex2 [label="Expert 2 EP1\nGPU-10\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep1_ex2 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep1_ex2
+	expert_stage0_layer1_ep1_ex3 [label="Expert 3 EP1\nGPU-11\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep1_ex3 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep1_ex3
+	expert_stage0_layer1_ep1_ex4 [label="Expert 4 EP1\nGPU-12\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep1_ex4 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep1_ex4
+	expert_stage0_layer1_ep1_ex5 [label="Expert 5 EP1\nGPU-13\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep1_ex5 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep1_ex5
+	expert_stage0_layer1_ep1_ex6 [label="Expert 6 EP1\nGPU-14\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep1_ex6 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep1_ex6
+	expert_stage0_layer1_ep1_ex7 [label="Expert 7 EP1\nGPU-15\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep1_ex7 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep1_ex7
+	expert_stage0_layer1_ep2_ex0 [label="Expert 0 EP2\nGPU-16\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep2_ex0 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep2_ex0
+	expert_stage0_layer1_ep2_ex1 [label="Expert 1 EP2\nGPU-17\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep2_ex1 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep2_ex1
+	expert_stage0_layer1_ep2_ex2 [label="Expert 2 EP2\nGPU-18\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep2_ex2 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep2_ex2
+	expert_stage0_layer1_ep2_ex3 [label="Expert 3 EP2\nGPU-19\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep2_ex3 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep2_ex3
+	expert_stage0_layer1_ep2_ex4 [label="Expert 4 EP2\nGPU-20\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep2_ex4 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep2_ex4
+	expert_stage0_layer1_ep2_ex5 [label="Expert 5 EP2\nGPU-21\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep2_ex5 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep2_ex5
+	expert_stage0_layer1_ep2_ex6 [label="Expert 6 EP2\nGPU-22\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep2_ex6 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep2_ex6
+	expert_stage0_layer1_ep2_ex7 [label="Expert 7 EP2\nGPU-23\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep2_ex7 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep2_ex7
+	expert_stage0_layer1_ep3_ex0 [label="Expert 0 EP3\nGPU-24\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep3_ex0 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep3_ex0
+	expert_stage0_layer1_ep3_ex1 [label="Expert 1 EP3\nGPU-25\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep3_ex1 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep3_ex1
+	expert_stage0_layer1_ep3_ex2 [label="Expert 2 EP3\nGPU-26\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep3_ex2 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep3_ex2
+	expert_stage0_layer1_ep3_ex3 [label="Expert 3 EP3\nGPU-27\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep3_ex3 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep3_ex3
+	expert_stage0_layer1_ep3_ex4 [label="Expert 4 EP3\nGPU-28\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep3_ex4 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep3_ex4
+	expert_stage0_layer1_ep3_ex5 [label="Expert 5 EP3\nGPU-29\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep3_ex5 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep3_ex5
+	expert_stage0_layer1_ep3_ex6 [label="Expert 6 EP3\nGPU-30\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep3_ex6 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep3_ex6
+	expert_stage0_layer1_ep3_ex7 [label="Expert 7 EP3\nGPU-31\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep3_ex7 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep3_ex7
+	expert_stage0_layer1_ep4_ex0 [label="Expert 0 EP4\nGPU-32\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep4_ex0 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep4_ex0
+	expert_stage0_layer1_ep4_ex1 [label="Expert 1 EP4\nGPU-33\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep4_ex1 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep4_ex1
+	expert_stage0_layer1_ep4_ex2 [label="Expert 2 EP4\nGPU-34\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep4_ex2 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep4_ex2
+	expert_stage0_layer1_ep4_ex3 [label="Expert 3 EP4\nGPU-35\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep4_ex3 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep4_ex3
+	expert_stage0_layer1_ep4_ex4 [label="Expert 4 EP4\nGPU-36\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep4_ex4 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep4_ex4
+	expert_stage0_layer1_ep4_ex5 [label="Expert 5 EP4\nGPU-37\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep4_ex5 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep4_ex5
+	expert_stage0_layer1_ep4_ex6 [label="Expert 6 EP4\nGPU-38\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep4_ex6 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep4_ex6
+	expert_stage0_layer1_ep4_ex7 [label="Expert 7 EP4\nGPU-39\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep4_ex7 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep4_ex7
+	expert_stage0_layer1_ep5_ex0 [label="Expert 0 EP5\nGPU-40\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep5_ex0 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep5_ex0
+	expert_stage0_layer1_ep5_ex1 [label="Expert 1 EP5\nGPU-41\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep5_ex1 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep5_ex1
+	expert_stage0_layer1_ep5_ex2 [label="Expert 2 EP5\nGPU-42\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep5_ex2 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep5_ex2
+	expert_stage0_layer1_ep5_ex3 [label="Expert 3 EP5\nGPU-43\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep5_ex3 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep5_ex3
+	expert_stage0_layer1_ep5_ex4 [label="Expert 4 EP5\nGPU-44\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep5_ex4 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep5_ex4
+	expert_stage0_layer1_ep5_ex5 [label="Expert 5 EP5\nGPU-45\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep5_ex5 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep5_ex5
+	expert_stage0_layer1_ep5_ex6 [label="Expert 6 EP5\nGPU-46\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep5_ex6 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep5_ex6
+	expert_stage0_layer1_ep5_ex7 [label="Expert 7 EP5\nGPU-47\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep5_ex7 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep5_ex7
+	expert_stage0_layer1_ep6_ex0 [label="Expert 0 EP6\nGPU-48\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep6_ex0 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep6_ex0
+	expert_stage0_layer1_ep6_ex1 [label="Expert 1 EP6\nGPU-49\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep6_ex1 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep6_ex1
+	expert_stage0_layer1_ep6_ex2 [label="Expert 2 EP6\nGPU-50\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep6_ex2 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep6_ex2
+	expert_stage0_layer1_ep6_ex3 [label="Expert 3 EP6\nGPU-51\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep6_ex3 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep6_ex3
+	expert_stage0_layer1_ep6_ex4 [label="Expert 4 EP6\nGPU-52\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep6_ex4 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep6_ex4
+	expert_stage0_layer1_ep6_ex5 [label="Expert 5 EP6\nGPU-53\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep6_ex5 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep6_ex5
+	expert_stage0_layer1_ep6_ex6 [label="Expert 6 EP6\nGPU-54\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep6_ex6 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep6_ex6
+	expert_stage0_layer1_ep6_ex7 [label="Expert 7 EP6\nGPU-55\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep6_ex7 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep6_ex7
+	expert_stage0_layer1_ep7_ex0 [label="Expert 0 EP7\nGPU-56\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep7_ex0 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep7_ex0
+	expert_stage0_layer1_ep7_ex1 [label="Expert 1 EP7\nGPU-57\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep7_ex1 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep7_ex1
+	expert_stage0_layer1_ep7_ex2 [label="Expert 2 EP7\nGPU-58\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep7_ex2 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep7_ex2
+	expert_stage0_layer1_ep7_ex3 [label="Expert 3 EP7\nGPU-59\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep7_ex3 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep7_ex3
+	expert_stage0_layer1_ep7_ex4 [label="Expert 4 EP7\nGPU-60\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep7_ex4 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep7_ex4
+	expert_stage0_layer1_ep7_ex5 [label="Expert 5 EP7\nGPU-61\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep7_ex5 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep7_ex5
+	expert_stage0_layer1_ep7_ex6 [label="Expert 6 EP7\nGPU-62\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep7_ex6 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep7_ex6
+	expert_stage0_layer1_ep7_ex7 [label="Expert 7 EP7\nGPU-63\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage0_layer1 -> expert_stage0_layer1_ep7_ex7 [style=dashed]
+	attn_agg_stage0_layer1 -> expert_stage0_layer1_ep7_ex7
+	expert_agg_stage0_layer1 [label="Expert Aggregation\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	expert_stage0_layer1_ep0_ex0 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep0_ex1 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep0_ex2 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep0_ex3 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep0_ex4 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep0_ex5 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep0_ex6 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep0_ex7 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep1_ex0 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep1_ex1 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep1_ex2 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep1_ex3 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep1_ex4 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep1_ex5 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep1_ex6 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep1_ex7 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep2_ex0 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep2_ex1 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep2_ex2 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep2_ex3 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep2_ex4 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep2_ex5 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep2_ex6 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep2_ex7 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep3_ex0 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep3_ex1 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep3_ex2 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep3_ex3 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep3_ex4 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep3_ex5 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep3_ex6 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep3_ex7 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep4_ex0 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep4_ex1 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep4_ex2 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep4_ex3 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep4_ex4 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep4_ex5 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep4_ex6 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep4_ex7 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep5_ex0 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep5_ex1 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep5_ex2 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep5_ex3 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep5_ex4 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep5_ex5 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep5_ex6 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep5_ex7 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep6_ex0 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep6_ex1 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep6_ex2 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep6_ex3 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep6_ex4 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep6_ex5 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep6_ex6 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep6_ex7 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep7_ex0 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep7_ex1 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep7_ex2 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep7_ex3 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep7_ex4 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep7_ex5 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep7_ex6 -> expert_agg_stage0_layer1
+	expert_stage0_layer1_ep7_ex7 -> expert_agg_stage0_layer1
+	mlp_stage0_layer1_tp0 [label="MLP Layer TP0\nGPU-0\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	expert_agg_stage0_layer1 -> mlp_stage0_layer1_tp0
+	mlp_stage0_layer1_tp1 [label="MLP Layer TP1\nGPU-1\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	expert_agg_stage0_layer1 -> mlp_stage0_layer1_tp1
+	mlp_agg_stage0_layer1 [label="MLP Aggregation\nInput: [batch=32, seq=1024, hidden=512]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	mlp_stage0_layer1_tp0 -> mlp_agg_stage0_layer1
+	mlp_stage0_layer1_tp1 -> mlp_agg_stage0_layer1
+	layernorm_stage0_layer1 [label="LayerNorm 1\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	mlp_agg_stage0_layer1 -> layernorm_stage0_layer1
+	comm_stage0_to_1 [label="Pipeline Communication\nStage 0 → 1\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	layernorm_stage0_layer1 -> comm_stage0_to_1
+	dist_stage1_layer0 [label="Distribute Layer 8\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	comm_stage0_to_1 -> dist_stage1_layer0
+	qkv_stage1_layer0_tp0 [label="QKV Projection TP0\nGPU-64\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+	dist_stage1_layer0 -> qkv_stage1_layer0_tp0
+	qkv_stage1_layer0_tp1 [label="QKV Projection TP1\nGPU-65\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+	dist_stage1_layer0 -> qkv_stage1_layer0_tp1
+	score_stage1_layer0_tp0 [label="Attention Scores TP0\nGPU-64\nInput: [batch=32, seq=1024, heads=8, d_k=64]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	qkv_stage1_layer0_tp0 -> score_stage1_layer0_tp0
+	score_stage1_layer0_tp1 [label="Attention Scores TP1\nGPU-65\nInput: [batch=32, seq=1024, heads=8, d_k=64]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	qkv_stage1_layer0_tp1 -> score_stage1_layer0_tp1
+	softmax_stage1_layer0_tp0 [label="Attention Softmax TP0\nGPU-64\nInput: [batch=32, heads=8, seq=1024, seq=1024]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	score_stage1_layer0_tp1 -> softmax_stage1_layer0_tp0
+	softmax_stage1_layer0_tp1 [label="Attention Softmax TP1\nGPU-65\nInput: [batch=32, heads=8, seq=1024, seq=1024]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	score_stage1_layer0_tp1 -> softmax_stage1_layer0_tp1
+	attn_out_stage1_layer0_tp0 [label="Attention Output TP0\nGPU-64\nInput: [batch=32, heads=8, seq=1024, d_k=64]\nOutput: [batch=32, seq=1024, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	softmax_stage1_layer0_tp0 -> attn_out_stage1_layer0_tp0
+	qkv_stage1_layer0_tp0 -> attn_out_stage1_layer0_tp0
+	attn_out_stage1_layer0_tp1 [label="Attention Output TP1\nGPU-65\nInput: [batch=32, heads=8, seq=1024, d_k=64]\nOutput: [batch=32, seq=1024, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	softmax_stage1_layer0_tp1 -> attn_out_stage1_layer0_tp1
+	qkv_stage1_layer0_tp1 -> attn_out_stage1_layer0_tp1
+	attn_agg_stage1_layer0 [label="Attention Aggregation\nInput: [batch=32, seq=1024, hidden=512]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	attn_out_stage1_layer0_tp0 -> attn_agg_stage1_layer0
+	attn_out_stage1_layer0_tp1 -> attn_agg_stage1_layer0
+	gate_stage1_layer0 [label="MoE Gate (Top-2)\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, experts=2]" fillcolor=lightyellow shape=parallelogram style=dashed]
+	attn_agg_stage1_layer0 -> gate_stage1_layer0 [style=dashed]
+	expert_stage1_layer0_ep0_ex0 [label="Expert 0 EP0\nGPU-64\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep0_ex0 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep0_ex0
+	expert_stage1_layer0_ep0_ex1 [label="Expert 1 EP0\nGPU-65\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep0_ex1 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep0_ex1
+	expert_stage1_layer0_ep0_ex2 [label="Expert 2 EP0\nGPU-66\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep0_ex2 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep0_ex2
+	expert_stage1_layer0_ep0_ex3 [label="Expert 3 EP0\nGPU-67\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep0_ex3 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep0_ex3
+	expert_stage1_layer0_ep0_ex4 [label="Expert 4 EP0\nGPU-68\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep0_ex4 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep0_ex4
+	expert_stage1_layer0_ep0_ex5 [label="Expert 5 EP0\nGPU-69\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep0_ex5 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep0_ex5
+	expert_stage1_layer0_ep0_ex6 [label="Expert 6 EP0\nGPU-70\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep0_ex6 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep0_ex6
+	expert_stage1_layer0_ep0_ex7 [label="Expert 7 EP0\nGPU-71\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep0_ex7 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep0_ex7
+	expert_stage1_layer0_ep1_ex0 [label="Expert 0 EP1\nGPU-72\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep1_ex0 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep1_ex0
+	expert_stage1_layer0_ep1_ex1 [label="Expert 1 EP1\nGPU-73\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep1_ex1 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep1_ex1
+	expert_stage1_layer0_ep1_ex2 [label="Expert 2 EP1\nGPU-74\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep1_ex2 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep1_ex2
+	expert_stage1_layer0_ep1_ex3 [label="Expert 3 EP1\nGPU-75\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep1_ex3 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep1_ex3
+	expert_stage1_layer0_ep1_ex4 [label="Expert 4 EP1\nGPU-76\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep1_ex4 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep1_ex4
+	expert_stage1_layer0_ep1_ex5 [label="Expert 5 EP1\nGPU-77\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep1_ex5 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep1_ex5
+	expert_stage1_layer0_ep1_ex6 [label="Expert 6 EP1\nGPU-78\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep1_ex6 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep1_ex6
+	expert_stage1_layer0_ep1_ex7 [label="Expert 7 EP1\nGPU-79\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep1_ex7 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep1_ex7
+	expert_stage1_layer0_ep2_ex0 [label="Expert 0 EP2\nGPU-80\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep2_ex0 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep2_ex0
+	expert_stage1_layer0_ep2_ex1 [label="Expert 1 EP2\nGPU-81\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep2_ex1 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep2_ex1
+	expert_stage1_layer0_ep2_ex2 [label="Expert 2 EP2\nGPU-82\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep2_ex2 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep2_ex2
+	expert_stage1_layer0_ep2_ex3 [label="Expert 3 EP2\nGPU-83\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep2_ex3 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep2_ex3
+	expert_stage1_layer0_ep2_ex4 [label="Expert 4 EP2\nGPU-84\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep2_ex4 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep2_ex4
+	expert_stage1_layer0_ep2_ex5 [label="Expert 5 EP2\nGPU-85\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep2_ex5 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep2_ex5
+	expert_stage1_layer0_ep2_ex6 [label="Expert 6 EP2\nGPU-86\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep2_ex6 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep2_ex6
+	expert_stage1_layer0_ep2_ex7 [label="Expert 7 EP2\nGPU-87\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep2_ex7 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep2_ex7
+	expert_stage1_layer0_ep3_ex0 [label="Expert 0 EP3\nGPU-88\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep3_ex0 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep3_ex0
+	expert_stage1_layer0_ep3_ex1 [label="Expert 1 EP3\nGPU-89\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep3_ex1 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep3_ex1
+	expert_stage1_layer0_ep3_ex2 [label="Expert 2 EP3\nGPU-90\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep3_ex2 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep3_ex2
+	expert_stage1_layer0_ep3_ex3 [label="Expert 3 EP3\nGPU-91\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep3_ex3 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep3_ex3
+	expert_stage1_layer0_ep3_ex4 [label="Expert 4 EP3\nGPU-92\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep3_ex4 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep3_ex4
+	expert_stage1_layer0_ep3_ex5 [label="Expert 5 EP3\nGPU-93\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep3_ex5 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep3_ex5
+	expert_stage1_layer0_ep3_ex6 [label="Expert 6 EP3\nGPU-94\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep3_ex6 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep3_ex6
+	expert_stage1_layer0_ep3_ex7 [label="Expert 7 EP3\nGPU-95\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep3_ex7 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep3_ex7
+	expert_stage1_layer0_ep4_ex0 [label="Expert 0 EP4\nGPU-96\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep4_ex0 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep4_ex0
+	expert_stage1_layer0_ep4_ex1 [label="Expert 1 EP4\nGPU-97\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep4_ex1 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep4_ex1
+	expert_stage1_layer0_ep4_ex2 [label="Expert 2 EP4\nGPU-98\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep4_ex2 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep4_ex2
+	expert_stage1_layer0_ep4_ex3 [label="Expert 3 EP4\nGPU-99\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep4_ex3 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep4_ex3
+	expert_stage1_layer0_ep4_ex4 [label="Expert 4 EP4\nGPU-100\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep4_ex4 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep4_ex4
+	expert_stage1_layer0_ep4_ex5 [label="Expert 5 EP4\nGPU-101\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep4_ex5 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep4_ex5
+	expert_stage1_layer0_ep4_ex6 [label="Expert 6 EP4\nGPU-102\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep4_ex6 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep4_ex6
+	expert_stage1_layer0_ep4_ex7 [label="Expert 7 EP4\nGPU-103\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep4_ex7 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep4_ex7
+	expert_stage1_layer0_ep5_ex0 [label="Expert 0 EP5\nGPU-104\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep5_ex0 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep5_ex0
+	expert_stage1_layer0_ep5_ex1 [label="Expert 1 EP5\nGPU-105\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep5_ex1 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep5_ex1
+	expert_stage1_layer0_ep5_ex2 [label="Expert 2 EP5\nGPU-106\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep5_ex2 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep5_ex2
+	expert_stage1_layer0_ep5_ex3 [label="Expert 3 EP5\nGPU-107\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep5_ex3 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep5_ex3
+	expert_stage1_layer0_ep5_ex4 [label="Expert 4 EP5\nGPU-108\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep5_ex4 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep5_ex4
+	expert_stage1_layer0_ep5_ex5 [label="Expert 5 EP5\nGPU-109\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep5_ex5 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep5_ex5
+	expert_stage1_layer0_ep5_ex6 [label="Expert 6 EP5\nGPU-110\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep5_ex6 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep5_ex6
+	expert_stage1_layer0_ep5_ex7 [label="Expert 7 EP5\nGPU-111\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep5_ex7 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep5_ex7
+	expert_stage1_layer0_ep6_ex0 [label="Expert 0 EP6\nGPU-112\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep6_ex0 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep6_ex0
+	expert_stage1_layer0_ep6_ex1 [label="Expert 1 EP6\nGPU-113\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep6_ex1 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep6_ex1
+	expert_stage1_layer0_ep6_ex2 [label="Expert 2 EP6\nGPU-114\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep6_ex2 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep6_ex2
+	expert_stage1_layer0_ep6_ex3 [label="Expert 3 EP6\nGPU-115\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep6_ex3 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep6_ex3
+	expert_stage1_layer0_ep6_ex4 [label="Expert 4 EP6\nGPU-116\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep6_ex4 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep6_ex4
+	expert_stage1_layer0_ep6_ex5 [label="Expert 5 EP6\nGPU-117\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep6_ex5 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep6_ex5
+	expert_stage1_layer0_ep6_ex6 [label="Expert 6 EP6\nGPU-118\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep6_ex6 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep6_ex6
+	expert_stage1_layer0_ep6_ex7 [label="Expert 7 EP6\nGPU-119\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep6_ex7 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep6_ex7
+	expert_stage1_layer0_ep7_ex0 [label="Expert 0 EP7\nGPU-120\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep7_ex0 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep7_ex0
+	expert_stage1_layer0_ep7_ex1 [label="Expert 1 EP7\nGPU-121\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep7_ex1 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep7_ex1
+	expert_stage1_layer0_ep7_ex2 [label="Expert 2 EP7\nGPU-122\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep7_ex2 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep7_ex2
+	expert_stage1_layer0_ep7_ex3 [label="Expert 3 EP7\nGPU-123\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep7_ex3 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep7_ex3
+	expert_stage1_layer0_ep7_ex4 [label="Expert 4 EP7\nGPU-124\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep7_ex4 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep7_ex4
+	expert_stage1_layer0_ep7_ex5 [label="Expert 5 EP7\nGPU-125\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep7_ex5 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep7_ex5
+	expert_stage1_layer0_ep7_ex6 [label="Expert 6 EP7\nGPU-126\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep7_ex6 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep7_ex6
+	expert_stage1_layer0_ep7_ex7 [label="Expert 7 EP7\nGPU-127\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer0 -> expert_stage1_layer0_ep7_ex7 [style=dashed]
+	attn_agg_stage1_layer0 -> expert_stage1_layer0_ep7_ex7
+	expert_agg_stage1_layer0 [label="Expert Aggregation\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	expert_stage1_layer0_ep0_ex0 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep0_ex1 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep0_ex2 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep0_ex3 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep0_ex4 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep0_ex5 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep0_ex6 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep0_ex7 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep1_ex0 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep1_ex1 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep1_ex2 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep1_ex3 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep1_ex4 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep1_ex5 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep1_ex6 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep1_ex7 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep2_ex0 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep2_ex1 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep2_ex2 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep2_ex3 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep2_ex4 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep2_ex5 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep2_ex6 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep2_ex7 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep3_ex0 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep3_ex1 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep3_ex2 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep3_ex3 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep3_ex4 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep3_ex5 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep3_ex6 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep3_ex7 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep4_ex0 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep4_ex1 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep4_ex2 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep4_ex3 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep4_ex4 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep4_ex5 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep4_ex6 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep4_ex7 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep5_ex0 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep5_ex1 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep5_ex2 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep5_ex3 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep5_ex4 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep5_ex5 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep5_ex6 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep5_ex7 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep6_ex0 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep6_ex1 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep6_ex2 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep6_ex3 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep6_ex4 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep6_ex5 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep6_ex6 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep6_ex7 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep7_ex0 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep7_ex1 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep7_ex2 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep7_ex3 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep7_ex4 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep7_ex5 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep7_ex6 -> expert_agg_stage1_layer0
+	expert_stage1_layer0_ep7_ex7 -> expert_agg_stage1_layer0
+	mlp_stage1_layer0_tp0 [label="MLP Layer TP0\nGPU-64\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	expert_agg_stage1_layer0 -> mlp_stage1_layer0_tp0
+	mlp_stage1_layer0_tp1 [label="MLP Layer TP1\nGPU-65\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	expert_agg_stage1_layer0 -> mlp_stage1_layer0_tp1
+	mlp_agg_stage1_layer0 [label="MLP Aggregation\nInput: [batch=32, seq=1024, hidden=512]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	mlp_stage1_layer0_tp0 -> mlp_agg_stage1_layer0
+	mlp_stage1_layer0_tp1 -> mlp_agg_stage1_layer0
+	layernorm_stage1_layer0 [label="LayerNorm 8\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	mlp_agg_stage1_layer0 -> layernorm_stage1_layer0
+	dist_stage1_layer1 [label="Distribute Layer 9\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightblue shape=ellipse]
+	layernorm_stage1_layer0 -> dist_stage1_layer1
+	qkv_stage1_layer1_tp0 [label="QKV Projection TP0\nGPU-64\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+	dist_stage1_layer1 -> qkv_stage1_layer1_tp0
+	qkv_stage1_layer1_tp1 [label="QKV Projection TP1\nGPU-65\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, heads=8, d_k=64]" fillcolor=lightgreen shape=rectangle]
+	dist_stage1_layer1 -> qkv_stage1_layer1_tp1
+	score_stage1_layer1_tp0 [label="Attention Scores TP0\nGPU-64\nInput: [batch=32, seq=1024, heads=8, d_k=64]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	qkv_stage1_layer1_tp0 -> score_stage1_layer1_tp0
+	score_stage1_layer1_tp1 [label="Attention Scores TP1\nGPU-65\nInput: [batch=32, seq=1024, heads=8, d_k=64]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	qkv_stage1_layer1_tp1 -> score_stage1_layer1_tp1
+	softmax_stage1_layer1_tp0 [label="Attention Softmax TP0\nGPU-64\nInput: [batch=32, heads=8, seq=1024, seq=1024]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	score_stage1_layer1_tp1 -> softmax_stage1_layer1_tp0
+	softmax_stage1_layer1_tp1 [label="Attention Softmax TP1\nGPU-65\nInput: [batch=32, heads=8, seq=1024, seq=1024]\nOutput: [batch=32, heads=8, seq=1024, seq=1024]" fillcolor=lightgreen shape=rectangle]
+	score_stage1_layer1_tp1 -> softmax_stage1_layer1_tp1
+	attn_out_stage1_layer1_tp0 [label="Attention Output TP0\nGPU-64\nInput: [batch=32, heads=8, seq=1024, d_k=64]\nOutput: [batch=32, seq=1024, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	softmax_stage1_layer1_tp0 -> attn_out_stage1_layer1_tp0
+	qkv_stage1_layer1_tp0 -> attn_out_stage1_layer1_tp0
+	attn_out_stage1_layer1_tp1 [label="Attention Output TP1\nGPU-65\nInput: [batch=32, heads=8, seq=1024, d_k=64]\nOutput: [batch=32, seq=1024, hidden=512]" fillcolor=lightgreen shape=rectangle]
+	softmax_stage1_layer1_tp1 -> attn_out_stage1_layer1_tp1
+	qkv_stage1_layer1_tp1 -> attn_out_stage1_layer1_tp1
+	attn_agg_stage1_layer1 [label="Attention Aggregation\nInput: [batch=32, seq=1024, hidden=512]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	attn_out_stage1_layer1_tp0 -> attn_agg_stage1_layer1
+	attn_out_stage1_layer1_tp1 -> attn_agg_stage1_layer1
+	gate_stage1_layer1 [label="MoE Gate (Top-2)\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, experts=2]" fillcolor=lightyellow shape=parallelogram style=dashed]
+	attn_agg_stage1_layer1 -> gate_stage1_layer1 [style=dashed]
+	expert_stage1_layer1_ep0_ex0 [label="Expert 0 EP0\nGPU-64\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep0_ex0 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep0_ex0
+	expert_stage1_layer1_ep0_ex1 [label="Expert 1 EP0\nGPU-65\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep0_ex1 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep0_ex1
+	expert_stage1_layer1_ep0_ex2 [label="Expert 2 EP0\nGPU-66\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep0_ex2 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep0_ex2
+	expert_stage1_layer1_ep0_ex3 [label="Expert 3 EP0\nGPU-67\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep0_ex3 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep0_ex3
+	expert_stage1_layer1_ep0_ex4 [label="Expert 4 EP0\nGPU-68\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep0_ex4 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep0_ex4
+	expert_stage1_layer1_ep0_ex5 [label="Expert 5 EP0\nGPU-69\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep0_ex5 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep0_ex5
+	expert_stage1_layer1_ep0_ex6 [label="Expert 6 EP0\nGPU-70\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep0_ex6 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep0_ex6
+	expert_stage1_layer1_ep0_ex7 [label="Expert 7 EP0\nGPU-71\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep0_ex7 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep0_ex7
+	expert_stage1_layer1_ep1_ex0 [label="Expert 0 EP1\nGPU-72\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep1_ex0 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep1_ex0
+	expert_stage1_layer1_ep1_ex1 [label="Expert 1 EP1\nGPU-73\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep1_ex1 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep1_ex1
+	expert_stage1_layer1_ep1_ex2 [label="Expert 2 EP1\nGPU-74\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep1_ex2 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep1_ex2
+	expert_stage1_layer1_ep1_ex3 [label="Expert 3 EP1\nGPU-75\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep1_ex3 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep1_ex3
+	expert_stage1_layer1_ep1_ex4 [label="Expert 4 EP1\nGPU-76\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep1_ex4 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep1_ex4
+	expert_stage1_layer1_ep1_ex5 [label="Expert 5 EP1\nGPU-77\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep1_ex5 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep1_ex5
+	expert_stage1_layer1_ep1_ex6 [label="Expert 6 EP1\nGPU-78\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep1_ex6 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep1_ex6
+	expert_stage1_layer1_ep1_ex7 [label="Expert 7 EP1\nGPU-79\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep1_ex7 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep1_ex7
+	expert_stage1_layer1_ep2_ex0 [label="Expert 0 EP2\nGPU-80\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep2_ex0 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep2_ex0
+	expert_stage1_layer1_ep2_ex1 [label="Expert 1 EP2\nGPU-81\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep2_ex1 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep2_ex1
+	expert_stage1_layer1_ep2_ex2 [label="Expert 2 EP2\nGPU-82\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep2_ex2 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep2_ex2
+	expert_stage1_layer1_ep2_ex3 [label="Expert 3 EP2\nGPU-83\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep2_ex3 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep2_ex3
+	expert_stage1_layer1_ep2_ex4 [label="Expert 4 EP2\nGPU-84\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep2_ex4 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep2_ex4
+	expert_stage1_layer1_ep2_ex5 [label="Expert 5 EP2\nGPU-85\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep2_ex5 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep2_ex5
+	expert_stage1_layer1_ep2_ex6 [label="Expert 6 EP2\nGPU-86\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep2_ex6 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep2_ex6
+	expert_stage1_layer1_ep2_ex7 [label="Expert 7 EP2\nGPU-87\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep2_ex7 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep2_ex7
+	expert_stage1_layer1_ep3_ex0 [label="Expert 0 EP3\nGPU-88\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep3_ex0 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep3_ex0
+	expert_stage1_layer1_ep3_ex1 [label="Expert 1 EP3\nGPU-89\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep3_ex1 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep3_ex1
+	expert_stage1_layer1_ep3_ex2 [label="Expert 2 EP3\nGPU-90\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep3_ex2 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep3_ex2
+	expert_stage1_layer1_ep3_ex3 [label="Expert 3 EP3\nGPU-91\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep3_ex3 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep3_ex3
+	expert_stage1_layer1_ep3_ex4 [label="Expert 4 EP3\nGPU-92\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep3_ex4 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep3_ex4
+	expert_stage1_layer1_ep3_ex5 [label="Expert 5 EP3\nGPU-93\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep3_ex5 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep3_ex5
+	expert_stage1_layer1_ep3_ex6 [label="Expert 6 EP3\nGPU-94\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep3_ex6 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep3_ex6
+	expert_stage1_layer1_ep3_ex7 [label="Expert 7 EP3\nGPU-95\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep3_ex7 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep3_ex7
+	expert_stage1_layer1_ep4_ex0 [label="Expert 0 EP4\nGPU-96\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep4_ex0 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep4_ex0
+	expert_stage1_layer1_ep4_ex1 [label="Expert 1 EP4\nGPU-97\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep4_ex1 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep4_ex1
+	expert_stage1_layer1_ep4_ex2 [label="Expert 2 EP4\nGPU-98\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep4_ex2 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep4_ex2
+	expert_stage1_layer1_ep4_ex3 [label="Expert 3 EP4\nGPU-99\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep4_ex3 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep4_ex3
+	expert_stage1_layer1_ep4_ex4 [label="Expert 4 EP4\nGPU-100\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep4_ex4 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep4_ex4
+	expert_stage1_layer1_ep4_ex5 [label="Expert 5 EP4\nGPU-101\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep4_ex5 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep4_ex5
+	expert_stage1_layer1_ep4_ex6 [label="Expert 6 EP4\nGPU-102\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep4_ex6 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep4_ex6
+	expert_stage1_layer1_ep4_ex7 [label="Expert 7 EP4\nGPU-103\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep4_ex7 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep4_ex7
+	expert_stage1_layer1_ep5_ex0 [label="Expert 0 EP5\nGPU-104\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep5_ex0 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep5_ex0
+	expert_stage1_layer1_ep5_ex1 [label="Expert 1 EP5\nGPU-105\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep5_ex1 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep5_ex1
+	expert_stage1_layer1_ep5_ex2 [label="Expert 2 EP5\nGPU-106\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep5_ex2 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep5_ex2
+	expert_stage1_layer1_ep5_ex3 [label="Expert 3 EP5\nGPU-107\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep5_ex3 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep5_ex3
+	expert_stage1_layer1_ep5_ex4 [label="Expert 4 EP5\nGPU-108\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep5_ex4 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep5_ex4
+	expert_stage1_layer1_ep5_ex5 [label="Expert 5 EP5\nGPU-109\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep5_ex5 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep5_ex5
+	expert_stage1_layer1_ep5_ex6 [label="Expert 6 EP5\nGPU-110\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep5_ex6 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep5_ex6
+	expert_stage1_layer1_ep5_ex7 [label="Expert 7 EP5\nGPU-111\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep5_ex7 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep5_ex7
+	expert_stage1_layer1_ep6_ex0 [label="Expert 0 EP6\nGPU-112\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep6_ex0 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep6_ex0
+	expert_stage1_layer1_ep6_ex1 [label="Expert 1 EP6\nGPU-113\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep6_ex1 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep6_ex1
+	expert_stage1_layer1_ep6_ex2 [label="Expert 2 EP6\nGPU-114\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep6_ex2 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep6_ex2
+	expert_stage1_layer1_ep6_ex3 [label="Expert 3 EP6\nGPU-115\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep6_ex3 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep6_ex3
+	expert_stage1_layer1_ep6_ex4 [label="Expert 4 EP6\nGPU-116\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep6_ex4 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep6_ex4
+	expert_stage1_layer1_ep6_ex5 [label="Expert 5 EP6\nGPU-117\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep6_ex5 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep6_ex5
+	expert_stage1_layer1_ep6_ex6 [label="Expert 6 EP6\nGPU-118\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep6_ex6 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep6_ex6
+	expert_stage1_layer1_ep6_ex7 [label="Expert 7 EP6\nGPU-119\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep6_ex7 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep6_ex7
+	expert_stage1_layer1_ep7_ex0 [label="Expert 0 EP7\nGPU-120\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep7_ex0 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep7_ex0
+	expert_stage1_layer1_ep7_ex1 [label="Expert 1 EP7\nGPU-121\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep7_ex1 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep7_ex1
+	expert_stage1_layer1_ep7_ex2 [label="Expert 2 EP7\nGPU-122\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep7_ex2 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep7_ex2
+	expert_stage1_layer1_ep7_ex3 [label="Expert 3 EP7\nGPU-123\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep7_ex3 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep7_ex3
+	expert_stage1_layer1_ep7_ex4 [label="Expert 4 EP7\nGPU-124\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep7_ex4 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep7_ex4
+	expert_stage1_layer1_ep7_ex5 [label="Expert 5 EP7\nGPU-125\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep7_ex5 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep7_ex5
+	expert_stage1_layer1_ep7_ex6 [label="Expert 6 EP7\nGPU-126\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep7_ex6 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep7_ex6
+	expert_stage1_layer1_ep7_ex7 [label="Expert 7 EP7\nGPU-127\nInput: [batch=4, seq=1024, hidden=1024]\nOutput: [batch=4, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	gate_stage1_layer1 -> expert_stage1_layer1_ep7_ex7 [style=dashed]
+	attn_agg_stage1_layer1 -> expert_stage1_layer1_ep7_ex7
+	expert_agg_stage1_layer1 [label="Expert Aggregation\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	expert_stage1_layer1_ep0_ex0 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep0_ex1 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep0_ex2 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep0_ex3 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep0_ex4 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep0_ex5 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep0_ex6 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep0_ex7 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep1_ex0 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep1_ex1 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep1_ex2 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep1_ex3 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep1_ex4 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep1_ex5 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep1_ex6 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep1_ex7 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep2_ex0 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep2_ex1 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep2_ex2 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep2_ex3 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep2_ex4 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep2_ex5 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep2_ex6 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep2_ex7 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep3_ex0 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep3_ex1 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep3_ex2 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep3_ex3 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep3_ex4 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep3_ex5 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep3_ex6 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep3_ex7 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep4_ex0 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep4_ex1 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep4_ex2 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep4_ex3 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep4_ex4 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep4_ex5 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep4_ex6 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep4_ex7 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep5_ex0 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep5_ex1 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep5_ex2 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep5_ex3 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep5_ex4 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep5_ex5 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep5_ex6 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep5_ex7 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep6_ex0 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep6_ex1 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep6_ex2 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep6_ex3 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep6_ex4 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep6_ex5 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep6_ex6 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep6_ex7 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep7_ex0 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep7_ex1 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep7_ex2 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep7_ex3 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep7_ex4 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep7_ex5 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep7_ex6 -> expert_agg_stage1_layer1
+	expert_stage1_layer1_ep7_ex7 -> expert_agg_stage1_layer1
+	mlp_stage1_layer1_tp0 [label="MLP Layer TP0\nGPU-64\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	expert_agg_stage1_layer1 -> mlp_stage1_layer1_tp0
+	mlp_stage1_layer1_tp1 [label="MLP Layer TP1\nGPU-65\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	expert_agg_stage1_layer1 -> mlp_stage1_layer1_tp1
+	mlp_agg_stage1_layer1 [label="MLP Aggregation\nInput: [batch=32, seq=1024, hidden=512]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	mlp_stage1_layer1_tp0 -> mlp_agg_stage1_layer1
+	mlp_stage1_layer1_tp1 -> mlp_agg_stage1_layer1
+	layernorm_stage1_layer1 [label="LayerNorm 9\nInput: [batch=32, seq=1024, hidden=1024]\nOutput: [batch=32, seq=1024, hidden=1024]" fillcolor=lightgreen shape=rectangle]
+	mlp_agg_stage1_layer1 -> layernorm_stage1_layer1
+	output [label="Output\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]" fillcolor=lightcoral shape=doubleoctagon]
+	layernorm_stage1_layer1 -> output
+}
