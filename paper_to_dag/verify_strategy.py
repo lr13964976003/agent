@@ -3,126 +3,109 @@
 import math
 
 def verify_parallel_strategy():
-    """Verify the parallel strategy for 30B MoE model"""
-    
-    # Hardware configuration
-    total_gpus = 128
-    gpu_memory = 64  # GB
-    gpu_compute = 400  # TFlops
-    gpu_bandwidth = 1.8  # TBps
-    
-    # Model configuration
-    model_params = 30e9  # 30B parameters
+    # Model parameters
+    total_params = 30e9  # 30B parameters
     num_layers = 16
     num_experts = 64
-    expert_params = 147e6  # per expert
-    hidden_size = 1024
+    expert_hidden_size = 2048
+    token_dim = 1024
+    num_heads = 16
+    head_dim = 64
     
-    # Parallel strategy
-    ep_degree = 8  # Expert parallelism
-    tp_degree = 4  # Tensor parallelism
-    pp_degree = 4  # Pipeline parallelism
+    # Hardware parameters
+    num_gpus = 8
+    vram_per_gpu = 64e9  # 64GB in bytes
+    bandwidth = 1.8e12  # 1.8TBps in bytes/sec
+    
+    # Batch parameters
+    batch_size = 128
+    seq_length_min = 128
+    seq_length_max = 10240
     
     print("=== Parallel Strategy Verification ===")
-    print(f"Total GPUs: {total_gpus}")
-    print(f"EP: {ep_degree}, TP: {tp_degree}, PP: {pp_degree}")
+    print(f"Model: {total_params/1e9:.1f}B parameters, {num_layers} layers, {num_experts} experts")
+    print(f"Hardware: {num_gpus} GPUs, {vram_per_gpu/1e9:.1f}GB VRAM each, {bandwidth/1e12:.1f}TBps bandwidth")
     print()
     
-    # 1. Verify GPU allocation
-    ep_gpus = total_gpus // ep_degree
-    pp_gpus = total_gpus // pp_degree
-    tp_gpus = 4  # Fixed for TP=4
-    
-    print("1. GPU Allocation Check:")
-    print(f"   EP groups: {ep_degree} × {ep_gpus} GPUs = {ep_degree * ep_gpus} GPUs")
-    print(f"   PP stages: {pp_degree} × {pp_gpus} GPUs = {pp_degree * pp_gpus} GPUs")
-    print(f"   TP groups: {tp_gpus} GPUs per group")
-    print(f"   Total verification: {ep_degree * ep_gpus} = {total_gpus} ✓")
+    # 1. Expert Parallelism Verification
+    experts_per_gpu = num_experts // num_gpus
+    print(f"1. Expert Parallelism:")
+    print(f"   - Experts per GPU: {experts_per_gpu} ({num_experts} ÷ {num_gpus})")
+    print(f"   - Load balanced: {'✓' if num_experts % num_gpus == 0 else '✗'}")
     print()
     
-    # 2. Expert distribution verification
-    experts_per_ep = num_experts // ep_degree
-    experts_per_gpu = experts_per_ep // (pp_degree * tp_degree // ep_degree)
-    
-    print("2. Expert Distribution Check:")
-    print(f"   Experts per EP group: {experts_per_ep}")
-    print(f"   Experts per GPU: {experts_per_gpu}")
-    print(f"   Total experts: {ep_degree * experts_per_ep * (pp_degree * tp_degree // ep_degree)} = {num_experts} ✓")
+    # 2. Tensor Parallelism Verification
+    tp_size = 2
+    print(f"2. Tensor Parallelism:")
+    print(f"   - TP size: {tp_size}")
+    print(f"   - Attention split: {'✓' if num_heads % tp_size == 0 else '✗'} ({num_heads} heads)")
+    print(f"   - Expert network split: {'✓' if expert_hidden_size % tp_size == 0 else '✗'} ({expert_hidden_size} hidden)")
     print()
     
-    # 3. Memory calculation verification
-    params_per_gpu = 1.18e9
-    memory_params = params_per_gpu * 2  # FP16
-    memory_optimizer = params_per_gpu * 8  # FP32 momentum + variance
-    memory_activations = 1.61e9  # Estimated
-    memory_gradients = params_per_gpu * 2  # FP16
-    
-    total_memory_gb = (memory_params + memory_optimizer + memory_activations + memory_gradients) / 1e9
-    
-    print("3. Memory Usage Check:")
-    print(f"   Parameters (FP16): {memory_params/1e9:.2f} GB")
-    print(f"   Optimizer (FP32): {memory_optimizer/1e9:.2f} GB")
-    print(f"   Activations: {memory_activations:.2f} GB")
-    print(f"   Gradients: {memory_gradients/1e9:.2f} GB")
-    print(f"   Total: {total_memory_gb:.2f} GB / {gpu_memory} GB ({total_memory_gb/gpu_memory*100:.1f}%) ✓")
+    # 3. Pipeline Parallelism Verification
+    pp_stages = 4
+    layers_per_stage = num_layers // pp_stages
+    print(f"3. Pipeline Parallelism:")
+    print(f"   - Pipeline stages: {pp_stages}")
+    print(f"   - Layers per stage: {layers_per_stage} ({num_layers} ÷ {pp_stages})")
+    print(f"   - Balanced: {'✓' if num_layers % pp_stages == 0 else '✗'}")
     print()
     
-    # 4. Compute efficiency verification
-    mfu_target = 0.60
-    effective_compute = gpu_compute * mfu_target
-    
-    print("4. Compute Efficiency Check:")
-    print(f"   Target MFU: {mfu_target*100}%")
-    print(f"   Effective compute per GPU: {effective_compute} TFlops")
-    print(f"   Total cluster compute: {effective_compute * total_gpus / 1000} PFlops")
+    # 4. Total GPU Configuration
+    total_gpus_needed = tp_size * pp_stages
+    print(f"4. GPU Configuration:")
+    print(f"   - Total GPUs needed: {total_gpus_needed} ({tp_size} TP × {pp_stages} PP)")
+    print(f"   - Available GPUs: {num_gpus}")
+    print(f"   - Match: {'✓' if total_gpus_needed == num_gpus else '✗'}")
     print()
     
-    # 5. Communication pattern verification
-    tp_comm_volume = hidden_size * hidden_size * 2  # FP16
-    ep_comm_volume = 54e6  # Estimated from document
-    pp_comm_volume = 16e6  # Estimated from document
+    # 5. Memory Estimation
+    # Rough estimation of memory usage
+    params_per_gpu = total_params / num_gpus  # Simplified distribution
+    memory_for_params = params_per_gpu * 4  # FP32: 4 bytes per parameter
+    memory_for_activations = batch_size * seq_length_max * token_dim * 4 * 0.5  # Rough estimate with checkpointing
     
-    print("5. Communication Pattern Check:")
-    print(f"   TP all-reduce volume: {tp_comm_volume/1e6:.1f} MB per layer")
-    print(f"   EP all-to-all volume: {ep_comm_volume/1e6:.1f} MB per operation")
-    print(f"   PP point-to-point: {pp_comm_volume/1e6:.1f} MB per micro-batch")
+    total_memory_per_gpu = (memory_for_params + memory_for_activations) / 1e9  # Convert to GB
+    memory_utilization = total_memory_per_gpu / (vram_per_gpu / 1e9) * 100
+    
+    print(f"5. Memory Analysis:")
+    print(f"   - Estimated memory per GPU: {total_memory_per_gpu:.1f}GB")
+    print(f"   - Available memory per GPU: {vram_per_gpu/1e9:.1f}GB")
+    print(f"   - Memory utilization: {memory_utilization:.1f}%")
+    print(f"   - Within limits: {'✓' if memory_utilization < 80 else '✗'}")
     print()
     
-    # 6. Performance metrics verification
-    iteration_time = 5.0  # ms
-    tokens_per_second = 26.16e6
-    
-    print("6. Performance Metrics Check:")
-    print(f"   Iteration time: {iteration_time} ms (< 10ms target) ✓")
-    print(f"   Throughput: {tokens_per_second/1e6:.2f}M tokens/second")
+    # 6. Module Division Verification
+    total_expert_modules = num_layers * num_experts
+    modules_per_gpu = total_expert_modules // num_gpus
+    print(f"6. Module Division:")
+    print(f"   - Total expert modules: {total_expert_modules} ({num_layers} × {num_experts})")
+    print(f"   - Modules per GPU: {modules_per_gpu}")
+    print(f"   - Perfectly balanced: {'✓' if total_expert_modules % num_gpus == 0 else '✗'}")
     print()
     
-    # 7. Mathematical consistency check
-    print("7. Mathematical Consistency Check:")
+    # Overall assessment
+    issues = []
+    if num_experts % num_gpus != 0:
+        issues.append("Expert distribution not perfectly balanced")
+    if total_gpus_needed != num_gpus:
+        issues.append("GPU configuration mismatch")
+    if memory_utilization > 80:
+        issues.append("Memory utilization too high")
+    if num_heads % tp_size != 0:
+        issues.append("Attention heads not divisible by TP size")
+    if expert_hidden_size % tp_size != 0:
+        issues.append("Expert hidden size not divisible by TP size")
+    if num_layers % pp_stages != 0:
+        issues.append("Layers not perfectly divisible by PP stages")
     
-    # Check if parallel degrees multiply correctly
-    total_gpus_check = ep_degree * (total_gpus // ep_degree)
-    print(f"   EP allocation: {total_gpus_check} = {total_gpus} ✓")
-    
-    # Check expert distribution
-    total_experts_check = ep_degree * experts_per_ep
-    print(f"   Expert distribution: {total_experts_check} = {num_experts} ✓")
-    
-    # Check layer distribution
-    layers_per_pp = num_layers // pp_degree
-    print(f"   Layers per PP stage: {layers_per_pp} (4) ✓")
-    
-    print()
-    print("=== Verification Summary ===")
-    print("✓ GPU allocation is correct (128 GPUs fully utilized)")
-    print("✓ Expert distribution is balanced (64 experts across 8 EP groups)")
-    print("✓ Memory usage is within limits (15.73GB < 64GB)")
-    print("✓ Compute efficiency target is achievable (60% MFU)")
-    print("✓ Communication patterns are optimized")
-    print("✓ Performance targets are met (5.0ms iteration time)")
-    print("✓ Mathematical consistency is maintained")
-    
-    return True
+    print("=== Overall Assessment ===")
+    if not issues:
+        print("✓ All checks passed! The parallel strategy appears sound.")
+    else:
+        print("⚠ Issues found:")
+        for issue in issues:
+            print(f"   - {issue}")
 
 if __name__ == "__main__":
     verify_parallel_strategy()
