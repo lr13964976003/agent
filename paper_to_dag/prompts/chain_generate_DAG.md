@@ -30,6 +30,8 @@ Require that all communication behaviors be represented in the DAG graph. <<<要
 
 Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
 
+Require that the attention and MOE components be broken down into multiple steps, prohibiting any single-step abbreviated representations. <<<要求将attention和MOE部分分解成多步，禁止出现一步省略表示>>>
+
 Use ellipses to represent communication, rectangles for computation, and parallelograms for routing/aggregation.<<<指定节点形状>>>
 
 The aggregation and split of data need to be represented by nodes. <<<显示数据聚合与分割>>>
