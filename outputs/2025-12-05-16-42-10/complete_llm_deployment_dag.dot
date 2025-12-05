@@ -1,0 +1,416 @@
+digraph LLM_Complete_Deployment {
+    rankdir="LR";
+    bgcolor="white";
+    fontname="Arial";
+    fontsize=12;
+    
+    // Node styles
+    node [shape=box, style=filled, fontname="Arial", fontsize=10];
+    
+    // Input node
+    Input [shape=ellipse, fillcolor="#9999FF", label="Input\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    // Global gate and routing
+    Global_Gate [shape=parallelogram, fillcolor="#99FF99", label="Global Gate\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, experts=128]"];
+    
+    // Expert selection (dashed)
+    Expert_Select [shape=parallelogram, fillcolor="#99FF99", style=dashed, label="Expert Selection\nTop-8 experts per token across all EP groups"];
+    
+    // EP8 groups - each with 2 GPUs, 128 experts per group, 64 per GPU
+    // EP Group 0: GPUs 0-1 (Experts 0-127)
+    subgraph cluster_ep0 {
+        label="EP Group 0 (GPUs 0-1) - 128 experts total, 64 per GPU";
+        style=filled;
+        fillcolor="#E6F3FF";
+        
+        // GPU 0: 64 experts
+        GPU0_RMSNorm [fillcolor="#E6F3FF", label="GPU0: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        
+        GPU0_Q_Proj_CP [fillcolor="#E6F3FF", label="GPU0: Q-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_K_Proj_CP [fillcolor="#E6F3FF", label="GPU0: K-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_V_Proj_CP [fillcolor="#E6F3FF", label="GPU0: V-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_Attention [fillcolor="#E6F3FF", label="GPU0: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_O_Proj_RP [fillcolor="#E6F3FF", label="GPU0: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // GPU 1: 64 experts  
+        GPU1_RMSNorm [fillcolor="#E6F3FF", label="GPU1: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        
+        GPU1_Q_Proj_CP [fillcolor="#E6F3FF", label="GPU1: Q-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_K_Proj_CP [fillcolor="#E6F3FF", label="GPU1: K-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_V_Proj_CP [fillcolor="#E6F3FF", label="GPU1: V-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_Attention [fillcolor="#E6F3FF", label="GPU1: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_O_Proj_RP [fillcolor="#E6F3FF", label="GPU1: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Expert samples for GPU 0
+        GPU0_Expert00 [fillcolor="#E6F3FF", label="GPU0: Expert_E0\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU0_Expert01 [fillcolor="#E6F3FF", label="GPU0: Expert_E1\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU0_Expert02 [fillcolor="#E6F3FF", label="GPU0: Expert_E2\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU0_Expert03 [fillcolor="#E6F3FF", label="GPU0: Expert_E3\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Expert samples for GPU 1
+        GPU1_Expert00 [fillcolor="#E6F3FF", label="GPU1: Expert_E0\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU1_Expert01 [fillcolor="#E6F3FF", label="GPU1: Expert_E1\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU1_Expert02 [fillcolor="#E6F3FF", label="GPU1: Expert_E2\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU1_Expert03 [fillcolor="#E6F3FF", label="GPU1: Expert_E3\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // EP Group 1: GPUs 2-3 (Experts 128-255)
+    subgraph cluster_ep1 {
+        label="EP Group 1 (GPUs 2-3) - 128 experts total, 64 per GPU";
+        style=filled;
+        fillcolor="#FFE6F3";
+        
+        GPU2_RMSNorm [fillcolor="#FFE6F3", label="GPU2: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU2_Attention [fillcolor="#FFE6F3", label="GPU2: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU2_O_Proj_RP [fillcolor="#FFE6F3", label="GPU2: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        GPU3_RMSNorm [fillcolor="#FFE6F3", label="GPU3: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU3_Attention [fillcolor="#FFE6F3", label="GPU3: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU3_O_Proj_RP [fillcolor="#FFE6F3", label="GPU3: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Expert samples for GPU 2-3
+        GPU2_Expert00 [fillcolor="#FFE6F3", label="GPU2: Expert_E128\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU2_Expert01 [fillcolor="#FFE6F3", label="GPU2: Expert_E129\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU3_Expert00 [fillcolor="#FFE6F3", label="GPU3: Expert_E192\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU3_Expert01 [fillcolor="#FFE6F3", label="GPU3: Expert_E193\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // EP Group 2: GPUs 4-5 (Experts 256-383)
+    subgraph cluster_ep2 {
+        label="EP Group 2 (GPUs 4-5) - 128 experts total, 64 per GPU";
+        style=filled;
+        fillcolor="#F3FFE6";
+        
+        GPU4_RMSNorm [fillcolor="#F3FFE6", label="GPU4: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU4_Attention [fillcolor="#F3FFE6", label="GPU4: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU4_O_Proj_RP [fillcolor="#F3FFE6", label="GPU4: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        GPU5_RMSNorm [fillcolor="#F3FFE6", label="GPU5: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU5_Attention [fillcolor="#F3FFE6", label="GPU5: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU5_O_Proj_RP [fillcolor="#F3FFE6", label="GPU5: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Expert samples
+        GPU4_Expert00 [fillcolor="#F3FFE6", label="GPU4: Expert_E256\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU5_Expert00 [fillcolor="#F3FFE6", label="GPU5: Expert_E320\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // EP Group 3: GPUs 6-7 (Experts 384-511)
+    subgraph cluster_ep3 {
+        label="EP Group 3 (GPUs 6-7) - 128 experts total, 64 per GPU";
+        style=filled;
+        fillcolor="#E6F3FF";
+        
+        GPU6_RMSNorm [fillcolor="#E6F3FF", label="GPU6: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU6_Attention [fillcolor="#E6F3FF", label="GPU6: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU6_O_Proj_RP [fillcolor="#E6F3FF", label="GPU6: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        GPU7_RMSNorm [fillcolor="#E6F3FF", label="GPU7: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU7_Attention [fillcolor="#E6F3FF", label="GPU7: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU7_O_Proj_RP [fillcolor="#E6F3FF", label="GPU7: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Expert samples
+        GPU6_Expert00 [fillcolor="#E6F3FF", label="GPU6: Expert_E384\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU7_Expert00 [fillcolor="#E6F3FF", label="GPU7: Expert_E448\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // EP Group 4: GPUs 8-9 (Experts 512-639)
+    subgraph cluster_ep4 {
+        label="EP Group 4 (GPUs 8-9) - 128 experts total, 64 per GPU";
+        style=filled;
+        fillcolor="#FFE6F3";
+        
+        GPU8_RMSNorm [fillcolor="#FFE6F3", label="GPU8: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU8_Attention [fillcolor="#FFE6F3", label="GPU8: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU8_O_Proj_RP [fillcolor="#FFE6F3", label="GPU8: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        GPU9_RMSNorm [fillcolor="#FFE6F3", label="GPU9: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU9_Attention [fillcolor="#FFE6F3", label="GPU9: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU9_O_Proj_RP [fillcolor="#FFE6F3", label="GPU9: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Expert samples
+        GPU8_Expert00 [fillcolor="#FFE6F3", label="GPU8: Expert_E512\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU9_Expert00 [fillcolor="#FFE6F3", label="GPU9: Expert_E576\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // EP Group 5: GPUs 10-11 (Experts 640-767)
+    subgraph cluster_ep5 {
+        label="EP Group 5 (GPUs 10-11) - 128 experts total, 64 per GPU";
+        style=filled;
+        fillcolor="#F3FFE6";
+        
+        GPU10_RMSNorm [fillcolor="#F3FFE6", label="GPU10: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU10_Attention [fillcolor="#F3FFE6", label="GPU10: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU10_O_Proj_RP [fillcolor="#F3FFE6", label="GPU10: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        GPU11_RMSNorm [fillcolor="#F3FFE6", label="GPU11: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU11_Attention [fillcolor="#F3FFE6", label="GPU11: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU11_O_Proj_RP [fillcolor="#F3FFE6", label="GPU11: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Expert samples
+        GPU10_Expert00 [fillcolor="#F3FFE6", label="GPU10: Expert_E640\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU11_Expert00 [fillcolor="#F3FFE6", label="GPU11: Expert_E704\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // EP Group 6: GPUs 12-13 (Experts 768-895)
+    subgraph cluster_ep6 {
+        label="EP Group 6 (GPUs 12-13) - 128 experts total, 64 per GPU";
+        style=filled;
+        fillcolor="#E6F3FF";
+        
+        GPU12_RMSNorm [fillcolor="#E6F3FF", label="GPU12: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU12_Attention [fillcolor="#E6F3FF", label="GPU12: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU12_O_Proj_RP [fillcolor="#E6F3FF", label="GPU12: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        GPU13_RMSNorm [fillcolor="#E6F3FF", label="GPU13: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU13_Attention [fillcolor="#E6F3FF", label="GPU13: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU13_O_Proj_RP [fillcolor="#E6F3FF", label="GPU13: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Expert samples
+        GPU12_Expert00 [fillcolor="#E6F3FF", label="GPU12: Expert_E768\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU13_Expert00 [fillcolor="#E6F3FF", label="GPU13: Expert_E832\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // EP Group 7: GPUs 14-15 (Experts 896-1023)
+    subgraph cluster_ep7 {
+        label="EP Group 7 (GPUs 14-15) - 128 experts total, 64 per GPU";
+        style=filled;
+        fillcolor="#FFE6F3";
+        
+        GPU14_RMSNorm [fillcolor="#FFE6F3", label="GPU14: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU14_Attention [fillcolor="#FFE6F3", label="GPU14: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU14_O_Proj_RP [fillcolor="#FFE6F3", label="GPU14: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        GPU15_RMSNorm [fillcolor="#FFE6F3", label="GPU15: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU15_Attention [fillcolor="#FFE6F3", label="GPU15: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU15_O_Proj_RP [fillcolor="#FFE6F3", label="GPU15: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Expert samples
+        GPU14_Expert00 [fillcolor="#FFE6F3", label="GPU14: Expert_E896\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU15_Expert00 [fillcolor="#FFE6F3", label="GPU15: Expert_E960\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // Communication nodes
+    Attn_AllReduce_EP0 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 0 Attention\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Attn_AllReduce_EP1 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 1 Attention\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Attn_AllReduce_EP2 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 2 Attention\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Attn_AllReduce_EP3 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 3 Attention\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Attn_AllReduce_EP4 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 4 Attention\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Attn_AllReduce_EP5 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 5 Attention\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Attn_AllReduce_EP6 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 6 Attention\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Attn_AllReduce_EP7 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 7 Attention\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    Global_Attn_AllReduce [shape=ellipse, fillcolor="#FF6666", label="Global All-Reduce\nAll EP Groups\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    Expert_AllReduce_EP0 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 0 Experts\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Expert_AllReduce_EP1 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 1 Experts\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Expert_AllReduce_EP2 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 2 Experts\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Expert_AllReduce_EP3 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 3 Experts\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Expert_AllReduce_EP4 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 4 Experts\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Expert_AllReduce_EP5 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 5 Experts\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Expert_AllReduce_EP6 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 6 Experts\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Expert_AllReduce_EP7 [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nEP Group 7 Experts\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    Global_Expert_AllReduce [shape=ellipse, fillcolor="#FF6666", label="Global All-Reduce\nAll Expert Outputs\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    // Final processing nodes
+    Final_RMSNorm [fillcolor="#FF99FF", label="Final RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Output_Proj [fillcolor="#FF99FF", label="Output Projection\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, vocab_size]"];
+    Output [shape=ellipse, fillcolor="#FF99FF", label="Output\nInput: [batch_size=?, seq_len=1024, vocab_size]\nOutput: [batch_size=?, seq_len=1024, vocab_size]"];
+    
+    // Edges - Input to all EP groups
+    Input -> Global_Gate;
+    Input -> GPU0_RMSNorm;
+    Input -> GPU1_RMSNorm;
+    Input -> GPU2_RMSNorm;
+    Input -> GPU3_RMSNorm;
+    Input -> GPU4_RMSNorm;
+    Input -> GPU5_RMSNorm;
+    Input -> GPU6_RMSNorm;
+    Input -> GPU7_RMSNorm;
+    Input -> GPU8_RMSNorm;
+    Input -> GPU9_RMSNorm;
+    Input -> GPU10_RMSNorm;
+    Input -> GPU11_RMSNorm;
+    Input -> GPU12_RMSNorm;
+    Input -> GPU13_RMSNorm;
+    Input -> GPU14_RMSNorm;
+    Input -> GPU15_RMSNorm;
+    
+    // Gate to expert selection (dashed)
+    Global_Gate -> Expert_Select [style=dashed];
+    
+    // Attention computation for EP0 (detailed)
+    GPU0_RMSNorm -> GPU0_Q_Proj_CP;
+    GPU0_RMSNorm -> GPU0_K_Proj_CP;
+    GPU0_RMSNorm -> GPU0_V_Proj_CP;
+    GPU0_Q_Proj_CP -> GPU0_Attention;
+    GPU0_K_Proj_CP -> GPU0_Attention;
+    GPU0_V_Proj_CP -> GPU0_Attention;
+    GPU0_Attention -> GPU0_O_Proj_RP;
+    
+    GPU1_RMSNorm -> GPU1_Q_Proj_CP;
+    GPU1_RMSNorm -> GPU1_K_Proj_CP;
+    GPU1_RMSNorm -> GPU1_V_Proj_CP;
+    GPU1_Q_Proj_CP -> GPU1_Attention;
+    GPU1_K_Proj_CP -> GPU1_Attention;
+    GPU1_V_Proj_CP -> GPU1_Attention;
+    GPU1_Attention -> GPU1_O_Proj_RP;
+    
+    // Attention computation for other EP groups (simplified)
+    GPU2_RMSNorm -> GPU2_Attention;
+    GPU2_Attention -> GPU2_O_Proj_RP;
+    GPU3_RMSNorm -> GPU3_Attention;
+    GPU3_Attention -> GPU3_O_Proj_RP;
+    GPU4_RMSNorm -> GPU4_Attention;
+    GPU4_Attention -> GPU4_O_Proj_RP;
+    GPU5_RMSNorm -> GPU5_Attention;
+    GPU5_Attention -> GPU5_O_Proj_RP;
+    GPU6_RMSNorm -> GPU6_Attention;
+    GPU6_Attention -> GPU6_O_Proj_RP;
+    GPU7_RMSNorm -> GPU7_Attention;
+    GPU7_Attention -> GPU7_O_Proj_RP;
+    GPU8_RMSNorm -> GPU8_Attention;
+    GPU8_Attention -> GPU8_O_Proj_RP;
+    GPU9_RMSNorm -> GPU9_Attention;
+    GPU9_Attention -> GPU9_O_Proj_RP;
+    GPU10_RMSNorm -> GPU10_Attention;
+    GPU10_Attention -> GPU10_O_Proj_RP;
+    GPU11_RMSNorm -> GPU11_Attention;
+    GPU11_Attention -> GPU11_O_Proj_RP;
+    GPU12_RMSNorm -> GPU12_Attention;
+    GPU12_Attention -> GPU12_O_Proj_RP;
+    GPU13_RMSNorm -> GPU13_Attention;
+    GPU13_Attention -> GPU13_O_Proj_RP;
+    GPU14_RMSNorm -> GPU14_Attention;
+    GPU14_Attention -> GPU14_O_Proj_RP;
+    GPU15_RMSNorm -> GPU15_Attention;
+    GPU15_Attention -> GPU15_O_Proj_RP;
+    
+    // All-reduce within EP groups
+    GPU0_O_Proj_RP -> Attn_AllReduce_EP0;
+    GPU1_O_Proj_RP -> Attn_AllReduce_EP0;
+    GPU2_O_Proj_RP -> Attn_AllReduce_EP1;
+    GPU3_O_Proj_RP -> Attn_AllReduce_EP1;
+    GPU4_O_Proj_RP -> Attn_AllReduce_EP2;
+    GPU5_O_Proj_RP -> Attn_AllReduce_EP2;
+    GPU6_O_Proj_RP -> Attn_AllReduce_EP3;
+    GPU7_O_Proj_RP -> Attn_AllReduce_EP3;
+    GPU8_O_Proj_RP -> Attn_AllReduce_EP4;
+    GPU9_O_Proj_RP -> Attn_AllReduce_EP4;
+    GPU10_O_Proj_RP -> Attn_AllReduce_EP5;
+    GPU11_O_Proj_RP -> Attn_AllReduce_EP5;
+    GPU12_O_Proj_RP -> Attn_AllReduce_EP6;
+    GPU13_O_Proj_RP -> Attn_AllReduce_EP6;
+    GPU14_O_Proj_RP -> Attn_AllReduce_EP7;
+    GPU15_O_Proj_RP -> Attn_AllReduce_EP7;
+    
+    // Global all-reduce across all EP groups
+    Attn_AllReduce_EP0 -> Global_Attn_AllReduce;
+    Attn_AllReduce_EP1 -> Global_Attn_AllReduce;
+    Attn_AllReduce_EP2 -> Global_Attn_AllReduce;
+    Attn_AllReduce_EP3 -> Global_Attn_AllReduce;
+    Attn_AllReduce_EP4 -> Global_Attn_AllReduce;
+    Attn_AllReduce_EP5 -> Global_Attn_AllReduce;
+    Attn_AllReduce_EP6 -> Global_Attn_AllReduce;
+    Attn_AllReduce_EP7 -> Global_Attn_AllReduce;
+    
+    // Attention output to experts
+    Global_Attn_AllReduce -> GPU0_Expert00;
+    Global_Attn_AllReduce -> GPU0_Expert01;
+    Global_Attn_AllReduce -> GPU0_Expert02;
+    Global_Attn_AllReduce -> GPU0_Expert03;
+    Global_Attn_AllReduce -> GPU1_Expert00;
+    Global_Attn_AllReduce -> GPU1_Expert01;
+    Global_Attn_AllReduce -> GPU1_Expert02;
+    Global_Attn_AllReduce -> GPU1_Expert03;
+    Global_Attn_AllReduce -> GPU2_Expert00;
+    Global_Attn_AllReduce -> GPU2_Expert01;
+    Global_Attn_AllReduce -> GPU3_Expert00;
+    Global_Attn_AllReduce -> GPU3_Expert01;
+    Global_Attn_AllReduce -> GPU4_Expert00;
+    Global_Attn_AllReduce -> GPU5_Expert00;
+    Global_Attn_AllReduce -> GPU6_Expert00;
+    Global_Attn_AllReduce -> GPU7_Expert00;
+    Global_Attn_AllReduce -> GPU8_Expert00;
+    Global_Attn_AllReduce -> GPU9_Expert00;
+    Global_Attn_AllReduce -> GPU10_Expert00;
+    Global_Attn_AllReduce -> GPU11_Expert00;
+    Global_Attn_AllReduce -> GPU12_Expert00;
+    Global_Attn_AllReduce -> GPU13_Expert00;
+    Global_Attn_AllReduce -> GPU14_Expert00;
+    Global_Attn_AllReduce -> GPU15_Expert00;
+    
+    // Expert selection to experts (dashed)
+    Expert_Select -> GPU0_Expert00 [style=dashed];
+    Expert_Select -> GPU0_Expert01 [style=dashed];
+    Expert_Select -> GPU0_Expert02 [style=dashed];
+    Expert_Select -> GPU0_Expert03 [style=dashed];
+    Expert_Select -> GPU1_Expert00 [style=dashed];
+    Expert_Select -> GPU1_Expert01 [style=dashed];
+    Expert_Select -> GPU1_Expert02 [style=dashed];
+    Expert_Select -> GPU1_Expert03 [style=dashed];
+    Expert_Select -> GPU2_Expert00 [style=dashed];
+    Expert_Select -> GPU2_Expert01 [style=dashed];
+    Expert_Select -> GPU3_Expert00 [style=dashed];
+    Expert_Select -> GPU3_Expert01 [style=dashed];
+    Expert_Select -> GPU4_Expert00 [style=dashed];
+    Expert_Select -> GPU5_Expert00 [style=dashed];
+    Expert_Select -> GPU6_Expert00 [style=dashed];
+    Expert_Select -> GPU7_Expert00 [style=dashed];
+    Expert_Select -> GPU8_Expert00 [style=dashed];
+    Expert_Select -> GPU9_Expert00 [style=dashed];
+    Expert_Select -> GPU10_Expert00 [style=dashed];
+    Expert_Select -> GPU11_Expert00 [style=dashed];
+    Expert_Select -> GPU12_Expert00 [style=dashed];
+    Expert_Select -> GPU13_Expert00 [style=dashed];
+    Expert_Select -> GPU14_Expert00 [style=dashed];
+    Expert_Select -> GPU15_Expert00 [style=dashed];
+    
+    // Expert outputs to all-reduce within EP groups
+    GPU0_Expert00 -> Expert_AllReduce_EP0;
+    GPU0_Expert01 -> Expert_AllReduce_EP0;
+    GPU0_Expert02 -> Expert_AllReduce_EP0;
+    GPU0_Expert03 -> Expert_AllReduce_EP0;
+    GPU1_Expert00 -> Expert_AllReduce_EP0;
+    GPU1_Expert01 -> Expert_AllReduce_EP0;
+    GPU1_Expert02 -> Expert_AllReduce_EP0;
+    GPU1_Expert03 -> Expert_AllReduce_EP0;
+    
+    GPU2_Expert00 -> Expert_AllReduce_EP1;
+    GPU2_Expert01 -> Expert_AllReduce_EP1;
+    GPU3_Expert00 -> Expert_AllReduce_EP1;
+    GPU3_Expert01 -> Expert_AllReduce_EP1;
+    
+    GPU4_Expert00 -> Expert_AllReduce_EP2;
+    GPU5_Expert00 -> Expert_AllReduce_EP2;
+    
+    GPU6_Expert00 -> Expert_AllReduce_EP3;
+    GPU7_Expert00 -> Expert_AllReduce_EP3;
+    
+    GPU8_Expert00 -> Expert_AllReduce_EP4;
+    GPU9_Expert00 -> Expert_AllReduce_EP4;
+    
+    GPU10_Expert00 -> Expert_AllReduce_EP5;
+    GPU11_Expert00 -> Expert_AllReduce_EP5;
+    
+    GPU12_Expert00 -> Expert_AllReduce_EP6;
+    GPU13_Expert00 -> Expert_AllReduce_EP6;
+    
+    GPU14_Expert00 -> Expert_AllReduce_EP7;
+    GPU15_Expert00 -> Expert_AllReduce_EP7;
+    
+    // Global all-reduce for expert outputs
+    Expert_AllReduce_EP0 -> Global_Expert_AllReduce;
+    Expert_AllReduce_EP1 -> Global_Expert_AllReduce;
+    Expert_AllReduce_EP2 -> Global_Expert_AllReduce;
+    Expert_AllReduce_EP3 -> Global_Expert_AllReduce;
+    Expert_AllReduce_EP4 -> Global_Expert_AllReduce;
+    Expert_AllReduce_EP5 -> Global_Expert_AllReduce;
+    Expert_AllReduce_EP6 -> Global_Expert_AllReduce;
+    Expert_AllReduce_EP7 -> Global_Expert_AllReduce;
+    
+    // Final processing
+    Global_Expert_AllReduce -> Final_RMSNorm;
+    Final_RMSNorm -> Output_Proj;
+    Output_Proj -> Output;
+}

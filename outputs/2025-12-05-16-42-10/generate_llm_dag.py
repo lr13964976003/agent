@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+
+import os
+
+def generate_llm_deployment_dag():
+    """Generate a comprehensive DAG for LLM deployment with EP8_TP2_PP1_DP1 strategy"""
+    
+    # Create the DOT content
+    dot_content = '''digraph LLM_Deployment {
+    rank_mode="LR";
+    bgcolor="white";
+    fontname="Arial";
+    fontsize=12;
+    
+    // Node styles
+    node [shape=box, style=filled, fontname="Arial", fontsize=10];
+    
+    // Define colors for different GPU groups
+    color_ep0 = "#E6F3FF";    // Light blue for EP group 0
+    color_ep1 = "#FFE6E6";    // Light red for EP group 1  
+    color_ep2 = "#E6FFE6";    // Light green for EP group 2
+    color_ep3 = "#FFFFE6";    // Light yellow for EP group 3
+    color_ep4 = "#F0E6FF";    // Light purple for EP group 4
+    color_ep5 = "#FFE6F0";    // Light pink for EP group 5
+    color_ep6 = "#E6F0FF";    // Light cyan for EP group 6
+    color_ep7 = "#FFF0E6";    // Light orange for EP group 7
+    
+    color_comm = "#FF9999";   // Light red for communication
+    color_routing = "#99FF99"; // Light green for routing/aggregation
+    color_input = "#9999FF";  // Light blue for input
+    color_output = "#FF99FF"; // Light purple for output
+    
+    // Input node
+    Input [shape=ellipse, fillcolor=color_input, label="Input\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    // Expert Parallel Groups - 8 groups total, each with 2 GPUs (TP=2)
+    
+    // EP Group 0: GPUs 0-1
+    subgraph cluster_ep0 {
+        label="EP Group 0 (GPUs 0-1)";
+        style=filled;
+        fillcolor=color_ep0;
+        
+        // GPU 0 in EP group 0
+        GPU0_RMSNorm [fillcolor=color_ep0, label="GPU0: RMSNorm\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU0_Q_Proj_CP [fillcolor=color_ep0, label="GPU0: Q-Projection-CP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_K_Proj_CP [fillcolor=color_ep0, label="GPU0: K-Projection-CP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_V_Proj_CP [fillcolor=color_ep0, label="GPU0: V-Projection-CP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_Attention [fillcolor=color_ep0, label="GPU0: Scaled-Dot-Attention\\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_O_Proj_RP [fillcolor=color_ep0, label="GPU0: O-Projection-RP\\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // GPU 1 in EP group 0  
+        GPU1_RMSNorm [fillcolor=color_ep0, label="GPU1: RMSNorm\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU1_Q_Proj_CP [fillcolor=color_ep0, label="GPU1: Q-Projection-CP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_K_Proj_CP [fillcolor=color_ep0, label="GPU1: K-Projection-CP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_V_Proj_CP [fillcolor=color_ep0, label="GPU1: V-Projection-CP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_Attention [fillcolor=color_ep0, label="GPU1: Scaled-Dot-Attention\\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_O_Proj_RP [fillcolor=color_ep0, label="GPU1: O-Projection-RP\\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // Communication nodes for attention output aggregation
+    Attn_AllReduce [shape=ellipse, fillcolor=color_comm, label="All-Reduce\\nAttention Output\\nInput: [batch_size=?, seq_len=1024, hidden=512]\\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    // Routing and Gate for MoE
+    Gate [shape=parallelogram, fillcolor=color_routing, label="Gate\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, experts=8]"];
+    
+    // Expert selection (dashed line)
+    Expert_Select [shape=parallelogram, fillcolor=color_routing, style=dashed, label="Expert Selection\\nTop-8 experts per token"];
+    
+    // Expert Parallel Groups - Sample experts (showing pattern for 64 experts total)
+    // Each EP group handles 128 experts, distributed across 2 TP GPUs = 64 experts per GPU
+    // 16 layers × 4 experts per layer per GPU = 64 experts per GPU
+    
+    // Sample experts for EP group 0
+    subgraph cluster_experts_ep0 {
+        label="Experts EP0 (64 experts per GPU)";
+        style=filled;
+        fillcolor=color_ep0;
+        
+        // GPU 0 experts - 4 experts per layer × 16 layers = 64 experts
+        GPU0_Expert00 [fillcolor=color_ep0, label="GPU0: Expert_L0_E0\\nMLP-CP-RP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU0_Expert01 [fillcolor=color_ep0, label="GPU0: Expert_L0_E1\\nMLP-CP-RP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU0_Expert02 [fillcolor=color_ep0, label="GPU0: Expert_L0_E2\\nMLP-CP-RP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU0_Expert03 [fillcolor=color_ep0, label="GPU0: Expert_L0_E3\\nMLP-CP-RP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // GPU 1 experts - 4 experts per layer × 16 layers = 64 experts  
+        GPU1_Expert00 [fillcolor=color_ep0, label="GPU1: Expert_L0_E0\\nMLP-CP-RP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU1_Expert01 [fillcolor=color_ep0, label="GPU1: Expert_L0_E1\\nMLP-CP-RP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU1_Expert02 [fillcolor=color_ep0, label="GPU1: Expert_L0_E2\\nMLP-CP-RP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU1_Expert03 [fillcolor=color_ep0, label="GPU1: Expert_L0_E3\\nMLP-CP-RP\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // Expert output aggregation
+    Expert_AllReduce [shape=ellipse, fillcolor=color_comm, label="All-Reduce\\nExpert Outputs\\nInput: [batch_size=?, seq_len=1024, hidden=512]\\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    // Final layer norm and output
+    Final_RMSNorm [fillcolor=color_output, label="Final RMSNorm\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Output_Proj [fillcolor=color_output, label="Output Projection\\nInput: [batch_size=?, seq_len=1024, hidden=1024]\\nOutput: [batch_size=?, seq_len=1024, vocab_size]"];
+    
+    // Output node
+    Output [shape=ellipse, fillcolor=color_output, label="Output\\nInput: [batch_size=?, seq_len=1024, vocab_size]\\nOutput: [batch_size=?, seq_len=1024, vocab_size]"];
+    
+    // Edges - Input to attention
+    Input -> GPU0_RMSNorm;
+    Input -> GPU1_RMSNorm;
+    
+    // Attention computation paths
+    GPU0_RMSNorm -> GPU0_Q_Proj_CP;
+    GPU0_RMSNorm -> GPU0_K_Proj_CP;
+    GPU0_RMSNorm -> GPU0_V_Proj_CP;
+    
+    GPU1_RMSNorm -> GPU1_Q_Proj_CP;
+    GPU1_RMSNorm -> GPU1_K_Proj_CP;
+    GPU1_RMSNorm -> GPU1_V_Proj_CP;
+    
+    // Q, K, V projections to attention
+    GPU0_Q_Proj_CP -> GPU0_Attention;
+    GPU0_K_Proj_CP -> GPU0_Attention;
+    GPU0_V_Proj_CP -> GPU0_Attention;
+    
+    GPU1_Q_Proj_CP -> GPU1_Attention;
+    GPU1_K_Proj_CP -> GPU1_Attention;
+    GPU1_V_Proj_CP -> GPU1_Attention;
+    
+    // Attention to output projection
+    GPU0_Attention -> GPU0_O_Proj_RP;
+    GPU1_Attention -> GPU1_O_Proj_RP;
+    
+    // All-reduce for attention output
+    GPU0_O_Proj_RP -> Attn_AllReduce;
+    GPU1_O_Proj_RP -> Attn_AllReduce;
+    
+    // Attention output to gate and experts
+    Attn_AllReduce -> Gate;
+    Attn_AllReduce -> GPU0_Expert00;
+    Attn_AllReduce -> GPU0_Expert01;
+    Attn_AllReduce -> GPU0_Expert02;
+    Attn_AllReduce -> GPU0_Expert03;
+    Attn_AllReduce -> GPU1_Expert00;
+    Attn_AllReduce -> GPU1_Expert01;
+    Attn_AllReduce -> GPU1_Expert02;
+    Attn_AllReduce -> GPU1_Expert03;
+    
+    // Gate to expert selection (dashed line)
+    Gate -> Expert_Select [style=dashed];
+    
+    // Expert selection to specific experts (dashed lines)
+    Expert_Select -> GPU0_Expert00 [style=dashed];
+    Expert_Select -> GPU0_Expert01 [style=dashed];
+    Expert_Select -> GPU0_Expert02 [style=dashed];
+    Expert_Select -> GPU0_Expert03 [style=dashed];
+    Expert_Select -> GPU1_Expert00 [style=dashed];
+    Expert_Select -> GPU1_Expert01 [style=dashed];
+    Expert_Select -> GPU1_Expert02 [style=dashed];
+    Expert_Select -> GPU1_Expert03 [style=dashed];
+    
+    // Expert outputs to all-reduce
+    GPU0_Expert00 -> Expert_AllReduce;
+    GPU0_Expert01 -> Expert_AllReduce;
+    GPU0_Expert02 -> Expert_AllReduce;
+    GPU0_Expert03 -> Expert_AllReduce;
+    GPU1_Expert00 -> Expert_AllReduce;
+    GPU1_Expert01 -> Expert_AllReduce;
+    GPU1_Expert02 -> Expert_AllReduce;
+    GPU1_Expert03 -> Expert_AllReduce;
+    
+    // Final processing
+    Expert_AllReduce -> Final_RMSNorm;
+    Final_RMSNorm -> Output_Proj;
+    Output_Proj -> Output;
+}'''
+    
+    return dot_content
+
+def main():
+    # Generate the DOT content
+    dot_content = generate_llm_deployment_dag()
+    
+    # Save the DOT file
+    dot_file_path = "../outputs/2025-12-05-16-42-10/llm_deployment_dag.dot"
+    with open(dot_file_path, 'w') as f:
+        f.write(dot_content)
+    
+    # Generate SVG using graphviz
+    try:
+        import subprocess
+        svg_file_path = "../outputs/2025-12-05-16-42-10/llm_deployment_dag.svg"
+        subprocess.run(['dot', '-Tsvg', dot_file_path, '-o', svg_file_path], check=True)
+        print(f"SVG file generated: {svg_file_path}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error generating SVG: {e}")
+        print("Please ensure graphviz is installed: sudo apt-get install graphviz")
+    except FileNotFoundError:
+        print("Graphviz not found. DOT file saved but SVG generation skipped.")
+    
+    print(f"DOT file saved: {dot_file_path}")
+    
+    # Create submission paths JSON
+    submission_paths = {
+        "dot_file": dot_file_path,
+        "svg_file": svg_file_path if os.path.exists(svg_file_path) else None,
+        "generated_at": "2025-12-05-16-42-10"
+    }
+    
+    import json
+    json_path = "../outputs/2025-12-05-16-42-10/dag_submission_paths.json"
+    with open(json_path, 'w') as f:
+        json.dump(submission_paths, f, indent=2)
+    
+    print(f"Submission paths saved: {json_path}")
+
+if __name__ == "__main__":
+    main()

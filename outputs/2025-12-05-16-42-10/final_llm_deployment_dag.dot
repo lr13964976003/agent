@@ -1,0 +1,130 @@
+digraph LLM_Deployment {
+    rankdir="LR";
+    bgcolor="white";
+    fontname="Arial";
+    fontsize=12;
+    
+    // Node styles
+    node [shape=box, style=filled, fontname="Arial", fontsize=10];
+    
+    // Input node
+    Input [shape=ellipse, fillcolor="#9999FF", label="Input\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    // EP Group 0: GPUs 0-1
+    subgraph cluster_ep0 {
+        label="EP Group 0 (GPUs 0-1) - 128 experts total, 64 per GPU";
+        style=filled;
+        fillcolor="#E6F3FF";
+        
+        // GPU 0 attention components
+        GPU0_RMSNorm [fillcolor="#E6F3FF", label="GPU0: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU0_Q_Proj_CP [fillcolor="#E6F3FF", label="GPU0: Q-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_K_Proj_CP [fillcolor="#E6F3FF", label="GPU0: K-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_V_Proj_CP [fillcolor="#E6F3FF", label="GPU0: V-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_Attention [fillcolor="#E6F3FF", label="GPU0: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU0_O_Proj_RP [fillcolor="#E6F3FF", label="GPU0: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // GPU 1 attention components  
+        GPU1_RMSNorm [fillcolor="#E6F3FF", label="GPU1: RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+        GPU1_Q_Proj_CP [fillcolor="#E6F3FF", label="GPU1: Q-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_K_Proj_CP [fillcolor="#E6F3FF", label="GPU1: K-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_V_Proj_CP [fillcolor="#E6F3FF", label="GPU1: V-Projection-CP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_Attention [fillcolor="#E6F3FF", label="GPU1: Scaled-Dot-Attention\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, heads=16, d_k=32]"];
+        GPU1_O_Proj_RP [fillcolor="#E6F3FF", label="GPU1: O-Projection-RP\nInput: [batch_size=?, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Sample experts for GPU 0 (showing 4 out of 64 experts)
+        GPU0_Expert00 [fillcolor="#E6F3FF", label="GPU0: Expert_L0_E0\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU0_Expert01 [fillcolor="#E6F3FF", label="GPU0: Expert_L0_E1\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU0_Expert02 [fillcolor="#E6F3FF", label="GPU0: Expert_L0_E2\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU0_Expert03 [fillcolor="#E6F3FF", label="GPU0: Expert_L0_E3\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        
+        // Sample experts for GPU 1 (showing 4 out of 64 experts)
+        GPU1_Expert00 [fillcolor="#E6F3FF", label="GPU1: Expert_L0_E0\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU1_Expert01 [fillcolor="#E6F3FF", label="GPU1: Expert_L0_E1\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU1_Expert02 [fillcolor="#E6F3FF", label="GPU1: Expert_L0_E2\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+        GPU1_Expert03 [fillcolor="#E6F3FF", label="GPU1: Expert_L0_E3\nMLP-CP-RP\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=512]"];
+    }
+    
+    // Communication and routing nodes
+    Attn_AllReduce [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nAttention Output\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    Gate [shape=parallelogram, fillcolor="#99FF99", label="Gate\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, experts=8]"];
+    
+    Expert_Select [shape=parallelogram, fillcolor="#99FF99", style=dashed, label="Expert Selection\nTop-8 experts per token"];
+    
+    Expert_AllReduce [shape=ellipse, fillcolor="#FF9999", label="All-Reduce\nExpert Outputs\nInput: [batch_size=?, seq_len=1024, hidden=512]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    
+    // Final processing nodes
+    Final_RMSNorm [fillcolor="#FF99FF", label="Final RMSNorm\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, hidden=1024]"];
+    Output_Proj [fillcolor="#FF99FF", label="Output Projection\nInput: [batch_size=?, seq_len=1024, hidden=1024]\nOutput: [batch_size=?, seq_len=1024, vocab_size]"];
+    Output [shape=ellipse, fillcolor="#FF99FF", label="Output\nInput: [batch_size=?, seq_len=1024, vocab_size]\nOutput: [batch_size=?, seq_len=1024, vocab_size]"];
+    
+    // Edges - Input to attention
+    Input -> GPU0_RMSNorm;
+    Input -> GPU1_RMSNorm;
+    
+    // Attention computation paths
+    GPU0_RMSNorm -> GPU0_Q_Proj_CP;
+    GPU0_RMSNorm -> GPU0_K_Proj_CP;
+    GPU0_RMSNorm -> GPU0_V_Proj_CP;
+    
+    GPU1_RMSNorm -> GPU1_Q_Proj_CP;
+    GPU1_RMSNorm -> GPU1_K_Proj_CP;
+    GPU1_RMSNorm -> GPU1_V_Proj_CP;
+    
+    // Q, K, V projections to attention
+    GPU0_Q_Proj_CP -> GPU0_Attention;
+    GPU0_K_Proj_CP -> GPU0_Attention;
+    GPU0_V_Proj_CP -> GPU0_Attention;
+    
+    GPU1_Q_Proj_CP -> GPU1_Attention;
+    GPU1_K_Proj_CP -> GPU1_Attention;
+    GPU1_V_Proj_CP -> GPU1_Attention;
+    
+    // Attention to output projection
+    GPU0_Attention -> GPU0_O_Proj_RP;
+    GPU1_Attention -> GPU1_O_Proj_RP;
+    
+    // All-reduce for attention output
+    GPU0_O_Proj_RP -> Attn_AllReduce;
+    GPU1_O_Proj_RP -> Attn_AllReduce;
+    
+    // Attention output to gate and experts
+    Attn_AllReduce -> Gate;
+    Attn_AllReduce -> GPU0_Expert00;
+    Attn_AllReduce -> GPU0_Expert01;
+    Attn_AllReduce -> GPU0_Expert02;
+    Attn_AllReduce -> GPU0_Expert03;
+    Attn_AllReduce -> GPU1_Expert00;
+    Attn_AllReduce -> GPU1_Expert01;
+    Attn_AllReduce -> GPU1_Expert02;
+    Attn_AllReduce -> GPU1_Expert03;
+    
+    // Gate to expert selection (dashed line)
+    Gate -> Expert_Select [style=dashed];
+    
+    // Expert selection to specific experts (dashed lines)
+    Expert_Select -> GPU0_Expert00 [style=dashed];
+    Expert_Select -> GPU0_Expert01 [style=dashed];
+    Expert_Select -> GPU0_Expert02 [style=dashed];
+    Expert_Select -> GPU0_Expert03 [style=dashed];
+    Expert_Select -> GPU1_Expert00 [style=dashed];
+    Expert_Select -> GPU1_Expert01 [style=dashed];
+    Expert_Select -> GPU1_Expert02 [style=dashed];
+    Expert_Select -> GPU1_Expert03 [style=dashed];
+    
+    // Expert outputs to all-reduce
+    GPU0_Expert00 -> Expert_AllReduce;
+    GPU0_Expert01 -> Expert_AllReduce;
+    GPU0_Expert02 -> Expert_AllReduce;
+    GPU0_Expert03 -> Expert_AllReduce;
+    GPU1_Expert00 -> Expert_AllReduce;
+    GPU1_Expert01 -> Expert_AllReduce;
+    GPU1_Expert02 -> Expert_AllReduce;
+    GPU1_Expert03 -> Expert_AllReduce;
+    
+    // Final processing
+    Expert_AllReduce -> Final_RMSNorm;
+    Final_RMSNorm -> Output_Proj;
+    Output_Proj -> Output;
+}
