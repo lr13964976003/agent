@@ -22,6 +22,8 @@ Check if the DAG contains a cycle. <<<检查dag中是否包含环>>>
 
 Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
 
+Check whether the attention block has been broken down into specific submodules. <<<检查attention部分是否被拆分>>>
+
 Check whether all nodes in the DAG, except for the input, have at least one input node.<<<检查是否除了input外，有节点没有输入>>>
 
 Check whether all nodes in the DAG, except for the output, have at least one output node.<<<检查是否除了output外，有节点没有输出>>>
@@ -55,6 +57,7 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
+
 
 
 
