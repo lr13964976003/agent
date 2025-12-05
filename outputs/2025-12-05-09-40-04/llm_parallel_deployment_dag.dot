@@ -1,0 +1,184 @@
+// LLM Parallel Deployment DAG - EP64_TP2_Hybrid_Optimized
+digraph {
+	nodesep=0.5 rankdir=TB splines=true
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	edge [color=black style=solid]
+	subgraph cluster_input {
+		color=black fillcolor=white label="Input Stage" style=rounded
+		input [label="Input Layer
+GPU: All
+Input: [batch_size=128, seq_len=1024, hidden_size=1024]
+Output: [batch_size=128, seq_len=1024, hidden_size=1024]" fillcolor=white shape=ellipse]
+	}
+	subgraph cluster_embedding {
+		color=blue fillcolor=lightblue label="Embedding Stage (TP-2)" style=rounded
+		split_embed [label="Split Input
+GPU: 0,1
+Input: [128,1024,1024]
+Output: [128,1024,512]" fillcolor=lightgray shape=parallelogram]
+		embed_0 [label="Embedding Layer 0
+GPU: 0
+Input: [128,1024,512]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightblue]
+		embed_1 [label="Embedding Layer 1
+GPU: 1
+Input: [128,1024,512]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightblue]
+		embed_allreduce [label="All-Reduce
+GPU: 0,1
+Input: [128,1024,2048]
+Output: [128,1024,2048]" fillcolor=lightcoral shape=ellipse]
+		embed_merge [label="Merge Embeddings
+GPU: 0,1
+Input: [128,1024,2048]
+Output: [128,1024,1024]" fillcolor=lightgray shape=parallelogram]
+	}
+	subgraph cluster_expert {
+		color=green fillcolor=lightgreen label="Expert Parallel Stage (EP-64)" style=rounded
+		broadcast_expert [label="Broadcast to Experts
+GPU: 0,1 → 2-65
+Input: [128,1024,1024]
+Output: [128,1024,1024]" fillcolor=lightcoral shape=ellipse]
+		gate_compute [label="Gate Computation
+GPU: 2-65
+Input: [128,1024,1024]
+Output: [128,1024,64]
+(gate scores)" fillcolor=lightpink shape=parallelogram]
+		expert_select [label="Expert Selection
+GPU: 2-65
+Input: [128,1024,64]
+Output: routing decisions" fillcolor=lightpink shape=parallelogram]
+		expert_2 [label="Expert 0
+GPU: 2
+Input: [128,1024,1024]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightgreen]
+		expert_3 [label="Expert 1
+GPU: 3
+Input: [128,1024,1024]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightgreen]
+		expert_4 [label="Expert 2
+GPU: 4
+Input: [128,1024,1024]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightgreen]
+		expert_5 [label="Expert 3
+GPU: 5
+Input: [128,1024,1024]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightgreen]
+		expert_6 [label="Expert 4
+GPU: 6
+Input: [128,1024,1024]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightgreen]
+		expert_7 [label="Expert 5
+GPU: 7
+Input: [128,1024,1024]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightgreen]
+		expert_8 [label="Expert 6
+GPU: 8
+Input: [128,1024,1024]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightgreen]
+		expert_9 [label="Expert 7
+GPU: 9
+Input: [128,1024,1024]
+Output: [128,1024,2048]
+Weight: [1024,2048]" fillcolor=lightgreen]
+		experts_ellipsis [label="... 56 more experts ...
+GPUs: 10-65" shape=none style=dashed]
+		alltoall_expert [label="All-to-All Communication
+GPU: 2-65
+Routes tokens to experts" fillcolor=lightcoral shape=ellipse]
+		expert_compute_2 [label="Expert 0 Compute
+GPU: 2
+Input: routed tokens
+Output: [128,1024,2048]" fillcolor=lightgreen]
+		expert_compute_3 [label="Expert 1 Compute
+GPU: 3
+Input: routed tokens
+Output: [128,1024,2048]" fillcolor=lightgreen]
+		expert_compute_4 [label="Expert 2 Compute
+GPU: 4
+Input: routed tokens
+Output: [128,1024,2048]" fillcolor=lightgreen]
+		expert_compute_5 [label="Expert 3 Compute
+GPU: 5
+Input: routed tokens
+Output: [128,1024,2048]" fillcolor=lightgreen]
+		expert_compute_ellipsis [label="... expert computations ..." shape=none style=dashed]
+		expert_agg [label="Expert Output Aggregation
+GPU: 2-65
+Input: [128,1024,2048]
+Output: [128,1024,1024]" fillcolor=lightgray shape=parallelogram]
+	}
+	subgraph cluster_aggregation {
+		color=orange fillcolor=lightyellow label="Aggregation Stage (TP-2)" style=rounded
+		reduce_scatter [label="Reduce-Scatter
+GPU: 2-65 → 66,67
+Input: [128,1024,1024]
+Output: [128,1024,512]" fillcolor=lightcoral shape=ellipse]
+		agg_0 [label="Aggregation Layer 0
+GPU: 66
+Input: [128,1024,512]
+Output: [128,1024,512]
+Weight: [512,1024]" fillcolor=lightyellow]
+		agg_1 [label="Aggregation Layer 1
+GPU: 67
+Input: [128,1024,512]
+Output: [128,1024,512]
+Weight: [512,1024]" fillcolor=lightyellow]
+		agg_allreduce [label="All-Reduce
+GPU: 66,67
+Input: [128,1024,512]
+Output: [128,1024,1024]" fillcolor=lightcoral shape=ellipse]
+		final_merge [label="Final Output Merge
+GPU: 66,67
+Input: [128,1024,512]
+Output: [128,1024,1024]" fillcolor=lightgray shape=parallelogram]
+	}
+	subgraph cluster_output {
+		color=black fillcolor=white label="Output Stage" style=rounded
+		output [label="Output Layer
+GPU: 66,67
+Input: [128,1024,1024]
+Output: [128,1024,1024]
+(final hidden states)" fillcolor=white shape=ellipse]
+	}
+	input -> split_embed
+	split_embed -> embed_0
+	split_embed -> embed_1
+	embed_0 -> embed_allreduce
+	embed_1 -> embed_allreduce
+	embed_allreduce -> embed_merge
+	embed_merge -> broadcast_expert
+	broadcast_expert -> gate_compute
+	gate_compute -> expert_select
+	expert_select -> expert_2 [style=dashed]
+	expert_select -> expert_3 [style=dashed]
+	expert_select -> expert_4 [style=dashed]
+	expert_select -> expert_5 [style=dashed]
+	expert_select -> expert_6 [style=dashed]
+	expert_select -> expert_7 [style=dashed]
+	expert_select -> expert_8 [style=dashed]
+	expert_select -> expert_9 [style=dashed]
+	expert_select -> experts_ellipsis [style=dashed]
+	broadcast_expert -> alltoall_expert
+	alltoall_expert -> expert_compute_2
+	alltoall_expert -> expert_compute_3
+	alltoall_expert -> expert_compute_4
+	alltoall_expert -> expert_compute_5
+	alltoall_expert -> expert_compute_ellipsis
+	expert_agg -> reduce_scatter
+	reduce_scatter -> agg_0
+	reduce_scatter -> agg_1
+	agg_0 -> agg_allreduce
+	agg_1 -> agg_allreduce
+	agg_allreduce -> final_merge
+	final_merge -> output
+}
