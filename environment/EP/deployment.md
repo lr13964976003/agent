@@ -14,7 +14,7 @@
 
 ## **Model Configuration**
 
-* **weights**: 7B
+* **weights**: 30B
 * **Layers**: 16-layer, Each layer includes Multi-head attention + Mixture of experts, Each layer has 64 experts.
 * **Precision**: FP16
 * **Batch size**: Each batch consists of 128 sequences.
