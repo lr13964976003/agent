@@ -1,0 +1,163 @@
+// 30B MoE Model Deployment DAG
+digraph {
+	fontname=Arial rankdir=TB size="40,60"
+	node [fontname=Arial fontsize=10]
+	edge [fontname=Arial fontsize=8]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input\nBatch: [batch_size=128, seq_len=1024, hidden=1024]\nGPU: Host" fillcolor=lightcoral shape=ellipse]
+	subgraph cluster_stage1_input {
+		fillcolor=lightgray label="Stage 1 Input Distribution (GPUs 0-7)" style="rounded,filled"
+		s1_split [label="Split Input Data\n[128, 1024, 1024] → 4×[128, 1024, 256]\nGPU: 0-7" fillcolor=lightyellow shape=parallelogram]
+		s1_broadcast [label="Broadcast Input\n[128, 1024, 256]\nGPU: 0-7" fillcolor=lightblue shape=ellipse]
+	}
+	subgraph cluster_layer1 {
+		fillcolor=lightcyan label="Layer 1 - Multi-Head Attention (Stage 1)" style="rounded,filled"
+		l1_ln [label="LayerNorm\nInput: [128, 1024, 256]\nOutput: [128, 1024, 256]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_qkv [label="QKV Linear (Col-Parallel)\nInput: [128, 1024, 256]\nOutput: [128, 1024, 192]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_qkv_comm [label="All-Gather QKV\n[128, 1024, 192]\nGPU: 0-3,4-7" fillcolor=lightblue shape=ellipse]
+		l1_reshape [label="Reshape for Attention\n[128, 1024, 192] → [128, 16, 1024, 64]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_scores [label="Attention Scores\nInput: [128, 4, 1024, 64]\nOutput: [128, 4, 1024, 1024]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_weights [label="Attention Softmax\nInput: [128, 4, 1024, 1024]\nOutput: [128, 4, 1024, 1024]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_attout [label="Attention Output\nInput: [128, 4, 1024, 64]\nOutput: [128, 1024, 256]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_att_allreduce [label="All-Reduce Attention\n[128, 1024, 256]\nGPU: 0-3,4-7" fillcolor=lightblue shape=ellipse]
+		l1_residual [label="Add Residual\n[128, 1024, 256] + [128, 1024, 256]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer1_mlp {
+		fillcolor=lightcyan label="Layer 1 - MLP (Stage 1)" style="rounded,filled"
+		l1_mlp_ln [label="MLP LayerNorm\nInput: [128, 1024, 256]\nOutput: [128, 1024, 256]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_mlp_linear1 [label="MLP Linear 1 (Col-Parallel)\nInput: [128, 1024, 256]\nOutput: [128, 1024, 1024]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_mlp_gather [label="All-Gather MLP\n[128, 1024, 1024]\nGPU: 0-3,4-7" fillcolor=lightblue shape=ellipse]
+		l1_mlp_gelu [label="GELU Activation\nInput: [128, 1024, 1024]\nOutput: [128, 1024, 1024]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_mlp_linear2 [label="MLP Linear 2 (Row-Parallel)\nInput: [128, 1024, 512]\nOutput: [128, 1024, 256]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+		l1_mlp_allreduce [label="All-Reduce MLP\n[128, 1024, 256]\nGPU: 0-3,4-7" fillcolor=lightblue shape=ellipse]
+		l1_mlp_residual [label="Add Residual\n[128, 1024, 256] + [128, 1024, 256]\nGPU: 0-3,4-7" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer1_moe {
+		fillcolor=lightcyan label="Layer 1 - MoE Routing (Stage 1)" style="rounded,filled"
+		l1_moe_gate [label="MoE Gate\nInput: [128, 1024, 256]\nOutput: [128, 1024, 64]\nGPU: 0-3,4-7" fillcolor=lightyellow shape=parallelogram]
+		l1_moe_select [label="Expert Selection (Top-2)\n[128, 1024, 64] → Expert IDs\nGPU: 0-3,4-7" fillcolor=lightyellow shape=parallelogram]
+		l1_moe_route_gpu0 [label="Route to Experts 0-7\nGPU: 0" fillcolor=lightblue shape=ellipse style=dashed]
+		l1_moe_route_gpu1 [label="Route to Experts 8-15\nGPU: 1" fillcolor=lightblue shape=ellipse style=dashed]
+		l1_moe_route_gpu2 [label="Route to Experts 16-23\nGPU: 2" fillcolor=lightblue shape=ellipse style=dashed]
+		l1_moe_route_gpu3 [label="Route to Experts 24-31\nGPU: 3" fillcolor=lightblue shape=ellipse style=dashed]
+		l1_moe_route_gpu4 [label="Route to Experts 32-39\nGPU: 4" fillcolor=lightblue shape=ellipse style=dashed]
+		l1_moe_route_gpu5 [label="Route to Experts 40-47\nGPU: 5" fillcolor=lightblue shape=ellipse style=dashed]
+		l1_moe_route_gpu6 [label="Route to Experts 48-55\nGPU: 6" fillcolor=lightblue shape=ellipse style=dashed]
+		l1_moe_route_gpu7 [label="Route to Experts 56-63\nGPU: 7" fillcolor=lightblue shape=ellipse style=dashed]
+	}
+	subgraph cluster_layer1_experts {
+		fillcolor=lightcyan label="Layer 1 - Expert Computation (8 experts per GPU)" style="rounded,filled"
+		l1_expert_linear1_gpu0 [label="Expert Linear 1\nInput: [128, 1024, 256]\nOutput: [128, 1024, 2048]\nGPU: 0\nExperts: 0-7" fillcolor=lightgreen shape=rectangle]
+		l1_expert_gelu_gpu0 [label="Expert GELU\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]\nGPU: 0\nExperts: 0-7" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear2_gpu0 [label="Expert Linear 2\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 256]\nGPU: 0\nExperts: 0-7" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear1_gpu1 [label="Expert Linear 1\nInput: [128, 1024, 256]\nOutput: [128, 1024, 2048]\nGPU: 1\nExperts: 8-15" fillcolor=lightgreen shape=rectangle]
+		l1_expert_gelu_gpu1 [label="Expert GELU\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]\nGPU: 1\nExperts: 8-15" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear2_gpu1 [label="Expert Linear 2\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 256]\nGPU: 1\nExperts: 8-15" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear1_gpu2 [label="Expert Linear 1\nInput: [128, 1024, 256]\nOutput: [128, 1024, 2048]\nGPU: 2\nExperts: 16-23" fillcolor=lightgreen shape=rectangle]
+		l1_expert_gelu_gpu2 [label="Expert GELU\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]\nGPU: 2\nExperts: 16-23" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear2_gpu2 [label="Expert Linear 2\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 256]\nGPU: 2\nExperts: 16-23" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear1_gpu3 [label="Expert Linear 1\nInput: [128, 1024, 256]\nOutput: [128, 1024, 2048]\nGPU: 3\nExperts: 24-31" fillcolor=lightgreen shape=rectangle]
+		l1_expert_gelu_gpu3 [label="Expert GELU\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]\nGPU: 3\nExperts: 24-31" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear2_gpu3 [label="Expert Linear 2\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 256]\nGPU: 3\nExperts: 24-31" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear1_gpu4 [label="Expert Linear 1\nInput: [128, 1024, 256]\nOutput: [128, 1024, 2048]\nGPU: 4\nExperts: 32-39" fillcolor=lightgreen shape=rectangle]
+		l1_expert_gelu_gpu4 [label="Expert GELU\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]\nGPU: 4\nExperts: 32-39" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear2_gpu4 [label="Expert Linear 2\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 256]\nGPU: 4\nExperts: 32-39" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear1_gpu5 [label="Expert Linear 1\nInput: [128, 1024, 256]\nOutput: [128, 1024, 2048]\nGPU: 5\nExperts: 40-47" fillcolor=lightgreen shape=rectangle]
+		l1_expert_gelu_gpu5 [label="Expert GELU\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]\nGPU: 5\nExperts: 40-47" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear2_gpu5 [label="Expert Linear 2\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 256]\nGPU: 5\nExperts: 40-47" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear1_gpu6 [label="Expert Linear 1\nInput: [128, 1024, 256]\nOutput: [128, 1024, 2048]\nGPU: 6\nExperts: 48-55" fillcolor=lightgreen shape=rectangle]
+		l1_expert_gelu_gpu6 [label="Expert GELU\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]\nGPU: 6\nExperts: 48-55" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear2_gpu6 [label="Expert Linear 2\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 256]\nGPU: 6\nExperts: 48-55" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear1_gpu7 [label="Expert Linear 1\nInput: [128, 1024, 256]\nOutput: [128, 1024, 2048]\nGPU: 7\nExperts: 56-63" fillcolor=lightgreen shape=rectangle]
+		l1_expert_gelu_gpu7 [label="Expert GELU\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 2048]\nGPU: 7\nExperts: 56-63" fillcolor=lightgreen shape=rectangle]
+		l1_expert_linear2_gpu7 [label="Expert Linear 2\nInput: [128, 1024, 2048]\nOutput: [128, 1024, 256]\nGPU: 7\nExperts: 56-63" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer1_moe_agg {
+		fillcolor=lightcyan label="Layer 1 - MoE Aggregation (Stage 1)" style="rounded,filled"
+		l1_moe_gather [label="Gather Expert Outputs\n8×[128, 1024, 256]\nGPU: 0-7" fillcolor=lightblue shape=ellipse]
+		l1_moe_weighted [label="Weighted Sum\n[128, 1024, 256]\nGPU: 0-7" fillcolor=lightyellow shape=parallelogram]
+		l1_moe_residual [label="Add Residual\n[128, 1024, 256] + [128, 1024, 256]\nGPU: 0-7" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_pipeline_comm {
+		fillcolor=lightgray label="Pipeline Communication (Stage 1 → Stage 2)" style="rounded,filled"
+		pipe_send [label="Pipeline Send\n[128, 1024, 256]\nGPU: 0-7 → 8-15" fillcolor=lightblue shape=ellipse]
+		pipe_recv [label="Pipeline Receive\n[128, 1024, 256]\nGPU: 8-15" fillcolor=lightblue shape=ellipse]
+	}
+	subgraph cluster_stage2_layers {
+		fillcolor=lightgray label="Stage 2: Layers 9-16 (GPUs 8-15)" style="rounded,filled"
+		l16_final [label="Final LayerNorm\nInput: [128, 1024, 256]\nOutput: [128, 1024, 256]\nGPU: 8-15" fillcolor=lightgreen shape=rectangle]
+		output_proj [label="Output Projection\nInput: [128, 1024, 256]\nOutput: [128, 1024, 1024]\nGPU: 8-15" fillcolor=lightgreen shape=rectangle]
+		final_gather [label="All-Gather Output\n4×[128, 1024, 256] → [128, 1024, 1024]\nGPU: 8-15" fillcolor=lightblue shape=ellipse]
+	}
+	output [label="Final Output\n[128, 1024, 1024]\nGPU: Host" fillcolor=lightcoral shape=ellipse]
+	input -> s1_split
+	s1_split -> s1_broadcast
+	s1_broadcast -> l1_ln
+	l1_ln -> l1_qkv
+	l1_qkv -> l1_qkv_comm
+	l1_qkv_comm -> l1_reshape
+	l1_reshape -> l1_scores
+	l1_scores -> l1_weights
+	l1_weights -> l1_attout
+	l1_attout -> l1_att_allreduce
+	l1_att_allreduce -> l1_residual
+	l1_residual -> l1_mlp_ln
+	l1_mlp_ln -> l1_mlp_linear1
+	l1_mlp_linear1 -> l1_mlp_gather
+	l1_mlp_gather -> l1_mlp_gelu
+	l1_mlp_gelu -> l1_mlp_linear2
+	l1_mlp_linear2 -> l1_mlp_allreduce
+	l1_mlp_allreduce -> l1_mlp_residual
+	l1_mlp_residual -> l1_moe_gate
+	l1_moe_gate -> l1_moe_select
+	l1_moe_select -> l1_moe_route_gpu0 [style=dashed]
+	l1_moe_route_gpu0 -> l1_expert_linear1_gpu0
+	l1_expert_linear1_gpu0 -> l1_expert_gelu_gpu0
+	l1_expert_gelu_gpu0 -> l1_expert_linear2_gpu0
+	l1_expert_linear2_gpu0 -> l1_moe_gather
+	l1_moe_select -> l1_moe_route_gpu1 [style=dashed]
+	l1_moe_route_gpu1 -> l1_expert_linear1_gpu1
+	l1_expert_linear1_gpu1 -> l1_expert_gelu_gpu1
+	l1_expert_gelu_gpu1 -> l1_expert_linear2_gpu1
+	l1_expert_linear2_gpu1 -> l1_moe_gather
+	l1_moe_select -> l1_moe_route_gpu2 [style=dashed]
+	l1_moe_route_gpu2 -> l1_expert_linear1_gpu2
+	l1_expert_linear1_gpu2 -> l1_expert_gelu_gpu2
+	l1_expert_gelu_gpu2 -> l1_expert_linear2_gpu2
+	l1_expert_linear2_gpu2 -> l1_moe_gather
+	l1_moe_select -> l1_moe_route_gpu3 [style=dashed]
+	l1_moe_route_gpu3 -> l1_expert_linear1_gpu3
+	l1_expert_linear1_gpu3 -> l1_expert_gelu_gpu3
+	l1_expert_gelu_gpu3 -> l1_expert_linear2_gpu3
+	l1_expert_linear2_gpu3 -> l1_moe_gather
+	l1_moe_select -> l1_moe_route_gpu4 [style=dashed]
+	l1_moe_route_gpu4 -> l1_expert_linear1_gpu4
+	l1_expert_linear1_gpu4 -> l1_expert_gelu_gpu4
+	l1_expert_gelu_gpu4 -> l1_expert_linear2_gpu4
+	l1_expert_linear2_gpu4 -> l1_moe_gather
+	l1_moe_select -> l1_moe_route_gpu5 [style=dashed]
+	l1_moe_route_gpu5 -> l1_expert_linear1_gpu5
+	l1_expert_linear1_gpu5 -> l1_expert_gelu_gpu5
+	l1_expert_gelu_gpu5 -> l1_expert_linear2_gpu5
+	l1_expert_linear2_gpu5 -> l1_moe_gather
+	l1_moe_select -> l1_moe_route_gpu6 [style=dashed]
+	l1_moe_route_gpu6 -> l1_expert_linear1_gpu6
+	l1_expert_linear1_gpu6 -> l1_expert_gelu_gpu6
+	l1_expert_gelu_gpu6 -> l1_expert_linear2_gpu6
+	l1_expert_linear2_gpu6 -> l1_moe_gather
+	l1_moe_select -> l1_moe_route_gpu7 [style=dashed]
+	l1_moe_route_gpu7 -> l1_expert_linear1_gpu7
+	l1_expert_linear1_gpu7 -> l1_expert_gelu_gpu7
+	l1_expert_gelu_gpu7 -> l1_expert_linear2_gpu7
+	l1_expert_linear2_gpu7 -> l1_moe_gather
+	l1_moe_gather -> l1_moe_weighted
+	l1_moe_weighted -> l1_moe_residual
+	l1_moe_residual -> pipe_send
+	pipe_send -> pipe_recv
+	pipe_recv -> l16_final
+	l16_final -> output_proj
+	output_proj -> final_gather
+	final_gather -> output
+}
