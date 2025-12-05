@@ -22,6 +22,8 @@ Gain a deep understanding of the methods proposed in the deployment method file.
 
 Generate one complete model deployment DAG(directed acyclic graph) according to deployment method by calling tools to generate graphviz code, meet the following conditions: <<<要求生成一个DAG，并遵守以下要求>>>
 
+It is required that the parallel strategy be fully, completely and correctly reflected. <<<要求充分完整正确地体现并行策略>>>
+
 Divide boundaries according to different GPUs, and label each node on the DAG graph with the corresponding GPU. <<<按不同GPU划分边界>>>
 
 Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
