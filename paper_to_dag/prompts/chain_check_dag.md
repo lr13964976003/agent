@@ -16,7 +16,7 @@ You are tested to completed the following tasks:
 
 Check if there are any errors in the DAG. The specific inspection items are as follows:<<<任务内容>>>
 
-Check whether the parallel strategy is fully, completely, and accurately reflected. <<<检查是否充分完整正确地体现并行策略>>>
+Check whether the parallel strategy in the deployment method is fully, completely, and accurately reflected. <<<检查是否充分完整正确地体现并行策略>>>
 
 Check whether all communication behaviors between GPUs are identified. <<<检查是否把GPU间所有的通信行为标识出来>>>
 
@@ -57,6 +57,7 @@ How we would grade this:
 Understand: We will check whether you have read and understood the DAG.
 
 Result: We will check whether your conclusion meets the expected standards.
+
 
 
 
