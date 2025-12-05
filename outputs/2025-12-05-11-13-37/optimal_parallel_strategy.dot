@@ -1,0 +1,168 @@
+digraph optimal_parallel_strategy {
+    rankdir=TB;
+    bgcolor=white;
+    node [shape=record, fontname="Helvetica", fontsize=10, style=filled, fillcolor=lightblue];
+    edge [fontname="Helvetica", fontsize=9];
+
+    /* Global parameters */
+    label="Optimal Hybrid Parallel Strategy: EP64_TP16_PP4 for 30B MoE Model";
+    labelloc=t;
+    
+    /* ---------- Input Stage ---------- */
+    Input [shape=box, fillcolor=lightgreen, label="Input Batch\nGPU: All PP Stages\n[batch=128, seq=128-10240, hidden=1024]"];
+    
+    /* ---------- Pipeline Stage 0 (Layers 0-3) ---------- */
+    subgraph cluster_pp0 {
+        label="Pipeline Stage 0: Layers 0-3 (GPUs 0-15)";
+        style=rounded;
+        fillcolor=lightyellow;
+        
+        /* Attention Block (TP=16) */
+        subgraph cluster_pp0_attn {
+            label="Multi-Head Attention (TP=16)";
+            style=dashed;
+            
+            pp0_ln1 [label="LayerNorm\nGPU: 0-15 (TP=16)\nInput: [B,S,1024]\nOutput: [B,S,1024]"];
+            pp0_qkv [label="QKV Linear (Col-Parallel)\nGPU: 0-15 (TP=16)\nInput: [B,S,1024]\nOutput: [B,S,16,64]"];
+            pp0_attn [label="Attention (16 heads)\nGPU: 0-15 (TP=16)\nInput: [B,S,16,64]\nOutput: [B,S,16,64]"];
+            pp0_proj [label="Projection (Row-Parallel)\nGPU: 0-15 (TP=16)\nInput: [B,S,16,64]\nOutput: [B,S,1024]"];
+            pp0_add1 [label="Add & Norm\nGPU: 0-15 (TP=16)\nInput: [B,S,1024]\nOutput: [B,S,1024]"];
+        }
+        
+        /* MoE Block (EP=64, TP=16) */
+        subgraph cluster_pp0_moe {
+            label="Mixture of Experts (EP=64, TP=16)";
+            style=solid;
+            
+            pp0_gate [label="Gate Network (Col-Parallel)\nGPU: 0-15 (TP=16)\nInput: [B,S,1024]\nOutput: [B,S,64]"];
+            pp0_scatter [shape=ellipse, fillcolor=lightgray, label="All-to-All Scatter\nGPU: 0-15 → Expert GPUs\nRoute tokens to experts"];
+            
+            /* Expert distribution (EP=64) */
+            subgraph cluster_pp0_experts {
+                label="Experts 0-15 (EP=64)";
+                style=rounded;
+                fillcolor=lightcyan;
+                
+                pp0_exp0 [label="Expert 0\nGPU: 0\nInput: [tokens,1024]\nOutput: [tokens,1024]"];
+                pp0_exp1 [label="Expert 1\nGPU: 1\nInput: [tokens,1024]\nOutput: [tokens,1024]"];
+                pp0_exp2 [label="Expert 2\nGPU: 2\nInput: [tokens,1024]\nOutput: [tokens,1024]"];
+                pp0_exp3 [label="Expert 3\nGPU: 3\nInput: [tokens,1024]\nOutput: [tokens,1024]"];
+                pp0_exp_others [label="...\nExperts 4-14\nGPU: 4-14"];
+                pp0_exp15 [label="Expert 15\nGPU: 15\nInput: [tokens,1024]\nOutput: [tokens,1024]"];
+            }
+            
+            pp0_gather [shape=ellipse, fillcolor=lightgray, label="All-to-All Gather\nGPU: Expert GPUs → 0-15\nAggregate expert outputs"];
+            pp0_weighted [label="Weighted Sum\nGPU: 0-15 (TP=16)\nApply gate weights"];
+            pp0_add2 [label="Add & Norm\nGPU: 0-15 (TP=16)\nInput: [B,S,1024]\nOutput: [B,S,1024]"];
+        }
+        
+        pp0_output [label="Stage 0 Output\nGPU: 0-15\nReady for Stage 1"];
+    }
+    
+    /* ---------- Pipeline Stage 1 (Layers 4-7) ---------- */
+    subgraph cluster_pp1 {
+        label="Pipeline Stage 1: Layers 4-7 (GPUs 16-31)";
+        style=rounded;
+        fillcolor=lightyellow;
+        
+        pp1_input [label="Stage 1 Input\nGPU: 16-31\nReceived from Stage 0"];
+        
+        /* Similar structure to Stage 0 */
+        pp1_attn [label="Attention Block\nGPU: 16-31 (TP=16)\nSame as Stage 0"];
+        pp1_moe [label="MoE Block\nGPU: 16-31\nExperts 16-31"];
+        pp1_output [label="Stage 1 Output\nGPU: 16-31\nReady for Stage 2"];
+    }
+    
+    /* ---------- Pipeline Stage 2 (Layers 8-11) ---------- */
+    subgraph cluster_pp2 {
+        label="Pipeline Stage 2: Layers 8-11 (GPUs 32-47)";
+        style=rounded;
+        fillcolor=lightyellow;
+        
+        pp2_input [label="Stage 2 Input\nGPU: 32-47\nReceived from Stage 1"];
+        pp2_attn [label="Attention Block\nGPU: 32-47 (TP=16)\nSame as Stage 0"];
+        pp2_moe [label="MoE Block\nGPU: 32-47\nExperts 32-47"];
+        pp2_output [label="Stage 2 Output\nGPU: 32-47\nReady for Stage 3"];
+    }
+    
+    /* ---------- Pipeline Stage 3 (Layers 12-15) ---------- */
+    subgraph cluster_pp3 {
+        label="Pipeline Stage 3: Layers 12-15 (GPUs 48-63)";
+        style=rounded;
+        fillcolor=lightyellow;
+        
+        pp3_input [label="Stage 3 Input\nGPU: 48-63\nReceived from Stage 2"];
+        pp3_attn [label="Attention Block\nGPU: 48-63 (TP=16)\nSame as Stage 0"];
+        pp3_moe [label="MoE Block\nGPU: 48-63\nExperts 48-63"];
+        pp3_output [label="Final Output\nGPU: 48-63\nComplete!"];
+    }
+    
+    /* ---------- Global Output ---------- */
+    Output [shape=box, fillcolor=lightgreen, label="Final Output\nGPU: All PP Stages\n[batch=128, seq=128-10240, hidden=1024]"];
+    
+    /* ---------- Edges ---------- */
+    /* Input to Stage 0 */
+    Input -> pp0_ln1 [style=bold, label="Pipeline Input"];
+    
+    /* Stage 0 internal connections */
+    pp0_ln1 -> pp0_qkv;
+    pp0_qkv -> pp0_attn;
+    pp0_attn -> pp0_proj;
+    pp0_proj -> pp0_add1;
+    pp0_add1 -> pp0_gate;
+    pp0_add1 -> pp0_scatter;
+    pp0_gate -> pp0_scatter [style=dashed, label="routing"];
+    
+    /* Expert routing */
+    pp0_scatter -> pp0_exp0;
+    pp0_scatter -> pp0_exp1;
+    pp0_scatter -> pp0_exp2;
+    pp0_scatter -> pp0_exp3;
+    pp0_scatter -> pp0_exp_others;
+    pp0_scatter -> pp0_exp15;
+    
+    /* Expert gather */
+    pp0_exp0 -> pp0_gather;
+    pp0_exp1 -> pp0_gather;
+    pp0_exp2 -> pp0_gather;
+    pp0_exp3 -> pp0_gather;
+    pp0_exp_others -> pp0_gather;
+    pp0_exp15 -> pp0_gather;
+    
+    pp0_gather -> pp0_weighted;
+    pp0_gate -> pp0_weighted [style=dashed, label="weights"];
+    pp0_weighted -> pp0_add2;
+    pp0_add1 -> pp0_add2 [style=dashed, label="residual"];
+    pp0_add2 -> pp0_output;
+    
+    /* Pipeline connections between stages */
+    pp0_output -> pp1_input [style=bold, label="PP: Stage 0→1"];
+    pp1_input -> pp1_attn;
+    pp1_attn -> pp1_moe;
+    pp1_moe -> pp1_output;
+    
+    pp1_output -> pp2_input [style=bold, label="PP: Stage 1→2"];
+    pp2_input -> pp2_attn;
+    pp2_attn -> pp2_moe;
+    pp2_moe -> pp2_output;
+    
+    pp2_output -> pp3_input [style=bold, label="PP: Stage 2→3"];
+    pp3_input -> pp3_attn;
+    pp3_attn -> pp3_moe;
+    pp3_moe -> pp3_output;
+    
+    /* Final output */
+    pp3_output -> Output [style=bold, label="Pipeline Output"];
+    
+    /* ---------- Legend ---------- */
+    subgraph cluster_legend {
+        label="Parallelism Legend";
+        style=rounded;
+        fillcolor=lightgreen;
+        
+        legend1 [shape=box, fillcolor=lightblue, label="TP=16: Tensor Parallel\nSplit across 16 GPUs"];
+        legend2 [shape=box, fillcolor=lightcyan, label="EP=64: Expert Parallel\n64 experts across 64 GPUs"];
+        legend3 [shape=box, fillcolor=lightyellow, label="PP=4: Pipeline Parallel\n4 stages across 4×16 GPUs"];
+        legend4 [shape=ellipse, fillcolor=lightgray, label="All-to-All Communication"];
+    }
+}

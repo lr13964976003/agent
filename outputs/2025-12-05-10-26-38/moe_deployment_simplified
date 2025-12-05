@@ -1,0 +1,94 @@
+// 30B MoE Model Deployment DAG - Simplified
+digraph {
+	bgcolor=white rankdir=TB ranksep=1.0 splines=ortho
+	input [label="Input Batch\n[128, 1024, 1024]" fillcolor=white shape=ellipse]
+	dp_split [label="Data Parallel Split\n→ 2 groups of 64\n[64, 1024, 1024]" fillcolor=lightyellow shape=parallelogram]
+	subgraph cluster_stage0 {
+		fillcolor=lightblue label="Stage 0: GPUs 0-3\nLayers 0-3" style="rounded,filled"
+		s0_l0_attn [label="Layer 0 Attention\n4-way Tensor Parallel\nQKV→Scores→Output\nGPU: 0,1,2,3" fillcolor=lightblue]
+		s0_l0_attn_comm [label="Attention All-Reduce\nGPU: 0,1,2,3" fillcolor=lightgray shape=ellipse]
+		s0_l0_moe [label="Layer 0 MoE\n16-way Expert Parallel\n4 experts per GPU\nGPU: 0-15" fillcolor=lightblue]
+		s0_l0_moe_comm [label="MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s0_l1_attn [label="Layer 1 Attention\n4-way Tensor Parallel\nGPU: 0,1,2,3" fillcolor=lightblue]
+		s0_l1_attn_comm [label="Layer 1 Attn All-Reduce\nGPU: 0,1,2,3" fillcolor=lightgray shape=ellipse]
+		s0_l1_moe [label="Layer 1 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s0_l1_moe_comm [label="Layer 1 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s0_l2_attn [label="Layer 2 Attention\n4-way Tensor Parallel\nGPU: 0,1,2,3" fillcolor=lightblue]
+		s0_l2_attn_comm [label="Layer 2 Attn All-Reduce\nGPU: 0,1,2,3" fillcolor=lightgray shape=ellipse]
+		s0_l2_moe [label="Layer 2 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s0_l2_moe_comm [label="Layer 2 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s0_l3_attn [label="Layer 3 Attention\n4-way Tensor Parallel\nGPU: 0,1,2,3" fillcolor=lightblue]
+		s0_l3_attn_comm [label="Layer 3 Attn All-Reduce\nGPU: 0,1,2,3" fillcolor=lightgray shape=ellipse]
+		s0_l3_moe [label="Layer 3 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s0_l3_moe_comm [label="Layer 3 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+	}
+	subgraph cluster_stage1 {
+		fillcolor=lightgreen label="Stage 1: GPUs 4-7\nLayers 4-7" style="rounded,filled"
+		s1_l4_attn [label="Layer 4 Attention\n4-way Tensor Parallel\nGPU: 4,5,6,7" fillcolor=lightblue]
+		s1_l4_attn_comm [label="Layer 4 Attn All-Reduce\nGPU: 4,5,6,7" fillcolor=lightgray shape=ellipse]
+		s1_l4_moe [label="Layer 4 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s1_l4_moe_comm [label="Layer 4 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s1_l5_attn [label="Layer 5 Attention\n4-way Tensor Parallel\nGPU: 4,5,6,7" fillcolor=lightblue]
+		s1_l5_attn_comm [label="Layer 5 Attn All-Reduce\nGPU: 4,5,6,7" fillcolor=lightgray shape=ellipse]
+		s1_l5_moe [label="Layer 5 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s1_l5_moe_comm [label="Layer 5 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s1_l6_attn [label="Layer 6 Attention\n4-way Tensor Parallel\nGPU: 4,5,6,7" fillcolor=lightblue]
+		s1_l6_attn_comm [label="Layer 6 Attn All-Reduce\nGPU: 4,5,6,7" fillcolor=lightgray shape=ellipse]
+		s1_l6_moe [label="Layer 6 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s1_l6_moe_comm [label="Layer 6 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s1_l7_attn [label="Layer 7 Attention\n4-way Tensor Parallel\nGPU: 4,5,6,7" fillcolor=lightblue]
+		s1_l7_attn_comm [label="Layer 7 Attn All-Reduce\nGPU: 4,5,6,7" fillcolor=lightgray shape=ellipse]
+		s1_l7_moe [label="Layer 7 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s1_l7_moe_comm [label="Layer 7 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+	}
+	subgraph cluster_stage2 {
+		fillcolor=lightyellow label="Stage 2: GPUs 8-11\nLayers 8-11" style="rounded,filled"
+		s2_l8_attn [label="Layer 8 Attention\n4-way Tensor Parallel\nGPU: 8,9,10,11" fillcolor=lightblue]
+		s2_l8_attn_comm [label="Layer 8 Attn All-Reduce\nGPU: 8,9,10,11" fillcolor=lightgray shape=ellipse]
+		s2_l8_moe [label="Layer 8 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s2_l8_moe_comm [label="Layer 8 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s2_l9_attn [label="Layer 9 Attention\n4-way Tensor Parallel\nGPU: 8,9,10,11" fillcolor=lightblue]
+		s2_l9_attn_comm [label="Layer 9 Attn All-Reduce\nGPU: 8,9,10,11" fillcolor=lightgray shape=ellipse]
+		s2_l9_moe [label="Layer 9 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s2_l9_moe_comm [label="Layer 9 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s2_l10_attn [label="Layer 10 Attention\n4-way Tensor Parallel\nGPU: 8,9,10,11" fillcolor=lightblue]
+		s2_l10_attn_comm [label="Layer 10 Attn All-Reduce\nGPU: 8,9,10,11" fillcolor=lightgray shape=ellipse]
+		s2_l10_moe [label="Layer 10 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s2_l10_moe_comm [label="Layer 10 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s2_l11_attn [label="Layer 11 Attention\n4-way Tensor Parallel\nGPU: 8,9,10,11" fillcolor=lightblue]
+		s2_l11_attn_comm [label="Layer 11 Attn All-Reduce\nGPU: 8,9,10,11" fillcolor=lightgray shape=ellipse]
+		s2_l11_moe [label="Layer 11 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s2_l11_moe_comm [label="Layer 11 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+	}
+	subgraph cluster_stage3 {
+		fillcolor=lightcoral label="Stage 3: GPUs 12-15\nLayers 12-15" style="rounded,filled"
+		s3_l12_attn [label="Layer 12 Attention\n4-way Tensor Parallel\nGPU: 12,13,14,15" fillcolor=lightblue]
+		s3_l12_attn_comm [label="Layer 12 Attn All-Reduce\nGPU: 12,13,14,15" fillcolor=lightgray shape=ellipse]
+		s3_l12_moe [label="Layer 12 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s3_l12_moe_comm [label="Layer 12 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s3_l13_attn [label="Layer 13 Attention\n4-way Tensor Parallel\nGPU: 12,13,14,15" fillcolor=lightblue]
+		s3_l13_attn_comm [label="Layer 13 Attn All-Reduce\nGPU: 12,13,14,15" fillcolor=lightgray shape=ellipse]
+		s3_l13_moe [label="Layer 13 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s3_l13_moe_comm [label="Layer 13 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s3_l14_attn [label="Layer 14 Attention\n4-way Tensor Parallel\nGPU: 12,13,14,15" fillcolor=lightblue]
+		s3_l14_attn_comm [label="Layer 14 Attn All-Reduce\nGPU: 12,13,14,15" fillcolor=lightgray shape=ellipse]
+		s3_l14_moe [label="Layer 14 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s3_l14_moe_comm [label="Layer 14 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+		s3_l15_attn [label="Layer 15 Attention\n4-way Tensor Parallel\nGPU: 12,13,14,15" fillcolor=lightblue]
+		s3_l15_attn_comm [label="Layer 15 Attn All-Reduce\nGPU: 12,13,14,15" fillcolor=lightgray shape=ellipse]
+		s3_l15_moe [label="Layer 15 MoE\n16-way Expert Parallel\nGPU: 0-15" fillcolor=lightblue]
+		s3_l15_moe_comm [label="Layer 15 MoE All-to-All\nGPU: 0-15" fillcolor=lightgray shape=ellipse]
+	}
+	output_agg [label="Output Aggregation\nAll-Reduce Sum\nGPU: 12,13,14,15" fillcolor=lightyellow shape=parallelogram]
+	output [label="Final Output\n[128, 1024, 1024]" fillcolor=lightgreen shape=ellipse]
+	input -> dp_split
+	dp_split -> s0_l0_attn
+	s0_l0_attn -> s0_l0_attn_comm
+	s0_l0_attn_comm -> s0_l0_moe
+	s0_l0_moe -> s0_l0_moe_comm
+	s0_l3_moe_comm -> s1_l4_attn
+	s1_l7_moe_comm -> s2_l8_attn
+	s2_l11_moe_comm -> s3_l12_attn
+	s3_l15_moe_comm -> output_agg
+	output_agg -> output
+}

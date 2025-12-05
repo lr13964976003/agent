@@ -1,0 +1,739 @@
+digraph G {
+    rankdir=TB;
+    bgcolor="white";
+    node [shape=box, style=rounded, fontname="Helvetica"];
+    edge [fontname="Helvetica", fontsize=10];
+
+    // ---------- legend ----------
+    subgraph cluster_legend {
+        label="Legend";
+        style=dotted;
+        comp [shape=box,     label="Computation"];
+        comm [shape=ellipse, label="Communication"];
+        route [shape=parallelogram, label="Split / Route / Aggregate"];
+    }
+
+    // ---------- input ----------
+    input [shape=parallelogram,
+           label="Input\lINPUT: [batch_size=128, seq_len=10240, hidden=1024]\lOUTPUT: same\l"];
+
+    // ============================================================
+    // PP Stage 0 – GPUs 0-15  (Layers 0-3)
+    // ============================================================
+    subgraph cluster_pp0 {
+        label="PP Stage 0 (Layers 0-3) – GPUs 0-15";
+        style=rounded;
+        color=blue;
+
+        qkv_c0   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar0  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph0     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp0     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm0      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do0      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh0     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r0  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar0 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm0    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c0  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar0 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route0   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s0   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp0     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar0  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r0   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg0     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m0  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c1   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar1  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph1     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp1     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm1      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do1      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh1     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r1  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar1 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm1    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c1  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar1 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route1   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s1   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp1     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar1  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r1   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg1     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m1  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c2   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar2  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph2     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp2     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm2      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do2      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh2     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r2  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar2 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm2    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c2  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar2 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route2   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s2   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp2     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar2  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r2   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg2     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m2  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c3   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar3  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph3     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp3     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm3      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do3      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh3     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r3  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar3 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm3    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c3  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar3 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route3   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s3   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp3     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar3  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r3   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg3     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m3  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+    }
+
+    // ============================================================
+    // PP Stage 1 – GPUs 16-31  (Layers 4-7)
+    // ============================================================
+    subgraph cluster_pp1 {
+        label="PP Stage 1 (Layers 4-7) – GPUs 16-31";
+        style=rounded;
+        color=green;
+
+        split1 [shape=parallelogram,
+                label="Split to TP=16 GPUs\lINPUT: [128,10240,1024]\lOUTPUT: 16× [128,10240,64]\l"];
+
+        qkv_c4   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar4  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph4     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp4     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm4      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do4      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh4     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r4  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar4 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm4    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c4  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar4 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route4   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s4   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp4     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar4  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r4   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg4     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m4  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c5   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar5  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph5     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp5     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm5      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do5      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh5     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r5  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar5 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm5    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c5  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar5 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route5   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s5   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp5     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar5  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r5   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg5     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m5  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c6   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar6  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph6     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp6     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm6      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do6      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh6     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r6  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar6 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm6    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c6  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar6 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route6   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s6   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp6     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar6  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r6   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg6     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m6  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c7   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar7  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph7     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp7     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm7      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do7      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh7     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r7  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar7 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm7    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c7  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar7 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route7   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s7   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp7     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar7  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r7   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg7     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m7  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+    }
+
+    // ============================================================
+    // PP Stage 2 – GPUs 32-47  (Layers 8-11)
+    // ============================================================
+    subgraph cluster_pp2 {
+        label="PP Stage 2 (Layers 8-11) – GPUs 32-47";
+        style=rounded;
+        color=orange;
+
+        split2 [shape=parallelogram,
+                label="Split to TP=16 GPUs\lINPUT: [128,10240,1024]\lOUTPUT: 16× [128,10240,64]\l"];
+
+        qkv_c8   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar8  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph8     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp8     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm8      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do8      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh8     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r8  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar8 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm8    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c8  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar8 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route8   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s8   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp8     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar8  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r8   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg8     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m8  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c9   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar9  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph9     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp9     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm9      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do9      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh9     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r9  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar9 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm9    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c9  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar9 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route9   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s9   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp9     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar9  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r9   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg9     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m9  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c10   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar10  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph10     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp10     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm10      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do10      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh10     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r10  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar10 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm10    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c10  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar10 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route10   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s10   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp10     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar10  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r10   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg10     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m10  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c11   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar11  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph11     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp11     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm11      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do11      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh11     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r11  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar11 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm11    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c11  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar11 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route11   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s11   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp11     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar11  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r11   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg11     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m11  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+    }
+
+    // ============================================================
+    // PP Stage 3 – GPUs 48-63  (Layers 12-15)
+    // ============================================================
+    subgraph cluster_pp3 {
+        label="PP Stage 3 (Layers 12-15) – GPUs 48-63";
+        style=rounded;
+        color=red;
+
+        split3 [shape=parallelogram,
+                label="Split to TP=16 GPUs\lINPUT: [128,10240,1024]\lOUTPUT: 16× [128,10240,64]\l"];
+
+        qkv_c12   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar12  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph12     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp12     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm12      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do12      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh12     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r12  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar12 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm12    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c12  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar12 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route12   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s12   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp12     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar12  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r12   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg12     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m12  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c13   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar13  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph13     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp13     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm13      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do13      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh13     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r13  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar13 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm13    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c13  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar13 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route13   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s13   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp13     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar13  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r13   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg13     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m13  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c14   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar14  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph14     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp14     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm14      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do14      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh14     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r14  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar14 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm14    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c14  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar14 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route14   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s14   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp14     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar14  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r14   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg14     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m14  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+        qkv_c15   [shape=box, label="QKV Column-Parallel Linear (TP=16)\lINPUT: [128,10240,64]\lOUTPUT: [128,10240,192]\l"];
+        qkv_ar15  [shape=ellipse, label="All-Reduce QKV (TP group)\lINPUT: [128,10240,192]\lOUTPUT: same\l"];
+        sph15     [shape=parallelogram, label="Split Heads (16 heads)\lINPUT: [128,10240,192]\lOUTPUT: [128,10240,16,64]\l"];
+        sdp15     [shape=box, label="Scaled Dot-Product (per head)\lINPUT: [128,10240,16,64]\lOUTPUT: same\l"];
+        sm15      [shape=box, label="Softmax (per head)\lINPUT: same\lOUTPUT: same\l"];
+        do15      [shape=box, label="Dropout (attn)\lINPUT: same\lOUTPUT: same\l"];
+        mgh15     [shape=parallelogram, label="Merge Heads\lINPUT: [128,10240,16,64]\lOUTPUT: [128,10240,1024]\l"];
+        proj_r15  [shape=box, label="Attn Proj Row-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,64]\l"];
+        proj_ar15 [shape=ellipse, label="All-Reduce Proj (TP)\lINPUT: [128,10240,64]\lOUTPUT: same\l"];
+        norm15    [shape=box, label="Add & LayerNorm\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        gate_c15  [shape=box, label="Gate Column-Parallel (TP=16)\lINPUT: [128,10240,1024]\lOUTPUT: [128,10240,4]\l"];
+        gate_ar15 [shape=ellipse, label="All-Reduce Gate (TP)\lINPUT: same\lOUTPUT: same\l"];
+        route15   [shape=parallelogram, label="Top-2 Routing\lINPUT: same\lOUTPUT: indices+weights\l"];
+        a2a_s15   [shape=ellipse, label="All-to-All Send tokens (EP=64)\lINPUT: [128,10240,1024]\lOUTPUT: scattered to 64 experts\l"];
+        exp15     [shape=box, label="Expert FFN Row-Parallel (TP=16)\lINPUT: local tokens, hidden=1024\lOUTPUT: same shape\l"];
+        exp_ar15  [shape=ellipse, label="All-Reduce Expert (TP)\lINPUT: same\lOUTPUT: same\l"];
+        a2a_r15   [shape=ellipse, label="All-to-All Recv results\lINPUT: scattered\lOUTPUT: [128,10240,1024]\l"];
+        agg15     [shape=parallelogram, label="Weighted Aggregate\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+        norm_m15  [shape=box, label="Add & LayerNorm (MoE)\lINPUT: same\lOUTPUT: same\l"];
+
+    }
+
+    // ---------- final output ----------
+    output [shape=parallelogram,
+            label="Aggregate Final Hidden\lINPUT: [128,10240,1024]\lOUTPUT: same\l"];
+
+    // ============================================================
+    // Edges – forward only (guaranteed acyclic)
+    // ============================================================
+    input -> split0;
+
+    // Layer 0
+    split0 -> qkv_c0;
+    qkv_c0 -> qkv_ar0;
+    qkv_ar0 -> sph0;
+    sph0 -> sdp0;
+    sdp0 -> sm0;
+    sm0 -> do0;
+    do0 -> mgh0;
+    mgh0 -> proj_r0;
+    proj_r0 -> proj_ar0;
+    proj_ar0 -> norm0;
+    norm0 -> gate_c0;
+    gate_c0 -> gate_ar0;
+    gate_ar0 -> route0;
+    route0 -> a2a_s0;
+    a2a_s0 -> exp0;
+    exp0 -> exp_ar0;
+    exp_ar0 -> a2a_r0;
+    a2a_r0 -> agg0;
+    agg0 -> norm_m0;
+
+    // Layer 1
+    norm_m0 -> qkv_c1;
+    qkv_c1 -> qkv_ar1;
+    qkv_ar1 -> sph1;
+    sph1 -> sdp1;
+    sdp1 -> sm1;
+    sm1 -> do1;
+    do1 -> mgh1;
+    mgh1 -> proj_r1;
+    proj_r1 -> proj_ar1;
+    proj_ar1 -> norm1;
+    norm1 -> gate_c1;
+    gate_c1 -> gate_ar1;
+    gate_ar1 -> route1;
+    route1 -> a2a_s1;
+    a2a_s1 -> exp1;
+    exp1 -> exp_ar1;
+    exp_ar1 -> a2a_r1;
+    a2a_r1 -> agg1;
+    agg1 -> norm_m1;
+
+    // Layer 2
+    norm_m1 -> qkv_c2;
+    qkv_c2 -> qkv_ar2;
+    qkv_ar2 -> sph2;
+    sph2 -> sdp2;
+    sdp2 -> sm2;
+    sm2 -> do2;
+    do2 -> mgh2;
+    mgh2 -> proj_r2;
+    proj_r2 -> proj_ar2;
+    proj_ar2 -> norm2;
+    norm2 -> gate_c2;
+    gate_c2 -> gate_ar2;
+    gate_ar2 -> route2;
+    route2 -> a2a_s2;
+    a2a_s2 -> exp2;
+    exp2 -> exp_ar2;
+    exp_ar2 -> a2a_r2;
+    a2a_r2 -> agg2;
+    agg2 -> norm_m2;
+
+    // Layer 3
+    norm_m2 -> qkv_c3;
+    qkv_c3 -> qkv_ar3;
+    qkv_ar3 -> sph3;
+    sph3 -> sdp3;
+    sdp3 -> sm3;
+    sm3 -> do3;
+    do3 -> mgh3;
+    mgh3 -> proj_r3;
+    proj_r3 -> proj_ar3;
+    proj_ar3 -> norm3;
+    norm3 -> gate_c3;
+    gate_c3 -> gate_ar3;
+    gate_ar3 -> route3;
+    route3 -> a2a_s3;
+    a2a_s3 -> exp3;
+    exp3 -> exp_ar3;
+    exp_ar3 -> a2a_r3;
+    a2a_r3 -> agg3;
+    agg3 -> norm_m3;
+
+    // Layer 4
+    split1 -> qkv_c4;
+    qkv_c4 -> qkv_ar4;
+    qkv_ar4 -> sph4;
+    sph4 -> sdp4;
+    sdp4 -> sm4;
+    sm4 -> do4;
+    do4 -> mgh4;
+    mgh4 -> proj_r4;
+    proj_r4 -> proj_ar4;
+    proj_ar4 -> norm4;
+    norm4 -> gate_c4;
+    gate_c4 -> gate_ar4;
+    gate_ar4 -> route4;
+    route4 -> a2a_s4;
+    a2a_s4 -> exp4;
+    exp4 -> exp_ar4;
+    exp_ar4 -> a2a_r4;
+    a2a_r4 -> agg4;
+    agg4 -> norm_m4;
+
+    // Layer 5
+    norm_m4 -> qkv_c5;
+    qkv_c5 -> qkv_ar5;
+    qkv_ar5 -> sph5;
+    sph5 -> sdp5;
+    sdp5 -> sm5;
+    sm5 -> do5;
+    do5 -> mgh5;
+    mgh5 -> proj_r5;
+    proj_r5 -> proj_ar5;
+    proj_ar5 -> norm5;
+    norm5 -> gate_c5;
+    gate_c5 -> gate_ar5;
+    gate_ar5 -> route5;
+    route5 -> a2a_s5;
+    a2a_s5 -> exp5;
+    exp5 -> exp_ar5;
+    exp_ar5 -> a2a_r5;
+    a2a_r5 -> agg5;
+    agg5 -> norm_m5;
+
+    // Layer 6
+    norm_m5 -> qkv_c6;
+    qkv_c6 -> qkv_ar6;
+    qkv_ar6 -> sph6;
+    sph6 -> sdp6;
+    sdp6 -> sm6;
+    sm6 -> do6;
+    do6 -> mgh6;
+    mgh6 -> proj_r6;
+    proj_r6 -> proj_ar6;
+    proj_ar6 -> norm6;
+    norm6 -> gate_c6;
+    gate_c6 -> gate_ar6;
+    gate_ar6 -> route6;
+    route6 -> a2a_s6;
+    a2a_s6 -> exp6;
+    exp6 -> exp_ar6;
+    exp_ar6 -> a2a_r6;
+    a2a_r6 -> agg6;
+    agg6 -> norm_m6;
+
+    // Layer 7
+    norm_m6 -> qkv_c7;
+    qkv_c7 -> qkv_ar7;
+    qkv_ar7 -> sph7;
+    sph7 -> sdp7;
+    sdp7 -> sm7;
+    sm7 -> do7;
+    do7 -> mgh7;
+    mgh7 -> proj_r7;
+    proj_r7 -> proj_ar7;
+    proj_ar7 -> norm7;
+    norm7 -> gate_c7;
+    gate_c7 -> gate_ar7;
+    gate_ar7 -> route7;
+    route7 -> a2a_s7;
+    a2a_s7 -> exp7;
+    exp7 -> exp_ar7;
+    exp_ar7 -> a2a_r7;
+    a2a_r7 -> agg7;
+    agg7 -> norm_m7;
+
+    // Layer 8
+    split2 -> qkv_c8;
+    qkv_c8 -> qkv_ar8;
+    qkv_ar8 -> sph8;
+    sph8 -> sdp8;
+    sdp8 -> sm8;
+    sm8 -> do8;
+    do8 -> mgh8;
+    mgh8 -> proj_r8;
+    proj_r8 -> proj_ar8;
+    proj_ar8 -> norm8;
+    norm8 -> gate_c8;
+    gate_c8 -> gate_ar8;
+    gate_ar8 -> route8;
+    route8 -> a2a_s8;
+    a2a_s8 -> exp8;
+    exp8 -> exp_ar8;
+    exp_ar8 -> a2a_r8;
+    a2a_r8 -> agg8;
+    agg8 -> norm_m8;
+
+    // Layer 9
+    norm_m8 -> qkv_c9;
+    qkv_c9 -> qkv_ar9;
+    qkv_ar9 -> sph9;
+    sph9 -> sdp9;
+    sdp9 -> sm9;
+    sm9 -> do9;
+    do9 -> mgh9;
+    mgh9 -> proj_r9;
+    proj_r9 -> proj_ar9;
+    proj_ar9 -> norm9;
+    norm9 -> gate_c9;
+    gate_c9 -> gate_ar9;
+    gate_ar9 -> route9;
+    route9 -> a2a_s9;
+    a2a_s9 -> exp9;
+    exp9 -> exp_ar9;
+    exp_ar9 -> a2a_r9;
+    a2a_r9 -> agg9;
+    agg9 -> norm_m9;
+
+    // Layer 10
+    norm_m9 -> qkv_c10;
+    qkv_c10 -> qkv_ar10;
+    qkv_ar10 -> sph10;
+    sph10 -> sdp10;
+    sdp10 -> sm10;
+    sm10 -> do10;
+    do10 -> mgh10;
+    mgh10 -> proj_r10;
+    proj_r10 -> proj_ar10;
+    proj_ar10 -> norm10;
+    norm10 -> gate_c10;
+    gate_c10 -> gate_ar10;
+    gate_ar10 -> route10;
+    route10 -> a2a_s10;
+    a2a_s10 -> exp10;
+    exp10 -> exp_ar10;
+    exp_ar10 -> a2a_r10;
+    a2a_r10 -> agg10;
+    agg10 -> norm_m10;
+
+    // Layer 11
+    norm_m10 -> qkv_c11;
+    qkv_c11 -> qkv_ar11;
+    qkv_ar11 -> sph11;
+    sph11 -> sdp11;
+    sdp11 -> sm11;
+    sm11 -> do11;
+    do11 -> mgh11;
+    mgh11 -> proj_r11;
+    proj_r11 -> proj_ar11;
+    proj_ar11 -> norm11;
+    norm11 -> gate_c11;
+    gate_c11 -> gate_ar11;
+    gate_ar11 -> route11;
+    route11 -> a2a_s11;
+    a2a_s11 -> exp11;
+    exp11 -> exp_ar11;
+    exp_ar11 -> a2a_r11;
+    a2a_r11 -> agg11;
+    agg11 -> norm_m11;
+
+    // Layer 12
+    split3 -> qkv_c12;
+    qkv_c12 -> qkv_ar12;
+    qkv_ar12 -> sph12;
+    sph12 -> sdp12;
+    sdp12 -> sm12;
+    sm12 -> do12;
+    do12 -> mgh12;
+    mgh12 -> proj_r12;
+    proj_r12 -> proj_ar12;
+    proj_ar12 -> norm12;
+    norm12 -> gate_c12;
+    gate_c12 -> gate_ar12;
+    gate_ar12 -> route12;
+    route12 -> a2a_s12;
+    a2a_s12 -> exp12;
+    exp12 -> exp_ar12;
+    exp_ar12 -> a2a_r12;
+    a2a_r12 -> agg12;
+    agg12 -> norm_m12;
+
+    // Layer 13
+    norm_m12 -> qkv_c13;
+    qkv_c13 -> qkv_ar13;
+    qkv_ar13 -> sph13;
+    sph13 -> sdp13;
+    sdp13 -> sm13;
+    sm13 -> do13;
+    do13 -> mgh13;
+    mgh13 -> proj_r13;
+    proj_r13 -> proj_ar13;
+    proj_ar13 -> norm13;
+    norm13 -> gate_c13;
+    gate_c13 -> gate_ar13;
+    gate_ar13 -> route13;
+    route13 -> a2a_s13;
+    a2a_s13 -> exp13;
+    exp13 -> exp_ar13;
+    exp_ar13 -> a2a_r13;
+    a2a_r13 -> agg13;
+    agg13 -> norm_m13;
+
+    // Layer 14
+    norm_m13 -> qkv_c14;
+    qkv_c14 -> qkv_ar14;
+    qkv_ar14 -> sph14;
+    sph14 -> sdp14;
+    sdp14 -> sm14;
+    sm14 -> do14;
+    do14 -> mgh14;
+    mgh14 -> proj_r14;
+    proj_r14 -> proj_ar14;
+    proj_ar14 -> norm14;
+    norm14 -> gate_c14;
+    gate_c14 -> gate_ar14;
+    gate_ar14 -> route14;
+    route14 -> a2a_s14;
+    a2a_s14 -> exp14;
+    exp14 -> exp_ar14;
+    exp_ar14 -> a2a_r14;
+    a2a_r14 -> agg14;
+    agg14 -> norm_m14;
+
+    // Layer 15
+    norm_m14 -> qkv_c15;
+    qkv_c15 -> qkv_ar15;
+    qkv_ar15 -> sph15;
+    sph15 -> sdp15;
+    sdp15 -> sm15;
+    sm15 -> do15;
+    do15 -> mgh15;
+    mgh15 -> proj_r15;
+    proj_r15 -> proj_ar15;
+    proj_ar15 -> norm15;
+    norm15 -> gate_c15;
+    gate_c15 -> gate_ar15;
+    gate_ar15 -> route15;
+    route15 -> a2a_s15;
+    a2a_s15 -> exp15;
+    exp15 -> exp_ar15;
+    exp_ar15 -> a2a_r15;
+    a2a_r15 -> agg15;
+    agg15 -> norm_m15;
+
+    // Pipeline stage connections
+    norm_m3 -> split1;
+    norm_m7 -> split2;
+    norm_m11 -> split3;
+    norm_m15 -> output;
+}
