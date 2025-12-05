@@ -22,15 +22,11 @@ Gain a deep understanding of the methods proposed in the deployment method file.
 
 Generate one complete model deployment DAG(directed acyclic graph) according to deployment method by calling tools to generate graphviz code, meet the following conditions: <<<要求生成一个DAG，并遵守以下要求>>>
 
-It is required that the parallel strategy be fully, completely and correctly reflected. <<<要求充分完整正确地体现并行策略>>>
+Check whether the parallel strategies in the deployment plan are fully, completely, and accurately reflected. <<<要求充分完整正确地体现并行策略>>>
 
 Divide boundaries according to different GPUs, and label each node on the DAG graph with the corresponding GPU. <<<按不同GPU划分边界>>>
 
 Each layer in DAG needs to be detailed down to the operator level.<<<要求dag详细到算子级别>>>
-
-Require that all communication behaviors be represented in the DAG graph. <<<要求把所有通信行为都在DAG图中体现出来>>>
-
-Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
 
 The attention part must be divided by operator granularity and cannot be omitted. <<<要求将attention部分按算子粒度划分，禁止省略表示>>>
 
@@ -42,6 +38,9 @@ The aggregation and split of data need to be represented by nodes. <<<显示数�
 
 The gate will select which token needs to be sent among all the experts. This process should be represented with a dashed line.<<<提醒门控是在所有专家中进行选择，要求用虚线表示这个过程>>>
 
+Require that all communication behaviors be represented in the DAG graph. <<<要求把所有通信行为都在DAG图中体现出来>>>
+
+
 
 NOTE
 
@@ -52,6 +51,8 @@ You need to follow the following constraints:
 This will be a task with many steps. Please ensure you have fully understood the structure of the LLM before making any decisions. <<<这是一个多步任务，不要急于求成>>>
 
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
+
+Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
 
 The generated DAG must not contain any cycles.<<<禁止有环>>>
 
