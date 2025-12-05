@@ -1,0 +1,749 @@
+// 30B MoE Model - Single Layer Detail
+digraph {
+	bgcolor=white rankdir=TB splines=ortho
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	node [fillcolor=lightgreen shape=ellipse style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	layer_input [label="Layer Input
+GPU: All 512 GPUs
+Input: [batch_size=32, seq_len=1024, hidden=1024]
+Output: [batch_size=32, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	attention [label="Multi-Head Attention
+GPU: [0-511] (TP=8 per group)
+Input: [batch_size=32, seq_len=1024, hidden=1024]
+Output: [batch_size=32, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	attn_tp_comm [label="TP All-Reduce
+GPU: 64 TP groups (8 GPUs each)
+Input: [batch_size=32, seq_len=1024, hidden=128]
+Output: [batch_size=32, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	moe_route [label="MoE Router
+GPU: [0-511] (16 EP groups)
+Input: [batch_size=32, seq_len=1024, hidden=1024]
+Output: routing weights" fillcolor=lightyellow shape=parallelogram]
+	gate_select [label="Gate Selection
+GPU: [0-511]
+Input: [batch_size=32, seq_len=1024, hidden=1024]
+Output: top-2 expert selection" fillcolor=lightyellow shape=parallelogram style=dashed]
+	expert_0_0 [label="Expert 0
+GPU: [0-7]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_0_0_tp [label="Expert TP All-Reduce
+GPU: [0-7]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_0_1 [label="Expert 1
+GPU: [8-15]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_0_1_tp [label="Expert TP All-Reduce
+GPU: [8-15]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_0_2 [label="Expert 2
+GPU: [16-23]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_0_2_tp [label="Expert TP All-Reduce
+GPU: [16-23]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_0_3 [label="Expert 3
+GPU: [24-31]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_0_3_tp [label="Expert TP All-Reduce
+GPU: [24-31]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_1_0 [label="Expert 4
+GPU: [32-39]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_1_0_tp [label="Expert TP All-Reduce
+GPU: [32-39]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_1_1 [label="Expert 5
+GPU: [40-47]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_1_1_tp [label="Expert TP All-Reduce
+GPU: [40-47]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_1_2 [label="Expert 6
+GPU: [48-55]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_1_2_tp [label="Expert TP All-Reduce
+GPU: [48-55]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_1_3 [label="Expert 7
+GPU: [56-63]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_1_3_tp [label="Expert TP All-Reduce
+GPU: [56-63]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_2_0 [label="Expert 8
+GPU: [64-71]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_2_0_tp [label="Expert TP All-Reduce
+GPU: [64-71]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_2_1 [label="Expert 9
+GPU: [72-79]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_2_1_tp [label="Expert TP All-Reduce
+GPU: [72-79]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_2_2 [label="Expert 10
+GPU: [80-87]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_2_2_tp [label="Expert TP All-Reduce
+GPU: [80-87]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_2_3 [label="Expert 11
+GPU: [88-95]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_2_3_tp [label="Expert TP All-Reduce
+GPU: [88-95]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_3_0 [label="Expert 12
+GPU: [96-103]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_3_0_tp [label="Expert TP All-Reduce
+GPU: [96-103]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_3_1 [label="Expert 13
+GPU: [104-111]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_3_1_tp [label="Expert TP All-Reduce
+GPU: [104-111]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_3_2 [label="Expert 14
+GPU: [112-119]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_3_2_tp [label="Expert TP All-Reduce
+GPU: [112-119]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_3_3 [label="Expert 15
+GPU: [120-127]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_3_3_tp [label="Expert TP All-Reduce
+GPU: [120-127]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_4_0 [label="Expert 16
+GPU: [128-135]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_4_0_tp [label="Expert TP All-Reduce
+GPU: [128-135]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_4_1 [label="Expert 17
+GPU: [136-143]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_4_1_tp [label="Expert TP All-Reduce
+GPU: [136-143]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_4_2 [label="Expert 18
+GPU: [144-151]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_4_2_tp [label="Expert TP All-Reduce
+GPU: [144-151]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_4_3 [label="Expert 19
+GPU: [152-159]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_4_3_tp [label="Expert TP All-Reduce
+GPU: [152-159]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_5_0 [label="Expert 20
+GPU: [160-167]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_5_0_tp [label="Expert TP All-Reduce
+GPU: [160-167]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_5_1 [label="Expert 21
+GPU: [168-175]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_5_1_tp [label="Expert TP All-Reduce
+GPU: [168-175]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_5_2 [label="Expert 22
+GPU: [176-183]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_5_2_tp [label="Expert TP All-Reduce
+GPU: [176-183]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_5_3 [label="Expert 23
+GPU: [184-191]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_5_3_tp [label="Expert TP All-Reduce
+GPU: [184-191]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_6_0 [label="Expert 24
+GPU: [192-199]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_6_0_tp [label="Expert TP All-Reduce
+GPU: [192-199]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_6_1 [label="Expert 25
+GPU: [200-207]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_6_1_tp [label="Expert TP All-Reduce
+GPU: [200-207]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_6_2 [label="Expert 26
+GPU: [208-215]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_6_2_tp [label="Expert TP All-Reduce
+GPU: [208-215]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_6_3 [label="Expert 27
+GPU: [216-223]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_6_3_tp [label="Expert TP All-Reduce
+GPU: [216-223]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_7_0 [label="Expert 28
+GPU: [224-231]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_7_0_tp [label="Expert TP All-Reduce
+GPU: [224-231]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_7_1 [label="Expert 29
+GPU: [232-239]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_7_1_tp [label="Expert TP All-Reduce
+GPU: [232-239]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_7_2 [label="Expert 30
+GPU: [240-247]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_7_2_tp [label="Expert TP All-Reduce
+GPU: [240-247]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_7_3 [label="Expert 31
+GPU: [248-255]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_7_3_tp [label="Expert TP All-Reduce
+GPU: [248-255]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_8_0 [label="Expert 32
+GPU: [256-263]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_8_0_tp [label="Expert TP All-Reduce
+GPU: [256-263]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_8_1 [label="Expert 33
+GPU: [264-271]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_8_1_tp [label="Expert TP All-Reduce
+GPU: [264-271]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_8_2 [label="Expert 34
+GPU: [272-279]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_8_2_tp [label="Expert TP All-Reduce
+GPU: [272-279]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_8_3 [label="Expert 35
+GPU: [280-287]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_8_3_tp [label="Expert TP All-Reduce
+GPU: [280-287]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_9_0 [label="Expert 36
+GPU: [288-295]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_9_0_tp [label="Expert TP All-Reduce
+GPU: [288-295]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_9_1 [label="Expert 37
+GPU: [296-303]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_9_1_tp [label="Expert TP All-Reduce
+GPU: [296-303]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_9_2 [label="Expert 38
+GPU: [304-311]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_9_2_tp [label="Expert TP All-Reduce
+GPU: [304-311]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_9_3 [label="Expert 39
+GPU: [312-319]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_9_3_tp [label="Expert TP All-Reduce
+GPU: [312-319]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_10_0 [label="Expert 40
+GPU: [320-327]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_10_0_tp [label="Expert TP All-Reduce
+GPU: [320-327]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_10_1 [label="Expert 41
+GPU: [328-335]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_10_1_tp [label="Expert TP All-Reduce
+GPU: [328-335]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_10_2 [label="Expert 42
+GPU: [336-343]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_10_2_tp [label="Expert TP All-Reduce
+GPU: [336-343]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_10_3 [label="Expert 43
+GPU: [344-351]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_10_3_tp [label="Expert TP All-Reduce
+GPU: [344-351]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_11_0 [label="Expert 44
+GPU: [352-359]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_11_0_tp [label="Expert TP All-Reduce
+GPU: [352-359]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_11_1 [label="Expert 45
+GPU: [360-367]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_11_1_tp [label="Expert TP All-Reduce
+GPU: [360-367]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_11_2 [label="Expert 46
+GPU: [368-375]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_11_2_tp [label="Expert TP All-Reduce
+GPU: [368-375]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_11_3 [label="Expert 47
+GPU: [376-383]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_11_3_tp [label="Expert TP All-Reduce
+GPU: [376-383]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_12_0 [label="Expert 48
+GPU: [384-391]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_12_0_tp [label="Expert TP All-Reduce
+GPU: [384-391]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_12_1 [label="Expert 49
+GPU: [392-399]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_12_1_tp [label="Expert TP All-Reduce
+GPU: [392-399]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_12_2 [label="Expert 50
+GPU: [400-407]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_12_2_tp [label="Expert TP All-Reduce
+GPU: [400-407]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_12_3 [label="Expert 51
+GPU: [408-415]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_12_3_tp [label="Expert TP All-Reduce
+GPU: [408-415]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_13_0 [label="Expert 52
+GPU: [416-423]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_13_0_tp [label="Expert TP All-Reduce
+GPU: [416-423]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_13_1 [label="Expert 53
+GPU: [424-431]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_13_1_tp [label="Expert TP All-Reduce
+GPU: [424-431]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_13_2 [label="Expert 54
+GPU: [432-439]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_13_2_tp [label="Expert TP All-Reduce
+GPU: [432-439]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_13_3 [label="Expert 55
+GPU: [440-447]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_13_3_tp [label="Expert TP All-Reduce
+GPU: [440-447]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_14_0 [label="Expert 56
+GPU: [448-455]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_14_0_tp [label="Expert TP All-Reduce
+GPU: [448-455]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_14_1 [label="Expert 57
+GPU: [456-463]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_14_1_tp [label="Expert TP All-Reduce
+GPU: [456-463]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_14_2 [label="Expert 58
+GPU: [464-471]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_14_2_tp [label="Expert TP All-Reduce
+GPU: [464-471]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_14_3 [label="Expert 59
+GPU: [472-479]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_14_3_tp [label="Expert TP All-Reduce
+GPU: [472-479]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_15_0 [label="Expert 60
+GPU: [480-487]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_15_0_tp [label="Expert TP All-Reduce
+GPU: [480-487]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_15_1 [label="Expert 61
+GPU: [488-495]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_15_1_tp [label="Expert TP All-Reduce
+GPU: [488-495]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_15_2 [label="Expert 62
+GPU: [496-503]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_15_2_tp [label="Expert TP All-Reduce
+GPU: [496-503]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_15_3 [label="Expert 63
+GPU: [504-511]
+Input: [batch_size=~2, seq_len=1024, hidden=1024]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	expert_15_3_tp [label="Expert TP All-Reduce
+GPU: [504-511]
+Input: [batch_size=~2, seq_len=1024, hidden=256]
+Output: [batch_size=~2, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	expert_agg [label="Expert Aggregation
+GPU: [0-511] (16 EP groups)
+Input: [batch_size=~2, seq_len=1024, hidden=1024] × 4
+Output: [batch_size=32, seq_len=1024, hidden=1024]" fillcolor=lightyellow shape=parallelogram]
+	ep_comm [label="EP All-to-All
+GPU: [0-511] (16 EP groups)
+Input: [batch_size=32, seq_len=1024, hidden=1024]
+Output: [batch_size=32, seq_len=1024, hidden=1024]" fillcolor=lightgreen shape=ellipse]
+	layer_output [label="Layer Output
+GPU: All 512 GPUs
+Input: [batch_size=32, seq_len=1024, hidden=1024]
+Output: [batch_size=32, seq_len=1024, hidden=1024]" fillcolor=lightblue shape=rectangle]
+	layer_input -> attention
+	attention -> attn_tp_comm
+	attn_tp_comm -> moe_route
+	moe_route -> gate_select
+	gate_select -> expert_0_0 [style=dashed]
+	expert_0_0 -> expert_0_0_tp
+	expert_0_0_tp -> expert_agg
+	gate_select -> expert_0_1 [style=dashed]
+	expert_0_1 -> expert_0_1_tp
+	expert_0_1_tp -> expert_agg
+	gate_select -> expert_0_2 [style=dashed]
+	expert_0_2 -> expert_0_2_tp
+	expert_0_2_tp -> expert_agg
+	gate_select -> expert_0_3 [style=dashed]
+	expert_0_3 -> expert_0_3_tp
+	expert_0_3_tp -> expert_agg
+	gate_select -> expert_1_0 [style=dashed]
+	expert_1_0 -> expert_1_0_tp
+	expert_1_0_tp -> expert_agg
+	gate_select -> expert_1_1 [style=dashed]
+	expert_1_1 -> expert_1_1_tp
+	expert_1_1_tp -> expert_agg
+	gate_select -> expert_1_2 [style=dashed]
+	expert_1_2 -> expert_1_2_tp
+	expert_1_2_tp -> expert_agg
+	gate_select -> expert_1_3 [style=dashed]
+	expert_1_3 -> expert_1_3_tp
+	expert_1_3_tp -> expert_agg
+	gate_select -> expert_2_0 [style=dashed]
+	expert_2_0 -> expert_2_0_tp
+	expert_2_0_tp -> expert_agg
+	gate_select -> expert_2_1 [style=dashed]
+	expert_2_1 -> expert_2_1_tp
+	expert_2_1_tp -> expert_agg
+	gate_select -> expert_2_2 [style=dashed]
+	expert_2_2 -> expert_2_2_tp
+	expert_2_2_tp -> expert_agg
+	gate_select -> expert_2_3 [style=dashed]
+	expert_2_3 -> expert_2_3_tp
+	expert_2_3_tp -> expert_agg
+	gate_select -> expert_3_0 [style=dashed]
+	expert_3_0 -> expert_3_0_tp
+	expert_3_0_tp -> expert_agg
+	gate_select -> expert_3_1 [style=dashed]
+	expert_3_1 -> expert_3_1_tp
+	expert_3_1_tp -> expert_agg
+	gate_select -> expert_3_2 [style=dashed]
+	expert_3_2 -> expert_3_2_tp
+	expert_3_2_tp -> expert_agg
+	gate_select -> expert_3_3 [style=dashed]
+	expert_3_3 -> expert_3_3_tp
+	expert_3_3_tp -> expert_agg
+	gate_select -> expert_4_0 [style=dashed]
+	expert_4_0 -> expert_4_0_tp
+	expert_4_0_tp -> expert_agg
+	gate_select -> expert_4_1 [style=dashed]
+	expert_4_1 -> expert_4_1_tp
+	expert_4_1_tp -> expert_agg
+	gate_select -> expert_4_2 [style=dashed]
+	expert_4_2 -> expert_4_2_tp
+	expert_4_2_tp -> expert_agg
+	gate_select -> expert_4_3 [style=dashed]
+	expert_4_3 -> expert_4_3_tp
+	expert_4_3_tp -> expert_agg
+	gate_select -> expert_5_0 [style=dashed]
+	expert_5_0 -> expert_5_0_tp
+	expert_5_0_tp -> expert_agg
+	gate_select -> expert_5_1 [style=dashed]
+	expert_5_1 -> expert_5_1_tp
+	expert_5_1_tp -> expert_agg
+	gate_select -> expert_5_2 [style=dashed]
+	expert_5_2 -> expert_5_2_tp
+	expert_5_2_tp -> expert_agg
+	gate_select -> expert_5_3 [style=dashed]
+	expert_5_3 -> expert_5_3_tp
+	expert_5_3_tp -> expert_agg
+	gate_select -> expert_6_0 [style=dashed]
+	expert_6_0 -> expert_6_0_tp
+	expert_6_0_tp -> expert_agg
+	gate_select -> expert_6_1 [style=dashed]
+	expert_6_1 -> expert_6_1_tp
+	expert_6_1_tp -> expert_agg
+	gate_select -> expert_6_2 [style=dashed]
+	expert_6_2 -> expert_6_2_tp
+	expert_6_2_tp -> expert_agg
+	gate_select -> expert_6_3 [style=dashed]
+	expert_6_3 -> expert_6_3_tp
+	expert_6_3_tp -> expert_agg
+	gate_select -> expert_7_0 [style=dashed]
+	expert_7_0 -> expert_7_0_tp
+	expert_7_0_tp -> expert_agg
+	gate_select -> expert_7_1 [style=dashed]
+	expert_7_1 -> expert_7_1_tp
+	expert_7_1_tp -> expert_agg
+	gate_select -> expert_7_2 [style=dashed]
+	expert_7_2 -> expert_7_2_tp
+	expert_7_2_tp -> expert_agg
+	gate_select -> expert_7_3 [style=dashed]
+	expert_7_3 -> expert_7_3_tp
+	expert_7_3_tp -> expert_agg
+	gate_select -> expert_8_0 [style=dashed]
+	expert_8_0 -> expert_8_0_tp
+	expert_8_0_tp -> expert_agg
+	gate_select -> expert_8_1 [style=dashed]
+	expert_8_1 -> expert_8_1_tp
+	expert_8_1_tp -> expert_agg
+	gate_select -> expert_8_2 [style=dashed]
+	expert_8_2 -> expert_8_2_tp
+	expert_8_2_tp -> expert_agg
+	gate_select -> expert_8_3 [style=dashed]
+	expert_8_3 -> expert_8_3_tp
+	expert_8_3_tp -> expert_agg
+	gate_select -> expert_9_0 [style=dashed]
+	expert_9_0 -> expert_9_0_tp
+	expert_9_0_tp -> expert_agg
+	gate_select -> expert_9_1 [style=dashed]
+	expert_9_1 -> expert_9_1_tp
+	expert_9_1_tp -> expert_agg
+	gate_select -> expert_9_2 [style=dashed]
+	expert_9_2 -> expert_9_2_tp
+	expert_9_2_tp -> expert_agg
+	gate_select -> expert_9_3 [style=dashed]
+	expert_9_3 -> expert_9_3_tp
+	expert_9_3_tp -> expert_agg
+	gate_select -> expert_10_0 [style=dashed]
+	expert_10_0 -> expert_10_0_tp
+	expert_10_0_tp -> expert_agg
+	gate_select -> expert_10_1 [style=dashed]
+	expert_10_1 -> expert_10_1_tp
+	expert_10_1_tp -> expert_agg
+	gate_select -> expert_10_2 [style=dashed]
+	expert_10_2 -> expert_10_2_tp
+	expert_10_2_tp -> expert_agg
+	gate_select -> expert_10_3 [style=dashed]
+	expert_10_3 -> expert_10_3_tp
+	expert_10_3_tp -> expert_agg
+	gate_select -> expert_11_0 [style=dashed]
+	expert_11_0 -> expert_11_0_tp
+	expert_11_0_tp -> expert_agg
+	gate_select -> expert_11_1 [style=dashed]
+	expert_11_1 -> expert_11_1_tp
+	expert_11_1_tp -> expert_agg
+	gate_select -> expert_11_2 [style=dashed]
+	expert_11_2 -> expert_11_2_tp
+	expert_11_2_tp -> expert_agg
+	gate_select -> expert_11_3 [style=dashed]
+	expert_11_3 -> expert_11_3_tp
+	expert_11_3_tp -> expert_agg
+	gate_select -> expert_12_0 [style=dashed]
+	expert_12_0 -> expert_12_0_tp
+	expert_12_0_tp -> expert_agg
+	gate_select -> expert_12_1 [style=dashed]
+	expert_12_1 -> expert_12_1_tp
+	expert_12_1_tp -> expert_agg
+	gate_select -> expert_12_2 [style=dashed]
+	expert_12_2 -> expert_12_2_tp
+	expert_12_2_tp -> expert_agg
+	gate_select -> expert_12_3 [style=dashed]
+	expert_12_3 -> expert_12_3_tp
+	expert_12_3_tp -> expert_agg
+	gate_select -> expert_13_0 [style=dashed]
+	expert_13_0 -> expert_13_0_tp
+	expert_13_0_tp -> expert_agg
+	gate_select -> expert_13_1 [style=dashed]
+	expert_13_1 -> expert_13_1_tp
+	expert_13_1_tp -> expert_agg
+	gate_select -> expert_13_2 [style=dashed]
+	expert_13_2 -> expert_13_2_tp
+	expert_13_2_tp -> expert_agg
+	gate_select -> expert_13_3 [style=dashed]
+	expert_13_3 -> expert_13_3_tp
+	expert_13_3_tp -> expert_agg
+	gate_select -> expert_14_0 [style=dashed]
+	expert_14_0 -> expert_14_0_tp
+	expert_14_0_tp -> expert_agg
+	gate_select -> expert_14_1 [style=dashed]
+	expert_14_1 -> expert_14_1_tp
+	expert_14_1_tp -> expert_agg
+	gate_select -> expert_14_2 [style=dashed]
+	expert_14_2 -> expert_14_2_tp
+	expert_14_2_tp -> expert_agg
+	gate_select -> expert_14_3 [style=dashed]
+	expert_14_3 -> expert_14_3_tp
+	expert_14_3_tp -> expert_agg
+	gate_select -> expert_15_0 [style=dashed]
+	expert_15_0 -> expert_15_0_tp
+	expert_15_0_tp -> expert_agg
+	gate_select -> expert_15_1 [style=dashed]
+	expert_15_1 -> expert_15_1_tp
+	expert_15_1_tp -> expert_agg
+	gate_select -> expert_15_2 [style=dashed]
+	expert_15_2 -> expert_15_2_tp
+	expert_15_2_tp -> expert_agg
+	gate_select -> expert_15_3 [style=dashed]
+	expert_15_3 -> expert_15_3_tp
+	expert_15_3_tp -> expert_agg
+	expert_agg -> ep_comm
+	ep_comm -> layer_output
+}
