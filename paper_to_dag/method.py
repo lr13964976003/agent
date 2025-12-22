@@ -32,7 +32,7 @@ def main():
 
     variant = {
 		    "generate_method": {
-                 "slug": "chain_generate_method",
+                 "slug": "generate_method",
                  "version": 1,
                  "inputs": {
 					 "environment_path": "../environment/EP/deployment.md",
@@ -60,7 +60,7 @@ def main():
                      ]
                  },
             "generate_dag": {
-                "slug": "chain_generate_DAG",
+                "slug": "generate_dag",
                 "version": 1,
                 "inputs": {
 					"knowledge_path": "../knowledges/llm_knowledge.md",
