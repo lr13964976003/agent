@@ -1,0 +1,395 @@
+// EP32-TP16-PP4-DP4 MoE LLM Inference DAG (Corrected)
+digraph {
+	bgcolor=white fontname=Arial rankdir=TB
+	node [fontname=Arial shape=rectangle style=filled]
+	input [label="Input
+Input: [batch_size=128, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]
+DP=4: Split batch into 4 groups of 32 sequences each" fillcolor=lightblue shape=ellipse]
+	dp_split [label="Data Parallelism Split
+GPU: DP0-DP3
+Split batch_size=128 → 4×32
+No communication required for inference" fillcolor=lightgreen shape=parallelogram]
+	embed_dp0 [label="Embedding Layer DP0
+GPU: DP0_TP0-DP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, hidden_size=256]
+TP=16: hidden_size=4096 → 256 per TP rank" fillcolor=lightgreen]
+	hidden_up_dp0 [label="Hidden Upscaling DP0
+GPU: DP0_TP0-DP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=256]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]
+TP=16: All-Gather operation" fillcolor=lightgreen]
+	pp0_dp0_start [label="PP Stage 0 DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Layers 0-3 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	layer0_norm_dp0 [label="Layer 0: RMSNorm DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightcoral]
+	layer0_q_proj_dp0 [label="Layer 0: Q Projection DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, heads=32, d_k=128]" fillcolor=lightcoral]
+	layer0_k_proj_dp0 [label="Layer 0: K Projection DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, heads=32, d_k=128]" fillcolor=lightcoral]
+	layer0_v_proj_dp0 [label="Layer 0: V Projection DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, heads=32, d_k=128]" fillcolor=lightcoral]
+	layer0_qk_matmul_dp0 [label="Layer 0: QK^T MatMul DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, heads=32, d_k=128] x2
+Output: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_scale_dp0 [label="Layer 0: Attention Scale DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]
+Output: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_mask_dp0 [label="Layer 0: Attention Mask DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]
+Output: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_softmax_dp0 [label="Layer 0: Softmax DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]
+Output: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_v_matmul_dp0 [label="Layer 0: Attention V MatMul DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, seq_len=1024, heads=32] x [batch_size=32, seq_len=1024, heads=32, d_k=128]
+Output: [batch_size=32, seq_len=1024, heads=32, d_k=128]" fillcolor=lightcoral]
+	layer0_attn_out_proj_dp0 [label="Layer 0: Attention Output Projection DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, heads=32, d_k=128]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightcoral]
+	layer0_attn_residual_dp0 [label="Layer 0: Attention Residual DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096] x2
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightcoral]
+	layer0_attn_ar_dp0 [label="All-Reduce
+TP Group: DP0_PP0_TP0-DP0_PP0_TP15
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse style=dashed]
+	layer0_norm2_dp0 [label="Layer 0: RMSNorm 2 DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightyellow shape=parallelogram]
+	layer0_gate_dp0 [label="Layer 0: MoE Gate DP0
+GPU: DP0_EP0-DP0_EP31
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, num_experts=64]" fillcolor=lightyellow shape=parallelogram]
+	layer0_route_dp0 [label="Token Routing DP0
+GPU: DP0_EP0-DP0_EP31
+Select 2 experts per token
+Load balance across 64 experts
+EP32: 2 experts per GPU" fillcolor=pink shape=ellipse style=dashed]
+	layer0_expert0_dp0 [label="Layer 0: Expert 0 DP0
+GPU: DP0_EP0
+Input: [batch_size=2, seq_len=64, hidden_size=4096]
+Output: [batch_size=2, seq_len=64, hidden_size=4096]
+Up-proj → Activation → Down-proj" fillcolor=lightsteelblue]
+	layer0_expert1_dp0 [label="Layer 0: Expert 1 DP0
+GPU: DP0_EP0
+Input: [batch_size=2, seq_len=64, hidden_size=4096]
+Output: [batch_size=2, seq_len=64, hidden_size=4096]
+Up-proj → Activation → Down-proj" fillcolor=lightsteelblue]
+	layer0_expert2_dp0 [label="Layer 0: Expert 2 DP0
+GPU: DP0_EP1
+Input: [batch_size=2, seq_len=64, hidden_size=4096]
+Output: [batch_size=2, seq_len=64, hidden_size=4096]
+Up-proj → Activation → Down-proj" fillcolor=lightsteelblue]
+	layer0_expert3_dp0 [label="Layer 0: Expert 3 DP0
+GPU: DP0_EP1
+Input: [batch_size=2, seq_len=64, hidden_size=4096]
+Output: [batch_size=2, seq_len=64, hidden_size=4096]
+Up-proj → Activation → Down-proj" fillcolor=lightsteelblue]
+	layer0_ep_a2a_dp0 [label="All-to-All
+EP Group: DP0_EP0-DP0_EP31
+Token dispatch/combine
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	layer0_expert_combine_dp0 [label="Expert Combine DP0
+GPU: DP0_EP0-DP0_EP31
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightyellow shape=parallelogram]
+	layer0_moe_residual_dp0 [label="Layer 0: MoE Residual DP0
+GPU: DP0_PP0_TP0-DP0_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096] x2
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightcoral]
+	layers1to3_dp0 [label="Layers 1-3 DP0
+Complete attention + MoE structure
+4 layers per stage
+TP=16, EP=32 (2 experts/GPU)" fillcolor=lightgray]
+	pp0_to_pp1_dp0 [label="Pipeline Transfer DP0
+PP0 → PP1
+Activations transfer
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	pp1_to_pp2_dp0 [label="Pipeline Transfer DP0
+PP1 → PP2
+Activations transfer
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	pp2_to_pp3_dp0 [label="Pipeline Transfer DP0
+PP2 → PP3
+Activations transfer
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	pp1_dp0_start [label="PP Stage 1 DP0
+GPU: DP0_PP1_TP0-DP0_PP1_TP15
+Layers 4-7 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	pp2_dp0_start [label="PP Stage 2 DP0
+GPU: DP0_PP2_TP0-DP0_PP2_TP15
+Layers 8-11 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	pp3_dp0_start [label="PP Stage 3 DP0
+GPU: DP0_PP3_TP0-DP0_PP3_TP15
+Layers 12-15 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	final_norm_dp0 [label="Final RMSNorm DP0
+GPU: DP0_PP3_TP0-DP0_PP3_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightgreen]
+	output_proj_dp0 [label="Output Projection DP0
+GPU: DP0_PP3_TP0-DP0_PP3_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, vocab_size=51200]" fillcolor=lightgreen]
+	embed_dp1 [label="Embedding Layer DP1
+GPU: DP1_TP0-DP1_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, hidden_size=256]
+TP=16: hidden_size=4096 → 256 per TP rank" fillcolor=lightgreen]
+	hidden_up_dp1 [label="Hidden Upscaling DP1
+GPU: DP1_TP0-DP1_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=256]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]
+TP=16: All-Gather operation" fillcolor=lightgreen]
+	pp0_dp1_start [label="PP Stage 0 DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Layers 0-3 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	layer0_norm_dp1 [label="Layer 0: RMSNorm DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightcoral]
+	layer0_q_proj_dp1 [label="Layer 0: Q Projection DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, heads=32, d_k=128]" fillcolor=lightcoral]
+	layer0_k_proj_dp1 [label="Layer 0: K Projection DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, heads=32, d_k=128]" fillcolor=lightcoral]
+	layer0_v_proj_dp1 [label="Layer 0: V Projection DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, heads=32, d_k=128]" fillcolor=lightcoral]
+	layer0_qk_matmul_dp1 [label="Layer 0: QK^T MatMul DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, heads=32, d_k=128] x2
+Output: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_scale_dp1 [label="Layer 0: Attention Scale DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]
+Output: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_mask_dp1 [label="Layer 0: Attention Mask DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]
+Output: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_softmax_dp1 [label="Layer 0: Softmax DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]
+Output: [batch_size=32, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_v_matmul_dp1 [label="Layer 0: Attention V MatMul DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, seq_len=1024, heads=32] x [batch_size=32, seq_len=1024, heads=32, d_k=128]
+Output: [batch_size=32, seq_len=1024, heads=32, d_k=128]" fillcolor=lightcoral]
+	layer0_attn_out_proj_dp1 [label="Layer 0: Attention Output Projection DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, heads=32, d_k=128]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightcoral]
+	layer0_attn_residual_dp1 [label="Layer 0: Attention Residual DP1
+GPU: DP1_PP0_TP0-DP1_PP0_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096] x2
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightcoral]
+	layer0_attn_ar_dp1 [label="All-Reduce
+TP Group: DP1_PP0_TP0-DP1_PP0_TP15
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse style=dashed]
+	final_norm_dp1 [label="Final RMSNorm DP1
+GPU: DP1_PP3_TP0-DP1_PP3_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=lightgreen]
+	output_proj_dp1 [label="Output Projection DP1
+GPU: DP1_PP3_TP0-DP1_PP3_TP15
+Input: [batch_size=32, seq_len=1024, hidden_size=4096]
+Output: [batch_size=32, seq_len=1024, vocab_size=51200]" fillcolor=lightgreen]
+	layers1to3_dp2 [label="Layers 1-3 DP2
+Complete attention + MoE structure
+4 layers per stage
+TP=16, EP=32 (2 experts/GPU)" fillcolor=lightgray]
+	layers1to3_dp3 [label="Layers 1-3 DP3
+Complete attention + MoE structure
+4 layers per stage
+TP=16, EP=32 (2 experts/GPU)" fillcolor=lightgray]
+	pp0_to_pp1_dp2 [label="Pipeline Transfer DP2
+PP0 → PP1
+Activations transfer
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	pp1_to_pp2_dp2 [label="Pipeline Transfer DP2
+PP1 → PP2
+Activations transfer
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	pp2_to_pp3_dp2 [label="Pipeline Transfer DP2
+PP2 → PP3
+Activations transfer
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	pp0_to_pp1_dp3 [label="Pipeline Transfer DP3
+PP0 → PP1
+Activations transfer
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	pp1_to_pp2_dp3 [label="Pipeline Transfer DP3
+PP1 → PP2
+Activations transfer
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	pp2_to_pp3_dp3 [label="Pipeline Transfer DP3
+PP2 → PP3
+Activations transfer
+Size: [batch_size=32, seq_len=1024, hidden_size=4096]" fillcolor=orange shape=ellipse]
+	pp1_dp2_start [label="PP Stage 1 DP2
+GPU: DP2_PP1_TP0-DP2_PP1_TP15
+Layers 4-7 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	pp2_dp2_start [label="PP Stage 2 DP2
+GPU: DP2_PP2_TP0-DP2_PP2_TP15
+Layers 8-11 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	pp3_dp2_start [label="PP Stage 3 DP2
+GPU: DP2_PP3_TP0-DP2_PP3_TP15
+Layers 12-15 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	pp1_dp3_start [label="PP Stage 1 DP3
+GPU: DP3_PP1_TP0-DP3_PP1_TP15
+Layers 4-7 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	pp2_dp3_start [label="PP Stage 2 DP3
+GPU: DP3_PP2_TP0-DP3_PP2_TP15
+Layers 8-11 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	pp3_dp3_start [label="PP Stage 3 DP3
+GPU: DP3_PP3_TP0-DP3_PP3_TP15
+Layers 12-15 (4 layers)
+4 layers × 32 EP groups × 2 experts/GPU = 256 expert instances" fillcolor=yellow shape=parallelogram]
+	dp_combine [label="Data Parallelism Combine
+GPU: Output aggregation
+Input: 4×[batch_size=32, seq_len=1024, vocab_size=51200]
+Output: [batch_size=128, seq_len=1024, vocab_size=51200]" fillcolor=orange shape=ellipse]
+	output [label="Output
+Input: [batch_size=128, seq_len=1024, hidden_size=4096]
+Output: [batch_size=128, seq_len=1024, vocab_size=51200]" fillcolor=lightblue shape=ellipse]
+	input -> dp_split
+	dp_split -> embed_dp0
+	embed_dp0 -> hidden_up_dp0
+	hidden_up_dp0 -> pp0_dp0_start
+	pp0_dp0_start -> layer0_norm_dp0
+	layer0_norm_dp0 -> layer0_q_proj_dp0
+	layer0_norm_dp0 -> layer0_k_proj_dp0
+	layer0_norm_dp0 -> layer0_v_proj_dp0
+	layer0_q_proj_dp0 -> layer0_qk_matmul_dp0
+	layer0_k_proj_dp0 -> layer0_qk_matmul_dp0
+	layer0_qk_matmul_dp0 -> layer0_attn_scale_dp0
+	layer0_attn_scale_dp0 -> layer0_attn_mask_dp0
+	layer0_attn_mask_dp0 -> layer0_attn_softmax_dp0
+	layer0_attn_softmax_dp0 -> layer0_attn_v_matmul_dp0
+	layer0_v_proj_dp0 -> layer0_attn_v_matmul_dp0
+	layer0_attn_v_matmul_dp0 -> layer0_attn_out_proj_dp0
+	layer0_attn_out_proj_dp0 -> layer0_attn_residual_dp0
+	hidden_up_dp0 -> layer0_attn_residual_dp0
+	layer0_attn_residual_dp0 -> layer0_attn_ar_dp0
+	layer0_attn_ar_dp0 -> layer0_norm2_dp0
+	layer0_norm2_dp0 -> layer0_gate_dp0
+	layer0_gate_dp0 -> layer0_route_dp0
+	layer0_route_dp0 -> layer0_expert0_dp0
+	layer0_route_dp0 -> layer0_expert1_dp0
+	layer0_route_dp0 -> layer0_expert2_dp0
+	layer0_route_dp0 -> layer0_expert3_dp0
+	layer0_expert0_dp0 -> layer0_ep_a2a_dp0
+	layer0_expert1_dp0 -> layer0_ep_a2a_dp0
+	layer0_expert2_dp0 -> layer0_ep_a2a_dp0
+	layer0_expert3_dp0 -> layer0_ep_a2a_dp0
+	layer0_ep_a2a_dp0 -> layer0_expert_combine_dp0
+	layer0_expert_combine_dp0 -> layer0_moe_residual_dp0
+	layer0_attn_ar_dp0 -> layer0_moe_residual_dp0
+	layer0_moe_residual_dp0 -> layers1to3_dp0
+	layers1to3_dp0 -> pp0_to_pp1_dp0
+	pp0_to_pp1_dp0 -> pp1_dp0_start
+	pp1_dp0_start -> pp1_to_pp2_dp0
+	pp1_to_pp2_dp0 -> pp2_dp0_start
+	pp2_dp0_start -> pp2_to_pp3_dp0
+	pp2_to_pp3_dp0 -> pp3_dp0_start
+	pp3_dp0_start -> final_norm_dp0
+	final_norm_dp0 -> output_proj_dp0
+	output_proj_dp0 -> dp_combine
+	dp_split -> embed_dp1
+	embed_dp1 -> hidden_up_dp1
+	hidden_up_dp1 -> pp0_dp1_start
+	pp0_dp1_start -> layer0_norm_dp1
+	layer0_norm_dp1 -> layer0_q_proj_dp1
+	layer0_norm_dp1 -> layer0_k_proj_dp1
+	layer0_norm_dp1 -> layer0_v_proj_dp1
+	layer0_q_proj_dp1 -> layer0_qk_matmul_dp1
+	layer0_k_proj_dp1 -> layer0_qk_matmul_dp1
+	layer0_qk_matmul_dp1 -> layer0_attn_scale_dp1
+	layer0_attn_scale_dp1 -> layer0_attn_mask_dp1
+	layer0_attn_mask_dp1 -> layer0_attn_softmax_dp1
+	layer0_attn_softmax_dp1 -> layer0_attn_v_matmul_dp1
+	layer0_v_proj_dp1 -> layer0_attn_v_matmul_dp1
+	layer0_attn_v_matmul_dp1 -> layer0_attn_out_proj_dp1
+	layer0_attn_out_proj_dp1 -> layer0_attn_residual_dp1
+	hidden_up_dp1 -> layer0_attn_residual_dp1
+	layer0_attn_residual_dp1 -> layer0_attn_ar_dp1
+	layer0_attn_ar_dp1 -> layer0_norm2_dp1
+	layer0_norm2_dp1 -> layer0_gate_dp1
+	layer0_gate_dp1 -> layer0_route_dp1
+	layer0_route_dp1 -> layer0_expert0_dp1
+	layer0_route_dp1 -> layer0_expert1_dp1
+	layer0_expert0_dp1 -> layer0_ep_a2a_dp1
+	layer0_expert1_dp1 -> layer0_ep_a2a_dp1
+	layer0_ep_a2a_dp1 -> layer0_expert_combine_dp1
+	layer0_expert_combine_dp1 -> layer0_moe_residual_dp1
+	layer0_attn_ar_dp1 -> layer0_moe_residual_dp1
+	layer0_moe_residual_dp1 -> layers1to3_dp1
+	layers1to3_dp1 -> pp0_to_pp1_dp1
+	pp0_to_pp1_dp1 -> pp1_dp1_start
+	pp1_dp1_start -> pp1_to_pp2_dp1
+	pp1_to_pp2_dp1 -> pp2_dp1_start
+	pp2_dp1_start -> pp2_to_pp3_dp1
+	pp2_to_pp3_dp1 -> pp3_dp1_start
+	pp3_dp1_start -> final_norm_dp1
+	final_norm_dp1 -> output_proj_dp1
+	output_proj_dp1 -> dp_combine
+	dp_split -> embed_dp2
+	embed_dp2 -> hidden_up_dp2
+	hidden_up_dp2 -> pp0_dp2_start
+	pp0_dp2_start -> layers1to3_dp2
+	layers1to3_dp2 -> pp0_to_pp1_dp2
+	pp0_to_pp1_dp2 -> pp1_dp2_start
+	pp1_dp2_start -> pp1_to_pp2_dp2
+	pp1_to_pp2_dp2 -> pp2_dp2_start
+	pp2_dp2_start -> pp2_to_pp3_dp2
+	pp2_to_pp3_dp2 -> pp3_dp2_start
+	pp3_dp2_start -> final_norm_dp2
+	final_norm_dp2 -> output_proj_dp2
+	output_proj_dp2 -> dp_combine
+	dp_split -> embed_dp3
+	embed_dp3 -> hidden_up_dp3
+	hidden_up_dp3 -> pp0_dp3_start
+	pp0_dp3_start -> layers1to3_dp3
+	layers1to3_dp3 -> pp0_to_pp1_dp3
+	pp0_to_pp1_dp3 -> pp1_dp3_start
+	pp1_dp3_start -> pp1_to_pp2_dp3
+	pp1_to_pp2_dp3 -> pp2_dp3_start
+	pp2_dp3_start -> pp2_to_pp3_dp3
+	pp2_to_pp3_dp3 -> pp3_dp3_start
+	pp3_dp3_start -> final_norm_dp3
+	final_norm_dp3 -> output_proj_dp3
+	output_proj_dp3 -> dp_combine
+	dp_combine -> output
+}

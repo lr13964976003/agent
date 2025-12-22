@@ -1,0 +1,80 @@
+digraph new_deployment_dag {
+	bgcolor=white fontname=Arial rankdir=TB
+	node [fontname=Arial shape=rectangle style=filled]
+	input [label="Input\nInput: [batch_size=128, seq_len=1024, hidden_size=4096]\nOutput: [batch_size=128, seq_len=1024, hidden_size=4096]" fillcolor=lightblue shape=ellipse]
+	embed [label="Embedding Layer\nGPU: TP0-TP15\nInput: [batch_size=128, seq_len=1024, hidden_size=4096]\nOutput: [batch_size=128, seq_len=1024, hidden_size=256]" fillcolor=lightgreen shape=rectangle]
+	pp0_start [label="PP Stage 0\nGPU: PP0\nLayers 0-3" fillcolor=yellow shape=parallelogram]
+	layer0_attn_q [label="Layer 0: Q Projection\nGPU: TP0-TP15\nInput: [batch_size=128, seq_len=1024, hidden_size=256]\nOutput: [batch_size=128, seq_len=1024, heads=32, d_k=32]" fillcolor=lightcoral]
+	layer0_attn_k [label="Layer 0: K Projection\nGPU: TP0-TP15\nInput: [batch_size=128, seq_len=1024, hidden_size=256]\nOutput: [batch_size=128, seq_len=1024, heads=32, d_k=32]" fillcolor=lightcoral]
+	layer0_attn_v [label="Layer 0: V Projection\nGPU: TP0-TP15\nInput: [batch_size=128, seq_len=1024, hidden_size=256]\nOutput: [batch_size=128, seq_len=1024, heads=32, d_k=32]" fillcolor=lightcoral]
+	layer0_attn_score [label="Layer 0: Attention Score\nGPU: TP0-TP15\nInput: [batch_size=128, seq_len=1024, heads=32, d_k=32]\nOutput: [batch_size=128, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_softmax [label="Layer 0: Softmax\nGPU: TP0-TP15\nInput: [batch_size=128, seq_len=1024, seq_len=1024, heads=32]\nOutput: [batch_size=128, seq_len=1024, seq_len=1024, heads=32]" fillcolor=lightcoral]
+	layer0_attn_out [label="Layer 0: Attention Output\nGPU: TP0-TP15\nInput: [batch_size=128, seq_len=1024, heads=32, d_k=32]\nOutput: [batch_size=128, seq_len=1024, hidden_size=256]" fillcolor=lightcoral]
+	layer0_attn_proj [label="Layer 0: Output Projection\nGPU: TP0-TP15\nInput: [batch_size=128, seq_len=1024, hidden_size=256]\nOutput: [batch_size=128, seq_len=1024, hidden_size=256]" fillcolor=lightcoral]
+	layer0_attn_ar [label="All-Reduce\nTP Group: TP0-TP15\nSize: [batch_size=128, seq_len=1024, hidden_size=256]" fillcolor=orange shape=ellipse style=dashed]
+	layer0_gate [label="Layer 0: MoE Gate\nGPU: EP0-EP31\nInput: [batch_size=128, seq_len=1024, hidden_size=256]\nOutput: [batch_size=128, seq_len=1024, num_experts=64]" fillcolor=lightyellow shape=parallelogram]
+	layer0_route [label="Token Routing\nGPU: EP0-EP31\nSelect 2 experts per token" fillcolor=pink shape=ellipse style=dashed]
+	layer0_expert0_up [label="Layer 0: Expert 0 Up-proj\nGPU: EP0\nInput: [batch_size=64, seq_len=512, hidden_size=256]\nOutput: [batch_size=64, seq_len=512, hidden_size=1024]" fillcolor=lightsteelblue]
+	layer0_expert0_act [label="Layer 0: Expert 0 Activation\nGPU: EP0\nInput: [batch_size=64, seq_len=512, hidden_size=1024]\nOutput: [batch_size=64, seq_len=512, hidden_size=1024]" fillcolor=lightsteelblue]
+	layer0_expert0_down [label="Layer 0: Expert 0 Down-proj\nGPU: EP0\nInput: [batch_size=64, seq_len=512, hidden_size=1024]\nOutput: [batch_size=64, seq_len=512, hidden_size=256]" fillcolor=lightsteelblue]
+	layer0_expert1_up [label="Layer 0: Expert 1 Up-proj\nGPU: EP0\nInput: [batch_size=64, seq_len=512, hidden_size=256]\nOutput: [batch_size=64, seq_len=512, hidden_size=1024]" fillcolor=lightsteelblue]
+	layer0_expert1_act [label="Layer 0: Expert 1 Activation\nGPU: EP0\nInput: [batch_size=64, seq_len=512, hidden_size=1024]\nOutput: [batch_size=64, seq_len=512, hidden_size=1024]" fillcolor=lightsteelblue]
+	layer0_expert1_down [label="Layer 0: Expert 1 Down-proj\nGPU: EP0\nInput: [batch_size=64, seq_len=512, hidden_size=1024]\nOutput: [batch_size=64, seq_len=512, hidden_size=256]" fillcolor=lightsteelblue]
+	layer0_expert2_up [label="Layer 0: Expert 2 Up-proj\nGPU: EP1\nInput: [batch_size=64, seq_len=512, hidden_size=256]\nOutput: [batch_size=64, seq_len=512, hidden_size=1024]" fillcolor=lightsteelblue]
+	layer0_expert2_act [label="Layer 0: Expert 2 Activation\nGPU: EP1\nInput: [batch_size=64, seq_len=512, hidden_size=1024]\nOutput: [batch_size=64, seq_len=512, hidden_size=1024]" fillcolor=lightsteelblue]
+	layer0_expert2_down [label="Layer 0: Expert 2 Down-proj\nGPU: EP1\nInput: [batch_size=64, seq_len=512, hidden_size=1024]\nOutput: [batch_size=64, seq_len=512, hidden_size=256]" fillcolor=lightsteelblue]
+	layer0_expert3_up [label="Layer 0: Expert 3 Up-proj\nGPU: EP1\nInput: [batch_size=64, seq_len=512, hidden_size=256]\nOutput: [batch_size=64, seq_len=512, hidden_size=1024]" fillcolor=lightsteelblue]
+	layer0_expert3_act [label="Layer 0: Expert 3 Activation\nGPU: EP1\nInput: [batch_size=64, seq_len=512, hidden_size=1024]\nOutput: [batch_size=64, seq_len=512, hidden_size=1024]" fillcolor=lightsteelblue]
+	layer0_expert3_down [label="Layer 0: Expert 3 Down-proj\nGPU: EP1\nInput: [batch_size=64, seq_len=512, hidden_size=1024]\nOutput: [batch_size=64, seq_len=512, hidden_size=256]" fillcolor=lightsteelblue]
+	layer0_ep_a2a [label="All-to-All\nEP Group: EP0-EP31\nToken dispatch/combine" fillcolor=orange shape=ellipse]
+	layer0_expert_combine [label="Expert Combine\nGPU: EP0-EP31\nInput: [batch_size=128, seq_len=1024, hidden_size=256]\nOutput: [batch_size=128, seq_len=1024, hidden_size=256]" fillcolor=lightyellow shape=parallelogram]
+	pp0_to_pp1 [label="Pipeline Transfer\nPP0 → PP1\nActivations transfer" fillcolor=orange shape=ellipse]
+	pp1_to_pp2 [label="Pipeline Transfer\nPP1 → PP2\nActivations transfer" fillcolor=orange shape=ellipse]
+	pp2_to_pp3 [label="Pipeline Transfer\nPP2 → PP3\nActivations transfer" fillcolor=orange shape=ellipse]
+	pp1_start [label="PP Stage 1\nGPU: PP1\nLayers 4-7" fillcolor=yellow shape=parallelogram]
+	pp2_start [label="PP Stage 2\nGPU: PP2\nLayers 8-11" fillcolor=yellow shape=parallelogram]
+	pp3_start [label="PP Stage 3\nGPU: PP3\nLayers 12-15" fillcolor=yellow shape=parallelogram]
+	layer15_attn [label="Layer 15: Attention\nGPU: TP0-TP15, PP3\nInput: [batch_size=128, seq_len=1024, hidden_size=256]\nOutput: [batch_size=128, seq_len=1024, hidden_size=256]" fillcolor=lightcoral]
+	layer15_moe [label="Layer 15: MoE\nGPU: EP0-EP31, PP3\nInput: [batch_size=128, seq_len=1024, hidden_size=256]\nOutput: [batch_size=128, seq_len=1024, hidden_size=256]" fillcolor=lightsteelblue]
+	output [label="Output\nInput: [batch_size=128, seq_len=1024, hidden_size=4096]\nOutput: [batch_size=128, seq_len=1024, vocab_size=51200]" fillcolor=lightblue shape=ellipse]
+	input -> embed
+	embed -> pp0_start
+	pp0_start -> layer0_attn_q
+	pp0_start -> layer0_attn_k
+	pp0_start -> layer0_attn_v
+	layer0_attn_q -> layer0_attn_score
+	layer0_attn_k -> layer0_attn_score
+	layer0_attn_v -> layer0_attn_out
+	layer0_attn_score -> layer0_attn_softmax
+	layer0_attn_softmax -> layer0_attn_out
+	layer0_attn_out -> layer0_attn_proj
+	layer0_attn_proj -> layer0_attn_ar
+	layer0_attn_ar -> layer0_gate
+	layer0_gate -> layer0_route
+	layer0_route -> layer0_expert0_up
+	layer0_expert0_up -> layer0_expert0_act
+	layer0_expert0_act -> layer0_expert0_down
+	layer0_route -> layer0_expert1_up
+	layer0_expert1_up -> layer0_expert1_act
+	layer0_expert1_act -> layer0_expert1_down
+	layer0_route -> layer0_expert2_up
+	layer0_expert2_up -> layer0_expert2_act
+	layer0_expert2_act -> layer0_expert2_down
+	layer0_route -> layer0_expert3_up
+	layer0_expert3_up -> layer0_expert3_act
+	layer0_expert3_act -> layer0_expert3_down
+	layer0_expert0_down -> layer0_ep_a2a
+	layer0_expert1_down -> layer0_ep_a2a
+	layer0_expert2_down -> layer0_ep_a2a
+	layer0_expert3_down -> layer0_ep_a2a
+	layer0_ep_a2a -> layer0_expert_combine
+	layer0_expert_combine -> pp0_to_pp1
+	pp0_to_pp1 -> pp1_start
+	pp1_start -> pp1_to_pp2
+	pp1_to_pp2 -> pp2_start
+	pp2_start -> pp2_to_pp3
+	pp2_to_pp3 -> pp3_start
+	pp3_start -> layer15_attn
+	layer15_attn -> layer15_moe
+	layer15_moe -> output
+}
