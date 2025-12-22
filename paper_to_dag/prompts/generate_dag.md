@@ -162,8 +162,7 @@ Return only the file paths in JSON format:
 
 ```json
 {
-  "dag_dot_path": "/path/to/deployment_dag.dot",
-  "dag_svg_path": "/path/to/deployment_dag.svg"
+  "save_path": f"../outputs/{submission_dir}"
 }
 ```
 
