@@ -36,11 +36,9 @@ def main():
                  "version": 1,
                  "inputs": {
 					 "environment_path": "../environment/EP/deployment.md",
-					 "knowledge_path": "../knowledges/llm_parallel_strategies.md",
                      "save_path": f"../outputs/{submission_dir}"
                      },
                  "tools": [
-                     ExtractEdgeFromDAGTool(),
                      FileReadTool(),
 					 PythonTool(),
                      CommandTool(),
@@ -51,10 +49,9 @@ def main():
                  "slug": "chain_check_method",
                  "version": 1,
                  "inputs": {
-                     "save_path": f"../outputs/{submission_dir}",
+                     "save_path": f"../outputs/{submission_dir}"
                      },
                  "tools": [
-                     ExtractEdgeFromDAGTool(),
                      FileReadTool(),
 					 PythonTool(),
                      CommandTool(),
@@ -63,10 +60,9 @@ def main():
                  },
             "generate_dag": {
                 "slug": "chain_generate_DAG",
-                "version": 15,
+                "version": 1,
                 "inputs": {
-                    "save_path": f"../outputs/{submission_dir}",
-					"knowledge_path": "../knowledges/llm_parallel_strategies.md"
+                    "save_path": f"../outputs/{submission_dir}"
                     },
                 "tools": [
                     FileReadTool(),
@@ -78,14 +74,16 @@ def main():
                 },
              "check_dag": {
                  "slug": "chain_check_dag",
-                 "version": 3,
+                 "version": 1,
                  "inputs": {
                      "save_path": f"../outputs/{submission_dir}"
                      },
                  "tools": [
-                     FileWriterTool(),
-                     CommandTool(),
-                     ExtractEdgeFromDAGTool()
+                    FileReadTool(),
+                    FileWriterTool(),
+                    CommandTool(),
+		            PythonTool(),
+                    ExtractEdgeFromDAGTool()
                      ]
                  }
             }
@@ -111,40 +109,6 @@ def main():
     
     return
 
-    perf_task = tasks[5]
-    perf_task.description = tasks[5].description + \
-    f"There are the submissions of previous agents: \n\n{dag_result}"
-    
-    init_perf = run_pipeline([agents[5]], [perf_task])
-    
-    #with open("temp.txt","r") as f:
-    #    iter_input = f.read()
-
-    for i in range(MAX_ITER):
-        
-        if i == 0:
-            iter_input = f"{dag_result}\n\n{init_perf}"
-        else:
-            iter_input = f"{iter_result}\n\n{iter_perf}"
-        
-        iter_loop = ReviewLoop(worker=agents[6], reviewer=agents[4], work_task=tasks[6], review_task=tasks[4], inputs=iter_input)
-        iter_result = iter_loop.run()
-        perf_task = tasks[5]
-        perf_task.description = tasks[5].description +\
-                        f"There are the submissions of previous agents: \n\n{iter_result}"
-        iter_perf =run_pipeline([agents[5]], [perf_task])
-
-    slug_list = []
-    for k,v in variant.items():
-        slug_list.append([v["slug"],v["version"]])
-    return slug_list
-
-
-
-
-
 if __name__ == "__main__":
-    #tracer = trace.get_tracer(__name__)
-    #with tracer.start_as_current_span("workflow-root") as root:
     main()
 
