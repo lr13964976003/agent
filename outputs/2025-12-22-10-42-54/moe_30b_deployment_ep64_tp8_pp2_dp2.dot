@@ -1,0 +1,223 @@
+digraph MoE_30B_Deployment_EP64_TP8_PP2_DP2 {
+	dpi=300 rankdir=TB size="30,40"
+	node [fontsize=9 margin="0.05,0.02"]
+	input [label="Model Input\n[batch=128, seq=1024, hidden=1024]" fillcolor=white penwidth=2 shape=circle style=filled]
+	subgraph cluster_pp_0 {
+		label="Pipeline Stage 0\nLayers 0-7\nPP Rank: 0"
+		bgcolor=lightgray penwidth=2 style="rounded, filled"
+		subgraph cluster_layer_0 {
+			label="Layer 0\nPP Rank: 0"
+			bgcolor=white penwidth=1 style="dashed, rounded"
+			layer_0_input [label="Layer 0 Input\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.4 shape=circle style=filled width=0.4]
+			subgraph cluster_attn_0 {
+				label="Attention Block (TP8)"
+				bgcolor=lightblue penwidth=1 style="rounded, filled"
+				qkv_0 [label="QKV Projection\n[batch=128, seq=1024]\n→ [3×heads=16, d_k=64]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_comp_0 [label="Attention Scores+Softmax\n[batch=128, heads=16, seq=1024]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_ar_0 [label="TP All-Reduce\n[batch=128, seq=1024, hidden=1024]\nGPU: All TP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				attn_proj_0 [label="Output Projection\n[batch=128, seq=1024, hidden=1024]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_out_0 [label="Attention Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+				qkv_0 -> attn_comp_0
+				attn_comp_0 -> attn_ar_0
+				attn_ar_0 -> attn_proj_0
+				attn_proj_0 -> attn_out_0
+			}
+			subgraph cluster_moe_0 {
+				label="MoE Block (EP64)"
+				bgcolor=lightgreen penwidth=1 style="rounded, filled"
+				gate_0 [label="Gate Selection\nTop-2 Experts\n[batch=128, seq=1024]\n→ [num_experts=64]\nGPU: All EP Ranks" fillcolor=lightgreen shape=parallelogram style=filled]
+				dispatch_0 [label="Expert Dispatch\nAll-to-All\n[batch=128, seq=1024]\nGPU: All EP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				subgraph cluster_experts_0 {
+					label="Expert Computation (64 Experts Total, TP8 Each)"
+					bgcolor=lightyellow penwidth=1 style="rounded, filled"
+					expert_0_0 [label="Expert 0 MLP\n[batch=?, seq=?, hidden=1024]\n→ [2048] → [1024]\nGPU: EP0, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+					expert_ar_0_0 [label="Expert 0 TP All-Reduce\n[batch=?, seq=?, hidden=1024]\nGPU: EP0, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+					expert_0_0 -> expert_ar_0_0
+					expert_0_1 [label="Expert 1 MLP\n[batch=?, seq=?, hidden=1024]\n→ [2048] → [1024]\nGPU: EP1, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+					expert_ar_0_1 [label="Expert 1 TP All-Reduce\n[batch=?, seq=?, hidden=1024]\nGPU: EP1, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+					expert_0_1 -> expert_ar_0_1
+					expert_ellipsis_0 [label="..." shape=none]
+				}
+				combine_0 [label="Expert Combine\nAll-to-All\n[batch=128, seq=1024]\nGPU: All EP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				aggregate_0 [label="Expert Output Aggregation\n[batch=128, seq=1024, hidden=1024]\nGPU: All EP Ranks" fillcolor=lightcoral shape=parallelogram style=filled]
+				moe_out_0 [label="MoE Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+				gate_0 -> dispatch_0
+				dispatch_0 -> expert_0_0
+				dispatch_0 -> expert_0_1
+				expert_ar_0_0 -> combine_0
+				expert_ar_0_1 -> combine_0
+				combine_0 -> aggregate_0
+				aggregate_0 -> moe_out_0
+				gate_0 -> expert_0_0 [label="Top-2" style=dashed]
+				gate_0 -> expert_0_1 [label="Top-2" style=dashed]
+			}
+			layer_0_output [label="Layer 0 Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.4 shape=circle style=filled width=0.4]
+			layer_0_input -> qkv_0
+			attn_out_0 -> gate_0
+			moe_out_0 -> layer_0_output
+		}
+		subgraph cluster_layer_1 {
+			label="Layer 1\nPP Rank: 0"
+			bgcolor=white penwidth=1 style="dashed, rounded"
+			layer_1_input [label="Layer 1 Input\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.4 shape=circle style=filled width=0.4]
+			subgraph cluster_attn_1 {
+				label="Attention Block (TP8)"
+				bgcolor=lightblue penwidth=1 style="rounded, filled"
+				qkv_1 [label="QKV Projection\n[batch=128, seq=1024]\n→ [3×heads=16, d_k=64]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_comp_1 [label="Attention Scores+Softmax\n[batch=128, heads=16, seq=1024]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_ar_1 [label="TP All-Reduce\n[batch=128, seq=1024, hidden=1024]\nGPU: All TP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				attn_proj_1 [label="Output Projection\n[batch=128, seq=1024, hidden=1024]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_out_1 [label="Attention Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+				qkv_1 -> attn_comp_1
+				attn_comp_1 -> attn_ar_1
+				attn_ar_1 -> attn_proj_1
+				attn_proj_1 -> attn_out_1
+			}
+			subgraph cluster_moe_1 {
+				label="MoE Block (EP64)"
+				bgcolor=lightgreen penwidth=1 style="rounded, filled"
+				gate_1 [label="Gate Selection\nTop-2 Experts\n[batch=128, seq=1024]\n→ [num_experts=64]\nGPU: All EP Ranks" fillcolor=lightgreen shape=parallelogram style=filled]
+				dispatch_1 [label="Expert Dispatch\nAll-to-All\n[batch=128, seq=1024]\nGPU: All EP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				subgraph cluster_experts_1 {
+					label="Expert Computation (64 Experts Total, TP8 Each)"
+					bgcolor=lightyellow penwidth=1 style="rounded, filled"
+					expert_1_0 [label="Expert 0 MLP\n[batch=?, seq=?, hidden=1024]\n→ [2048] → [1024]\nGPU: EP0, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+					expert_ar_1_0 [label="Expert 0 TP All-Reduce\n[batch=?, seq=?, hidden=1024]\nGPU: EP0, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+					expert_1_0 -> expert_ar_1_0
+					expert_1_1 [label="Expert 1 MLP\n[batch=?, seq=?, hidden=1024]\n→ [2048] → [1024]\nGPU: EP1, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+					expert_ar_1_1 [label="Expert 1 TP All-Reduce\n[batch=?, seq=?, hidden=1024]\nGPU: EP1, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+					expert_1_1 -> expert_ar_1_1
+					expert_ellipsis_1 [label="..." shape=none]
+				}
+				combine_1 [label="Expert Combine\nAll-to-All\n[batch=128, seq=1024]\nGPU: All EP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				aggregate_1 [label="Expert Output Aggregation\n[batch=128, seq=1024, hidden=1024]\nGPU: All EP Ranks" fillcolor=lightcoral shape=parallelogram style=filled]
+				moe_out_1 [label="MoE Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+				gate_1 -> dispatch_1
+				dispatch_1 -> expert_1_0
+				dispatch_1 -> expert_1_1
+				expert_ar_1_0 -> combine_1
+				expert_ar_1_1 -> combine_1
+				combine_1 -> aggregate_1
+				aggregate_1 -> moe_out_1
+				gate_1 -> expert_1_0 [label="Top-2" style=dashed]
+				gate_1 -> expert_1_1 [label="Top-2" style=dashed]
+			}
+			layer_1_output [label="Layer 1 Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.4 shape=circle style=filled width=0.4]
+			layer_1_input -> qkv_1
+			attn_out_1 -> gate_1
+			moe_out_1 -> layer_1_output
+		}
+		ellipsis_pp0 [label="..." shape=none]
+	}
+	subgraph cluster_pp_1 {
+		label="Pipeline Stage 1\nLayers 8-15\nPP Rank: 1"
+		bgcolor=lightgray penwidth=2 style="rounded, filled"
+		subgraph cluster_layer_14 {
+			label="Layer 14\nPP Rank: 1"
+			bgcolor=white penwidth=1 style="dashed, rounded"
+			layer_14_input [label="Layer 14 Input\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.4 shape=circle style=filled width=0.4]
+			subgraph cluster_attn_14 {
+				label="Attention Block (TP8)"
+				bgcolor=lightblue penwidth=1 style="rounded, filled"
+				qkv_14 [label="QKV Projection\n[batch=128, seq=1024]\n→ [3×heads=16, d_k=64]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_comp_14 [label="Attention Scores+Softmax\n[batch=128, heads=16, seq=1024]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_ar_14 [label="TP All-Reduce\n[batch=128, seq=1024, hidden=1024]\nGPU: All TP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				attn_proj_14 [label="Output Projection\n[batch=128, seq=1024, hidden=1024]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_out_14 [label="Attention Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+				qkv_14 -> attn_comp_14
+				attn_comp_14 -> attn_ar_14
+				attn_ar_14 -> attn_proj_14
+				attn_proj_14 -> attn_out_14
+			}
+			subgraph cluster_moe_14 {
+				label="MoE Block (EP64)"
+				bgcolor=lightgreen penwidth=1 style="rounded, filled"
+				gate_14 [label="Gate Selection\nTop-2 Experts\n[batch=128, seq=1024]\n→ [num_experts=64]\nGPU: All EP Ranks" fillcolor=lightgreen shape=parallelogram style=filled]
+				dispatch_14 [label="Expert Dispatch\nAll-to-All\n[batch=128, seq=1024]\nGPU: All EP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				subgraph cluster_experts_14 {
+					label="Expert Computation (64 Experts Total, TP8 Each)"
+					bgcolor=lightyellow penwidth=1 style="rounded, filled"
+					expert_14_0 [label="Expert 0 MLP\n[batch=?, seq=?, hidden=1024]\n→ [2048] → [1024]\nGPU: EP0, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+					expert_ar_14_0 [label="Expert 0 TP All-Reduce\n[batch=?, seq=?, hidden=1024]\nGPU: EP0, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+					expert_14_0 -> expert_ar_14_0
+					expert_14_1 [label="Expert 1 MLP\n[batch=?, seq=?, hidden=1024]\n→ [2048] → [1024]\nGPU: EP1, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+					expert_ar_14_1 [label="Expert 1 TP All-Reduce\n[batch=?, seq=?, hidden=1024]\nGPU: EP1, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+					expert_14_1 -> expert_ar_14_1
+					expert_ellipsis_14 [label="..." shape=none]
+				}
+				combine_14 [label="Expert Combine\nAll-to-All\n[batch=128, seq=1024]\nGPU: All EP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				aggregate_14 [label="Expert Output Aggregation\n[batch=128, seq=1024, hidden=1024]\nGPU: All EP Ranks" fillcolor=lightcoral shape=parallelogram style=filled]
+				moe_out_14 [label="MoE Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+				gate_14 -> dispatch_14
+				dispatch_14 -> expert_14_0
+				dispatch_14 -> expert_14_1
+				expert_ar_14_0 -> combine_14
+				expert_ar_14_1 -> combine_14
+				combine_14 -> aggregate_14
+				aggregate_14 -> moe_out_14
+				gate_14 -> expert_14_0 [label="Top-2" style=dashed]
+				gate_14 -> expert_14_1 [label="Top-2" style=dashed]
+			}
+			layer_14_output [label="Layer 14 Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.4 shape=circle style=filled width=0.4]
+			layer_14_input -> qkv_14
+			attn_out_14 -> gate_14
+			moe_out_14 -> layer_14_output
+		}
+		subgraph cluster_layer_15 {
+			label="Layer 15\nPP Rank: 1"
+			bgcolor=white penwidth=1 style="dashed, rounded"
+			layer_15_input [label="Layer 15 Input\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.4 shape=circle style=filled width=0.4]
+			subgraph cluster_attn_15 {
+				label="Attention Block (TP8)"
+				bgcolor=lightblue penwidth=1 style="rounded, filled"
+				qkv_15 [label="QKV Projection\n[batch=128, seq=1024]\n→ [3×heads=16, d_k=64]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_comp_15 [label="Attention Scores+Softmax\n[batch=128, heads=16, seq=1024]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_ar_15 [label="TP All-Reduce\n[batch=128, seq=1024, hidden=1024]\nGPU: All TP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				attn_proj_15 [label="Output Projection\n[batch=128, seq=1024, hidden=1024]\nGPU: All TP Ranks" fillcolor=lightblue shape=rectangle style=filled]
+				attn_out_15 [label="Attention Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+				qkv_15 -> attn_comp_15
+				attn_comp_15 -> attn_ar_15
+				attn_ar_15 -> attn_proj_15
+				attn_proj_15 -> attn_out_15
+			}
+			subgraph cluster_moe_15 {
+				label="MoE Block (EP64)"
+				bgcolor=lightgreen penwidth=1 style="rounded, filled"
+				gate_15 [label="Gate Selection\nTop-2 Experts\n[batch=128, seq=1024]\n→ [num_experts=64]\nGPU: All EP Ranks" fillcolor=lightgreen shape=parallelogram style=filled]
+				dispatch_15 [label="Expert Dispatch\nAll-to-All\n[batch=128, seq=1024]\nGPU: All EP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				subgraph cluster_experts_15 {
+					label="Expert Computation (64 Experts Total, TP8 Each)"
+					bgcolor=lightyellow penwidth=1 style="rounded, filled"
+					expert_15_0 [label="Expert 0 MLP\n[batch=?, seq=?, hidden=1024]\n→ [2048] → [1024]\nGPU: EP0, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+					expert_ar_15_0 [label="Expert 0 TP All-Reduce\n[batch=?, seq=?, hidden=1024]\nGPU: EP0, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+					expert_15_0 -> expert_ar_15_0
+					expert_15_1 [label="Expert 1 MLP\n[batch=?, seq=?, hidden=1024]\n→ [2048] → [1024]\nGPU: EP1, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+					expert_ar_15_1 [label="Expert 1 TP All-Reduce\n[batch=?, seq=?, hidden=1024]\nGPU: EP1, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+					expert_15_1 -> expert_ar_15_1
+					expert_ellipsis_15 [label="..." shape=none]
+				}
+				combine_15 [label="Expert Combine\nAll-to-All\n[batch=128, seq=1024]\nGPU: All EP Ranks" fillcolor=lightyellow shape=ellipse style=filled]
+				aggregate_15 [label="Expert Output Aggregation\n[batch=128, seq=1024, hidden=1024]\nGPU: All EP Ranks" fillcolor=lightcoral shape=parallelogram style=filled]
+				moe_out_15 [label="MoE Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+				gate_15 -> dispatch_15
+				dispatch_15 -> expert_15_0
+				dispatch_15 -> expert_15_1
+				expert_ar_15_0 -> combine_15
+				expert_ar_15_1 -> combine_15
+				combine_15 -> aggregate_15
+				aggregate_15 -> moe_out_15
+				gate_15 -> expert_15_0 [label="Top-2" style=dashed]
+				gate_15 -> expert_15_1 [label="Top-2" style=dashed]
+			}
+			layer_15_output [label="Layer 15 Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white height=0.4 shape=circle style=filled width=0.4]
+			layer_15_input -> qkv_15
+			attn_out_15 -> gate_15
+			moe_out_15 -> layer_15_output
+		}
+	}
+	pp_comm_0_1 [label="PP Communication\nSend/Recv All-Reduce\nStage 0 → 1" fillcolor=lightyellow shape=ellipse style=filled]
+	output [label="Model Output\n[batch=128, seq=1024, vocab=32000]" fillcolor=white penwidth=2 shape=doublecircle style=filled]
+	layer_1_output -> pp_comm_0_1
+	pp_comm_0_1 -> layer_14_input
+	layer_15_output -> output
+}

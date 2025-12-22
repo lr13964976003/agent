@@ -1,0 +1,131 @@
+digraph MoE_Single_Layer_Detailed {
+	dpi=300 rankdir=TB size="25,35"
+	node [fontsize=8 margin="0.03,0.01"]
+	input [label="Layer Input\n[batch=128, seq=1024, hidden=1024]" fillcolor=white penwidth=2 shape=circle style=filled]
+	subgraph cluster_attn_detailed {
+		label="Attention Block - Detailed Operator Breakdown"
+		bgcolor=lightblue penwidth=2 style="rounded, filled"
+		q_proj [label="Q Projection (TP8)\n[batch=128, seq=1024]\n→ [heads=16, d_k=64]\nGPU: TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+		k_proj [label="K Projection (TP8)\n[batch=128, seq=1024]\n→ [heads=16, d_k=64]\nGPU: TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+		v_proj [label="V Projection (TP8)\n[batch=128, seq=1024]\n→ [heads=16, d_k=64]\nGPU: TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+		q_ag [label="TP All-Gather Q\nComplete Q tensor\nGPU: TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+		k_ag [label="TP All-Gather K\nComplete K tensor\nGPU: TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+		v_ag [label="TP All-Gather V\nComplete V tensor\nGPU: TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+		attn_scores [label="Attention Scores\nQ × K^T / sqrt(d_k)\n[batch=128, heads=16, seq_q=1024, seq_k=1024]\nGPU: TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+		attn_mask [label="Causal Mask\nTriangular mask\n[seq=1024, seq=1024]" fillcolor=lightblue shape=rectangle style=filled]
+		attn_softmax [label="Softmax\n[batch=128, heads=16, seq=1024, seq=1024]\nGPU: TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+		attn_output [label="Attention Output\nWeights × V\n[batch=128, heads=16, seq=1024, d_k=64]\nGPU: TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+		attn_ar [label="TP All-Reduce\nSum partial results\n[batch=128, seq=1024, hidden=1024]\nGPU: TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+		out_proj [label="Output Projection (TP8)\n[batch=128, seq=1024]\nGPU: TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+		final_ar [label="Final TP All-Reduce\nComplete attention output\n[batch=128, seq=1024, hidden=1024]\nGPU: TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+		attn_final [label="Attention Block Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white penwidth=1 shape=circle style=filled]
+		input -> q_proj
+		input -> k_proj
+		input -> v_proj
+		q_proj -> q_ag
+		k_proj -> k_ag
+		v_proj -> v_ag
+		q_ag -> attn_scores
+		k_ag -> attn_scores
+		attn_scores -> attn_mask
+		attn_mask -> attn_softmax
+		attn_softmax -> attn_output
+		v_ag -> attn_output
+		attn_output -> attn_ar
+		attn_ar -> out_proj
+		out_proj -> final_ar
+		final_ar -> attn_final
+	}
+	subgraph cluster_moe_detailed {
+		label="MoE Block - Detailed Expert Parallelism"
+		bgcolor=lightgreen penwidth=2 style="rounded, filled"
+		moe_input [label="MoE Input\n[batch=128, seq=1024, hidden=1024]" fillcolor=white penwidth=1 shape=circle style=filled]
+		gate_compute [label="Gate Computation\nLinear + Softmax\n[batch=128, seq=1024]\n→ [num_experts=64]\nGPU: All EP Ranks" fillcolor=lightgreen shape=parallelogram style=filled]
+		top2_select [label="Top-2 Expert Selection\nSelect highest scoring experts\nGPU: All EP Ranks" fillcolor=lightgreen shape=parallelogram style=filled]
+		dispatch [label="Expert Dispatch\nAll-to-All Communication\nSend tokens to expert GPUs\n[batch=128, seq=1024]\nGPU: EP0-EP63" fillcolor=lightyellow shape=ellipse style=filled]
+		subgraph cluster_expert_0 {
+			label="Expert 0 (EP Rank 0)"
+			bgcolor=lightyellow penwidth=1 style="rounded, filled"
+			expert_recv_0 [label="Expert 0 Receive\nSubset of tokens\nGPU: EP0" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+			expert_mlp1_0 [label="Expert 0 MLP Layer 1 (TP8)\n[hidden=1024]\n→ [2048]\nGPU: EP0, TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+			expert_act_0 [label="Activation (SiLU/GeLU)\nGPU: EP0, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+			expert_mlp2_0 [label="Expert 0 MLP Layer 2 (TP8)\n[2048]\n→ [hidden=1024]\nGPU: EP0, TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+			expert_ar_0 [label="Expert 0 TP All-Reduce\n[hidden=1024]\nGPU: EP0, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+			expert_done_0 [label="Expert 0 Output\n[hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+			expert_recv_0 -> expert_mlp1_0
+			expert_mlp1_0 -> expert_act_0
+			expert_act_0 -> expert_mlp2_0
+			expert_mlp2_0 -> expert_ar_0
+			expert_ar_0 -> expert_done_0
+		}
+		subgraph cluster_expert_1 {
+			label="Expert 1 (EP Rank 1)"
+			bgcolor=lightyellow penwidth=1 style="rounded, filled"
+			expert_recv_1 [label="Expert 1 Receive\nSubset of tokens\nGPU: EP1" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+			expert_mlp1_1 [label="Expert 1 MLP Layer 1 (TP8)\n[hidden=1024]\n→ [2048]\nGPU: EP1, TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+			expert_act_1 [label="Activation (SiLU/GeLU)\nGPU: EP1, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+			expert_mlp2_1 [label="Expert 1 MLP Layer 2 (TP8)\n[2048]\n→ [hidden=1024]\nGPU: EP1, TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+			expert_ar_1 [label="Expert 1 TP All-Reduce\n[hidden=1024]\nGPU: EP1, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+			expert_done_1 [label="Expert 1 Output\n[hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+			expert_recv_1 -> expert_mlp1_1
+			expert_mlp1_1 -> expert_act_1
+			expert_act_1 -> expert_mlp2_1
+			expert_mlp2_1 -> expert_ar_1
+			expert_ar_1 -> expert_done_1
+		}
+		subgraph cluster_expert_2 {
+			label="Expert 2 (EP Rank 2)"
+			bgcolor=lightyellow penwidth=1 style="rounded, filled"
+			expert_recv_2 [label="Expert 2 Receive\nSubset of tokens\nGPU: EP2" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+			expert_mlp1_2 [label="Expert 2 MLP Layer 1 (TP8)\n[hidden=1024]\n→ [2048]\nGPU: EP2, TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+			expert_act_2 [label="Activation (SiLU/GeLU)\nGPU: EP2, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+			expert_mlp2_2 [label="Expert 2 MLP Layer 2 (TP8)\n[2048]\n→ [hidden=1024]\nGPU: EP2, TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+			expert_ar_2 [label="Expert 2 TP All-Reduce\n[hidden=1024]\nGPU: EP2, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+			expert_done_2 [label="Expert 2 Output\n[hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+			expert_recv_2 -> expert_mlp1_2
+			expert_mlp1_2 -> expert_act_2
+			expert_act_2 -> expert_mlp2_2
+			expert_mlp2_2 -> expert_ar_2
+			expert_ar_2 -> expert_done_2
+		}
+		subgraph cluster_expert_3 {
+			label="Expert 3 (EP Rank 3)"
+			bgcolor=lightyellow penwidth=1 style="rounded, filled"
+			expert_recv_3 [label="Expert 3 Receive\nSubset of tokens\nGPU: EP3" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+			expert_mlp1_3 [label="Expert 3 MLP Layer 1 (TP8)\n[hidden=1024]\n→ [2048]\nGPU: EP3, TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+			expert_act_3 [label="Activation (SiLU/GeLU)\nGPU: EP3, TP0-TP7" fillcolor=lightblue shape=rectangle style=filled]
+			expert_mlp2_3 [label="Expert 3 MLP Layer 2 (TP8)\n[2048]\n→ [hidden=1024]\nGPU: EP3, TP0-TP7 (1/8 each)" fillcolor=lightblue shape=rectangle style=filled]
+			expert_ar_3 [label="Expert 3 TP All-Reduce\n[hidden=1024]\nGPU: EP3, TP0-TP7" fillcolor=lightyellow shape=ellipse style=filled]
+			expert_done_3 [label="Expert 3 Output\n[hidden=1024]" fillcolor=white height=0.3 shape=circle style=filled width=0.3]
+			expert_recv_3 -> expert_mlp1_3
+			expert_mlp1_3 -> expert_act_3
+			expert_act_3 -> expert_mlp2_3
+			expert_mlp2_3 -> expert_ar_3
+			expert_ar_3 -> expert_done_3
+		}
+		experts_ellipsis [label="...\n60 more experts\nEP4-EP63" shape=none]
+		combine [label="Expert Combine\nAll-to-All Communication\nGather expert outputs\n[batch=128, seq=1024]\nGPU: EP0-EP63" fillcolor=lightyellow shape=ellipse style=filled]
+		weighted_sum [label="Weighted Aggregation\nGate scores × Expert outputs\n[batch=128, seq=1024, hidden=1024]\nGPU: All EP Ranks" fillcolor=lightcoral shape=parallelogram style=filled]
+		moe_final [label="MoE Block Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white penwidth=1 shape=circle style=filled]
+		attn_final -> moe_input
+		moe_input -> gate_compute
+		gate_compute -> top2_select
+		top2_select -> dispatch
+		dispatch -> expert_recv_0
+		dispatch -> expert_recv_1
+		dispatch -> expert_recv_2
+		dispatch -> expert_recv_3
+		expert_done_0 -> combine
+		expert_done_1 -> combine
+		expert_done_2 -> combine
+		expert_done_3 -> combine
+		combine -> weighted_sum
+		weighted_sum -> moe_final
+		top2_select -> expert_recv_0 [label="Top-2 Selection" style=dashed]
+		top2_select -> expert_recv_1 [label="Top-2 Selection" style=dashed]
+		top2_select -> expert_recv_2 [label="Top-2 Selection" style=dashed]
+		top2_select -> expert_recv_3 [label="Top-2 Selection" style=dashed]
+	}
+	output [label="Layer Output\n[batch=128, seq=1024, hidden=1024]" fillcolor=white penwidth=2 shape=doublecircle style=filled]
+	moe_final -> output
+}
