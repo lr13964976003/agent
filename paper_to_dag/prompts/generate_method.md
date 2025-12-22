@@ -121,7 +121,7 @@ The final output must include:
 Example:
 ```json
 {
-  "strategy_path": "/path/to/parallel_strategy.md"
+  "save_path": f"../outputs/{submission_dir}/parallel_strategy.md"
 }
 ```
 
