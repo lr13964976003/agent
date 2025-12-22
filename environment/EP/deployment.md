@@ -29,9 +29,9 @@
 ## **Current Parallelism Strategy**
 - **Expert Parallelism (EP)**: 8-way - Each expert assigned to separate GPU
 - **Tensor Parallelism (TP)**: 8-way - Intra-layer parallelism for attention and MLP
-- **Pipeline Parallelism (PP)**: 2-way - Layer distribution across pipeline stages
+- **Pipeline Parallelism (PP)**: 8-way - Layer distribution across pipeline stages
 - **Data Parallelism (DP)**: 8-way - Batch processing parallelism
-- **Total GPUs** = EP × TP × PP × DP = 8 × 8 × 2 × 8 = 1024
+- **Total GPUs** = EP × TP × PP × DP = 8 × 8 × 8 × 8 = 4096
 
 
 
