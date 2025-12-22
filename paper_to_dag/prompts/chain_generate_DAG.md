@@ -18,9 +18,9 @@ TASK
 
 You are tested to completed the following tasks:
 
-Gain a deep understanding of the methods proposed in the deployment method file. <<<要求理解部署方案>>> 
+Gain a deep understanding of the methods proposed in two deployment method files. <<<要求理解部署方案>>> 
 
-Generate one complete model deployment DAG(directed acyclic graph) according to deployment method by calling tools to generate graphviz code, meet the following conditions: <<<要求生成一个DAG，并遵守以下要求>>>
+Generate two complete model deployment DAGs(directed acyclic graph) according to deployment method by calling tools(one for the current deployment method, another for the new deployment method) to generate graphviz code, meet the following conditions: <<<要求生成两个DAG，并遵守以下要求>>>
 
 Check whether the parallel strategies in the deployment plan are fully, completely, and accurately reflected. <<<要求充分完整正确地体现并行策略>>>
 
