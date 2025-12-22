@@ -27,11 +27,11 @@
 
 
 ## **Strategy Composition**
-- **Expert Parallelism (EP)**: 64-way - Each expert assigned to separate GPU
+- **Expert Parallelism (EP)**: 8-way - Each expert assigned to separate GPU
 - **Tensor Parallelism (TP)**: 8-way - Intra-layer parallelism for attention and MLP
 - **Pipeline Parallelism (PP)**: 2-way - Layer distribution across pipeline stages
-- **Data Parallelism (DP)**: 2-way - Batch processing parallelism
-- **Total GPUs** = EP × TP × PP × DP = 64 × 8 × 2 × 2 = 2048
+- **Data Parallelism (DP)**: 8-way - Batch processing parallelism
+- **Total GPUs** = EP × TP × PP × DP = 8 × 8 × 2 × 8 = 1024
 
 
 
