@@ -26,7 +26,7 @@
 ---
 
 
-## **Strategy Composition**
+## **Current Parallelism Strategy**
 - **Expert Parallelism (EP)**: 8-way - Each expert assigned to separate GPU
 - **Tensor Parallelism (TP)**: 8-way - Intra-layer parallelism for attention and MLP
 - **Pipeline Parallelism (PP)**: 2-way - Layer distribution across pipeline stages
