@@ -53,7 +53,7 @@ This will be a task with many steps. Please ensure you have fully understood the
 
 Do not make any changes to the original file. <<<禁止修改原始文件>>>
 
-Avoid vague expressions like "all GPUs"; specify the exact GPU. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
+Avoid vague expressions like "ALL GPUs"; instead, specify the exact GPU model numbers. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
 
 The generated DAG must not contain any cycles.<<<禁止有环>>>
 
