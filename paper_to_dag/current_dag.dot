@@ -1,0 +1,154 @@
+// 30B MoE Model Deployment DAG - Fixed Version
+digraph {
+    dpi=300 rankdir=TB size="40,60"
+    node [fontname=Arial fontsize=10]
+    edge [fontname=Arial fontsize=9]
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    node [fillcolor=lightgreen shape=box style=filled]
+    node [fillcolor=lightyellow shape=parallelogram style=filled]
+    node [fillcolor=pink shape=ellipse style="filled,dashed"]
+    
+    subgraph cluster_pipeline_stage_0 {
+        fillcolor=lightgray fontsize=14 label="Pipeline Stage 0 (Layers 0-7)" style="rounded,filled"
+        
+        input [label="Input\nINPUT DIMENSION: [batch_size=64, seq_len=128-10240, hidden_dim=1024]" fillcolor=lightblue shape=ellipse]
+        
+        // Input broadcast node to properly distribute input to all TP blocks
+        input_broadcast [label="Input Broadcast\nDistribute input to TP=8 blocks\nGPU: PP0_TP0_GPU" fillcolor=lightyellow shape=parallelogram]
+        
+        subgraph cluster_layer0_attention {
+            fontsize=12 label="Layer 0 - Multi-Head Attention (TP=8)" style=rounded
+            
+            // All 8 TP QKV projection nodes - now properly connected to input
+            layer0_qkv_tp0 [label="QKV Projection\nGPU: PP0_TP0_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_qkv_tp1 [label="QKV Projection\nGPU: PP0_TP1_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_qkv_tp2 [label="QKV Projection\nGPU: PP0_TP2_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_qkv_tp3 [label="QKV Projection\nGPU: PP0_TP3_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_qkv_tp4 [label="QKV Projection\nGPU: PP0_TP4_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_qkv_tp5 [label="QKV Projection\nGPU: PP0_TP5_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_qkv_tp6 [label="QKV Projection\nGPU: PP0_TP6_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_qkv_tp7 [label="QKV Projection\nGPU: PP0_TP7_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            
+            // Attention score computations
+            layer0_attn_tp0 [label="Attention Score\nGPU: PP0_TP0_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_attn_tp1 [label="Attention Score\nGPU: PP0_TP1_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_attn_tp2 [label="Attention Score\nGPU: PP0_TP2_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_attn_tp3 [label="Attention Score\nGPU: PP0_TP3_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_attn_tp4 [label="Attention Score\nGPU: PP0_TP4_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_attn_tp5 [label="Attention Score\nGPU: PP0_TP5_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_attn_tp6 [label="Attention Score\nGPU: PP0_TP6_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            layer0_attn_tp7 [label="Attention Score\nGPU: PP0_TP7_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]" fillcolor=lightgreen shape=box]
+            
+            // Output projections
+            layer0_out_tp0 [label="Attention Output\nGPU: PP0_TP0_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, hidden_dim=128]" fillcolor=lightgreen shape=box]
+            layer0_out_tp1 [label="Attention Output\nGPU: PP0_TP1_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, hidden_dim=128]" fillcolor=lightgreen shape=box]
+            layer0_out_tp2 [label="Attention Output\nGPU: PP0_TP2_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, hidden_dim=128]" fillcolor=lightgreen shape=box]
+            layer0_out_tp3 [label="Attention Output\nGPU: PP0_TP3_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, hidden_dim=128]" fillcolor=lightgreen shape=box]
+            layer0_out_tp4 [label="Attention Output\nGPU: PP0_TP4_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, hidden_dim=128]" fillcolor=lightgreen shape=box]
+            layer0_out_tp5 [label="Attention Output\nGPU: PP0_TP5_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, hidden_dim=128]" fillcolor=lightgreen shape=box]
+            layer0_out_tp6 [label="Attention Output\nGPU: PP0_TP6_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, hidden_dim=128]" fillcolor=lightgreen shape=box]
+            layer0_out_tp7 [label="Attention Output\nGPU: PP0_TP7_GPU\nINPUT: [batch_size=64, seq_len=128-10240, heads=2, d_k=64]\nOUTPUT: [batch_size=64, seq_len=128-10240, hidden_dim=128]" fillcolor=lightgreen shape=box]
+            
+            layer0_allreduce [label="All-Reduce Attention\nTP Group All-Reduce\n8 GPUs" fillcolor=pink shape=ellipse style="filled,dashed"]
+        }
+        
+        subgraph cluster_layer0_moe {
+            fontsize=12 label="Layer 0 - MoE (EP=64)" style=rounded
+            
+            layer0_router [label="Router\nTop-K Expert Selection\nGPU: PP0_TP0_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, top_k=2]" fillcolor=lightyellow shape=parallelogram]
+            layer0_dispatch [label="Expert Dispatch\nDispatch tokens to 64 experts\nAll-to-All communication\n64 GPUs involved" fillcolor=pink shape=ellipse style="filled,dashed"]
+            
+            layer0_expert0 [label="Expert 0\nGPU: PP0_EP0_GPU\nINPUT: [batch_size=~1, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=~1, seq_len=128-10240, hidden_dim=1024]" fillcolor=lightgreen shape=box]
+            layer0_expert1 [label="Expert 1\nGPU: PP0_EP1_GPU\nINPUT: [batch_size=~1, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=~1, seq_len=128-10240, hidden_dim=1024]" fillcolor=lightgreen shape=box]
+            layer0_expert2 [label="Expert 2\nGPU: PP0_EP2_GPU\nINPUT: [batch_size=~1, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=~1, seq_len=128-10240, hidden_dim=1024]" fillcolor=lightgreen shape=box]
+            layer0_expert3 [label="Expert 3\nGPU: PP0_EP3_GPU\nINPUT: [batch_size=~1, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=~1, seq_len=128-10240, hidden_dim=1024]" fillcolor=lightgreen shape=box]
+            
+            layer0_experts_ellipsis [label="...\n60 more experts\n distributed across\n60 GPUs" fillcolor=lightgray shape=box style=dashed]
+            
+            layer0_combine [label="Expert Combine\nCombine expert outputs\nAll-to-All communication\n64 GPUs involved" fillcolor=pink shape=ellipse style="filled,dashed"]
+        }
+        
+        layer0_norm [label="Layer Normalization\nGPU: PP0_TP0_GPU\nINPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]\nOUTPUT: [batch_size=64, seq_len=128-10240, hidden_dim=1024]" fillcolor=lightgreen shape=box]
+        
+        pipeline_send [label="Pipeline Send\nSend activations to Stage 1\nPipeline communication\nGPU-to-GPU transfer" fillcolor=orange shape=ellipse style="filled,dashed"]
+    }
+    
+    subgraph cluster_pipeline_stage_1 {
+        fillcolor=lightgray fontsize=14 label="Pipeline Stage 1 (Layers 8-15)" style="rounded,filled"
+        
+        pipeline_receive [label="Pipeline Receive\nReceive activations from Stage 0\nPipeline communication\nGPU-to-GPU transfer" fillcolor=orange shape=ellipse style="filled,dashed"]
+        stage1_processing [label="Stage 1 Processing\nLayers 8-15\nSimilar TP+EP pattern\n8 TP GPUs + 64 EP GPUs" fillcolor=lightgreen shape=box]
+        output [label="Final Output\nOUTPUT DIMENSION: [batch_size=64, seq_len=128-10240, hidden_dim=1024, vocab_size=32000]" fillcolor=lightcoral shape=ellipse]
+    }
+    
+    subgraph cluster_data_parallel {
+        fontsize=12 label="Data Parallelism (DP=2)" style="dashed,rounded"
+        dp_replica [label="Data Parallel Replica\nBatch 64 sequences\nIdentical computation graph\nGradient sync in training" fillcolor=lightsteelblue shape=parallelogram]
+    }
+    
+    // Fixed input connections - now all TP blocks receive input
+    input -> input_broadcast
+    input_broadcast -> layer0_qkv_tp0
+    input_broadcast -> layer0_qkv_tp1
+    input_broadcast -> layer0_qkv_tp2
+    input_broadcast -> layer0_qkv_tp3
+    input_broadcast -> layer0_qkv_tp4
+    input_broadcast -> layer0_qkv_tp5
+    input_broadcast -> layer0_qkv_tp6
+    input_broadcast -> layer0_qkv_tp7
+    
+    // Attention computation flow
+    layer0_qkv_tp0 -> layer0_attn_tp0
+    layer0_qkv_tp1 -> layer0_attn_tp1
+    layer0_qkv_tp2 -> layer0_attn_tp2
+    layer0_qkv_tp3 -> layer0_attn_tp3
+    layer0_qkv_tp4 -> layer0_attn_tp4
+    layer0_qkv_tp5 -> layer0_attn_tp5
+    layer0_qkv_tp6 -> layer0_attn_tp6
+    layer0_qkv_tp7 -> layer0_attn_tp7
+    
+    layer0_attn_tp0 -> layer0_out_tp0
+    layer0_attn_tp1 -> layer0_out_tp1
+    layer0_attn_tp2 -> layer0_out_tp2
+    layer0_attn_tp3 -> layer0_out_tp3
+    layer0_attn_tp4 -> layer0_out_tp4
+    layer0_attn_tp5 -> layer0_out_tp5
+    layer0_attn_tp6 -> layer0_out_tp6
+    layer0_attn_tp7 -> layer0_out_tp7
+    
+    // Output aggregation and All-Reduce
+    layer0_out_tp0 -> layer0_out_tp1
+    layer0_out_tp1 -> layer0_out_tp2
+    layer0_out_tp2 -> layer0_out_tp3
+    layer0_out_tp3 -> layer0_out_tp4
+    layer0_out_tp4 -> layer0_out_tp5
+    layer0_out_tp5 -> layer0_out_tp6
+    layer0_out_tp6 -> layer0_out_tp7
+    layer0_out_tp7 -> layer0_allreduce
+    
+    // MoE processing
+    layer0_allreduce -> layer0_router
+    layer0_router -> layer0_dispatch [label="expert selection" style=dashed]
+    
+    layer0_dispatch -> layer0_expert0
+    layer0_dispatch -> layer0_expert1
+    layer0_dispatch -> layer0_expert2
+    layer0_dispatch -> layer0_expert3
+    layer0_dispatch -> layer0_experts_ellipsis
+    
+    layer0_expert0 -> layer0_combine
+    layer0_expert1 -> layer0_combine
+    layer0_expert2 -> layer0_combine
+    layer0_expert3 -> layer0_combine
+    layer0_experts_ellipsis -> layer0_combine
+    
+    layer0_combine -> layer0_norm
+    layer0_norm -> pipeline_send
+    
+    pipeline_send -> pipeline_receive
+    pipeline_receive -> stage1_processing
+    stage1_processing -> output
+    
+    // Data parallelism representation
+    input -> dp_replica [label="DP replica" style=dotted]
+}
