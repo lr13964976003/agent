@@ -30,14 +30,6 @@ Parallel strategies should strive to optimize the model's performance (latency, 
 Make full use of hardware resources and leverage the advantages of current deployment conditions. <<<要求充分利用硬件资源>>>
 
 
-
-
-
-
-
-
-
-
 NOTE
 
 ---
