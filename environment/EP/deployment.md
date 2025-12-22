@@ -23,6 +23,16 @@
 * **Dimension of MHA**: The number of heads is 16 and the dimension of each heads is 64
 * **Hidden size of MOE**: The hidden is of MOE is 2048
 
+---
+
+
+## **Strategy Composition**
+- **Expert Parallelism (EP)**: 64-way - Each expert assigned to separate GPU
+- **Tensor Parallelism (TP)**: 8-way - Intra-layer parallelism for attention and MLP
+- **Pipeline Parallelism (PP)**: 2-way - Layer distribution across pipeline stages
+- **Data Parallelism (DP)**: 2-way - Batch processing parallelism
+- **Total GPUs** = EP × TP × PP × DP = 64 × 8 × 2 × 2 = 2048
+
 
 
 ```
