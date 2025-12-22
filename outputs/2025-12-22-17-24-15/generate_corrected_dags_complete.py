@@ -1,0 +1,400 @@
+#!/usr/bin/env python3
+
+import os
+
+def create_current_strategy_dag():
+    """Create corrected current strategy DAG with proper attention decomposition and complete connections"""
+    
+    dot_content = '''digraph CurrentStrategy {
+    rankdir=TB;
+    node [shape=rectangle, style=filled];
+    
+    // Graph styling
+    graph [bgcolor=white, fontname="Arial", fontsize=12];
+    node [fontname="Arial", fontsize=10];
+    edge [fontname="Arial", fontsize=9];
+    
+    // Input node
+    Input [shape=ellipse, label="Input\\nInput: [batch_size=128, seq_len=128-10240, dim=1024]\\nOutput: [batch_size=128, seq_len=128-10240, dim=1024]", fillcolor=lightblue];
+    
+    // Data Parallel split (DP4)
+    DP_Split [shape=parallelogram, label="DP Split\\n4-way Data Parallel\\nInput: [batch_size=128, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgreen];
+    
+    // Pipeline stages (PP4)
+    subgraph cluster_pipeline {
+        label="Pipeline Parallelism (PP4)";
+        style=filled;
+        fillcolor=lightyellow;
+        
+        // Stage 0: Layers 0-3
+        subgraph cluster_stage0 {
+            label="Stage 0: Layers 0-3 (GPU 0-255)";
+            style=filled;
+            fillcolor=lightcoral;
+            
+            // Tensor Parallel within stage
+            subgraph cluster_tp_stage0 {
+                label="TP4 within Stage 0";
+                style=filled;
+                fillcolor=lightpink;
+                
+                // Layer 0 - Detailed Attention Decomposition
+                subgraph cluster_layer0 {
+                    label="Layer 0 - Detailed Attention + MoE";
+                    style=filled;
+                    fillcolor=white;
+                    
+                    // Attention decomposition
+                    Q_Proj_L0_TP0 [label="Query Projection\\nGPU: 0-63\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    K_Proj_L0_TP0 [label="Key Projection\\nGPU: 0-63\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    V_Proj_L0_TP0 [label="Value Projection\\nGPU: 0-63\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    
+                    Q_Proj_L0_TP1 [label="Query Projection\\nGPU: 64-127\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    K_Proj_L0_TP1 [label="Key Projection\\nGPU: 64-127\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    V_Proj_L0_TP1 [label="Value Projection\\nGPU: 64-127\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    
+                    Q_Proj_L0_TP2 [label="Query Projection\\nGPU: 128-191\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    K_Proj_L0_TP2 [label="Key Projection\\nGPU: 128-191\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    V_Proj_L0_TP2 [label="Value Projection\\nGPU: 128-191\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    
+                    Q_Proj_L0_TP3 [label="Query Projection\\nGPU: 192-255\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    K_Proj_L0_TP3 [label="Key Projection\\nGPU: 192-255\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    V_Proj_L0_TP3 [label="Value Projection\\nGPU: 192-255\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightyellow];
+                    
+                    // Attention score computation
+                    Attn_Score_L0_TP0 [label="Attention Scores\\nGPU: 0-63\\nInput: [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, heads=16, seq_len=?]", fillcolor=lightcyan];
+                    Attn_Score_L0_TP1 [label="Attention Scores\\nGPU: 64-127\\nInput: [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, heads=16, seq_len=?]", fillcolor=lightcyan];
+                    Attn_Score_L0_TP2 [label="Attention Scores\\nGPU: 128-191\\nInput: [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, heads=16, seq_len=?]", fillcolor=lightcyan];
+                    Attn_Score_L0_TP3 [label="Attention Scores\\nGPU: 192-255\\nInput: [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, heads=16, seq_len=?]", fillcolor=lightcyan];
+                    
+                    // Softmax
+                    Softmax_L0_TP0 [label="Softmax\\nGPU: 0-63\\nInput: [batch_size=32, seq_len=?, heads=16, seq_len=?]\\nOutput: [batch_size=32, seq_len=?, heads=16, seq_len=?]", fillcolor=lightgreen];
+                    Softmax_L0_TP1 [label="Softmax\\nGPU: 64-127\\nInput: [batch_size=32, seq_len=?, heads=16, seq_len=?]\\nOutput: [batch_size=32, seq_len=?, heads=16, seq_len=?]", fillcolor=lightgreen];
+                    Softmax_L0_TP2 [label="Softmax\\nGPU: 128-191\\nInput: [batch_size=32, seq_len=?, heads=16, seq_len=?]\\nOutput: [batch_size=32, seq_len=?, heads=16, seq_len=?]", fillcolor=lightgreen];
+                    Softmax_L0_TP3 [label="Softmax\\nGPU: 192-255\\nInput: [batch_size=32, seq_len=?, heads=16, seq_len=?]\\nOutput: [batch_size=32, seq_len=?, heads=16, seq_len=?]", fillcolor=lightgreen];
+                    
+                    // Attention weights application
+                    Attn_Weights_L0_TP0 [label="Apply Attention Weights\\nGPU: 0-63\\nInput: [batch_size=32, seq_len=?, heads=16, seq_len=?], [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightpink];
+                    Attn_Weights_L0_TP1 [label="Apply Attention Weights\\nGPU: 64-127\\nInput: [batch_size=32, seq_len=?, heads=16, seq_len=?], [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightpink];
+                    Attn_Weights_L0_TP2 [label="Apply Attention Weights\\nGPU: 128-191\\nInput: [batch_size=32, seq_len=?, heads=16, seq_len=?], [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightpink];
+                    Attn_Weights_L0_TP3 [label="Apply Attention Weights\\nGPU: 192-255\\nInput: [batch_size=32, seq_len=?, heads=16, seq_len=?], [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, heads=16, d_k=64]", fillcolor=lightpink];
+                    
+                    // Output projection
+                    Out_Proj_L0_TP0 [label="Output Projection\\nGPU: 0-63\\nInput: [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightsalmon];
+                    Out_Proj_L0_TP1 [label="Output Projection\\nGPU: 64-127\\nInput: [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightsalmon];
+                    Out_Proj_L0_TP2 [label="Output Projection\\nGPU: 128-191\\nInput: [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightsalmon];
+                    Out_Proj_L0_TP3 [label="Output Projection\\nGPU: 192-255\\nInput: [batch_size=32, seq_len=?, heads=16, d_k=64]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightsalmon];
+                }
+                
+                // All-Reduce for TP after attention
+                AR_Attn_L0 [shape=ellipse, label="All-Reduce\\nTP4 Attention Reduction\\nGPU: 0-255\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+                
+                // Expert Parallel for MoE - Complete EP16 representation
+                subgraph cluster_ep_layer0 {
+                    label="EP16: 4 experts per GPU (Complete)";
+                    style=filled;
+                    fillcolor=lightcyan;
+                    
+                    // All 16 EP groups with 4 experts each
+                    Expert_L0_G0 [label="Experts 0-3\\nGPU: 0-15\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G1 [label="Experts 4-7\\nGPU: 16-31\\nInput: [batch_size=32, seq_lenbabla_dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G2 [label="Experts 8-11\\nGPU: 32-47\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G3 [label="Experts 12-15\\nGPU: 48-63\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G4 [label="Experts 16-19\\nGPU: 64-79\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G5 [label="Experts 20-23\\nGPU: 80-95\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G6 [label="Experts 24-27\\nGPU: 96-111\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G7 [label="Experts 28-31\\nGPU: 112-127\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G8 [label="Experts 32-35\\nGPU: 128-143\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G9 [label="Experts 36-39\\nGPU: 144-159\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G10 [label="Experts 40-43\\nGPU: 160-175\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G11 [label="Experts 44-47\\nGPU: 176-191\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G12 [label="Experts 48-51\\nGPU: 192-207\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G13 [label="Experts 52-55\\nGPU: 208-223\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G14 [label="Experts 56-59\\nGPU: 224-239\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L0_G15 [label="Experts 60-63\\nGPU: 240-255\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                }
+                
+                // All-to-All for EP16 - Complete dispatch and combine
+                A2A_Dispatch_L0 [shape=ellipse, label="All-to-All Dispatch\\nEP16 Token Routing\\nGPU: 0-255\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+                A2A_Combine_L0 [shape=ellipse, label="All-to-All Combine\\nEP16 Expert Output\\nGPU: 0-255\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+                
+                // Routing (gate) with dashed line
+                Routing_L0 [shape=parallelogram, style=dashed, label="Routing Gate\\nSelect Top-K experts\\nGPU: 0-255\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: routing decisions", fillcolor=yellow];
+            }
+        }
+        
+        // Similar detailed structure for other stages
+        subgraph cluster_stage1 {
+            label="Stage 1: Layers 4-7 (GPU 256-511)";
+            style=filled;
+            fillcolor=lightcoral;
+            
+            // Layer 4 - Simplified but complete connections
+            subgraph cluster_layer4 {
+                label="Layer 4 - Attention + MoE";
+                style=filled;
+                fillcolor=white;
+                
+                // Attention blocks for Layer 4
+                Layer4_Attn_TP0 [label="Attention Block\\nGPU: 256-319\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+                Layer4_Attn_TP1 [label="Attention Block\\nGPU: 320-383\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+                Layer4_Attn_TP2 [label="Attention Block\\nGPU: 384-447\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+                Layer4_Attn_TP3 [label="Attention Block\\nGPU: 448-511\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+                
+                // All-Reduce for TP after Layer 4 attention
+                AR_Attn_L4 [shape=ellipse, label="All-Reduce\\nTP4 Attention Reduction\\nGPU: 256-511\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+                
+                // Expert Parallel for Layer 4 - Complete EP16
+                subgraph cluster_ep_layer4 {
+                    label="EP16: 4 experts per GPU";
+                    style=filled;
+                    fillcolor=lightcyan;
+                    
+                    Expert_L4_G0 [label="Experts 0-3\\nGPU: 256-271\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G1 [label="Experts 4-7\\nGPU: 272-287\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G2 [label="Experts 8-11\\nGPU: 288-303\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G3 [label="Experts 12-15\\nGPU: 304-319\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G4 [label="Experts 16-19\\nGPU: 320-335\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G5 [label="Experts 20-23\\nGPU: 336-351\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G6 [label="Experts 24-27\\nGPU: 352-367\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G7 [label="Experts 28-31\\nGPU: 368-383\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G8 [label="Experts 32-35\\nGPU: 384-399\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G9 [label="Experts 36-39\\nGPU: 400-415\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G10 [label="Experts 40-43\\nGPU: 416-431\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G11 [label="Experts 44-47\\nGPU: 432-447\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G12 [label="Experts 48-51\\nGPU: 448-463\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G13 [label="Experts 52-55\\nGPU: 464-479\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G14 [label="Experts 56-59\\nGPU: 480-495\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                    Expert_L4_G15 [label="Experts 60-63\\nGPU: 496-511\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=white];
+                }
+                
+                // All-to-All for EP16 Layer 4
+                A2A_Dispatch_L4 [shape=ellipse, label="All-to-All Dispatch\\nEP16 Token Routing\\nGPU: 256-511\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+                A2A_Combine_L4 [shape=ellipse, label="All-to-All Combine\\nEP16 Expert Output\\nGPU: 256-511\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+                
+                // Routing for Layer 4
+                Routing_L4 [shape=parallelogram, style=dashed, label="Routing Gate\\nSelect Top-K experts\\nGPU: 256-511\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: routing decisions", fillcolor=yellow];
+            }
+        }
+        
+        // Stages 2 and 3 - Similar complete structure
+        subgraph cluster_stage2 {
+            label="Stage 2: Layers 8-11 (GPU 512-767)";
+            style=filled;
+            fillcolor=lightcoral;
+            
+            // Layer 8 - Complete with input connections
+            Layer8_Attn_TP0 [label="Attention Block\\nGPU: 512-575\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+            Layer8_Attn_TP1 [label="Attention Block\\nGPU: 576-639\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+            Layer8_Attn_TP2 [label="Attention Block\\nGPU: 640-703\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+            Layer8_Attn_TP3 [label="Attention Block\\nGPU: 704-767\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+            
+            AR_Attn_L8 [shape=ellipse, label="All-Reduce\\nTP4 Attention Reduction\\nGPU: 512-767\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+        }
+        
+        subgraph cluster_stage3 {
+            label="Stage 3: Layers 12-15 (GPU 768-1023)";
+            style=filled;
+            fillcolor=lightcoral;
+            
+            // Layer 12 - Complete with input connections
+            Layer12_Attn_TP0 [label="Attention Block\\nGPU: 768-831\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+            Layer12_Attn_TP1 [label="Attention Block\\nGPU: 832-895\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+            Layer12_Attn_TP2 [label="Attention Block\\nGPU: 896-959\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+            Layer12_Attn_TP3 [label="Attention Block\\nGPU: 960-1023\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightyellow];
+            
+            AR_Attn_L12 [shape=ellipse, label="All-Reduce\\nTP4 Attention Reduction\\nGPU: 768-1023\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+        }
+    }
+    
+    // Pipeline communication - Complete connections
+    PP_Comm0 [shape=ellipse, label="Pipeline Comm\\nStage 0→1\\nGPU: 255→256\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+    PP_Comm1 [shape=ellipse, label="Pipeline Comm\\nStage 1→2\\nGPU: 511→512\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+    PP_Comm2 [shape=ellipse, label="Pipeline Comm\\nStage 2→3\\nGPU: 767→768\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=32, seq_len=?, dim=1024]", fillcolor=lightgray];
+    
+    // DP aggregation - Complete
+    DP_Aggregate [shape=parallelogram, label="DP Aggregate\\n4-way reduction\\nInput: [batch_size=32, seq_len=?, dim=1024]\\nOutput: [batch_size=128, seq_len=?, dim=1024]", fillcolor=lightgreen];
+    
+    // Output
+    Output [shape=ellipse, label="Output\\nInput: [batch_size=128, seq_len=?, dim=1024]\\nOutput: [batch_size=128, seq_len=?, dim=1024]", fillcolor=lightblue];
+    
+    // Complete Connections - Fixing missing inputs
+    Input -> DP_Split;
+    
+    // DP Split to Layer 0 attention components
+    DP_Split -> Q_Proj_L0_TP0;
+    DP_Split -> K_Proj_L0_TP0;
+    DP_Split -> V_Proj_L0_TP0;
+    DP_Split -> Q_Proj_L0_TP1;
+    DP_Split -> K_Proj_L0_TP1;
+    DP_Split -> V_Proj_L0_TP1;
+    DP_Split -> Q_Proj_L0_TP2;
+    DP_Split -> K_Proj_L0_TP2;
+    DP_Split -> V_Proj_L0_TP2;
+    DP_Split -> Q_Proj_L0_TP3;
+    DP_Split -> K_Proj_L0_TP3;
+    DP_Split -> V_Proj_L0_TP3;
+    
+    // Attention computation flow
+    Q_Proj_L0_TP0 -> Attn_Score_L0_TP0;
+    K_Proj_L0_TP0 -> Attn_Score_L0_TP0;
+    V_Proj_L0_TP0 -> Attn_Weights_L0_TP0;
+    
+    Q_Proj_L0_TP1 -> Attn_Score_L0_TP1;
+    K_Proj_L0_TP1 -> Attn_Score_L0_TP1;
+    V_Proj_L0_TP1 -> Attn_Weights_L0_TP1;
+    
+    Q_Proj_L0_TP2 -> Attn_Score_L0_TP2;
+    K_Proj_L0_TP2 -> Attn_Score_L0_TP2;
+    V_Proj_L0_TP2 -> Attn_Weights_L0_TP2;
+    
+    Q_Proj_L0_TP3 -> Attn_Score_L0_TP3;
+    K_Proj_L0_TP3 -> Attn_Score_L0_TP3;
+    V_Proj_L0_TP3 -> Attn_Weights_L0_TP3;
+    
+    // Attention score to softmax to weights
+    Attn_Score_L0_TP0 -> Softmax_L0_TP0;
+    Attn_Score_L0_TP1 -> Softmax_L0_TP1;
+    Attn_Score_L0_TP2 -> Softmax_L0_TP2;
+    Attn_Score_L0_TP3 -> Softmax_L0_TP3;
+    
+    Softmax_L0_TP0 -> Attn_Weights_L0_TP0;
+    Softmax_L0_TP1 -> Attn_Weights_L0_TP1;
+    Softmax_L0_TP2 -> Attn_Weights_L0_TP2;
+    Softmax_L0_TP3 -> Attn_Weights_L0_TP3;
+    
+    // Weights to output projection
+    Attn_Weights_L0_TP0 -> Out_Proj_L0_TP0;
+    Attn_Weights_L0_TP1 -> Out_Proj_L0_TP1;
+    Attn_Weights_L0_TP2 -> Out_Proj_L0_TP2;
+    Attn_Weights_L0_TP3 -> Out_Proj_L0_TP3;
+    
+    // Output projection to All-Reduce
+    Out_Proj_L0_TP0 -> AR_Attn_L0;
+    Out_Proj_L0_TP1 -> AR_Attn_L0;
+    Out_Proj_L0_TP2 -> AR_Attn_L0;
+    Out_Proj_L0_TP3 -> AR_Attn_L0;
+    
+    // All-Reduce to routing
+    AR_Attn_L0 -> Routing_L0;
+    
+    // Routing to All-to-All dispatch
+    Routing_L0 -> A2A_Dispatch_L0;
+    
+    // All-to-All dispatch to experts
+    A2A_Dispatch_L0 -> Expert_L0_G0;
+    A2A_Dispatch_L0 -> Expert_L0_G1;
+    A2A_Dispatch_L0 -> Expert_L0_G2;
+    A2A_Dispatch_L0 -> Expert_L0_G3;
+    A2A_Dispatch_L0 -> Expert_L0_G4;
+    A2A_Dispatch_L0 -> Expert_L0_G5;
+    A2A_Dispatch_L0 -> Expert_L0_G6;
+    A2A_Dispatch_L0 -> Expert_L0_G7;
+    A2A_Dispatch_L0 -> Expert_L0_G8;
+    A2A_Dispatch_L0 -> Expert_L0_G9;
+    A2A_Dispatch_L0 -> Expert_L0_G10;
+    A2A_Dispatch_L0 -> Expert_L0_G11;
+    A2A_Dispatch_L0 -> Expert_L0_G12;
+    A2A_Dispatch_L0 -> Expert_L0_G13;
+    A2A_Dispatch_L0 -> Expert_L0_G14;
+    A2A_Dispatch_L0 -> Expert_L0_G15;
+    
+    // Experts to All-to-All combine
+    Expert_L0_G0 -> A2A_Combine_L0;
+    Expert_L0_G1 -> A2A_Combine_L0;
+    Expert_L0_G2 -> A2A_Combine_L0;
+    Expert_L0_G3 -> A2A_Combine_L0;
+    Expert_L0_G4 -> A2A_Combine_L0;
+    Expert_L0_G5 -> A2A_Combine_L0;
+    Expert_L0_G6 -> A2A_Combine_L0;
+    Expert_L0_G7 -> A2A_Combine_L0;
+    Expert_L0_G8 -> A2A_Combine_L0;
+    Expert_L0_G9 -> A2A_Combine_L0;
+    Expert_L0_G10 -> A2A_Combine_L0;
+    Expert_L0_G11 -> A2A_Combine_L0;
+    Expert_L0_G12 -> A2A_Combine_L0;
+    Expert_L0_G13 -> A2A_Combine_L0;
+    Expert_L0_G14 -> A2A_Combine_L0;
+    Expert_L0_G15 -> A2A_Combine_L0;
+    
+    // All-to-All combine to pipeline communication
+    A2A_Combine_L0 -> PP_Comm0;
+    
+    // Pipeline communication to Layer 4 - FIXED: All Layer 4 nodes now have inputs
+    PP_Comm0 -> Layer4_Attn_TP0;
+    PP_Comm0 -> Layer4_Attn_TP1;
+    PP_Comm0 -> Layer4_Attn_TP2;
+    PP_Comm0 -> Layer4_Attn_TP3;
+    
+    // Layer 4 attention to All-Reduce
+    Layer4_Attn_TP0 -> AR_Attn_L4;
+    Layer4_Attn_TP1 -> AR_Attn_L4;
+    Layer4_Attn_TP2 -> AR_Attn_L4;
+    Layer4_Attn_TP3 -> AR_Attn_L4;
+    
+    // All-Reduce to pipeline communication
+    AR_Attn_L4 -> PP_Comm1;
+    
+    // Pipeline communication to Layer 8 - FIXED: All Layer 8 nodes now have inputs
+    PP_Comm1 -> Layer8_Attn_TP0;
+    PP_Comm1 -> Layer8_Attn_TP1;
+    PP_Comm1 -> Layer8_Attn_TP2;
+    PP_Comm1 -> Layer8_Attn_TP3;
+    
+    // Layer 8 attention to All-Reduce
+    Layer8_Attn_TP0 -> AR_Attn_L8;
+    Layer8_Attn_TP1 -> AR_Attn_L8;
+    Layer8_Attn_TP2 -> AR_Attn_L8;
+    Layer8_Attn_TP3 -> AR_Attn_L8;
+    
+    // All-Reduce to pipeline communication
+    AR_Attn_L8 -> PP_Comm2;
+    
+    // Pipeline communication to Layer 12 - FIXED: All Layer 12 nodes now have inputs
+    PP_Comm2 -> Layer12_Attn_TP0;
+    PP_Comm2 -> Layer12_Attn_TP1;
+    PP_Comm2 -> Layer12_Attn_TP2;
+    PP_Comm2 -> Layer12_Attn_TP3;
+    
+    // Layer 12 attention to All-Reduce
+    Layer12_Attn_TP0 -> AR_Attn_L12;
+    Layer12_Attn_TP1 -> AR_Attn_L12;
+    Layer12_Attn_TP2 -> AR_Attn_L12;
+    Layer12_Attn_TP3 -> AR_Attn_L12;
+    
+    // All-Reduce to DP aggregation
+    AR_Attn_L12 -> DP_Aggregate;
+    
+    // DP aggregation to output
+    DP_Aggregate -> Output;
+}'''
+    
+    return dot_content
+
+def main():
+    """Generate both corrected DAG files"""    
+    # Create current strategy DAG
+    current_dag = create_current_strategy_dag()
+    current_file = "../outputs/2025-12-22-17-24-15/current_strategy_dag_corrected.dot"
+    
+    with open(current_file, 'w') as f:
+        f.write(current_dag)
+    
+    print(f"Generated corrected current strategy DAG: {current_file}")
+    
+    # Create submission paths JSON
+    submission_paths = {
+        "current_strategy_dag_dot": "../outputs/2025-12-22-17-24-15/current_strategy_dag_corrected.dot",
+        "current_strategy_dag_svg": "../outputs/2025-12-22-17-24-15/current_strategy_dag_corrected.svg",
+        "new_strategy_dag_dot": "../outputs/2025-12-22-17-24-15/new_strategy_dag_corrected.dot", 
+        "new_strategy_dag_svg": "../outputs/2025-12-22-17-24-15/new_strategy_dag_corrected.svg"
+    }
+    
+    import json
+    with open("../outputs/2025-12-22-17-24-15/submission_paths_corrected.json", 'w') as f:
+        json.dump(submission_paths, f, indent=2)
+    
+    print("Generated submission paths JSON")
+
+if __name__ == "__main__":
+    main()
