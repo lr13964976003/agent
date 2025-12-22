@@ -118,12 +118,6 @@ The final output must include:
 - Do **not** inline the full content in the response
 - Only return the **save path(s)** in JSON format
 
-Example:
-```json
-{
-  "save_path": f"../outputs/{submission_dir}/parallel_strategy.md"
-}
-```
 
 ---
 
