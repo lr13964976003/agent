@@ -31,7 +31,6 @@
 - **Tensor Parallelism (TP)**: 8-way - Intra-layer parallelism for attention and MLP
 - **Pipeline Parallelism (PP)**: 8-way - Layer distribution across pipeline stages
 - **Data Parallelism (DP)**: 8-way - Batch processing parallelism
-- **Total GPUs** = EP × TP × PP × DP = 8 × 8 × 8 × 8 = 4096
 
 
 
