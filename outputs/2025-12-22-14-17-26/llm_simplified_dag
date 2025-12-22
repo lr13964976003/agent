@@ -1,0 +1,26 @@
+// Simplified LLM EP64-TP8-PP2-DP2 DAG
+digraph {
+	bgcolor=white fontname=Arial rankdir=TB size="20,30"
+	node [fontname=Arial fontsize=12 shape=rectangle style=filled]
+	input [label="Input Layer\n[128, seq_len, 1024]" fillcolor=white]
+	stage1 [label="Pipeline Stage 1\nLayers 1-8\nTP8-EP64" fillcolor=lightblue]
+	stage2 [label="Pipeline Stage 2\nLayers 9-16\nTP8-EP64" fillcolor=lightgreen]
+	pp_comm [label="Pipeline Communication\nPP Transfer" fillcolor=lightyellow shape=ellipse]
+	ep_dispatch [label="Expert Dispatch\nAll-to-All (128 ops)" fillcolor=lightyellow shape=ellipse]
+	ep_combine [label="Expert Combine\nAll-to-All (128 ops)" fillcolor=lightyellow shape=ellipse]
+	tp_sync [label="Tensor Parallel Sync\nAll-Reduce (16 ops)" fillcolor=lightyellow shape=ellipse]
+	routing [label="MoE Routing\nGate Selection" fillcolor=lightcoral shape=parallelogram]
+	experts [label="64 Expert Computations\nTP8 Parallel" fillcolor=lightblue]
+	output [label="Output Layer\n[128, seq_len, vocab_size]" fillcolor=white]
+	input -> stage1
+	stage1 -> pp_comm
+	pp_comm -> stage2
+	stage2 -> output
+	stage1 -> routing [constraint=false style=dashed]
+	routing -> ep_dispatch [constraint=false]
+	ep_dispatch -> experts [constraint=false]
+	experts -> ep_combine [constraint=false]
+	ep_combine -> stage1 [constraint=false style=dashed]
+	tp_sync -> stage1 [constraint=false style=dotted]
+	tp_sync -> stage2 [constraint=false style=dotted]
+}

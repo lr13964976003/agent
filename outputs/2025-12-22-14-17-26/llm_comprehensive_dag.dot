@@ -1,0 +1,249 @@
+// LLM EP64-TP8-PP2-DP2 Deployment DAG
+digraph {
+	rankdir=TB size="100,200"
+	node [fontname=Arial fontsize=10]
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	input [label="Input\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: All" fillcolor=lightgreen shape=ellipse]
+	layernorm1_s1 [label="LayerNorm 1\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 0-1023" fillcolor=lightblue]
+	qkv_proj_s1 [label="QKV Projection (TP8)\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, heads=16, d_k=64]\nGPUs: 0-1023" fillcolor=lightblue]
+	allreduce_qkv_s1 [label="All-Reduce QKV\nInput: [batch=128, seq=1024, heads=16, d_k=64]\nOutput: [batch=128, seq=1024, heads=16, d_k=64]\nGPUs: 0-1023" fillcolor=yellow shape=ellipse]
+	attention_s1 [label="Self-Attention\nInput: [batch=128, seq=1024, heads=16, d_k=64]\nOutput: [batch=128, seq=1024, heads=16, d_k=64]\nGPUs: 0-1023" fillcolor=lightblue]
+	attn_out_proj_s1 [label="Attention Output Proj (TP8)\nInput: [batch=128, seq=1024, heads=16, d_k=64]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 0-1023" fillcolor=lightblue]
+	allreduce_attn_out_s1 [label="All-Reduce Attention Output\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 0-1023" fillcolor=yellow shape=ellipse]
+	moe_gate_s1 [label="MoE Gate (Router)\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 0-1023" fillcolor=orange shape=parallelogram]
+	expert_dispatch_s1 [label="Expert Dispatch (All-to-All)\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 0-1023" fillcolor=yellow shape=ellipse]
+	expert_0_s1 [label="Expert 0\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 0-31" fillcolor=lightblue]
+	expert_1_s1 [label="Expert 1\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 32-63" fillcolor=lightblue]
+	expert_2_s1 [label="Expert 2\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 64-95" fillcolor=lightblue]
+	expert_3_s1 [label="Expert 3\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 96-127" fillcolor=lightblue]
+	expert_4_s1 [label="Expert 4\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 128-159" fillcolor=lightblue]
+	expert_5_s1 [label="Expert 5\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 160-191" fillcolor=lightblue]
+	expert_6_s1 [label="Expert 6\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 192-223" fillcolor=lightblue]
+	expert_7_s1 [label="Expert 7\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 224-255" fillcolor=lightblue]
+	expert_8_s1 [label="Expert 8\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 256-287" fillcolor=lightblue]
+	expert_9_s1 [label="Expert 9\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 288-319" fillcolor=lightblue]
+	expert_10_s1 [label="Expert 10\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 320-351" fillcolor=lightblue]
+	expert_11_s1 [label="Expert 11\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 352-383" fillcolor=lightblue]
+	expert_12_s1 [label="Expert 12\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 384-415" fillcolor=lightblue]
+	expert_13_s1 [label="Expert 13\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 416-447" fillcolor=lightblue]
+	expert_14_s1 [label="Expert 14\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 448-479" fillcolor=lightblue]
+	expert_15_s1 [label="Expert 15\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 480-511" fillcolor=lightblue]
+	expert_16_s1 [label="Expert 16\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 512-543" fillcolor=lightblue]
+	expert_17_s1 [label="Expert 17\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 544-575" fillcolor=lightblue]
+	expert_18_s1 [label="Expert 18\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 576-607" fillcolor=lightblue]
+	expert_19_s1 [label="Expert 19\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 608-639" fillcolor=lightblue]
+	expert_20_s1 [label="Expert 20\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 640-671" fillcolor=lightblue]
+	expert_21_s1 [label="Expert 21\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 672-703" fillcolor=lightblue]
+	expert_22_s1 [label="Expert 22\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 704-735" fillcolor=lightblue]
+	expert_23_s1 [label="Expert 23\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 736-767" fillcolor=lightblue]
+	expert_24_s1 [label="Expert 24\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 768-799" fillcolor=lightblue]
+	expert_25_s1 [label="Expert 25\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 800-831" fillcolor=lightblue]
+	expert_26_s1 [label="Expert 26\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 832-863" fillcolor=lightblue]
+	expert_27_s1 [label="Expert 27\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 864-895" fillcolor=lightblue]
+	expert_28_s1 [label="Expert 28\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 896-927" fillcolor=lightblue]
+	expert_29_s1 [label="Expert 29\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 928-959" fillcolor=lightblue]
+	expert_30_s1 [label="Expert 30\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 960-991" fillcolor=lightblue]
+	expert_31_s1 [label="Expert 31\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 992-1023" fillcolor=lightblue]
+	expert_combine_s1 [label="Expert Combine (All-to-All)\nInput: [batch=128, seq=1024, hidden=2048]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 0-1023" fillcolor=yellow shape=ellipse]
+	moe_out_proj_s1 [label="MoE Output Proj (TP8)\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 0-1023" fillcolor=lightblue]
+	allreduce_moe_out_s1 [label="All-Reduce MoE Output\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 0-1023" fillcolor=yellow shape=ellipse]
+	layernorm2_s1 [label="LayerNorm 2\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 0-1023" fillcolor=lightblue]
+	pp_transfer_s1_s2 [label="Pipeline Transfer S1→S2\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1023 → 1024" fillcolor=red shape=ellipse]
+	layernorm1_s2 [label="LayerNorm 1\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1024-2047" fillcolor=lightblue]
+	qkv_proj_s2 [label="QKV Projection (TP8)\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, heads=16, d_k=64]\nGPUs: 1024-2047" fillcolor=lightblue]
+	allreduce_qkv_s2 [label="All-Reduce QKV\nInput: [batch=128, seq=1024, heads=16, d_k=64]\nOutput: [batch=128, seq=1024, heads=16, d_k=64]\nGPUs: 1024-2047" fillcolor=yellow shape=ellipse]
+	attention_s2 [label="Self-Attention\nInput: [batch=128, seq=1024, heads=16, d_k=64]\nOutput: [batch=128, seq=1024, heads=16, d_k=64]\nGPUs: 1024-2047" fillcolor=lightblue]
+	attn_out_proj_s2 [label="Attention Output Proj (TP8)\nInput: [batch=128, seq=1024, heads=16, d_k=64]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1024-2047" fillcolor=lightblue]
+	allreduce_attn_out_s2 [label="All-Reduce Attention Output\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1024-2047" fillcolor=yellow shape=ellipse]
+	moe_gate_s2 [label="MoE Gate (Router)\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1024-2047" fillcolor=orange shape=parallelogram]
+	expert_dispatch_s2 [label="Expert Dispatch (All-to-All)\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1024-2047" fillcolor=yellow shape=ellipse]
+	expert_32_s2 [label="Expert 32\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1024-1055" fillcolor=lightblue]
+	expert_33_s2 [label="Expert 33\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1056-1087" fillcolor=lightblue]
+	expert_34_s2 [label="Expert 34\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1088-1119" fillcolor=lightblue]
+	expert_35_s2 [label="Expert 35\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1120-1151" fillcolor=lightblue]
+	expert_36_s2 [label="Expert 36\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1152-1183" fillcolor=lightblue]
+	expert_37_s2 [label="Expert 37\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1184-1215" fillcolor=lightblue]
+	expert_38_s2 [label="Expert 38\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1216-1247" fillcolor=lightblue]
+	expert_39_s2 [label="Expert 39\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1248-1279" fillcolor=lightblue]
+	expert_40_s2 [label="Expert 40\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1280-1311" fillcolor=lightblue]
+	expert_41_s2 [label="Expert 41\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1312-1343" fillcolor=lightblue]
+	expert_42_s2 [label="Expert 42\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1344-1375" fillcolor=lightblue]
+	expert_43_s2 [label="Expert 43\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1376-1407" fillcolor=lightblue]
+	expert_44_s2 [label="Expert 44\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1408-1439" fillcolor=lightblue]
+	expert_45_s2 [label="Expert 45\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1440-1471" fillcolor=lightblue]
+	expert_46_s2 [label="Expert 46\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1472-1503" fillcolor=lightblue]
+	expert_47_s2 [label="Expert 47\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1504-1535" fillcolor=lightblue]
+	expert_48_s2 [label="Expert 48\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1536-1567" fillcolor=lightblue]
+	expert_49_s2 [label="Expert 49\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1568-1599" fillcolor=lightblue]
+	expert_50_s2 [label="Expert 50\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1600-1631" fillcolor=lightblue]
+	expert_51_s2 [label="Expert 51\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1632-1663" fillcolor=lightblue]
+	expert_52_s2 [label="Expert 52\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1664-1695" fillcolor=lightblue]
+	expert_53_s2 [label="Expert 53\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1696-1727" fillcolor=lightblue]
+	expert_54_s2 [label="Expert 54\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1728-1759" fillcolor=lightblue]
+	expert_55_s2 [label="Expert 55\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1760-1791" fillcolor=lightblue]
+	expert_56_s2 [label="Expert 56\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1792-1823" fillcolor=lightblue]
+	expert_57_s2 [label="Expert 57\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1824-1855" fillcolor=lightblue]
+	expert_58_s2 [label="Expert 58\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1856-1887" fillcolor=lightblue]
+	expert_59_s2 [label="Expert 59\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1888-1919" fillcolor=lightblue]
+	expert_60_s2 [label="Expert 60\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1920-1951" fillcolor=lightblue]
+	expert_61_s2 [label="Expert 61\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1952-1983" fillcolor=lightblue]
+	expert_62_s2 [label="Expert 62\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 1984-2015" fillcolor=lightblue]
+	expert_63_s2 [label="Expert 63\nInput: [batch=2, seq=1024, hidden=1024]\nOutput: [batch=2, seq=1024, hidden=2048]\nGPUs: 2016-2047" fillcolor=lightblue]
+	expert_combine_s2 [label="Expert Combine (All-to-All)\nInput: [batch=128, seq=1024, hidden=2048]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1024-2047" fillcolor=yellow shape=ellipse]
+	moe_out_proj_s2 [label="MoE Output Proj (TP8)\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1024-2047" fillcolor=lightblue]
+	allreduce_moe_out_s2 [label="All-Reduce MoE Output\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1024-2047" fillcolor=yellow shape=ellipse]
+	layernorm2_s2 [label="LayerNorm 2\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: 1024-2047" fillcolor=lightblue]
+	output [label="Output\nInput: [batch=128, seq=1024, hidden=1024]\nOutput: [batch=128, seq=1024, hidden=1024]\nGPUs: All" fillcolor=lightgreen shape=ellipse]
+	input -> layernorm1_s1
+	layernorm1_s1 -> qkv_proj_s1
+	qkv_proj_s1 -> allreduce_qkv_s1
+	allreduce_qkv_s1 -> attention_s1
+	attention_s1 -> attn_out_proj_s1
+	attn_out_proj_s1 -> allreduce_attn_out_s1
+	allreduce_attn_out_s1 -> moe_gate_s1
+	moe_gate_s1 -> expert_dispatch_s1 [style=dashed]
+	expert_dispatch_s1 -> expert_0_s1
+	expert_dispatch_s1 -> expert_1_s1
+	expert_dispatch_s1 -> expert_2_s1
+	expert_dispatch_s1 -> expert_3_s1
+	expert_dispatch_s1 -> expert_4_s1
+	expert_dispatch_s1 -> expert_5_s1
+	expert_dispatch_s1 -> expert_6_s1
+	expert_dispatch_s1 -> expert_7_s1
+	expert_dispatch_s1 -> expert_8_s1
+	expert_dispatch_s1 -> expert_9_s1
+	expert_dispatch_s1 -> expert_10_s1
+	expert_dispatch_s1 -> expert_11_s1
+	expert_dispatch_s1 -> expert_12_s1
+	expert_dispatch_s1 -> expert_13_s1
+	expert_dispatch_s1 -> expert_14_s1
+	expert_dispatch_s1 -> expert_15_s1
+	expert_dispatch_s1 -> expert_16_s1
+	expert_dispatch_s1 -> expert_17_s1
+	expert_dispatch_s1 -> expert_18_s1
+	expert_dispatch_s1 -> expert_19_s1
+	expert_dispatch_s1 -> expert_20_s1
+	expert_dispatch_s1 -> expert_21_s1
+	expert_dispatch_s1 -> expert_22_s1
+	expert_dispatch_s1 -> expert_23_s1
+	expert_dispatch_s1 -> expert_24_s1
+	expert_dispatch_s1 -> expert_25_s1
+	expert_dispatch_s1 -> expert_26_s1
+	expert_dispatch_s1 -> expert_27_s1
+	expert_dispatch_s1 -> expert_28_s1
+	expert_dispatch_s1 -> expert_29_s1
+	expert_dispatch_s1 -> expert_30_s1
+	expert_dispatch_s1 -> expert_31_s1
+	expert_0_s1 -> expert_combine_s1
+	expert_1_s1 -> expert_combine_s1
+	expert_2_s1 -> expert_combine_s1
+	expert_3_s1 -> expert_combine_s1
+	expert_4_s1 -> expert_combine_s1
+	expert_5_s1 -> expert_combine_s1
+	expert_6_s1 -> expert_combine_s1
+	expert_7_s1 -> expert_combine_s1
+	expert_8_s1 -> expert_combine_s1
+	expert_9_s1 -> expert_combine_s1
+	expert_10_s1 -> expert_combine_s1
+	expert_11_s1 -> expert_combine_s1
+	expert_12_s1 -> expert_combine_s1
+	expert_13_s1 -> expert_combine_s1
+	expert_14_s1 -> expert_combine_s1
+	expert_15_s1 -> expert_combine_s1
+	expert_16_s1 -> expert_combine_s1
+	expert_17_s1 -> expert_combine_s1
+	expert_18_s1 -> expert_combine_s1
+	expert_19_s1 -> expert_combine_s1
+	expert_20_s1 -> expert_combine_s1
+	expert_21_s1 -> expert_combine_s1
+	expert_22_s1 -> expert_combine_s1
+	expert_23_s1 -> expert_combine_s1
+	expert_24_s1 -> expert_combine_s1
+	expert_25_s1 -> expert_combine_s1
+	expert_26_s1 -> expert_combine_s1
+	expert_27_s1 -> expert_combine_s1
+	expert_28_s1 -> expert_combine_s1
+	expert_29_s1 -> expert_combine_s1
+	expert_30_s1 -> expert_combine_s1
+	expert_31_s1 -> expert_combine_s1
+	expert_combine_s1 -> moe_out_proj_s1
+	moe_out_proj_s1 -> allreduce_moe_out_s1
+	allreduce_moe_out_s1 -> layernorm2_s1
+	layernorm2_s1 -> pp_transfer_s1_s2
+	pp_transfer_s1_s2 -> layernorm1_s2
+	layernorm1_s2 -> qkv_proj_s2
+	qkv_proj_s2 -> allreduce_qkv_s2
+	allreduce_qkv_s2 -> attention_s2
+	attention_s2 -> attn_out_proj_s2
+	attn_out_proj_s2 -> allreduce_attn_out_s2
+	allreduce_attn_out_s2 -> moe_gate_s2
+	moe_gate_s2 -> expert_dispatch_s2 [style=dashed]
+	expert_dispatch_s2 -> expert_32_s2
+	expert_dispatch_s2 -> expert_33_s2
+	expert_dispatch_s2 -> expert_34_s2
+	expert_dispatch_s2 -> expert_35_s2
+	expert_dispatch_s2 -> expert_36_s2
+	expert_dispatch_s2 -> expert_37_s2
+	expert_dispatch_s2 -> expert_38_s2
+	expert_dispatch_s2 -> expert_39_s2
+	expert_dispatch_s2 -> expert_40_s2
+	expert_dispatch_s2 -> expert_41_s2
+	expert_dispatch_s2 -> expert_42_s2
+	expert_dispatch_s2 -> expert_43_s2
+	expert_dispatch_s2 -> expert_44_s2
+	expert_dispatch_s2 -> expert_45_s2
+	expert_dispatch_s2 -> expert_46_s2
+	expert_dispatch_s2 -> expert_47_s2
+	expert_dispatch_s2 -> expert_48_s2
+	expert_dispatch_s2 -> expert_49_s2
+	expert_dispatch_s2 -> expert_50_s2
+	expert_dispatch_s2 -> expert_51_s2
+	expert_dispatch_s2 -> expert_52_s2
+	expert_dispatch_s2 -> expert_53_s2
+	expert_dispatch_s2 -> expert_54_s2
+	expert_dispatch_s2 -> expert_55_s2
+	expert_dispatch_s2 -> expert_56_s2
+	expert_dispatch_s2 -> expert_57_s2
+	expert_dispatch_s2 -> expert_58_s2
+	expert_dispatch_s2 -> expert_59_s2
+	expert_dispatch_s2 -> expert_60_s2
+	expert_dispatch_s2 -> expert_61_s2
+	expert_dispatch_s2 -> expert_62_s2
+	expert_dispatch_s2 -> expert_63_s2
+	expert_32_s2 -> expert_combine_s2
+	expert_33_s2 -> expert_combine_s2
+	expert_34_s2 -> expert_combine_s2
+	expert_35_s2 -> expert_combine_s2
+	expert_36_s2 -> expert_combine_s2
+	expert_37_s2 -> expert_combine_s2
+	expert_38_s2 -> expert_combine_s2
+	expert_39_s2 -> expert_combine_s2
+	expert_40_s2 -> expert_combine_s2
+	expert_41_s2 -> expert_combine_s2
+	expert_42_s2 -> expert_combine_s2
+	expert_43_s2 -> expert_combine_s2
+	expert_44_s2 -> expert_combine_s2
+	expert_45_s2 -> expert_combine_s2
+	expert_46_s2 -> expert_combine_s2
+	expert_47_s2 -> expert_combine_s2
+	expert_48_s2 -> expert_combine_s2
+	expert_49_s2 -> expert_combine_s2
+	expert_50_s2 -> expert_combine_s2
+	expert_51_s2 -> expert_combine_s2
+	expert_52_s2 -> expert_combine_s2
+	expert_53_s2 -> expert_combine_s2
+	expert_54_s2 -> expert_combine_s2
+	expert_55_s2 -> expert_combine_s2
+	expert_56_s2 -> expert_combine_s2
+	expert_57_s2 -> expert_combine_s2
+	expert_58_s2 -> expert_combine_s2
+	expert_59_s2 -> expert_combine_s2
+	expert_60_s2 -> expert_combine_s2
+	expert_61_s2 -> expert_combine_s2
+	expert_62_s2 -> expert_combine_s2
+	expert_63_s2 -> expert_combine_s2
+	expert_combine_s2 -> moe_out_proj_s2
+	moe_out_proj_s2 -> allreduce_moe_out_s2
+	allreduce_moe_out_s2 -> layernorm2_s2
+	layernorm2_s2 -> output
+}

@@ -1,0 +1,56 @@
+// 30B MoE Model Deployment DAG
+digraph {
+	rankdir=TB ranksep=1.5 size="30,20"
+	node [fontname=Arial fontsize=10]
+	input [label="Input\nBatch: 128, Seq: 10240\nDim: 1024" fillcolor=lightblue shape=box style=filled]
+	prefill_start [label="Prefill Phase Start" fillcolor=lightblue shape=box style=filled]
+	embed_tp0_gpu0 [label="Embedding\nTP0\nGPU0\nIn: [B=128,S=10240,D=1024]\nOut: [B=128,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	embed_tp0_gpu4 [label="Embedding\nTP0\nGPU4\nIn: [B=128,S=10240,D=1024]\nOut: [B=128,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	embed_tp1_gpu1 [label="Embedding\nTP1\nGPU1\nIn: [B=128,S=10240,D=1024]\nOut: [B=128,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	embed_tp1_gpu5 [label="Embedding\nTP1\nGPU5\nIn: [B=128,S=10240,D=1024]\nOut: [B=128,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	embed_ar_tp0_gpu0 [label="Embedding All-Reduce\nTP0\nGPU0" fillcolor=lightblue shape=ellipse style=filled]
+	embed_ar_tp0_gpu4 [label="Embedding All-Reduce\nTP0\nGPU4" fillcolor=lightblue shape=ellipse style=filled]
+	embed_ar_tp1_gpu1 [label="Embedding All-Reduce\nTP1\nGPU1" fillcolor=lightblue shape=ellipse style=filled]
+	embed_ar_tp1_gpu5 [label="Embedding All-Reduce\nTP1\nGPU5" fillcolor=lightblue shape=ellipse style=filled]
+	ln1_l0_gpu0 [label="Layer Norm 1\nL0 GPU0\nIn: [B=128,S=10240,H=2048]\nOut: [B=128,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	qkv_l0_gpu0 [label="QKV Projection\nL0 GPU0\nIn: [B=128,S=10240,H=2048]\nOut: [B=128,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	attn_l0_gpu0 [label="Self-Attention\nL0 GPU0\nIn: [B=128,H=16,S=10240,D=64]\nOut: [B=128,H=16,S=10240,D=64]" fillcolor=lightgreen shape=box style=filled]
+	gate_l0_gpu0 [label="MoE Gate\nL0 GPU0\nIn: [B=128,S=10240,H=2048]\nOut: [B=128,S=10240,K=2]" fillcolor=lightyellow shape=parallelogram style=filled]
+	dispatch_l0_gpu0 [label="Expert Dispatch\nL0 GPU0" fillcolor=lightblue shape=ellipse style="filled,dashed"]
+	expert_l0_gpu0 [label="Expert Compute\nL0 GPU0\nIn: [B=16,S=10240,H=2048]\nOut: [B=16,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	combine_l0_gpu0 [label="Expert Combine\nL0 GPU0" fillcolor=lightblue shape=ellipse style=filled]
+	pipeline_send_gpu0_to_gpu128 [label="Pipeline Send\nGPU0→GPU128" fillcolor=lightblue shape=ellipse style=filled]
+	ln1_l8_gpu128 [label="Layer Norm 1\nL8 GPU128\nIn: [B=128,S=10240,H=2048]\nOut: [B=128,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	qkv_l8_gpu128 [label="QKV Projection\nL8 GPU128\nIn: [B=128,S=10240,H=2048]\nOut: [B=128,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	attn_l8_gpu128 [label="Self-Attention\nL8 GPU128\nIn: [B=128,H=16,S=10240,D=64]\nOut: [B=128,H=16,S=10240,D=64]" fillcolor=lightgreen shape=box style=filled]
+	gate_l8_gpu128 [label="MoE Gate\nL8 GPU128\nIn: [B=128,S=10240,H=2048]\nOut: [B=128,S=10240,K=2]" fillcolor=lightyellow shape=parallelogram style=filled]
+	dispatch_l8_gpu128 [label="Expert Dispatch\nL8 GPU128" fillcolor=lightblue shape=ellipse style="filled,dashed"]
+	expert_l8_gpu128 [label="Expert Compute\nL8 GPU128\nIn: [B=16,S=10240,H=2048]\nOut: [B=16,S=10240,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	combine_l8_gpu128 [label="Expert Combine\nL8 GPU128" fillcolor=lightblue shape=ellipse style=filled]
+	prefill_end [label="Prefill Phase End" fillcolor=lightblue shape=box style=filled]
+	decode_start [label="Decode Phase Start" fillcolor=lightblue shape=box style=filled]
+	kv_cache_read_gpu0 [label="KV Cache Read\nGPU0\nIn: [B=1,S=1,H=2048]\nOut: [B=1,S=1,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	decode_layer_gpu0 [label="Decode Layer\nGPU0\nIn: [B=1,S=1,H=2048]\nOut: [B=1,S=1,H=2048]" fillcolor=lightgreen shape=box style=filled]
+	kv_cache_write_gpu0 [label="KV Cache Update\nGPU0" fillcolor=lightgreen shape=box style=filled]
+	decode_end [label="Decode Phase End" fillcolor=lightblue shape=box style=filled]
+	input -> prefill_start
+	prefill_start -> embed_tp0_gpu0
+	embed_tp0_gpu0 -> embed_ar_tp0_gpu0
+	embed_ar_tp0_gpu0 -> ln1_l0_gpu0
+	ln1_l0_gpu0 -> qkv_l0_gpu0
+	qkv_l0_gpu0 -> attn_l0_gpu0
+	attn_l0_gpu0 -> gate_l0_gpu0
+	gate_l0_gpu0 -> dispatch_l0_gpu0 [style=dashed]
+	dispatch_l0_gpu0 -> expert_l0_gpu0
+	expert_l0_gpu0 -> combine_l0_gpu0
+	combine_l0_gpu0 -> pipeline_send_gpu0_to_gpu128
+	pipeline_send_gpu0_to_gpu128 -> ln1_l8_gpu128
+	ln1_l8_gpu128 -> prefill_end
+	prefill_end -> decode_start
+	decode_start -> kv_cache_read_gpu0
+	kv_cache_read_gpu0 -> decode_layer_gpu0
+	decode_layer_gpu0 -> kv_cache_write_gpu0
+	kv_cache_write_gpu0 -> decode_end
+	input -> prefill_start
+	prefill_end -> decode_start
+}
