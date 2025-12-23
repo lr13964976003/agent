@@ -35,13 +35,13 @@ def main():
                  "slug": "chain_generate_method",
                  "version": 1,
                  "inputs": {
-				             "environment_path": "../environment/EP/deployment.md",
-				             "knowledge_path": "../knowledges/llm.md",
+				     "environment_path": "../environment/EP/deployment.md",
+				     "knowledge_path": "../knowledges/llm.md",
                      "save_path": f"../outputs/{submission_dir}"
                      },
                  "tools": [
                      FileReadTool(),
-					           PythonTool(),
+					 PythonTool(),
                      CommandTool(),
                      FileWriterTool()
                      ]
@@ -54,23 +54,23 @@ def main():
                      },
                  "tools": [
                      FileReadTool(),
-					           PythonTool(),
+					 PythonTool(),
                      CommandTool(),
                      FileWriterTool()
                      ]
                  },
             "generate_dag": {
-                    "slug": "chain_generate_DAG",
-                    "version": 1,
-                    "inputs": {
-					          "knowledge_path": "../knowledges/llm.md",
+                "slug": "chain_generate_DAG",
+                "version": 1,
+                "inputs": {
+					"knowledge_path": "../knowledges/llm.md",
                     "save_path": f"../outputs/{submission_dir}"
                     },
                 "tools": [
                     FileReadTool(),
                     FileWriterTool(),
                     CommandTool(),
-		                PythonTool(),
+		            PythonTool(),
                     ExtractEdgeFromDAGTool()
                     ]
                 },
@@ -84,7 +84,7 @@ def main():
                     FileReadTool(),
                     FileWriterTool(),
                     CommandTool(),
-		                PythonTool(),
+		            PythonTool(),
                     ExtractEdgeFromDAGTool()
                     ]
                  }
