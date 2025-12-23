@@ -35,7 +35,9 @@ SUBMISSION
 
 ---
 
-Save the nodes that need to be modified in markdown format at the {save_path}.
+Is this parallel strategy deployment method incorrect. If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
+
+If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method in JSON format.
 
 ---
 
