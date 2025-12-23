@@ -26,10 +26,10 @@
 ---
 
 
-## **Performance Evaluation**
-- **The time to the first token(TTFT)**
-- **Time per output token(TPOT)**
-- **Throughput per GPU**
+## **Basic Performance Requirements**
+- **The time to the first token(TTFT)**: 10s
+- **Time per output token(TPOT)**:  None
+- **Throughput per GPU**: 100tokens/ms
 
 
 ```
