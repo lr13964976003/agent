@@ -59,7 +59,7 @@ def build_check_method(model: str, tools: list):
             )
     agent = Agent(
                 role="An expert in LLM parallel strategy deployment solutions.",
-                goal="Propose parallel strategies that meet the model performance requirements under current hardware conditions, ensuring that the strategies are practical and cost-effective as much as possible.",
+                goal="Check whether the generated parallel strategy deployment plan meets practical requirements and whether the performance needs are satisfied. If not, propose modification suggestions.",
                 backstory="You are an expert in the deployment of LLM parallel strategies, proficient in mastering various parallel strategies such as DP, TP, PP, EP, SP, and their combinations. You can accurately evaluate the performance of models under different parallel strategy schemes, including TTFT, TPOT, throughput, and other metrics.",
                 tools=tools,
                 allow_delegation=False,
@@ -68,6 +68,26 @@ def build_check_method(model: str, tools: list):
                 max_execution_time=1800,
                 llm=llm
 	)
+    return agent
+	
+def build_DAG(model: str, tools: list):
+    llm = ChatOpenAI(
+            model = model,
+            temperature = 0.7,
+            max_tokens = 16384,
+            request_timeout = 1800
+            )
+    agent = Agent(
+                role="An expert in generating parallel strategy DAG diagrams for LLMs.",
+                goal="According to the deployment plan of the parallel strategy, generate Python files, dot files, and SVG files for the DAG graph step by step, ensuring the correctness, accuracy, and aesthetics of the DAG graph.",
+                backstory="You are an expert in generating DAG (Directed Acyclic Graph) diagrams for LLM parallel strategies, capable of ensuring that the generated DAG diagrams themselves are error-free and that they strictly correspond to the deployment plans of the parallel strategies.",
+                tools=tools,
+                allow_delegation=False,
+		# allow_code_execution=True,
+                verbose=True,
+                max_execution_time=1800,
+                llm=llm
+            )
     return agent
 
 #@ag.instrument()
