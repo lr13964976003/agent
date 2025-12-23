@@ -7,7 +7,7 @@ RESOURCES
 
 ---
 
-Provide an input file containing hardware environment, model parameters, and performance evaluation metrics. <<<提供包含硬件环境和模型参数以及性能评价指标的输入文件>>>
+Provide input files containing hardware environment, model parameters, and performance requirements. <<<提供包含硬件环境和模型参数以及性能需求的输入文件>>>
 
 You have been provided with a supplementary knowledge located at {knowledge_path}. <<<提供知识路径>>>
 
@@ -19,11 +19,9 @@ TASK
 
 You are tested to completed the following tasks:
 
-Gain a deep understanding of the input file . <<<要求理解部署条件>>> 
+Requires a deep understanding of the hardware environment, models, and performance requirements. . <<<要求理解输入文件>>> 
 
-Request to propose a parallel strategy that optimizes the model's performance under the current hardware environment. <<<要求提出当前硬件环境下该模型最优的并行策略>>>
-
-Parallel strategies should strive to optimize the model's performance (latency, throughput) as much as possible. <<<并行策略要尽量使模型的性能（时延，吞吐）达到最优>>>
+Propose the optimal parallel strategy for the model based on the current hardware environment, while meeting basic performance requirements. <<<要求在满足基本性能需求的前提下，提出基于当前硬件环境下模型的最优并行策略>>>
 
 Make full use of hardware resources and leverage the advantages of current deployment conditions. <<<要求充分利用硬件资源>>>
 
@@ -35,6 +33,8 @@ NOTE
 You need to follow the following constraints:
 
 After you complete the deployment method, calculate how many parts the module has been divided into and whether it matches the number of GPUs.  <<<要求反思部署方案是否符合实际>>>
+
+Basic performance requirements must be met. <<<要求必须满足基本的性能需求>>>
 
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
