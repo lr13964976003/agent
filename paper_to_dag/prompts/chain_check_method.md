@@ -35,9 +35,9 @@ SUBMISSION
 
 ---
 
-Is this the deployment method incorrect. If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
+Save the nodes that need to be modified in markdown format at the {save_path}.
 
-If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method file in JSON format.
+---
 
 How we would grade this:
 
