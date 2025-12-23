@@ -23,6 +23,8 @@ Requires a deep understanding of the hardware environment, models, and performan
 
 Propose the optimal parallel strategy for the model based on the current hardware environment, while meeting basic performance requirements. <<<要求在满足基本性能需求的前提下，提出基于当前硬件环境下模型的最优并行策略>>>
 
+Document requiring the generation of a parallel strategy deployment plan. <<<要求生成并行策略的部署方案的文件>>>
+
 Make full use of hardware resources and leverage the advantages of current deployment conditions. <<<要求充分利用硬件资源>>>
 
 
@@ -45,7 +47,7 @@ SUBMISSION
 
 ---
 
-The generated method should be saved in {save_path}. 
+The a parallel strategy deployment plan should be saved in {save_path}. 
 
 You don't need to submit the complete content because it is too large. Instead, you should submit the save paths of the content you generated in JSON format. <<<提交路径而不是content>>>
 
