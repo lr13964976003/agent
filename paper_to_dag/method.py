@@ -75,7 +75,7 @@ def main():
                     ]
                 },
              "check_dag": {
-                 "slug": "chain_check_dag",
+                 "slug": "chain_check_DAG",
                  "version": 1,
                  "inputs": {
                      "save_path": f"../outputs/{submission_dir}"
