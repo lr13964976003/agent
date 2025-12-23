@@ -61,7 +61,8 @@ def main():
                 "slug" : "chain_check_paper",
                 "version" : 8,
                 "inputs": {
-                    "origin_paper_path" : "../papers/EP/paper.md"
+                    "origin_paper_path" : "../papers/EP/paper.md",
+					"save_path": f"../outputs/{submission_dir}"
                     },
                 "tools": [
                     FileReadTool(),
@@ -181,4 +182,5 @@ def main():
 if __name__ == "__main__":
     #tracer = trace.get_tracer(__name__)
     #with tracer.start_as_current_span("workflow-root") as root:
+
     main()
