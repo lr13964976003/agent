@@ -126,8 +126,8 @@ def main():
                   ]
               }
             }
-    agents = []
-    tasks = []
+	agents = []
+	tasks = []
 	i = 0
 	expected_outputs = ["Check Result", "The file path of concise paper and deployment configuration", "Check Result", "The path of graphviz code describing the DAG", "Check Result", "The performance of DAG", "The path of graphviz code describing the DAG"]
 	for k in variant.keys():
@@ -144,13 +144,9 @@ def main():
 
     paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], work_task=tasks[1], review_task=tasks[2])
     paper_result = paper_loop.run()
-
-	return
-
     dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=paper_result)
     dag_result = dag_loop.run()
-    
-
+    return
 
     perf_task = tasks[5]
     perf_task.description = tasks[5].description + \
