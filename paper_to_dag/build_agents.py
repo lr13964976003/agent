@@ -90,6 +90,26 @@ def build_DAG(model: str, tools: list):
             )
     return agent
 
+def build_check_DAG(model: str, tools: list):
+    llm = ChatOpenAI(
+            model = model,
+            temperature = 0.7,
+            max_tokens = 16384,
+            request_timeout = 1800
+            )
+    agent = Agent(
+                role="An expert in generating parallel strategy DAG diagrams for LLMs.",
+                goal="Check whether the generated DAG graph correctly and completely reflects the deployment plan of the parallel strategy, and verify that there are no errors in the DAG graph itself, such as loops or dangling nodes.",
+                backstory="You are an expert in generating DAG (Directed Acyclic Graph) diagrams for LLM parallel strategies, capable of ensuring that the generated DAG diagrams themselves are error-free and that they strictly correspond to the deployment plans of the parallel strategies.",
+                tools=tools,
+                allow_delegation=False,
+		# allow_code_execution=True,
+                verbose=True,
+                max_execution_time=1800,
+                llm=llm
+            )
+    return agent
+
 #@ag.instrument()
 def build_task(description, expected_output, agent):
     task = Task(
