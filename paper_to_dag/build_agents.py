@@ -49,6 +49,26 @@ def build_method(model: str, tools: list):
                 llm=llm
             )
     return agent
+	
+def build_check_method(model: str, tools: list):
+    llm = ChatOpenAI(
+            model = model,
+            temperature = 0.7,
+            max_tokens = 16384,
+            request_timeout = 1800
+            )
+    agent = Agent(
+                role="An expert in LLM parallel strategy deployment solutions.",
+                goal="Propose parallel strategies that meet the model performance requirements under current hardware conditions, ensuring that the strategies are practical and cost-effective as much as possible.",
+                backstory="You are an expert in the deployment of LLM parallel strategies, proficient in mastering various parallel strategies such as DP, TP, PP, EP, SP, and their combinations. You can accurately evaluate the performance of models under different parallel strategy schemes, including TTFT, TPOT, throughput, and other metrics.",
+                tools=tools,
+                allow_delegation=False,
+		# allow_code_execution=True,
+                verbose=True,
+                max_execution_time=1800,
+                llm=llm
+	)
+    return agent
 
 #@ag.instrument()
 def build_task(description, expected_output, agent):
