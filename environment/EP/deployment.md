@@ -26,8 +26,8 @@
 ---
 
 
-## **Current Parallelism Strategy**
-- **Expert Parallelism (EP)**: 2-way - Each expert assigned to separate GPU
+## **Performance Evaluation**
+- **the time to the first token(TTFT)**
 - **Tensor Parallelism (TP)**: 2-way - Intra-layer parallelism for attention and MLP
 - **Pipeline Parallelism (PP)**: 2-way - Layer distribution across pipeline stages
 - **Data Parallelism (DP)**: 2-way - Batch processing parallelism
