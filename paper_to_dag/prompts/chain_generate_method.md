@@ -7,7 +7,7 @@ RESOURCES
 
 ---
 
-You have been provided with a deployment condition file containing the hardware environment and model parameters. <<<提供包含硬件环境和模型参数的部署条件文件>>>
+Provide an input file containing hardware environment, model parameters, and performance evaluation metrics. <<<提供包含硬件环境和模型参数以及性能评价指标的输入文件>>>
 
 You have been provided with a supplementary knowledge located at {knowledge_path}. <<<提供知识路径>>>
 
@@ -19,9 +19,7 @@ TASK
 
 You are tested to completed the following tasks:
 
-Gain a deep understanding of the deployment condition file . <<<要求理解部署条件>>> 
-
-The performance evaluation metrics of the model are as follows: the smaller the model's latency and the larger its throughput, the better the model's performance. <<<模型的性能评价指标>>>
+Gain a deep understanding of the input file . <<<要求理解部署条件>>> 
 
 Request to propose a parallel strategy that optimizes the model's performance under the current hardware environment. <<<要求提出当前硬件环境下该模型最优的并行策略>>>
 
