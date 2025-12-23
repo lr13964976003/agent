@@ -17,7 +17,7 @@ You are tested to completed the following tasks:
 
 Check whether the parallel strategy is compatible with the current hardware environment and model parameters. <<<检查并行策略是否符合实际>>>
 
-Check whether the parallel strategy can optimize the model's performance. <<<检查是否性能最优>>>
+Check whether the performance is optimized while meeting basic performance requirements. <<<检查是否在满足基本性能需求的情况下，性能达到最优>>>
 
 Ensure that the refined version of deployment method file retains sufficient information to generate the directed acyclic graph for the deployment of the experimental model in the paper.<<<提醒要保留足够的信息来生成dag>>>
 
