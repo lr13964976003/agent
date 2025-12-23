@@ -131,6 +131,7 @@ def main():
     i = 0
     expected_outputs = ["Check Result", "The file path of concise paper and deployment configuration", "Check Result", "The path of graphviz code describing the DAG", "Check Result", "The performance of DAG", "The path of graphviz code describing the DAG"]
     for k in variant.keys():
+		print(k)
         prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"])
         tools = variant[k]["tools"]
         agents.append(build_agent("openai/Kimi-K2",tools))
