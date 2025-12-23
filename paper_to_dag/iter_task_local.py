@@ -128,7 +128,7 @@ def main():
             }
     agents = []
     tasks = []
-    i = 0
+	i = 0
 	expected_outputs = ["Check Result", "The file path of concise paper and deployment configuration", "Check Result", "The path of graphviz code describing the DAG", "Check Result", "The performance of DAG", "The path of graphviz code describing the DAG"]
 	for k in variant.keys():
 		print(k)
