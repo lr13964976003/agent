@@ -1,0 +1,29 @@
+// Simplified TP4xPP2 Hybrid Configuration
+digraph LLM_TP4_PP2_Simplified_Corrected {
+	graph [bgcolor=white fontname=Arial fontsize=12 nodesep=0.6 rankdir=TB ranksep=1.0]
+	input [label="INPUT\n[batch_size=1, seq_len=2048, hidden=8192]" fillcolor=lightcoral fontname=Arial fontsize=11 shape=hexagon style=filled]
+	stage0_overview [label="PIPELINE STAGE 0\nGPUs 0-3 (TP4)\nLayers 0-39" fillcolor=lightgray fontname=Arial fontsize=12 shape=box style="rounded,filled"]
+	embed_s0 [label="Embedding\nGPU: 0-3 (TP4)" fillcolor=lightblue fontname=Arial fontsize=11 shape=rectangle style=filled]
+	attn_block_s0 [label="Attention Block\n(QKV→Split→Compute→AR→Output)\nGPU: 0-3 (TP4)" fillcolor=lightblue fontname=Arial fontsize=11 shape=rectangle style=filled]
+	ffn_block_s0 [label="FFN Block\n(Up→Act→Down→AR)\nGPU: 0-3 (TP4)" fillcolor=lightblue fontname=Arial fontsize=11 shape=rectangle style=filled]
+	layers_1_38_s0 [label="Layers 1-38\n[Repeated Pattern]\nGPU: 0-3 (TP4)" fillcolor=lightblue fontname=Arial fontsize=11 shape=rectangle style=filled]
+	layer_39_s0 [label="Layer 39 (Final)\nGPU: 0-3 (TP4)" fillcolor=lightblue fontname=Arial fontsize=11 shape=rectangle style=filled]
+	pipe_comm [label="Pipeline Communication\nStage 0 → Stage 1\nGPU: 0-3 → 4-7" fillcolor=lightyellow fontname=Arial fontsize=11 shape=ellipse style=filled]
+	stage1_overview [label="PIPELINE STAGE 1\nGPUs 4-7 (TP4)\nLayers 40-79" fillcolor=lightgray fontname=Arial fontsize=12 shape=box style="rounded,filled"]
+	layer_40_s1 [label="Layer 40 (First)\nGPU: 4-7 (TP4)" fillcolor=lightblue fontname=Arial fontsize=11 shape=rectangle style=filled]
+	layers_41_78_s1 [label="Layers 41-78\n[Repeated Pattern]\nGPU: 4-7 (TP4)" fillcolor=lightblue fontname=Arial fontsize=11 shape=rectangle style=filled]
+	layer_79_s1 [label="Layer 79 (Final)\nGPU: 4-7 (TP4)" fillcolor=lightblue fontname=Arial fontsize=11 shape=rectangle style=filled]
+	output [label="OUTPUT\n[batch_size=1, seq_len=2048, hidden=8192]" fillcolor=lightcoral fontname=Arial fontsize=11 shape=hexagon style=filled]
+	input -> stage0_overview [style=dashed]
+	stage0_overview -> embed_s0
+	embed_s0 -> attn_block_s0
+	attn_block_s0 -> ffn_block_s0
+	ffn_block_s0 -> layers_1_38_s0
+	layers_1_38_s0 -> layer_39_s0
+	layer_39_s0 -> pipe_comm
+	pipe_comm -> stage1_overview
+	stage1_overview -> layer_40_s1
+	layer_40_s1 -> layers_41_78_s1
+	layers_41_78_s1 -> layer_79_s1
+	layer_79_s1 -> output
+}

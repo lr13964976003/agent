@@ -1,0 +1,64 @@
+// LLM TP4xPP2 Simplified DAG
+digraph {
+	nodesep=0.5 rankdir=TB ranksep=1.0 splines=ortho
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	node [fillcolor=lightgreen shape=ellipse style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input
+[batch=32, seq=2048, hidden=8192]" fillcolor=lightgray shape=box style="rounded,filled"]
+	stage0_embed [label="Embedding + Pos Enc (GPU0-3)
+TP4 All-Reduce" shape=rectangle]
+	stage0_layer10 [label="Layer 10 (GPU0-3)
+RMSNorm + MHA + FFN
+TP4 All-Reduce" shape=rectangle]
+	stage0_layer20 [label="Layer 20 (GPU0-3)
+RMSNorm + MHA + FFN
+TP4 All-Reduce" shape=rectangle]
+	stage0_layer10 -> stage0_layer20
+	stage0_layer30 [label="Layer 30 (GPU0-3)
+RMSNorm + MHA + FFN
+TP4 All-Reduce" shape=rectangle]
+	stage0_layer20 -> stage0_layer30
+	stage0_layer40 [label="Layer 40 (GPU0-3)
+RMSNorm + MHA + FFN
+TP4 All-Reduce" shape=rectangle]
+	stage0_layer30 -> stage0_layer40
+	stage0_final [label="Layer 39 (GPU0-3)
+Final RMSNorm" shape=rectangle]
+	pp_comm [label="Pipeline Communication
+Stage 0 → Stage 1
+GPU0-3 → GPU4-7" fillcolor=lightgreen shape=ellipse]
+	stage1_first [label="Layer 40 (GPU4-7)
+First Layer Processing
+TP4 All-Reduce" fillcolor=lightpink shape=rectangle]
+	stage1_layer50 [label="Layer 50 (GPU4-7)
+RMSNorm + MHA + FFN
+TP4 All-Reduce" fillcolor=lightpink shape=rectangle]
+	stage1_layer60 [label="Layer 60 (GPU4-7)
+RMSNorm + MHA + FFN
+TP4 All-Reduce" fillcolor=lightpink shape=rectangle]
+	stage1_layer50 -> stage1_layer60
+	stage1_layer70 [label="Layer 70 (GPU4-7)
+RMSNorm + MHA + FFN
+TP4 All-Reduce" fillcolor=lightpink shape=rectangle]
+	stage1_layer60 -> stage1_layer70
+	stage1_layer80 [label="Layer 80 (GPU4-7)
+RMSNorm + MHA + FFN
+TP4 All-Reduce" fillcolor=lightpink shape=rectangle]
+	stage1_layer70 -> stage1_layer80
+	stage1_final [label="Layer 79 (GPU4-7)
+Final RMSNorm" fillcolor=lightpink shape=rectangle]
+	lm_head [label="LM Head (GPU4-7)
+[hidden=8192 → vocab=128256]" fillcolor=lightyellow shape=parallelogram]
+	output [label="Output
+[batch=32, seq=2048, vocab=128256]" fillcolor=lightgray shape=box style="rounded,filled"]
+	input -> stage0_embed
+	stage0_embed -> stage0_layer10
+	stage0_layer30 -> stage0_final
+	stage0_final -> pp_comm
+	pp_comm -> stage1_first
+	stage1_first -> stage1_layer50
+	stage1_layer70 -> stage1_final
+	stage1_final -> lm_head
+	lm_head -> output
+}

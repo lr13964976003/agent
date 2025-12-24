@@ -1,0 +1,258 @@
+// LLM TP4xPP2 Hybrid Parallel Strategy DAG
+digraph {
+	nodesep=0.8 rankdir=TB ranksep=1.2 splines=ortho
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	node [fillcolor=lightgreen shape=ellipse style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	subgraph cluster_input {
+		color=black label=Input style=dashed
+		input [label="Input Layer
+Input: [batch_size=32, seq_len=2048, hidden=8192]
+Output: [batch_size=32, seq_len=2048, hidden=8192]" fillcolor=lightgray shape=box style="rounded,filled"]
+	}
+	subgraph cluster_attn_1_s0 {
+		color=lightgray fillcolor=lightgray label="Layer 1: Multi-Head Attention (TP4)" style=filled
+		qkv_proj_1_s0 [label="QKV Projection (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: Q,K,V [batch=32, seq=2048, head=64, d_k=128]" shape=rectangle]
+		attn_scores_1_s0 [label="Attention Scores (GPU0-3)
+Input: Q,K,V [batch=32, seq=2048, head=64, d_k=128]
+Output: Scores [batch=32, head=64, seq=2048, seq=2048]" shape=rectangle]
+		attn_out_1_s0 [label="Attention Output (GPU0-3)
+Input: Scores [batch=32, head=64, seq=2048, seq=2048]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		attn_ar_1_s0 [label="Attention All-Reduce (GPU0-3)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_ffn_1_s0 {
+		color=lightcoral fillcolor=lightcoral label="Layer 1: FFN (TP4)" style=filled
+		ffn_gate_up_1_s0 [label="FFN Gate+Up Projection (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_silu_1_s0 [label="SiLU Activation (GPU0-3)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_down_1_s0 [label="FFN Down Projection (GPU0-3)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		ffn_ar_1_s0 [label="FFN All-Reduce (GPU0-3)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_attn_2_s0 {
+		color=lightgray fillcolor=lightgray label="Layer 2: Multi-Head Attention (TP4)" style=filled
+		qkv_proj_2_s0 [label="QKV Projection (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: Q,K,V [batch=32, seq=2048, head=64, d_k=128]" shape=rectangle]
+		attn_scores_2_s0 [label="Attention Scores (GPU0-3)
+Input: Q,K,V [batch=32, seq=2048, head=64, d_k=128]
+Output: Scores [batch=32, head=64, seq=2048, seq=2048]" shape=rectangle]
+		attn_out_2_s0 [label="Attention Output (GPU0-3)
+Input: Scores [batch=32, head=64, seq=2048, seq=2048]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		attn_ar_2_s0 [label="Attention All-Reduce (GPU0-3)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_ffn_2_s0 {
+		color=lightcoral fillcolor=lightcoral label="Layer 2: FFN (TP4)" style=filled
+		ffn_gate_up_2_s0 [label="FFN Gate+Up Projection (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_silu_2_s0 [label="SiLU Activation (GPU0-3)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_down_2_s0 [label="FFN Down Projection (GPU0-3)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		ffn_ar_2_s0 [label="FFN All-Reduce (GPU0-3)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_attn_3_s0 {
+		color=lightgray fillcolor=lightgray label="Layer 3: Multi-Head Attention (TP4)" style=filled
+		qkv_proj_3_s0 [label="QKV Projection (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: Q,K,V [batch=32, seq=2048, head=64, d_k=128]" shape=rectangle]
+		attn_scores_3_s0 [label="Attention Scores (GPU0-3)
+Input: Q,K,V [batch=32, seq=2048, head=64, d_k=128]
+Output: Scores [batch=32, head=64, seq=2048, seq=2048]" shape=rectangle]
+		attn_out_3_s0 [label="Attention Output (GPU0-3)
+Input: Scores [batch=32, head=64, seq=2048, seq=2048]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		attn_ar_3_s0 [label="Attention All-Reduce (GPU0-3)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_ffn_3_s0 {
+		color=lightcoral fillcolor=lightcoral label="Layer 3: FFN (TP4)" style=filled
+		ffn_gate_up_3_s0 [label="FFN Gate+Up Projection (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_silu_3_s0 [label="SiLU Activation (GPU0-3)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_down_3_s0 [label="FFN Down Projection (GPU0-3)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		ffn_ar_3_s0 [label="FFN All-Reduce (GPU0-3)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_stage0 {
+		color=lightblue fillcolor=lightblue label="PP Stage 0: GPUs 0-3 (TP4)" style=filled
+		embed_0 [label="Embedding + Pos Encoding (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		rmsnorm_1_s0 [label="Layer 1: RMSNorm (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		rmsnorm_2_s0 [label="Layer 2: RMSNorm (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		rmsnorm_3_s0 [label="Layer 3: RMSNorm (GPU0-3)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		stage0_final [label="Stage 0 Final Layer (GPU0-3)
+Layer 39: RMSNorm + Attention + FFN
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" fillcolor=lightblue shape=rectangle]
+	}
+	pp_comm_s0_s1 [label="Pipeline Communication
+Stage 0 → Stage 1
+GPU0-3 → GPU4-7
+Message: [batch=32, seq=2048, hidden=8192]" fillcolor=lightgreen shape=ellipse]
+	subgraph cluster_attn_41_s1 {
+		color=lightgray fillcolor=lightgray label="Layer 41: Multi-Head Attention (TP4)" style=filled
+		qkv_proj_41_s1 [label="QKV Projection (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: Q,K,V [batch=32, seq=2048, head=64, d_k=128]" shape=rectangle]
+		attn_scores_41_s1 [label="Attention Scores (GPU4-7)
+Input: Q,K,V [batch=32, seq=2048, head=64, d_k=128]
+Output: Scores [batch=32, head=64, seq=2048, seq=2048]" shape=rectangle]
+		attn_out_41_s1 [label="Attention Output (GPU4-7)
+Input: Scores [batch=32, head=64, seq=2048, seq=2048]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		attn_ar_41_s1 [label="Attention All-Reduce (GPU4-7)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_ffn_41_s1 {
+		color=lightcoral fillcolor=lightcoral label="Layer 41: FFN (TP4)" style=filled
+		ffn_gate_up_41_s1 [label="FFN Gate+Up Projection (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_silu_41_s1 [label="SiLU Activation (GPU4-7)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_down_41_s1 [label="FFN Down Projection (GPU4-7)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		ffn_ar_41_s1 [label="FFN All-Reduce (GPU4-7)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_attn_42_s1 {
+		color=lightgray fillcolor=lightgray label="Layer 42: Multi-Head Attention (TP4)" style=filled
+		qkv_proj_42_s1 [label="QKV Projection (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: Q,K,V [batch=32, seq=2048, head=64, d_k=128]" shape=rectangle]
+		attn_scores_42_s1 [label="Attention Scores (GPU4-7)
+Input: Q,K,V [batch=32, seq=2048, head=64, d_k=128]
+Output: Scores [batch=32, head=64, seq=2048, seq=2048]" shape=rectangle]
+		attn_out_42_s1 [label="Attention Output (GPU4-7)
+Input: Scores [batch=32, head=64, seq=2048, seq=2048]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		attn_ar_42_s1 [label="Attention All-Reduce (GPU4-7)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_ffn_42_s1 {
+		color=lightcoral fillcolor=lightcoral label="Layer 42: FFN (TP4)" style=filled
+		ffn_gate_up_42_s1 [label="FFN Gate+Up Projection (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_silu_42_s1 [label="SiLU Activation (GPU4-7)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_down_42_s1 [label="FFN Down Projection (GPU4-7)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		ffn_ar_42_s1 [label="FFN All-Reduce (GPU4-7)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_attn_43_s1 {
+		color=lightgray fillcolor=lightgray label="Layer 43: Multi-Head Attention (TP4)" style=filled
+		qkv_proj_43_s1 [label="QKV Projection (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: Q,K,V [batch=32, seq=2048, head=64, d_k=128]" shape=rectangle]
+		attn_scores_43_s1 [label="Attention Scores (GPU4-7)
+Input: Q,K,V [batch=32, seq=2048, head=64, d_k=128]
+Output: Scores [batch=32, head=64, seq=2048, seq=2048]" shape=rectangle]
+		attn_out_43_s1 [label="Attention Output (GPU4-7)
+Input: Scores [batch=32, head=64, seq=2048, seq=2048]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		attn_ar_43_s1 [label="Attention All-Reduce (GPU4-7)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_ffn_43_s1 {
+		color=lightcoral fillcolor=lightcoral label="Layer 43: FFN (TP4)" style=filled
+		ffn_gate_up_43_s1 [label="FFN Gate+Up Projection (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_silu_43_s1 [label="SiLU Activation (GPU4-7)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, ffn_hidden=28672]" shape=rectangle]
+		ffn_down_43_s1 [label="FFN Down Projection (GPU4-7)
+Input: [batch=32, seq=2048, ffn_hidden=28672]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		ffn_ar_43_s1 [label="FFN All-Reduce (GPU4-7)
+TP4 Collective Operation" fillcolor=lightgreen shape=ellipse]
+	}
+	subgraph cluster_stage1 {
+		color=lightpink fillcolor=lightpink label="PP Stage 1: GPUs 4-7 (TP4)" style=filled
+		stage1_first [label="Stage 1 First Layer (GPU4-7)
+Layer 40: RMSNorm + Attention + FFN
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" fillcolor=lightpink shape=rectangle]
+		rmsnorm_41_s1 [label="Layer 41: RMSNorm (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		rmsnorm_42_s1 [label="Layer 42: RMSNorm (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		rmsnorm_43_s1 [label="Layer 43: RMSNorm (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" shape=rectangle]
+		stage1_final [label="Stage 1 Final Layer (GPU4-7)
+Layer 79: RMSNorm
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, hidden=8192]" fillcolor=lightpink shape=rectangle]
+	}
+	subgraph cluster_output {
+		color=black label=Output style=dashed
+		lm_head [label="LM Head (GPU4-7)
+Input: [batch=32, seq=2048, hidden=8192]
+Output: [batch=32, seq=2048, vocab=128256]" fillcolor=lightyellow shape=parallelogram]
+		output [label="Output Layer
+Input: [batch=32, seq=2048, vocab=128256]
+Output: [batch=32, seq=2048, vocab=128256]" fillcolor=lightgray shape=box style="rounded,filled"]
+	}
+	input -> embed_0
+	embed_0 -> rmsnorm_1_s0
+	rmsnorm_1_s0 -> qkv_proj_1_s0
+	qkv_proj_1_s0 -> attn_scores_1_s0
+	attn_scores_1_s0 -> attn_out_1_s0
+	attn_out_1_s0 -> attn_ar_1_s0
+	attn_ar_1_s0 -> ffn_gate_up_1_s0
+	ffn_gate_up_1_s0 -> ffn_silu_1_s0
+	ffn_silu_1_s0 -> ffn_down_1_s0
+	ffn_down_1_s0 -> ffn_ar_1_s0
+	ffn_ar_3_s0 -> stage0_final
+	stage0_final -> pp_comm_s0_s1
+	pp_comm_s0_s1 -> stage1_first
+	stage1_first -> rmsnorm_41_s1
+	rmsnorm_41_s1 -> qkv_proj_41_s1
+	qkv_proj_41_s1 -> attn_scores_41_s1
+	attn_scores_41_s1 -> attn_out_41_s1
+	attn_out_41_s1 -> attn_ar_41_s1
+	attn_ar_41_s1 -> ffn_gate_up_41_s1
+	ffn_gate_up_41_s1 -> ffn_silu_41_s1
+	ffn_silu_41_s1 -> ffn_down_41_s1
+	ffn_down_41_s1 -> ffn_ar_41_s1
+	ffn_ar_43_s1 -> stage1_final
+	stage1_final -> lm_head
+	lm_head -> output
+}
