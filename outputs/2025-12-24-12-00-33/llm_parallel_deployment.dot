@@ -1,0 +1,133 @@
+// LLM Parallel Strategy Deployment DAG
+digraph {
+	dpi=300 rankdir=TB size="50,30"
+	node [fontsize=10 margin="0.1,0.05"]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	prefill_start [label="PREFILL PHASE\nPP=4, EP=4, TP=2, SP=2\n64 GPUs Total" fillcolor=red fontsize=14 shape=box style=filled]
+	input [label="INPUT\nInput: [batch_size=4, seq_len=10240, hidden=512]\nOutput: [batch_size=4, seq_len=10240, hidden=512]" fillcolor=white penwidth=3 shape=ellipse style=filled]
+	stage1_label [label="PIPELINE STAGE 1\nLayers 1-4\nGPUs: 0-15" fillcolor=purple fontsize=12 shape=box style=filled]
+	sp_split_1 [label="SP SPLIT\nInput: [batch=4, seq=10240, hidden=512]\nOutput: [batch=4, seq=5120, hidden=512]\nGPU: 0-15" fillcolor=lightyellow shape=parallelogram style=filled]
+	layernorm1_1 [label="LayerNorm\nInput: [batch=4, seq=5120, hidden=512]\nOutput: [batch=4, seq=5120, hidden=512]\nGPU: 0-15" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_qkv1_1 [label="Attention QKV Proj\nTP=2\nInput: [batch=4, seq=5120, hidden=512]\nOutput: [batch=4, seq=5120, hidden=256]\nGPU: 0-7" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_qkv1_2 [label="Attention QKV Proj\nTP=2\nInput: [batch=4, seq=5120, hidden=512]\nOutput: [batch=4, seq=5120, hidden=256]\nGPU: 8-15" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_compute1_1 [label="Attention Compute\nSP=2\nInput: [batch=4, seq=5120, hidden=256]\nOutput: [batch=4, seq=5120, hidden=256]\nGPU: 0-7" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_compute1_2 [label="Attention Compute\nSP=2\nInput: [batch=4, seq=5120, hidden=256]\nOutput: [batch=4, seq=5120, hidden=256]\nGPU: 8-15" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_gather1 [label="All-Gather\nTP Attention\nInput: [batch=4, seq=5120, hidden=256]\nOutput: [batch=4, seq=5120, hidden=512]\nGPU: 0-15" fillcolor=lightblue shape=ellipse style=filled]
+	mlp_gate1 [label="MLP Gate\nInput: [batch=4, seq=5120, hidden=512]\nOutput: [batch=4, seq=5120, num_experts=16]\nGPU: 0-15" fillcolor=lightgreen shape=rectangle style=filled]
+	expert_route1 [label="Expert Routing\nTop-2 Selection\nGPU: 0-15" fillcolor=orange shape=parallelogram style="filled, dashed"]
+	expert1_1 [label="Expert 0-3\nEP=4\nInput: [batch=4, seq=1280, hidden=512]\nOutput: [batch=4, seq=1280, hidden=512]\nGPU: 0-3" fillcolor=lightgreen shape=rectangle style=filled]
+	expert1_2 [label="Expert 4-7\nEP=4\nInput: [batch=4, seq=1280, hidden=512]\nOutput: [batch=4, seq=1280, hidden=512]\nGPU: 4-7" fillcolor=lightgreen shape=rectangle style=filled]
+	expert1_3 [label="Expert 8-11\nEP=4\nInput: [batch=4, seq=1280, hidden=512]\nOutput: [batch=4, seq=1280, hidden=512]\nGPU: 8-11" fillcolor=lightgreen shape=rectangle style=filled]
+	expert1_4 [label="Expert 12-15\nEP=4\nInput: [batch=4, seq=1280, hidden=512]\nOutput: [batch=4, seq=1280, hidden=512]\nGPU: 12-15" fillcolor=lightgreen shape=rectangle style=filled]
+	expert_all2all1 [label="All-to-All\nExpert Aggregation\nInput: [batch=4, seq=1280, hidden=512]\nOutput: [batch=4, seq=5120, hidden=512]\nGPU: 0-15" fillcolor=lightblue shape=ellipse style=filled]
+	sp_gather_1 [label="SP GATHER\nInput: [batch=4, seq=5120, hidden=512]\nOutput: [batch=4, seq=10240, hidden=512]\nGPU: 0-15" fillcolor=lightyellow shape=parallelogram style=filled]
+	stage2_label [label="PIPELINE STAGE 2\nLayers 5-8\nGPUs: 16-31" fillcolor=purple fontsize=12 shape=box style=filled]
+	sp_split_2 [label="SP SPLIT\nGPU: 16-31" fillcolor=lightyellow shape=parallelogram style=filled]
+	layernorm2 [label="LayerNorm\nGPU: 16-31" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_qkv2_1 [label="Attention QKV Proj\nTP=2\nGPU: 16-23" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_qkv2_2 [label="Attention QKV Proj\nTP=2\nGPU: 24-31" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_compute2_1 [label="Attention Compute\nSP=2\nGPU: 16-23" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_compute2_2 [label="Attention Compute\nSP=2\nGPU: 24-31" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_gather2 [label="All-Gather\nTP Attention\nGPU: 16-31" fillcolor=lightblue shape=ellipse style=filled]
+	mlp_gate2 [label="MLP Gate\nGPU: 16-31" fillcolor=lightgreen shape=rectangle style=filled]
+	expert_route2 [label="Expert Routing\nTop-2 Selection\nGPU: 16-31" fillcolor=orange shape=parallelogram style="filled, dashed"]
+	expert2_1 [label="Expert 0-3\nEP=4\nGPU: 16-19" fillcolor=lightgreen shape=rectangle style=filled]
+	expert2_2 [label="Expert 4-7\nEP=4\nGPU: 20-23" fillcolor=lightgreen shape=rectangle style=filled]
+	expert2_3 [label="Expert 8-11\nEP=4\nGPU: 24-27" fillcolor=lightgreen shape=rectangle style=filled]
+	expert2_4 [label="Expert 12-15\nEP=4\nGPU: 28-31" fillcolor=lightgreen shape=rectangle style=filled]
+	expert_all2all2 [label="All-to-All\nExpert Aggregation\nGPU: 16-31" fillcolor=lightblue shape=ellipse style=filled]
+	sp_gather_2 [label="SP GATHER\nGPU: 16-31" fillcolor=lightyellow shape=parallelogram style=filled]
+	stage3_label [label="PIPELINE STAGE 3\nLayers 9-12\nGPUs: 32-47" fillcolor=purple fontsize=12 shape=box style=filled]
+	sp_split_3 [label="SP SPLIT\nGPU: 32-47" fillcolor=lightyellow shape=parallelogram style=filled]
+	layernorm3 [label="LayerNorm\nGPU: 32-47" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_qkv3_1 [label="Attention QKV Proj\nTP=2\nGPU: 32-39" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_qkv3_2 [label="Attention QKV Proj\nTP=2\nGPU: 40-47" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_compute3_1 [label="Attention Compute\nSP=2\nGPU: 32-39" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_compute3_2 [label="Attention Compute\nSP=2\nGPU: 40-47" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_gather3 [label="All-Gather\nTP Attention\nGPU: 32-47" fillcolor=lightblue shape=ellipse style=filled]
+	mlp_gate3 [label="MLP Gate\nGPU: 32-47" fillcolor=lightgreen shape=rectangle style=filled]
+	expert_route3 [label="Expert Routing\nTop-2 Selection\nGPU: 32-47" fillcolor=orange shape=parallelogram style="filled, dashed"]
+	expert3_1 [label="Expert 0-3\nEP=4\nGPU: 32-35" fillcolor=lightgreen shape=rectangle style=filled]
+	expert3_2 [label="Expert 4-7\nEP=4\nGPU: 36-39" fillcolor=lightgreen shape=rectangle style=filled]
+	expert3_3 [label="Expert 8-11\nEP=4\nGPU: 40-43" fillcolor=lightgreen shape=rectangle style=filled]
+	expert3_4 [label="Expert 12-15\nEP=4\nGPU: 44-47" fillcolor=lightgreen shape=rectangle style=filled]
+	expert_all2all3 [label="All-to-All\nExpert Aggregation\nGPU: 32-47" fillcolor=lightblue shape=ellipse style=filled]
+	sp_gather_3 [label="SP GATHER\nGPU: 32-47" fillcolor=lightyellow shape=parallelogram style=filled]
+	stage4_label [label="PIPELINE STAGE 4\nLayers 13-16\nGPUs: 48-63" fillcolor=purple fontsize=12 shape=box style=filled]
+	sp_split_4 [label="SP SPLIT\nGPU: 48-63" fillcolor=lightyellow shape=parallelogram style=filled]
+	layernorm4 [label="LayerNorm\nGPU: 48-63" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_qkv4_1 [label="Attention QKV Proj\nTP=2\nGPU: 48-55" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_qkv4_2 [label="Attention QKV Proj\nTP=2\nGPU: 56-63" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_compute4_1 [label="Attention Compute\nSP=2\nGPU: 48-55" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_compute4_2 [label="Attention Compute\nSP=2\nGPU: 56-63" fillcolor=lightgreen shape=rectangle style=filled]
+	attn_gather4 [label="All-Gather\nTP Attention\nGPU: 48-63" fillcolor=lightblue shape=ellipse style=filled]
+	mlp_gate4 [label="MLP Gate\nGPU: 48-63" fillcolor=lightgreen shape=rectangle style=filled]
+	expert_route4 [label="Expert Routing\nTop-2 Selection\nGPU: 48-63" fillcolor=orange shape=parallelogram style="filled, dashed"]
+	expert4_1 [label="Expert 0-3\nEP=4\nGPU: 48-51" fillcolor=lightgreen shape=rectangle style=filled]
+	expert4_2 [label="Expert 4-7\nEP=4\nGPU: 52-55" fillcolor=lightgreen shape=rectangle style=filled]
+	expert4_3 [label="Expert 8-11\nEP=4\nGPU: 56-59" fillcolor=lightgreen shape=rectangle style=filled]
+	expert4_4 [label="Expert 12-15\nEP=4\nGPU: 60-63" fillcolor=lightgreen shape=rectangle style=filled]
+	expert_all2all4 [label="All-to-All\nExpert Aggregation\nGPU: 48-63" fillcolor=lightblue shape=ellipse style=filled]
+	sp_gather_4 [label="SP GATHER\nGPU: 48-63" fillcolor=lightyellow shape=parallelogram style=filled]
+	final_output [label="FINAL OUTPUT\nInput: [batch=4, seq=10240, hidden=512]\nOutput: [batch=4, seq=10240, hidden=512]" fillcolor=white penwidth=3 shape=ellipse style=filled]
+	decode_start [label="DECODE PHASE\nPP=4, EP=4, TP=2, SP=1\n32 GPUs Total" fillcolor=red fontsize=14 shape=box style=filled]
+	decode_input [label="DECODE INPUT\nSingle Token\nInput: [batch=4, seq=1, hidden=512]\nOutput: [batch=4, seq=1, hidden=512]" fillcolor=pink penwidth=3 shape=ellipse style=filled]
+	decode_stage1 [label="DECODE STAGE 1\nLayers 1-4\nGPUs: 0-15" fillcolor=purple fontsize=12 shape=box style=filled]
+	decode_layernorm1 [label="LayerNorm\nInput: [batch=4, seq=1, hidden=512]\nOutput: [batch=4, seq=1, hidden=512]\nGPU: 0-15" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_attn_qkv1_1 [label="Attention QKV Proj\nTP=2\nGPU: 0-7" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_attn_qkv1_2 [label="Attention QKV Proj\nTP=2\nGPU: 8-15" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_attn1_1 [label="Attention Compute\nNo SP\nGPU: 0-7" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_attn1_2 [label="Attention Compute\nNo SP\nGPU: 8-15" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_attn_gather1 [label="All-Gather\nTP Attention\nGPU: 0-15" fillcolor=lightblue shape=ellipse style=filled]
+	decode_mlp_gate1 [label="MLP Gate\nGPU: 0-15" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_expert_route1 [label="Expert Routing\nTop-2 Selection\nGPU: 0-15" fillcolor=orange shape=parallelogram style="filled, dashed"]
+	decode_expert1_1 [label="Expert 0-3\nEP=4\nGPU: 0-3" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_expert1_2 [label="Expert 4-7\nEP=4\nGPU: 4-7" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_expert1_3 [label="Expert 8-11\nEP=4\nGPU: 8-11" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_expert1_4 [label="Expert 12-15\nEP=4\nGPU: 12-15" fillcolor=lightgreen shape=rectangle style=filled]
+	decode_expert_all2all1 [label="All-to-All\nExpert Aggregation\nGPU: 0-15" fillcolor=lightblue shape=ellipse style=filled]
+	decode_output1 [label="STAGE 1 OUTPUT\nGPU: 0-15" fillcolor=lightcyan shape=ellipse style=filled]
+	input -> sp_split_1
+	sp_split_1 -> layernorm1_1
+	layernorm1_1 -> attn_qkv1_1
+	layernorm1_1 -> attn_qkv1_2
+	attn_qkv1_1 -> attn_compute1_1
+	attn_qkv1_2 -> attn_compute1_2
+	attn_compute1_1 -> attn_gather1
+	attn_compute1_2 -> attn_gather1
+	attn_gather1 -> mlp_gate1
+	mlp_gate1 -> expert_route1
+	expert_route1 -> expert1_1 [style=dashed]
+	expert_route1 -> expert1_2 [style=dashed]
+	expert_route1 -> expert1_3 [style=dashed]
+	expert_route1 -> expert1_4 [style=dashed]
+	expert1_1 -> expert_all2all1
+	expert1_2 -> expert_all2all1
+	expert1_3 -> expert_all2all1
+	expert1_4 -> expert_all2all1
+	expert_all2all1 -> sp_gather_1
+	sp_gather_1 -> sp_split_2 [label="Pipeline\nStage 1→2" penwidth=2]
+	sp_gather_2 -> sp_split_3 [label="Pipeline\nStage 2→3" penwidth=2]
+	sp_gather_3 -> sp_split_4 [label="Pipeline\nStage 3→4" penwidth=2]
+	sp_gather_4 -> final_output
+	decode_input -> decode_layernorm1
+	decode_layernorm1 -> decode_attn_qkv1_1
+	decode_layernorm1 -> decode_attn_qkv1_2
+	decode_attn_qkv1_1 -> decode_attn1_1
+	decode_attn_qkv1_2 -> decode_attn1_2
+	decode_attn1_1 -> decode_attn_gather1
+	decode_attn1_2 -> decode_attn_gather1
+	decode_attn_gather1 -> decode_mlp_gate1
+	decode_mlp_gate1 -> decode_expert_route1
+	decode_expert_route1 -> decode_expert1_1 [style=dashed]
+	decode_expert_route1 -> decode_expert1_2 [style=dashed]
+	decode_expert_route1 -> decode_expert1_3 [style=dashed]
+	decode_expert_route1 -> decode_expert1_4 [style=dashed]
+	decode_expert1_1 -> decode_expert_all2all1
+	decode_expert1_2 -> decode_expert_all2all1
+	decode_expert1_3 -> decode_expert_all2all1
+	decode_expert1_4 -> decode_expert_all2all1
+	decode_expert_all2all1 -> decode_output1
+}
