@@ -1,0 +1,689 @@
+// 10B MoE Model TP×EP×PP=2×2×2 Parallelism DAG
+digraph {
+	nodesep=0.5 rankdir=TB ranksep=1.0 splines=ortho
+	node [fontsize=10 height=0.6 width=1.2]
+	edge [fontsize=9]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rect style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	subgraph cluster_prefill {
+		fillcolor=lightgray label="PREFILL PHASE" labeljust=l style="rounded,filled"
+		input_split [label="Input Split
+[batch=128, seq=10240, dim=512]→[batch=128, seq=10240, dim=256]
+GPU: ALL" fillcolor=lightyellow shape=parallelogram]
+		subgraph cluster_pp0 {
+			fillcolor=lightcyan label="Pipeline Stage 0 (Layers 0-7)" style="rounded,filled"
+			subgraph cluster_gpu0 {
+				fillcolor=lightcoral label="GPU 0 (TP-0, PP-0, EP-0)" style="rounded,filled"
+				gpu0_l0_attn_q [label="Attention Q Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_attn_k [label="Attention K Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_attn_v [label="Attention V Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_attn_score [label="Attention Score
+Input: [128,10240,16,16]×[128,10240,16,16]
+Output: [128,10240,16,16]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_attn_softmax [label="Attention Softmax
+Input: [128,10240,16,16]
+Output: [128,10240,16,16]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_attn_out [label="Attention Output
+Input: [128,10240,16,16]×[128,10240,16,16]
+Output: [128,10240,16,32]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_attn_proj [label="Attention Projection
+Input: [128,10240,16,32]
+Output: [128,10240,512]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_attn_ar [label="TP All-Reduce
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 0-1" fillcolor=lightblue shape=ellipse]
+				gpu0_l0_gate [label="MoE Gate
+Input: [128,10240,512]
+Output: [128,10240,16]
+GPU: 0" fillcolor=lightyellow shape=parallelogram style="dashed,filled"]
+				gpu0_l0_exp0_fc1 [label="Expert 0 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_exp0_act [label="Expert 0 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_exp0_fc2 [label="Expert 0 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_exp1_fc1 [label="Expert 1 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_exp1_act [label="Expert 1 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_exp1_fc2 [label="Expert 1 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_ep_a2a [label="EP All-to-All
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 0-1" fillcolor=lightblue shape=ellipse]
+				gpu0_l0_exp_agg [label="Expert Aggregation
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 0" fillcolor=lightyellow shape=parallelogram]
+				gpu0_l0_ln1 [label="Layer Norm 1
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				gpu0_l0_ln2 [label="Layer Norm 2
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 0" fillcolor=lightgreen shape=rect]
+			}
+			subgraph cluster_gpu1 {
+				fillcolor=lightsteelblue label="GPU 1 (TP-1, PP-0, EP-1)" style="rounded,filled"
+				gpu1_l0_attn_q [label="Attention Q Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_attn_k [label="Attention K Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_attn_v [label="Attention V Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_attn_score [label="Attention Score
+Input: [128,10240,16,16]×[128,10240,16,16]
+Output: [128,10240,16,16]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_attn_softmax [label="Attention Softmax
+Input: [128,10240,16,16]
+Output: [128,10240,16,16]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_attn_out [label="Attention Output
+Input: [128,10240,16,16]×[128,10240,16,16]
+Output: [128,10240,16,32]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_attn_proj [label="Attention Projection
+Input: [128,10240,16,32]
+Output: [128,10240,512]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_attn_ar [label="TP All-Reduce
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 0-1" fillcolor=lightblue shape=ellipse]
+				gpu1_l0_gate [label="MoE Gate
+Input: [128,10240,512]
+Output: [128,10240,16]
+GPU: 1" fillcolor=lightyellow shape=parallelogram style="dashed,filled"]
+				gpu1_l0_exp8_fc1 [label="Expert 8 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_exp8_act [label="Expert 8 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_exp8_fc2 [label="Expert 8 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_exp9_fc1 [label="Expert 9 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_exp9_act [label="Expert 9 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_exp9_fc2 [label="Expert 9 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_ep_a2a [label="EP All-to-All
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 0-1" fillcolor=lightblue shape=ellipse]
+				gpu1_l0_exp_agg [label="Expert Aggregation
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 1" fillcolor=lightyellow shape=parallelogram]
+				gpu1_l0_ln1 [label="Layer Norm 1
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				gpu1_l0_ln2 [label="Layer Norm 2
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 1" fillcolor=lightgreen shape=rect]
+			}
+		}
+		subgraph cluster_pp1 {
+			fillcolor=lightcyan label="Pipeline Stage 1 (Layers 8-15)" style="rounded,filled"
+			subgraph cluster_gpu2 {
+				fillcolor=lightseagreen label="GPU 2 (TP-0, PP-1, EP-0)" style="rounded,filled"
+				gpu2_l8_attn_q [label="Attention Q Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_attn_k [label="Attention K Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_attn_v [label="Attention V Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_attn_score [label="Attention Score
+Input: [128,10240,16,16]×[128,10240,16,16]
+Output: [128,10240,16,16]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_attn_softmax [label="Attention Softmax
+Input: [128,10240,16,16]
+Output: [128,10240,16,16]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_attn_out [label="Attention Output
+Input: [128,10240,16,16]×[128,10240,16,16]
+Output: [128,10240,16,32]
+GPU: 2" phases=lightgreen shape=rect]
+				gpu2_l8_attn_proj [label="Attention Projection
+Input: [128,10240,16,32]
+Output: [128,10240,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_attn_ar [label="TP All-Reduce
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 2-3" fillcolor=lightblue shape=ellipse]
+				gpu2_l8_gate [label="MoE Gate
+Input: [128,10240,512]
+Output: [128,10240,16]
+GPU: 2" fillcolor=lightyellow shape=parallelogram style="dashed,filled"]
+				gpu2_l8_exp0_fc1 [label="Expert 0 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_exp0_act [label="Expert 0 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_exp0_fc2 [label="Expert 0 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_ep_a2a [label="EP All-to-All
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 2-3" fillcolor=lightblue shape=ellipse]
+				gpu2_l8_exp_agg [label="Expert Aggregation
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 2" fillcolor=lightyellow shape=parallelogram]
+				gpu2_l8_ln1 [label="Layer Norm 1
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_l8_ln2 [label="Layer Norm 2
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				gpu2_output_proj [label="Output Projection
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+			}
+			subgraph cluster_gpu3 {
+				fillcolor=lightsalmon label="GPU 3 (TP-1, PP-1, EP-1)" style="rounded,filled"
+				gpu3_l8_attn_q [label="Attention Q Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_attn_k [label="Attention K Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_attn_v [label="Attention V Projection
+Input: [128,10240,16,32]
+Output: [128,10240,16,16]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_attn_score [label="Attention Score
+Input: [128,10240,16,16]×[128,10240,16,16]
+Output: [128,10240,16,16]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_attn_softmax [label="Attention Softmax
+Input: [128,10240,16,16]
+Output: [128,10240,16,16]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_attn_out [label="Attention Output
+Input: [128,10240,16,16]×[128,10240,16,16]
+Output: [128,10240,16,32]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_attn_proj [label="Attention Projection
+Input: [128,10240,16,32]
+Output: [128,10240,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_attn_ar [label="TP All-Reduce
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 2-3" fillcolor=lightblue shape=ellipse]
+				gpu3_l8_gate [label="MoE Gate
+Input: [128,10240,512]
+Output: [128,10240,16]
+GPU: 3" fillcolor=lightyellow shape=parallelogram style="dashed,filled"]
+				gpu3_l8_exp8_fc1 [label="Expert 8 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_exp8_act [label="Expert 8 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_exp8_fc2 [label="Expert 8 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_ep_a2a [label="EP All-to-All
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 2-3" fillcolor=lightblue shape=ellipse]
+				gpu3_l8_exp_agg [label="Expert Aggregation
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 3" fillcolor=lightyellow shape=parallelogram]
+				gpu3_l8_ln1 [label="Layer Norm 1
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_l8_ln2 [label="Layer Norm 2
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				gpu3_output_proj [label="Output Projection
+Input: [128,10240,512]
+Output: [128,10240,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				output_agg [label="Output Aggregation
+Input: [128,10240,512]×2
+Output: [128,10240,512]
+GPU: ALL" fillcolor=lightyellow shape=parallelogram]
+			}
+		}
+	}
+	subgraph cluster_decode {
+		fillcolor=lightgray label="DECODE PHASE" labeljust=l style="rounded,filled"
+		decode_input [label="Decode Input
+[batch=128, seq=1, dim=512]→[batch=128, seq=1, dim=256]
+GPU: ALL" fillcolor=lightyellow shape=parallelogram]
+		subgraph cluster_decode_pp0 {
+			fillcolor=lightcyan label="Decode Pipeline Stage 0 (Layers 0-7)" style="rounded,filled"
+			subgraph cluster_decode_gpu0 {
+				fillcolor=lightcoral label="GPU 0 Decode (TP-0, PP-0, EP-0)" style="rounded,filled"
+				dec_gpu0_l0_attn_q [label="Attention Q
+Input: [128,1,16,32]
+Output: [128,1,16,16]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_attn_k [label="Attention K
+Input: [128,1,16,32]
+Output: [128,1,16,16]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_attn_v [label="Attention V
+Input: [128,1,16,32]
+Output: [128,1,16,16]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_kv_cache [label="KV Cache Update
+Input: [128,1,16,16]
+Output: [128,seq+1,16,16]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_attn_score [label="Attention Score
+Input: [128,1,16,16]×[128,seq+1,16,16]
+Output: [128,1,16,seq+1]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_attn_softmax [label="Attention Softmax
+Input: [128,1,16,seq+1]
+Output: [128,1,16,seq+1]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_attn_out [label="Attention Output
+Input: [128,1,16,seq+1]×[128,seq+1,16,16]
+Output: [128,1,16,32]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_attn_proj [label="Attention Projection
+Input: [128,1,16,32]
+Output: [128,1,512]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_attn_ar [label="TP All-Reduce
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 0-1" fillcolor=lightblue shape=ellipse]
+				dec_gpu0_l0_gate [label="MoE Gate
+Input: [128,1,512]
+Output: [128,1,16]
+GPU: 0" fillcolor=lightyellow shape=parallelogram style="dashed,filled"]
+				dec_gpu0_l0_exp0_fc1 [label="Expert 0 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_exp0_act [label="Expert 0 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_exp0_fc2 [label="Expert 0 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_ep_a2a [label="EP All-to-All
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 0-1" fillcolor=lightblue shape=ellipse]
+				dec_gpu0_l0_exp_agg [label="Expert Aggregation
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 0" fillcolor=lightyellow shape=parallelogram]
+				dec_gpu0_l0_ln1 [label="Layer Norm 1
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 0" fillcolor=lightgreen shape=rect]
+				dec_gpu0_l0_ln2 [label="Layer Norm 2
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 0" fillcolor=lightgreen shape=rect]
+			}
+			subgraph cluster_decode_gpu1 {
+				fillcolor=lightsteelblue label="GPU 1 Decode (TP-1, PP-0, EP-1)" style="rounded,filled"
+				dec_gpu1_l0_attn_q [label="Attention Q
+Input: [128,1,16,32]
+Output: [128,1,16,16]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_attn_k [label="Attention K
+Input: [128,1,16,32]
+Output: [128,1,16,16]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_attn_v [label="Attention V
+Input: [128,1,16,32]
+Output: [128,1,16,16]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_kv_cache [label="KV Cache Update
+Input: [128,1,16,16]
+Output: [128,seq+1,16,16]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_attn_score [label="Attention Score
+Input: [128,1,16,16]×[128,seq+1,16,16]
+Output: [128,1,16,seq+1]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_attn_softmax [label="Attention Softmax
+Input: [128,1,16,seq+1]
+Output: [128,1,16,seq+1]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_attn_out [label="Attention Output
+Input: [128,1,16,seq+1]×[128,seq+1,16,16]
+Output: [128,1,16,32]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_attn_proj [label="Attention Projection
+Input: [128,1,16,32]
+Output: [128,1,512]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_attn_ar [label="TP All-Reduce
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 0-1" fillcolor=lightblue shape=ellipse]
+				dec_gpu1_l0_gate [label="MoE Gate
+Input: [128,1,512]
+Output: [128,1,16]
+GPU: 1" fillcolor=lightyellow shape=parallelogram style="dashed,filled"]
+				dec_gpu1_l0_exp8_fc1 [label="Expert 8 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_exp8_act [label="Expert 8 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_exp8_fc2 [label="Expert 8 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_ep_a2a [label="EP All-to-All
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 0-1" fillcolor=lightblue shape=ellipse]
+				dec_gpu1_l0_exp_agg [label="Expert Aggregation
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 1" fillcolor=lightyellow shape=parallelogram]
+				dec_gpu1_l0_ln1 [label="Layer Norm 1
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 1" fillcolor=lightgreen shape=rect]
+				dec_gpu1_l0_ln2 [label="Layer Norm 2
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 1" fillcolor=lightgreen shape=rect]
+			}
+		}
+		subgraph cluster_decode_pp1 {
+			fillcolor=lightcyan label="Decode Pipeline Stage 1 (Layers 8-15)" style="rounded,filled"
+			subgraph cluster_decode_gpu2 {
+				fillcolor=lightseagreen label="GPU 2 Decode (TP-0, PP-1, EP-0)" style="rounded,filled"
+				dec_gpu2_l8_attn_q [label="Attention Q
+Input: [128,1,16,32]
+Output: [128,1,16,16]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_kv_cache [label="KV Cache Update
+Input: [128,1,16,16]
+Output: [128,seq+1,16,16]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_attn_score [label="Attention Score
+Input: [128,1,16,16]×[128,seq+1,16,16]
+Output: [128,1,16,seq+1]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_attn_softmax [label="Attention Softmax
+Input: [128,1,16,seq+1]
+Output: [128,1,16,seq+1]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_attn_out [label="Attention Output
+Input: [128,1,16,seq+1]×[128,seq+1,16,16]
+Output: [128,1,16,32]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_attn_proj [label="Attention Projection
+Input: [128,1,16,32]
+Output: [128,1,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_attn_ar [label="TP All-Reduce
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 2-3" fillcolor=lightblue shape=ellipse]
+				dec_gpu2_l8_gate [label="MoE Gate
+Input: [128,1,512]
+Output: [128,1,16]
+GPU: 2" fillcolor=lightyellow shape=parallelogram style="dashed,filled"]
+				dec_gpu2_l8_exp0_fc1 [label="Expert 0 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_exp0_act [label="Expert 0 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_exp0_fc2 [label="Expert 0 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_ep_a2a [label="EP All-to-All
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 2-3" fillcolor=lightblue shape=ellipse]
+				dec_gpu2_l8_exp_agg [label="Expert Aggregation
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 2" fillcolor=lightyellow shape=parallelogram]
+				dec_gpu2_l8_ln1 [label="Layer Norm 1
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_l8_ln2 [label="Layer Norm 2
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+				dec_gpu2_output [label="Decode Output
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 2" fillcolor=lightgreen shape=rect]
+			}
+			subgraph cluster_decode_gpu3 {
+				fillcolor=lightsalmon label="GPU 3 Decode (TP-1, PP-1, EP-1)" style="rounded,filled"
+				dec_gpu3_l8_attn_q [label="Attention Q
+Input: [128,1,16,32]
+Output: [128,1,16,16]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_kv_cache [label="KV Cache Update
+Input: [128,1,16,16]
+Output: [128,seq+1,16,16]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_attn_score [label="Attention Score
+Input: [128,1,16,16]×[128,seq+1,16,16]
+Output: [128,1,16,seq+1]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_attn_softmax [label="Attention Softmax
+Input: [128,1,16,seq+1]
+Output: [128,1,16,seq+1]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_attn_out [label="Attention Output
+Input: [128,1,16,seq+1]×[128,seq+1,16,16]
+Output: [128,1,16,32]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_attn_proj [label="Attention Projection
+Input: [128,1,16,32]
+Output: [128,1,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_attn_ar [label="TP All-Reduce
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 2-3" fillcolor=lightblue shape=ellipse]
+				dec_gpu3_l8_gate [label="MoE Gate
+Input: [128,1,512]
+Output: [128,1,16]
+GPU: 3" fillcolor=lightyellow shape=parallelogram style="dashed,filled"]
+				dec_gpu3_l8_exp8_fc1 [label="Expert 8 FC1
+Input: [tokens,512]
+Output: [tokens,1024]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_exp8_act [label="Expert 8 Activation
+Input: [tokens,1024]
+Output: [tokens,1024]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_exp8_fc2 [label="Expert 8 FC2
+Input: [tokens,1024]
+Output: [tokens,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_ep_a2a [label="EP All-to-All
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 2-3" fillcolor=lightblue shape=ellipse]
+				dec_gpu3_l8_exp_agg [label="Expert Aggregation
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 3" fillcolor=lightyellow shape=parallelogram]
+				dec_gpu3_l8_ln1 [label="Layer Norm 1
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_l8_ln2 [label="Layer Norm 2
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				dec_gpu3_output [label="Decode Output
+Input: [128,1,512]
+Output: [128,1,512]
+GPU: 3" fillcolor=lightgreen shape=rect]
+				decode_output_agg [label="Decode Output Agg
+Input: [128,1,512]×2
+Output: [128,1,512]
+GPU: ALL" fillcolor=lightyellow shape=parallelogram]
+			}
+		}
+	}
+	input_split -> gpu0_l0_attn_q
+	input_split -> gpu0_l0_attn_k
+	input_split -> gpu0_l0_attn_v
+	input_split -> gpu1_l0_attn_q
+	input_split -> gpu1_l0_attn_k
+	input_split -> gpu1_l0_attn_v
+	gpu0_l0_attn_q -> gpu0_l0_attn_score
+	gpu0_l0_attn_k -> gpu0_l0_attn_score
+	gpu0_l0_attn_v -> gpu0_l0_attn_out
+	gpu0_l0_attn_score -> gpu0_l0_attn_softmax
+	gpu0_l0_attn_softmax -> gpu0_l0_attn_out
+	gpu0_l0_attn_out -> gpu0_l0_attn_proj
+	gpu0_l0_attn_proj -> gpu0_l0_attn_ar
+	gpu1_l0_attn_q -> gpu1_l0_attn_score
+	gpu1_l0_attn_k -> gpu1_l0_attn_score
+	gpu1_l0_attn_v -> gpu1_l0_attn_out
+	gpu1_l0_attn_score -> gpu1_l0_attn_softmax
+	gpu1_l0_attn_softmax -> gpu1_l0_attn_out
+	gpu1_l0_attn_out -> gpu1_l0_attn_proj
+	gpu1_l0_attn_proj -> gpu1_l0_attn_ar
+	gpu0_l0_attn_ar -> gpu0_l0_gate
+	gpu0_l0_attn_ar -> gpu0_l0_ln1
+	gpu1_l0_attn_ar -> gpu1_l0_gate
+	gpu1_l0_attn_ar -> gpu1_l0_ln1
+	gpu0_l0_gate -> gpu0_l0_exp0_fc1 [style=dashed]
+	gpu0_l0_gate -> gpu0_l0_exp1_fc1 [style=dashed]
+	gpu0_l0_exp0_fc1 -> gpu0_l0_exp0_act
+	gpu0_l0_exp0_act -> gpu0_l0_exp0_fc2
+	gpu0_l0_exp1_fc1 -> gpu0_l0_exp1_act
+	gpu0_l0_exp1_act -> gpu0_l0_exp1_fc2
+	gpu0_l0_exp0_fc2 -> gpu0_l0_ep_a2a
+	gpu0_l0_exp1_fc2 -> gpu0_l0_ep_a2a
+	gpu0_l0_ep_a2a -> gpu0_l0_exp_agg
+	gpu0_l0_exp_agg -> gpu0_l0_ln2
+	gpu0_l0_ln2 -> gpu2_l8_attn_q
+	gpu0_l0_ln2 -> gpu2_l8_attn_k
+	gpu0_l0_ln2 -> gpu2_l8_attn_v
+	gpu1_l0_ln2 -> gpu3_l8_attn_q
+	gpu1_l0_ln2 -> gpu3_l8_attn_k
+	gpu1_l0_ln2 -> gpu3_l8_attn_v
+	gpu2_output_proj -> output_agg
+	gpu3_output_proj -> output_agg
+	decode_input -> dec_gpu0_l0_attn_q
+	decode_input -> dec_gpu0_l0_attn_k
+	decode_input -> dec_gpu0_l0_attn_v
+	decode_input -> dec_gpu1_l0_attn_q
+	decode_input -> dec_gpu1_l0_attn_k
+	decode_input -> dec_gpu1_l0_attn_v
+	dec_gpu0_l0_attn_q -> dec_gpu0_l0_attn_score
+	dec_gpu0_l0_attn_k -> dec_gpu0_l0_kv_cache
+	dec_gpu0_l0_attn_v -> dec_gpu0_l0_kv_cache
+	dec_gpu0_l0_kv_cache -> dec_gpu0_l0_attn_score
+	dec_gpu0_l0_attn_score -> dec_gpu0_l0_attn_softmax
+	dec_gpu0_l0_attn_softmax -> dec_gpu0_l0_attn_out
+	dec_gpu0_l0_attn_out -> dec_gpu0_l0_attn_proj
+	dec_gpu0_l0_attn_proj -> dec_gpu0_l0_attn_ar
+	dec_gpu0_l0_attn_ar -> dec_gpu0_l0_gate
+	dec_gpu0_l0_attn_ar -> dec_gpu0_l0_ln1
+	dec_gpu0_l0_gate -> dec_gpu0_l0_exp0_fc1 [style=dashed]
+	dec_gpu0_l0_exp0_fc1 -> dec_gpu0_l0_exp0_act
+	dec_gpu0_l0_exp0_act -> dec_gpu0_l0_exp0_fc2
+	dec_gpu0_l0_exp0_fc2 -> dec_gpu0_l0_ep_a2a
+	dec_gpu0_l0_ep_a2a -> dec_gpu0_l0_exp_agg
+	dec_gpu0_l0_exp_agg -> dec_gpu0_l0_ln2
+	dec_gpu0_l0_ln2 -> dec_gpu2_l8_attn_q
+	dec_gpu0_l0_ln2 -> dec_gpu2_l8_attn_k
+	dec_gpu0_l0_ln2 -> dec_gpu2_l8_attn_v
+	dec_gpu1_l0_ln2 -> dec_gpu3_l8_attn_q
+	dec_gpu1_l0_ln2 -> dec_gpu3_l8_attn_k
+	dec_gpu1_l0_ln2 -> dec_gpu3_l8_attn_v
+	dec_gpu2_output -> decode_output_agg
+	dec_gpu3_output -> decode_output_agg
+}

@@ -1,0 +1,360 @@
+digraph MoE_Model_DAG {
+    rankdir=TB;
+    node [shape=rectangle, style=filled, fillcolor=lightblue];
+    edge [fontsize=10];
+    
+    // Graph styling
+    graph [bgcolor=white, fontname="Arial", fontsize=12];
+    node [fontname="Arial", fontsize=10, height=0.6, width=1.2];
+    edge [fontname="Arial", fontsize=9];
+    
+    // Input nodes
+    input [label="Input\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]", shape=ellipse, fillcolor=lightgreen];
+    input_split [label="Input Split (TP)\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=256]", shape=parallelogram, fillcolor=yellow];
+    
+    // Decode input
+    decode_input [label="Decode Input\nInput: [batch_size=128, seq_len=1, hidden=512]\nOutput: [batch_size=128, seq_len=1, hidden=512]", shape=ellipse, fillcolor=lightgreen];
+    
+    // Pipeline Stage 0: Layers 0-7 on GPUs 0,1
+    subgraph cluster_pipeline0 {
+        label="Pipeline Stage 0 (Layers 0-7)";
+        style=filled;
+        fillcolor=lightgrey;
+        
+        // GPU 0 - Layer 0-7, Experts 0-7, TP group 0
+        subgraph cluster_gpu0 {
+            label="GPU 0 (TP0, PP0, EP0)";
+            style=filled;
+            fillcolor=lightcyan;
+            
+            // Layer 0
+            gpu0_l0_ln1 [label="LayerNorm1\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu0_l0_attn_q [label="Attention Q Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu0_l0_attn_k [label="Attention K Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu0_l0_attn_v [label="Attention V Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu0_l0_attn_score [label="Attention Score\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu0_l0_attn_softmax [label="Attention Softmax\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu0_l0_attn_out [label="Attention Out Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu0_l0_attn_ar [label="TP All-Reduce\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=orange];
+            gpu0_l0_ln2 [label="LayerNorm2\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            
+            // MoE for layer 0
+            gpu0_l0_gate [label="Gate Router\nInput: [128, 256]\nOutput: [128, 8]", fillcolor=lightblue];
+            gpu0_l0_expert0 [label="Expert 0 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu0_l0_expert1 [label="Expert 1 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu0_l0_expert2 [label="Expert 2 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu0_l0_expert3 [label="Expert 3 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu0_l0_expert_agg [label="Expert Agg\nInput: [128, 1024]\nOutput: [128, 256]", shape=parallelogram, fillcolor=yellow];
+            
+            // Pipeline send to stage 1
+            gpu0_send [label="Send to PP1\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=purple];
+        }
+        
+        // GPU 1 - Layer 0-7, Experts 8-15, TP group 1
+        subgraph cluster_gpu1 {
+            label="GPU 1 (TP1, PP0, EP1)";
+            style=filled;
+            fillcolor=lightcyan;
+            
+            // Layer 0
+            gpu1_l0_ln1 [label="LayerNorm1\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu1_l0_attn_q [label="Attention Q Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu1_l0_attn_k [label="Attention K Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu1_l0_attn_v [label="Attention V Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu1_l0_attn_score [label="Attention Score\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu1_l0_attn_softmax [label="Attention Softmax\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu1_l0_attn_out [label="Attention Out Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu1_l0_attn_ar [label="TP All-Reduce\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=orange];
+            gpu1_l0_ln2 [label="LayerNorm2\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            
+            // MoE for layer 0
+            gpu1_l0_gate [label="Gate Router\nInput: [128, 256]\nOutput: [128, 8]", fillcolor=lightblue];
+            gpu1_l0_expert8 [label="Expert 8 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu1_l0_expert9 [label="Expert 9 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu1_l0_expert10 [label="Expert 10 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu1_l0_expert11 [label="Expert 11 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu1_l0_expert_agg [label="Expert Agg\nInput: [128, 1024]\nOutput: [128, 256]", shape=parallelogram, fillcolor=yellow];
+            
+            // EP All-to-All communication
+            gpu1_ep_a2a_send [label="EP All-to-All Send\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=red];
+            gpu1_ep_a2a_recv [label="EP All-to-All Recv\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=red];
+            
+            // Pipeline send to stage 1
+            gpu1_send [label="Send to PP1\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=purple];
+        }
+    }
+    
+    // Pipeline Stage 1: Layers 8-15 on GPUs 2,3
+    subgraph cluster_pipeline1 {
+        label="Pipeline Stage 1 (Layers 8-15)";
+        style=filled;
+        fillcolor=lightgrey;
+        
+        // GPU 2 - Layer 8-15, Experts 0-7, TP group 0
+        subgraph cluster_gpu2 {
+            label="GPU 2 (TP0, PP1, EP0)";
+            style=filled;
+            fillcolor=lightcyan;
+            
+            // Layer 8 - receive from pipeline stage 0
+            gpu2_recv [label="Recv from PP0\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=purple];
+            gpu2_l8_ln1 [label="LayerNorm1\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu2_l8_attn_q [label="Attention Q Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu2_l8_attn_k [label="Attention K Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu2_l8_attn_v [label="Attention V Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu2_l8_attn_score [label="Attention Score\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu2_l8_attn_softmax [label="Attention Softmax\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu2_l8_attn_out [label="Attention Out Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu2_l8_attn_ar [label="TP All-Reduce\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=orange];
+            gpu2_l8_ln2 [label="LayerNorm2\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            
+            // MoE for layer 8
+            gpu2_l8_gate [label="Gate Router\nInput: [128, 256]\nOutput: [128, 8]", fillcolor=lightblue];
+            gpu2_l8_expert0 [label="Expert 0 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu2_l8_expert1 [label="Expert 1 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu2_l8_expert2 [label="Expert 2 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu2_l8_expert3 [label="Expert 3 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu2_l8_expert_agg [label="Expert Agg\nInput: [128, 1024]\nOutput: [128, 256]", shape=parallelogram, fillcolor=yellow];
+            
+            // Output projection
+            gpu2_output_proj [label="Output Projection\nInput: [128, 256]\nOutput: [128, 512]", fillcolor=lightblue];
+        }
+        
+        // GPU 3 - Layer 8-15, Experts 8-15, TP group 1
+        subgraph cluster_gpu3 {
+            label="GPU 3 (TP1, PP1, EP1)";
+            style=filled;
+            fillcolor=lightcyan;
+            
+            // Layer 8 - receive from pipeline stage 0
+            gpu3_recv [label="Recv from PP0\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=purple];
+            gpu3_l8_ln1 [label="LayerNorm1\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu3_l8_attn_q [label="Attention Q Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu3_l8_attn_k [label="Attention K Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu3_l8_attn_v [label="Attention V Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu3_l8_attn_score [label="Attention Score\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu3_l8_attn_softmax [label="Attention Softmax\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu3_l8_attn_out [label="Attention Out Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            gpu3_l8_attn_ar [label="TP All-Reduce\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=orange];
+            gpu3_l8_ln2 [label="LayerNorm2\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+            
+            // MoE for layer 8
+            gpu3_l8_gate [label="Gate Router\nInput: [128, 256]\nOutput: [128, 8]", fillcolor=lightblue];
+            gpu3_l8_expert8 [label="Expert 8 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu3_l8_expert9 [label="Expert 9 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu3_l8_expert10 [label="Expert 10 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu3_l8_expert11 [label="Expert 11 FC\nInput: [128, 256]\nOutput: [128, 1024]", fillcolor=lightblue];
+            gpu3_l8_expert_agg [label="Expert Agg\nInput: [128, 1024]\nOutput: [128, 256]", shape=parallelogram, fillcolor=yellow];
+            
+            // EP All-to-All communication
+            gpu3_ep_a2a_send [label="EP All-to-All Send\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=red];
+            gpu3_ep_a2a_recv [label="EP All-to-All Recv\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=red];
+            
+            // Output projection
+            gpu3_output_proj [label="Output Projection\nInput: [128, 256]\nOutput: [128, 512]", fillcolor=lightblue];
+        }
+    }
+    
+    // Output aggregation
+    output_agg [label="Output Aggregation\nInput: [128, 512]\nOutput: [128, 512]", shape=parallelogram, fillcolor=yellow];
+    final_output [label="Final Output\nInput: [128, 512]\nOutput: [128, 512]", shape=ellipse, fillcolor=lightgreen];
+    
+    // ===== PREFILL PHASE CONNECTIONS =====
+    // Input flow
+    input -> input_split;
+    input_split -> gpu0_l0_ln1;
+    input_split -> gpu1_l0_ln1;
+    input_split -> gpu2_recv;
+    input_split -> gpu3_recv;
+    
+    // GPU 0 - Layer 0 attention
+    gpu0_l0_ln1 -> gpu0_l0_attn_q;
+    gpu0_l0_ln1 -> gpu0_l0_attn_k;
+    gpu0_l0_ln1 -> gpu0_l0_attn_v;
+    gpu0_l0_attn_q -> gpu0_l0_attn_score;
+    gpu0_l0_attn_k -> gpu0_l0_attn_score;
+    gpu0_l0_attn_v -> gpu0_l0_attn_softmax;
+    gpu0_l0_attn_score -> gpu0_l0_attn_softmax;
+    gpu0_l0_attn_softmax -> gpu0_l0_attn_out;
+    gpu0_l0_attn_out -> gpu0_l0_attn_ar;
+    gpu0_l0_attn_ar -> gpu0_l0_ln2;
+    
+    // GPU 1 - Layer 0 attention
+    gpu1_l0_ln1 -> gpu1_l0_attn_q;
+    gpu1_l0_ln1 -> gpu1_l0_attn_k;
+    gpu1_l0_ln1 -> gpu1_l0_attn_v;
+    gpu1_l0_attn_q -> gpu1_l0_attn_score;
+    gpu1_l0_attn_k -> gpu1_l0_attn_score;
+    gpu1_l0_attn_v -> gpu1_l0_attn_softmax;
+    gpu1_l0_attn_score -> gpu1_l0_attn_softmax;
+    gpu1_l0_attn_softmax -> gpu1_l0_attn_out;
+    gpu1_l0_attn_out -> gpu1_l0_attn_ar;
+    gpu1_l0_attn_ar -> gpu1_l0_ln2;
+    
+    // GPU 0 - Layer 0 MoE
+    gpu0_l0_ln2 -> gpu0_l0_gate;
+    gpu0_l0_ln2 -> gpu0_l0_expert0;
+    gpu0_l0_ln2 -> gpu0_l0_expert1;
+    gpu0_l0_ln2 -> gpu0_l0_expert2;
+    gpu0_l0_ln2 -> gpu0_l0_expert3;
+    gpu0_l0_expert0 -> gpu0_l0_expert_agg;
+    gpu0_l0_expert1 -> gpu0_l0_expert_agg;
+    gpu0_l0_expert2 -> gpu0_l0_expert_agg;
+    gpu0_l0_expert3 -> gpu0_l0_expert_agg;
+    gpu0_l0_gate -> gpu0_l0_expert_agg [style=dashed, label="routing"];
+    
+    // GPU 1 - Layer 0 MoE with EP communication
+    gpu1_l0_ln2 -> gpu1_l0_gate;
+    gpu1_l0_ln2 -> gpu1_ep_a2a_send;
+    gpu1_ep_a2a_send -> gpu1_ep_a2a_recv;
+    gpu1_ep_a2a_recv -> gpu1_l0_expert8;
+    gpu1_ep_a2a_recv -> gpu1_l0_expert9;
+    gpu1_ep_a2a_recv -> gpu1_l0_expert10;
+    gpu1_ep_a2a_recv -> gpu1_l0_expert11;
+    gpu1_l0_expert8 -> gpu1_l0_expert_agg;
+    gpu1_l0_expert9 -> gpu1_l0_expert_agg;
+    gpu1_l0_expert10 -> gpu1_l0_expert_agg;
+    gpu1_l0_expert11 -> gpu1_l0_expert_agg;
+    gpu1_l0_gate -> gpu1_l0_expert_agg [style=dashed, label="routing"];
+    
+    // Pipeline communication to stage 1
+    gpu0_l0_expert_agg -> gpu0_send;
+    gpu1_l0_expert_agg -> gpu1_send;
+    gpu0_send -> gpu2_recv;
+    gpu1_send -> gpu3_recv;
+    
+    // GPU 2 - Layer 8 (complete pipeline stage 1)
+    gpu2_recv -> gpu2_l8_ln1;
+    gpu2_l8_ln1 -> gpu2_l8_attn_q;
+    gpu2_l8_ln1 -> gpu2_l8_attn_k;
+    gpu2_l8_ln1 -> gpu2_l8_attn_v;
+    gpu2_l8_attn_q -> gpu2_l8_attn_score;
+    gpu2_l8_attn_k -> gpu2_l8_attn_score;
+    gpu2_l8_attn_v -> gpu2_l8_attn_softmax;
+    gpu2_l8_attn_score -> gpu2_l8_attn_softmax;
+    gpu2_l8_attn_softmax -> gpu2_l8_attn_out;
+    gpu2_l8_attn_out -> gpu2_l8_attn_ar;
+    gpu2_l8_attn_ar -> gpu2_l8_ln2;
+    
+    // GPU 2 - Layer 8 MoE
+    gpu2_l8_ln2 -> gpu2_l8_gate;
+    gpu2_l8_ln2 -> gpu2_l8_expert0;
+    gpu2_l8_ln2 -> gpu2_l8_expert1;
+    gpu2_l8_ln2 -> gpu2_l8_expert2;
+    gpu2_l8_ln2 -> gpu2_l8_expert3;
+    gpu2_l8_expert0 -> gpu2_l8_expert_agg;
+    gpu2_l8_expert1 -> gpu2_l8_expert_agg;
+    gpu2_l8_expert2 -> gpu2_l8_expert_agg;
+    gpu2_l8_expert3 -> gpu2_l8_expert_agg;
+    gpu2_l8_gate -> gpu2_l8_expert_agg [style=dashed, label="routing"];
+    gpu2_l8_expert_agg -> gpu2_output_proj;
+    
+    // GPU 3 - Layer 8 (complete pipeline stage 1)
+    gpu3_recv -> gpu3_l8_ln1;
+    gpu3_l8_ln1 -> gpu3_l8_attn_q;
+    gpu3_l8_ln1 -> gpu3_l8_attn_k;
+    gpu3_l8_ln1 -> gpu3_l8_attn_v;
+    gpu3_l8_attn_q -> gpu3_l8_attn_score;
+    gpu3_l8_attn_k -> gpu3_l8_attn_score;
+    gpu3_l8_attn_v -> gpu3_l8_attn_softmax;
+    gpu3_l8_attn_score -> gpu3_l8_attn_softmax;
+    gpu3_l8_attn_softmax -> gpu3_l8_attn_out;
+    gpu3_l8_attn_out -> gpu3_l8_attn_ar;
+    gpu3_l8_attn_ar -> gpu3_l8_ln2;
+    
+    // GPU 3 - Layer 8 MoE with EP communication
+    gpu3_l8_ln2 -> gpu3_l8_gate;
+    gpu3_l8_ln2 -> gpu3_ep_a2a_send;
+    gpu3_ep_a2a_send -> gpu3_ep_a2a_recv;
+    gpu3_ep_a2a_recv -> gpu3_l8_expert8;
+    gpu3_ep_a2a_recv -> gpu3_l8_expert9;
+    gpu3_ep_a2a_recv -> gpu3_l8_expert10;
+    gpu3_ep_a2a_recv -> gpu3_l8_expert11;
+    gpu3_l8_expert8 -> gpu3_l8_expert_agg;
+    gpu3_l8_expert9 -> gpu3_l8_expert_agg;
+    gpu3_l8_expert10 -> gpu3_l8_expert_agg;
+    gpu3_l8_expert11 -> gpu3_l8_expert_agg;
+    gpu3_l8_gate -> gpu3_l8_expert_agg [style=dashed, label="routing"];
+    gpu3_l8_expert_agg -> gpu3_output_proj;
+    
+    // Output aggregation
+    gpu2_output_proj -> output_agg;
+    gpu3_output_proj -> output_agg;
+    output_agg -> final_output;
+    
+    // ===== DECODE PHASE CONNECTIONS =====
+    // Decode nodes (simplified for single token processing)
+    subgraph cluster_decode {
+        label="Decode Phase";
+        style=filled;
+        fillcolor=lightgrey;
+        
+        // Decode GPU 0
+        dec_gpu0_l0_ln1 [label="Decode LayerNorm1\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+        dec_gpu0_l0_attn_q [label="Decode Attn Q Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+        dec_gpu0_l0_attn_ar [label="Decode TP All-Reduce\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=orange];
+        dec_gpu0_l0_ln2 [label="Decode LayerNorm2\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+        dec_gpu0_send [label="Decode Send to PP1\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=purple];
+        
+        // Decode GPU 1
+        dec_gpu1_l0_ln1 [label="Decode LayerNorm1\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+        dec_gpu1_l0_gate [label="Decode Gate Router\nInput: [128, 256]\nOutput: [128, 8]", fillcolor=lightblue];
+        dec_gpu1_ep_a2a_send [label="Decode EP A2A Send\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=red];
+        dec_gpu1_ep_a2a_recv [label="Decode EP A2A Recv\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=red];
+        dec_gpu1_send [label="Decode Send to PP1\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=purple];
+        
+        // Decode GPU 2
+        dec_gpu2_recv [label="Decode Recv from PP0\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=purple];
+        dec_gpu2_l8_ln1 [label="Decode LayerNorm1\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+        dec_gpu2_l8_attn_q [label="Decode Attn Q Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+        dec_gpu2_l8_attn_ar [label="Decode TP All-Reduce\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=orange];
+        dec_gpu2_output [label="Decode Output Proj\nInput: [128, 256]\nOutput: [128, 512]", fillcolor=lightblue];
+        
+        // Decode GPU 3
+        dec_gpu3_recv [label="Decode Recv from PP0\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=purple];
+        dec_gpu3_l8_ln1 [label="Decode LayerNorm1\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+        dec_gpu3_l8_attn_q [label="Decode Attn Q Proj\nInput: [128, 256]\nOutput: [128, 256]", fillcolor=lightblue];
+        dec_gpu3_l8_attn_ar [label="Decode TP All-Reduce\nInput: [128, 256]\nOutput: [128, 256]", shape=ellipse, fillcolor=orange];
+        dec_gpu3_output [label="Decode Output Proj\nInput: [128, 256]\nOutput: [128, 512]", fillcolor=lightblue];
+        
+        // Decode output aggregation
+        decode_output_agg [label="Decode Output Agg\nInput: [128, 512]\nOutput: [128, 512]", shape=parallelogram, fillcolor=yellow];
+    }
+    
+    // Decode connections
+    decode_input -> dec_gpu0_l0_ln1;
+    decode_input -> dec_gpu1_l0_ln1;
+    decode_input -> dec_gpu2_recv;
+    decode_input -> dec_gpu3_recv;
+    
+    dec_gpu0_l0_ln1 -> dec_gpu0_l0_attn_q;
+    dec_gpu0_l0_attn_q -> dec_gpu0_l0_attn_ar;
+    dec_gpu0_l0_attn_ar -> dec_gpu0_l0_ln2;
+    dec_gpu0_l0_ln2 -> dec_gpu0_send;
+    
+    dec_gpu1_l0_ln1 -> dec_gpu1_l0_gate;
+    dec_gpu1_l0_gate -> dec_gpu1_ep_a2a_send;  // Fixed: gate needs to control routing
+    dec_gpu1_l0_ln1 -> dec_gpu1_ep_a2a_send;
+    dec_gpu1_ep_a2a_send -> dec_gpu1_ep_a2a_recv;
+    dec_gpu1_ep_a2a_recv -> dec_gpu1_send;
+    
+    dec_gpu0_send -> dec_gpu2_recv;
+    dec_gpu1_send -> dec_gpu3_recv;
+    
+    dec_gpu2_recv -> dec_gpu2_l8_ln1;
+    dec_gpu2_l8_ln1 -> dec_gpu2_l8_attn_q;
+    dec_gpu2_l8_attn_q -> dec_gpu2_l8_attn_ar;
+    dec_gpu2_l8_attn_ar -> dec_gpu2_output;
+    
+    dec_gpu3_recv -> dec_gpu3_l8_ln1;
+    dec_gpu3_l8_ln1 -> dec_gpu3_l8_attn_q;
+    dec_gpu3_l8_attn_q -> dec_gpu3_l8_attn_ar;
+    dec_gpu3_l8_attn_ar -> dec_gpu3_output;
+    
+    dec_gpu2_output -> decode_output_agg;
+    dec_gpu3_output -> decode_output_agg;
+    
+    // Add missing output connections
+    decode_output_agg -> final_output;  // Connect decode output to final output
+    input -> decode_input;  // Connect input to decode input for completeness
+}
