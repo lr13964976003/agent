@@ -7,7 +7,7 @@ RESOURCES
 
 ---
 
-Provide input files containing hardware environment conditions, model configurations, and basic performance requirements. <<<提供包含硬件环境和模型参数以及性能需求的输入文件>>>
+Provide input file located at {} containing hardware environment conditions, model configurations, and basic performance requirements. <<<提供包含硬件环境和模型参数以及性能需求的输入文件>>>
 
 You have been provided with a supplementary knowledge located at {knowledge_path}. <<<提供知识路径>>>
 
