@@ -99,7 +99,7 @@ def main():
         prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"])
         prompts.append(prompt)
         tool = variant[k]["tools"]
-        tools.append(tools)
+        tools.append(tool)
         i = i + 1
     agents.append(build_method("openai/Kimi-K2",tools[0]))
     agents.append(build_check_method("openai/Kimi-K2",tools[1]))
