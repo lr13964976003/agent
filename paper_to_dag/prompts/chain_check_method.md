@@ -7,7 +7,7 @@ RESOURCES
 
 ---
 
-You have been provided with the deployment method file provided by the previous agent. <<<提供部署方案文件>>>
+You have been provided with the parallel strategy deployment method file provided by the previous agent. <<<提供部署方案文件>>>
 
 TASK
 
@@ -15,7 +15,7 @@ TASK
 
 You are tested to completed the following tasks:
 
-Check whether the parallel strategy is compatible with the current hardware environment and model parameters. <<<检查并行策略是否符合实际>>>
+Check whether the parallel strategy deployment method is compatible with the current hardware environment and model parameters. <<<检查并行策略是否符合实际>>>
 
 Check whether the performance is optimized while meeting basic performance requirements. <<<检查是否在满足基本性能需求的情况下，性能达到最优>>>
 
