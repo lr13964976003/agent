@@ -35,7 +35,7 @@ def main():
                  "slug": "chain_generate_method",
                  "version": 1,
                  "inputs": {
-				     "environment_path": "../environment/EP/deployment.md",
+				     "task_path": "../environment/EP/deployment.md",
 				     "knowledge_path": "../knowledges/llm.md",
                      "save_path": f"../outputs/{submission_dir}"
                      },
