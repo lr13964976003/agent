@@ -1,0 +1,358 @@
+// LLM Deployment DAG - TP=2, PP=4 on 8x H100 GPUs (Complete)
+digraph {
+	dpi=300 rankdir=TB size="50,50"
+	node [fontname=Arial fontsize=10]
+	edge [fontname=Arial fontsize=9]
+	input [label="INPUT\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightcyan shape=rectangle]
+	layer0_norm_tp0 [label="Layer 0 RMSNorm\nGPU 0\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	input -> layer0_norm_tp0
+	layer0_qkv_tp0 [label="Layer 0 QKV Projection\nGPU 0\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer0_norm_tp0 -> layer0_qkv_tp0
+	layer0_attention_scores_tp0 [label="Layer 0 Attention Scores\nGPU 0\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer0_qkv_tp0 -> layer0_attention_scores_tp0
+	layer0_attention_weights_tp0 [label="Layer 0 Attention Weights\nGPU 0\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer0_attention_scores_tp0 -> layer0_attention_weights_tp0
+	layer0_attention_output_tp0 [label="Layer 0 Attention Output\nGPU 0\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer0_attention_weights_tp0 -> layer0_attention_output_tp0
+	layer0_attention_allreduce_tp0 [label="Layer 0 Attention All-Reduce\nGPU 0\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer0_attention_output_tp0 -> layer0_attention_allreduce_tp0
+	layer0_attention_allreduce_tp0 -> layer0_attention_allreduce_tp1 [label="TP sync" style=dashed]
+	layer0_residual_tp0 [label="Layer 0 Residual Add\nGPU 0\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer0_attention_allreduce_tp0 -> layer0_residual_tp0
+	input -> layer0_residual_tp0
+	layer0_post_norm_tp0 [label="Layer 0 Post-Attention RMSNorm\nGPU 0\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer0_residual_tp0 -> layer0_post_norm_tp0
+	layer0_ffn_gate_tp0 [label="Layer 0 FFN Gate\nGPU 0\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer0_post_norm_tp0 -> layer0_ffn_gate_tp0
+	layer0_ffn_up_tp0 [label="Layer 0 FFN Up\nGPU 0\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer0_post_norm_tp0 -> layer0_ffn_up_tp0
+	layer0_ffn_activation_tp0 [label="Layer 0 FFN SwiGLU\nGPU 0\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer0_ffn_gate_tp0 -> layer0_ffn_activation_tp0
+	layer0_ffn_up_tp0 -> layer0_ffn_activation_tp0
+	layer0_ffn_down_tp0 [label="Layer 0 FFN Down\nGPU 0\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer0_ffn_activation_tp0 -> layer0_ffn_down_tp0
+	layer0_ffn_allreduce_tp0 [label="Layer 0 FFN All-Reduce\nGPU 0\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer0_ffn_down_tp0 -> layer0_ffn_allreduce_tp0
+	layer0_ffn_allreduce_tp0 -> layer0_ffn_allreduce_tp1 [label="TP sync" style=dashed]
+	layer0_final_residual_tp0 [label="Layer 0 Final Residual\nGPU 0\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer0_ffn_allreduce_tp0 -> layer0_final_residual_tp0
+	layer0_residual_tp0 -> layer0_final_residual_tp0
+	layer0_norm_tp1 [label="Layer 0 RMSNorm\nGPU 1\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	input -> layer0_norm_tp1
+	layer0_qkv_tp1 [label="Layer 0 QKV Projection\nGPU 1\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer0_norm_tp1 -> layer0_qkv_tp1
+	layer0_attention_scores_tp1 [label="Layer 0 Attention Scores\nGPU 1\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer0_qkv_tp1 -> layer0_attention_scores_tp1
+	layer0_attention_weights_tp1 [label="Layer 0 Attention Weights\nGPU 1\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer0_attention_scores_tp1 -> layer0_attention_weights_tp1
+	layer0_attention_output_tp1 [label="Layer 0 Attention Output\nGPU 1\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer0_attention_weights_tp1 -> layer0_attention_output_tp1
+	layer0_attention_allreduce_tp1 [label="Layer 0 Attention All-Reduce\nGPU 1\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer0_attention_output_tp1 -> layer0_attention_allreduce_tp1
+	layer0_attention_allreduce_tp1 -> layer0_attention_allreduce_tp0 [label="TP sync" style=dashed]
+	layer0_residual_tp1 [label="Layer 0 Residual Add\nGPU 1\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer0_attention_allreduce_tp1 -> layer0_residual_tp1
+	input -> layer0_residual_tp1
+	layer0_post_norm_tp1 [label="Layer 0 Post-Attention RMSNorm\nGPU 1\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer0_residual_tp1 -> layer0_post_norm_tp1
+	layer0_ffn_gate_tp1 [label="Layer 0 FFN Gate\nGPU 1\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer0_post_norm_tp1 -> layer0_ffn_gate_tp1
+	layer0_ffn_up_tp1 [label="Layer 0 FFN Up\nGPU 1\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer0_post_norm_tp1 -> layer0_ffn_up_tp1
+	layer0_ffn_activation_tp1 [label="Layer 0 FFN SwiGLU\nGPU 1\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer0_ffn_gate_tp1 -> layer0_ffn_activation_tp1
+	layer0_ffn_up_tp1 -> layer0_ffn_activation_tp1
+	layer0_ffn_down_tp1 [label="Layer 0 FFN Down\nGPU 1\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer0_ffn_activation_tp1 -> layer0_ffn_down_tp1
+	layer0_ffn_allreduce_tp1 [label="Layer 0 FFN All-Reduce\nGPU 1\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer0_ffn_down_tp1 -> layer0_ffn_allreduce_tp1
+	layer0_ffn_allreduce_tp1 -> layer0_ffn_allreduce_tp0 [label="TP sync" style=dashed]
+	layer0_final_residual_tp1 [label="Layer 0 Final Residual\nGPU 1\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer0_ffn_allreduce_tp1 -> layer0_final_residual_tp1
+	layer0_residual_tp1 -> layer0_final_residual_tp1
+	pp_stage1_recv_tp0 [label="PP Stage 1 Receive\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightcoral shape=parallelogram]
+	layer19_ffn_allreduce_tp0 -> pp_stage1_recv_tp0 [label=pipeline_send_gpu0_to_gpu2]
+	layer19_ffn_allreduce_tp1 -> pp_stage1_recv_tp0 [label=pipeline_send_gpu1_to_gpu2]
+	pp_stage1_recv_tp1 [label="PP Stage 1 Receive\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightcoral shape=parallelogram]
+	layer19_ffn_allreduce_tp0 -> pp_stage1_recv_tp1 [label=pipeline_send_gpu0_to_gpu3]
+	layer19_ffn_allreduce_tp1 -> pp_stage1_recv_tp1 [label=pipeline_send_gpu1_to_gpu3]
+	layer20_norm_tp0 [label="Layer 20 RMSNorm\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	pp_stage1_recv_tp0 -> layer20_norm_tp0
+	layer20_qkv_tp0 [label="Layer 20 QKV Projection\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer20_norm_tp0 -> layer20_qkv_tp0
+	layer20_attention_scores_tp0 [label="Layer 20 Attention Scores\nGPU 2\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer20_qkv_tp0 -> layer20_attention_scores_tp0
+	layer20_attention_weights_tp0 [label="Layer 20 Attention Weights\nGPU 2\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer20_attention_scores_tp0 -> layer20_attention_weights_tp0
+	layer20_attention_output_tp0 [label="Layer 20 Attention Output\nGPU 2\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer20_attention_weights_tp0 -> layer20_attention_output_tp0
+	layer20_attention_allreduce_tp0 [label="Layer 20 Attention All-Reduce\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer20_attention_output_tp0 -> layer20_attention_allreduce_tp0
+	layer20_attention_allreduce_tp0 -> layer20_attention_allreduce_tp1 [label="TP sync" style=dashed]
+	layer20_residual_tp0 [label="Layer 20 Residual Add\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer20_attention_allreduce_tp0 -> layer20_residual_tp0
+	pp_stage1_recv_tp0 -> layer20_residual_tp0
+	layer20_post_norm_tp0 [label="Layer 20 Post-Attention RMSNorm\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer20_residual_tp0 -> layer20_post_norm_tp0
+	layer20_ffn_gate_tp0 [label="Layer 20 FFN Gate\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer20_post_norm_tp0 -> layer20_ffn_gate_tp0
+	layer20_ffn_up_tp0 [label="Layer 20 FFN Up\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer20_post_norm_tp0 -> layer20_ffn_up_tp0
+	layer20_ffn_activation_tp0 [label="Layer 20 FFN SwiGLU\nGPU 2\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer20_ffn_gate_tp0 -> layer20_ffn_activation_tp0
+	layer20_ffn_up_tp0 -> layer20_ffn_activation_tp0
+	layer20_ffn_down_tp0 [label="Layer 20 FFN Down\nGPU 2\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer20_ffn_activation_tp0 -> layer20_ffn_down_tp0
+	layer20_ffn_allreduce_tp0 [label="Layer 20 FFN All-Reduce\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer20_ffn_down_tp0 -> layer20_ffn_allreduce_tp0
+	layer20_ffn_allreduce_tp0 -> layer20_ffn_allreduce_tp1 [label="TP sync" style=dashed]
+	layer20_final_residual_tp0 [label="Layer 20 Final Residual\nGPU 2\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer20_ffn_allreduce_tp0 -> layer20_final_residual_tp0
+	layer20_residual_tp0 -> layer20_final_residual_tp0
+	layer20_norm_tp1 [label="Layer 20 RMSNorm\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	pp_stage1_recv_tp1 -> layer20_norm_tp1
+	layer20_qkv_tp1 [label="Layer 20 QKV Projection\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer20_norm_tp1 -> layer20_qkv_tp1
+	layer20_attention_scores_tp1 [label="Layer 20 Attention Scores\nGPU 3\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer20_qkv_tp1 -> layer20_attention_scores_tp1
+	layer20_attention_weights_tp1 [label="Layer 20 Attention Weights\nGPU 3\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer20_attention_scores_tp1 -> layer20_attention_weights_tp1
+	layer20_attention_output_tp1 [label="Layer 20 Attention Output\nGPU 3\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer20_attention_weights_tp1 -> layer20_attention_output_tp1
+	layer20_attention_allreduce_tp1 [label="Layer 20 Attention All-Reduce\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer20_attention_output_tp1 -> layer20_attention_allreduce_tp1
+	layer20_attention_allreduce_tp1 -> layer20_attention_allreduce_tp0 [label="TP sync" style=dashed]
+	layer20_residual_tp1 [label="Layer 20 Residual Add\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer20_attention_allreduce_tp1 -> layer20_residual_tp1
+	pp_stage1_recv_tp1 -> layer20_residual_tp1
+	layer20_post_norm_tp1 [label="Layer 20 Post-Attention RMSNorm\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer20_residual_tp1 -> layer20_post_norm_tp1
+	layer20_ffn_gate_tp1 [label="Layer 20 FFN Gate\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer20_post_norm_tp1 -> layer20_ffn_gate_tp1
+	layer20_ffn_up_tp1 [label="Layer 20 FFN Up\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer20_post_norm_tp1 -> layer20_ffn_up_tp1
+	layer20_ffn_activation_tp1 [label="Layer 20 FFN SwiGLU\nGPU 3\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer20_ffn_gate_tp1 -> layer20_ffn_activation_tp1
+	layer20_ffn_up_tp1 -> layer20_ffn_activation_tp1
+	layer20_ffn_down_tp1 [label="Layer 20 FFN Down\nGPU 3\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer20_ffn_activation_tp1 -> layer20_ffn_down_tp1
+	layer20_ffn_allreduce_tp1 [label="Layer 20 FFN All-Reduce\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer20_ffn_down_tp1 -> layer20_ffn_allreduce_tp1
+	layer20_ffn_allreduce_tp1 -> layer20_ffn_allreduce_tp0 [label="TP sync" style=dashed]
+	layer20_final_residual_tp1 [label="Layer 20 Final Residual\nGPU 3\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer20_ffn_allreduce_tp1 -> layer20_final_residual_tp1
+	layer20_residual_tp1 -> layer20_final_residual_tp1
+	pp_stage2_recv_tp0 [label="PP Stage 2 Receive\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightcoral shape=parallelogram]
+	layer39_ffn_allreduce_tp0 -> pp_stage2_recv_tp0 [label=pipeline_send_gpu2_to_gpu4]
+	layer39_ffn_allreduce_tp1 -> pp_stage2_recv_tp0 [label=pipeline_send_gpu3_to_gpu4]
+	pp_stage2_recv_tp1 [label="PP Stage 2 Receive\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightcoral shape=parallelogram]
+	layer39_ffn_allreduce_tp0 -> pp_stage2_recv_tp1 [label=pipeline_send_gpu2_to_gpu5]
+	layer39_ffn_allreduce_tp1 -> pp_stage2_recv_tp1 [label=pipeline_send_gpu3_to_gpu5]
+	layer40_norm_tp0 [label="Layer 40 RMSNorm\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	pp_stage2_recv_tp0 -> layer40_norm_tp0
+	layer40_qkv_tp0 [label="Layer 40 QKV Projection\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer40_norm_tp0 -> layer40_qkv_tp0
+	layer40_attention_scores_tp0 [label="Layer 40 Attention Scores\nGPU 4\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer40_qkv_tp0 -> layer40_attention_scores_tp0
+	layer40_attention_weights_tp0 [label="Layer 40 Attention Weights\nGPU 4\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer40_attention_scores_tp0 -> layer40_attention_weights_tp0
+	layer40_attention_output_tp0 [label="Layer 40 Attention Output\nGPU 4\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer40_attention_weights_tp0 -> layer40_attention_output_tp0
+	layer40_attention_allreduce_tp0 [label="Layer 40 Attention All-Reduce\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer40_attention_output_tp0 -> layer40_attention_allreduce_tp0
+	layer40_attention_allreduce_tp0 -> layer40_attention_allreduce_tp1 [label="TP sync" style=dashed]
+	layer40_residual_tp0 [label="Layer 40 Residual Add\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer40_attention_allreduce_tp0 -> layer40_residual_tp0
+	pp_stage2_recv_tp0 -> layer40_residual_tp0
+	layer40_post_norm_tp0 [label="Layer 40 Post-Attention RMSNorm\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer40_residual_tp0 -> layer40_post_norm_tp0
+	layer40_ffn_gate_tp0 [label="Layer 40 FFN Gate\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer40_post_norm_tp0 -> layer40_ffn_gate_tp0
+	layer40_ffn_up_tp0 [label="Layer 40 FFN Up\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer40_post_norm_tp0 -> layer40_ffn_up_tp0
+	layer40_ffn_activation_tp0 [label="Layer 40 FFN SwiGLU\nGPU 4\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer40_ffn_gate_tp0 -> layer40_ffn_activation_tp0
+	layer40_ffn_up_tp0 -> layer40_ffn_activation_tp0
+	layer40_ffn_down_tp0 [label="Layer 40 FFN Down\nGPU 4\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer40_ffn_activation_tp0 -> layer40_ffn_down_tp0
+	layer40_ffn_allreduce_tp0 [label="Layer 40 FFN All-Reduce\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer40_ffn_down_tp0 -> layer40_ffn_allreduce_tp0
+	layer40_ffn_allreduce_tp0 -> layer40_ffn_allreduce_tp1 [label="TP sync" style=dashed]
+	layer40_final_residual_tp0 [label="Layer 40 Final Residual\nGPU 4\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer40_ffn_allreduce_tp0 -> layer40_final_residual_tp0
+	layer40_residual_tp0 -> layer40_final_residual_tp0
+	layer40_norm_tp1 [label="Layer 40 RMSNorm\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	pp_stage2_recv_tp1 -> layer40_norm_tp1
+	layer40_qkv_tp1 [label="Layer 40 QKV Projection\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer40_norm_tp1 -> layer40_qkv_tp1
+	layer40_attention_scores_tp1 [label="Layer 40 Attention Scores\nGPU 5\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer40_qkv_tp1 -> layer40_attention_scores_tp1
+	layer40_attention_weights_tp1 [label="Layer 40 Attention Weights\nGPU 5\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer40_attention_scores_tp1 -> layer40_attention_weights_tp1
+	layer40_attention_output_tp1 [label="Layer 40 Attention Output\nGPU 5\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer40_attention_weights_tp1 -> layer40_attention_output_tp1
+	layer40_attention_allreduce_tp1 [label="Layer 40 Attention All-Reduce\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer40_attention_output_tp1 -> layer40_attention_allreduce_tp1
+	layer40_attention_allreduce_tp1 -> layer40_attention_allreduce_tp0 [label="TP sync" style=dashed]
+	layer40_residual_tp1 [label="Layer 40 Residual Add\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer40_attention_allreduce_tp1 -> layer40_residual_tp1
+	pp_stage2_recv_tp1 -> layer40_residual_tp1
+	layer40_post_norm_tp1 [label="Layer 40 Post-Attention RMSNorm\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer40_residual_tp1 -> layer40_post_norm_tp1
+	layer40_ffn_gate_tp1 [label="Layer 40 FFN Gate\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer40_post_norm_tp1 -> layer40_ffn_gate_tp1
+	layer40_ffn_up_tp1 [label="Layer 40 FFN Up\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer40_post_norm_tp1 -> layer40_ffn_up_tp1
+	layer40_ffn_activation_tp1 [label="Layer 40 FFN SwiGLU\nGPU 5\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer40_ffn_gate_tp1 -> layer40_ffn_activation_tp1
+	layer40_ffn_up_tp1 -> layer40_ffn_activation_tp1
+	layer40_ffn_down_tp1 [label="Layer 40 FFN Down\nGPU 5\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer40_ffn_activation_tp1 -> layer40_ffn_down_tp1
+	layer40_ffn_allreduce_tp1 [label="Layer 40 FFN All-Reduce\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer40_ffn_down_tp1 -> layer40_ffn_allreduce_tp1
+	layer40_ffn_allreduce_tp1 -> layer40_ffn_allreduce_tp0 [label="TP sync" style=dashed]
+	layer40_final_residual_tp1 [label="Layer 40 Final Residual\nGPU 5\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer40_ffn_allreduce_tp1 -> layer40_final_residual_tp1
+	layer40_residual_tp1 -> layer40_final_residual_tp1
+	pp_stage3_recv_tp0 [label="PP Stage 3 Receive\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightcoral shape=parallelogram]
+	layer59_ffn_allreduce_tp0 -> pp_stage3_recv_tp0 [label=pipeline_send_gpu4_to_gpu6]
+	layer59_ffn_allreduce_tp1 -> pp_stage3_recv_tp0 [label=pipeline_send_gpu5_to_gpu6]
+	pp_stage3_recv_tp1 [label="PP Stage 3 Receive\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightcoral shape=parallelogram]
+	layer59_ffn_allreduce_tp0 -> pp_stage3_recv_tp1 [label=pipeline_send_gpu4_to_gpu7]
+	layer59_ffn_allreduce_tp1 -> pp_stage3_recv_tp1 [label=pipeline_send_gpu5_to_gpu7]
+	layer60_norm_tp0 [label="Layer 60 RMSNorm\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	pp_stage3_recv_tp0 -> layer60_norm_tp0
+	layer60_qkv_tp0 [label="Layer 60 QKV Projection\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer60_norm_tp0 -> layer60_qkv_tp0
+	layer60_attention_scores_tp0 [label="Layer 60 Attention Scores\nGPU 6\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer60_qkv_tp0 -> layer60_attention_scores_tp0
+	layer60_attention_weights_tp0 [label="Layer 60 Attention Weights\nGPU 6\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer60_attention_scores_tp0 -> layer60_attention_weights_tp0
+	layer60_attention_output_tp0 [label="Layer 60 Attention Output\nGPU 6\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer60_attention_weights_tp0 -> layer60_attention_output_tp0
+	layer60_attention_allreduce_tp0 [label="Layer 60 Attention All-Reduce\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer60_attention_output_tp0 -> layer60_attention_allreduce_tp0
+	layer60_attention_allreduce_tp0 -> layer60_attention_allreduce_tp1 [label="TP sync" style=dashed]
+	layer60_residual_tp0 [label="Layer 60 Residual Add\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer60_attention_allreduce_tp0 -> layer60_residual_tp0
+	pp_stage3_recv_tp0 -> layer60_residual_tp0
+	layer60_post_norm_tp0 [label="Layer 60 Post-Attention RMSNorm\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer60_residual_tp0 -> layer60_post_norm_tp0
+	layer60_ffn_gate_tp0 [label="Layer 60 FFN Gate\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer60_post_norm_tp0 -> layer60_ffn_gate_tp0
+	layer60_ffn_up_tp0 [label="Layer 60 FFN Up\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer60_post_norm_tp0 -> layer60_ffn_up_tp0
+	layer60_ffn_activation_tp0 [label="Layer 60 FFN SwiGLU\nGPU 6\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer60_ffn_gate_tp0 -> layer60_ffn_activation_tp0
+	layer60_ffn_up_tp0 -> layer60_ffn_activation_tp0
+	layer60_ffn_down_tp0 [label="Layer 60 FFN Down\nGPU 6\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer60_ffn_activation_tp0 -> layer60_ffn_down_tp0
+	layer60_ffn_allreduce_tp0 [label="Layer 60 FFN All-Reduce\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer60_ffn_down_tp0 -> layer60_ffn_allreduce_tp0
+	layer60_ffn_allreduce_tp0 -> layer60_ffn_allreduce_tp1 [label="TP sync" style=dashed]
+	layer60_final_residual_tp0 [label="Layer 60 Final Residual\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer60_ffn_allreduce_tp0 -> layer60_final_residual_tp0
+	layer60_residual_tp0 -> layer60_final_residual_tp0
+	layer60_norm_tp1 [label="Layer 60 RMSNorm\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	pp_stage3_recv_tp1 -> layer60_norm_tp1
+	layer60_qkv_tp1 [label="Layer 60 QKV Projection\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer60_norm_tp1 -> layer60_qkv_tp1
+	layer60_attention_scores_tp1 [label="Layer 60 Attention Scores\nGPU 7\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer60_qkv_tp1 -> layer60_attention_scores_tp1
+	layer60_attention_weights_tp1 [label="Layer 60 Attention Weights\nGPU 7\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer60_attention_scores_tp1 -> layer60_attention_weights_tp1
+	layer60_attention_output_tp1 [label="Layer 60 Attention Output\nGPU 7\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer60_attention_weights_tp1 -> layer60_attention_output_tp1
+	layer60_attention_allreduce_tp1 [label="Layer 60 Attention All-Reduce\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer60_attention_output_tp1 -> layer60_attention_allreduce_tp1
+	layer60_attention_allreduce_tp1 -> layer60_attention_allreduce_tp0 [label="TP sync" style=dashed]
+	layer60_residual_tp1 [label="Layer 60 Residual Add\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer60_attention_allreduce_tp1 -> layer60_residual_tp1
+	pp_stage3_recv_tp1 -> layer60_residual_tp1
+	layer60_post_norm_tp1 [label="Layer 60 Post-Attention RMSNorm\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer60_residual_tp1 -> layer60_post_norm_tp1
+	layer60_ffn_gate_tp1 [label="Layer 60 FFN Gate\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer60_post_norm_tp1 -> layer60_ffn_gate_tp1
+	layer60_ffn_up_tp1 [label="Layer 60 FFN Up\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer60_post_norm_tp1 -> layer60_ffn_up_tp1
+	layer60_ffn_activation_tp1 [label="Layer 60 FFN SwiGLU\nGPU 7\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer60_ffn_gate_tp1 -> layer60_ffn_activation_tp1
+	layer60_ffn_up_tp1 -> layer60_ffn_activation_tp1
+	layer60_ffn_down_tp1 [label="Layer 60 FFN Down\nGPU 7\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer60_ffn_activation_tp1 -> layer60_ffn_down_tp1
+	layer60_ffn_allreduce_tp1 [label="Layer 60 FFN All-Reduce\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer60_ffn_down_tp1 -> layer60_ffn_allreduce_tp1
+	layer60_ffn_allreduce_tp1 -> layer60_ffn_allreduce_tp0 [label="TP sync" style=dashed]
+	layer60_final_residual_tp1 [label="Layer 60 Final Residual\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer60_ffn_allreduce_tp1 -> layer60_final_residual_tp1
+	layer60_residual_tp1 -> layer60_final_residual_tp1
+	layer79_norm_tp0 [label="Layer 79 RMSNorm\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer78_final_residual_tp0 -> layer79_norm_tp0
+	layer79_qkv_tp0 [label="Layer 79 QKV Projection\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer79_norm_tp0 -> layer79_qkv_tp0
+	layer79_attention_scores_tp0 [label="Layer 79 Attention Scores\nGPU 6\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer79_qkv_tp0 -> layer79_attention_scores_tp0
+	layer79_attention_weights_tp0 [label="Layer 79 Attention Weights\nGPU 6\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer79_attention_scores_tp0 -> layer79_attention_weights_tp0
+	layer79_attention_output_tp0 [label="Layer 79 Attention Output\nGPU 6\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer79_attention_weights_tp0 -> layer79_attention_output_tp0
+	layer79_attention_allreduce_tp0 [label="Layer 79 Attention All-Reduce\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer79_attention_output_tp0 -> layer79_attention_allreduce_tp0
+	layer79_attention_allreduce_tp0 -> layer79_attention_allreduce_tp1 [label="TP sync" style=dashed]
+	layer79_residual_tp0 [label="Layer 79 Residual Add\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer79_attention_allreduce_tp0 -> layer79_residual_tp0
+	layer78_final_residual_tp0 -> layer79_residual_tp0
+	layer79_post_norm_tp0 [label="Layer 79 Post-Attention RMSNorm\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer79_residual_tp0 -> layer79_post_norm_tp0
+	layer79_ffn_gate_tp0 [label="Layer 79 FFN Gate\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer79_post_norm_tp0 -> layer79_ffn_gate_tp0
+	layer79_ffn_up_tp0 [label="Layer 79 FFN Up\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer79_post_norm_tp0 -> layer79_ffn_up_tp0
+	layer79_ffn_activation_tp0 [label="Layer 79 FFN SwiGLU\nGPU 6\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer79_ffn_gate_tp0 -> layer79_ffn_activation_tp0
+	layer79_ffn_up_tp0 -> layer79_ffn_activation_tp0
+	layer79_ffn_down_tp0 [label="Layer 79 FFN Down\nGPU 6\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer79_ffn_activation_tp0 -> layer79_ffn_down_tp0
+	layer79_ffn_allreduce_tp0 [label="Layer 79 FFN All-Reduce\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer79_ffn_down_tp0 -> layer79_ffn_allreduce_tp0
+	layer79_ffn_allreduce_tp0 -> layer79_ffn_allreduce_tp1 [label="TP sync" style=dashed]
+	layer79_final_residual_tp0 [label="Layer 79 Final Residual\nGPU 6\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer79_ffn_allreduce_tp0 -> layer79_final_residual_tp0
+	layer79_residual_tp0 -> layer79_final_residual_tp0
+	layer79_norm_tp1 [label="Layer 79 RMSNorm\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer78_final_residual_tp1 -> layer79_norm_tp1
+	layer79_qkv_tp1 [label="Layer 79 QKV Projection\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, qkv_dim=12288]" fillcolor=lightgreen shape=rectangle]
+	layer79_norm_tp1 -> layer79_qkv_tp1
+	layer79_attention_scores_tp1 [label="Layer 79 Attention Scores\nGPU 7\nInput: [batch_size=B, seq_len=S, qkv_dim=12288]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer79_qkv_tp1 -> layer79_attention_scores_tp1
+	layer79_attention_weights_tp1 [label="Layer 79 Attention Weights\nGPU 7\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]" fillcolor=lightgreen shape=rectangle]
+	layer79_attention_scores_tp1 -> layer79_attention_weights_tp1
+	layer79_attention_output_tp1 [label="Layer 79 Attention Output\nGPU 7\nInput: [batch_size=B, seq_len=S, num_heads=32, head_dim=128]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer79_attention_weights_tp1 -> layer79_attention_output_tp1
+	layer79_attention_allreduce_tp1 [label="Layer 79 Attention All-Reduce\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer79_attention_output_tp1 -> layer79_attention_allreduce_tp1
+	layer79_attention_allreduce_tp1 -> layer79_attention_allreduce_tp0 [label="TP sync" style=dashed]
+	layer79_residual_tp1 [label="Layer 79 Residual Add\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer79_attention_allreduce_tp1 -> layer79_residual_tp1
+	layer78_final_residual_tp1 -> layer79_residual_tp1
+	layer79_post_norm_tp1 [label="Layer 79 Post-Attention RMSNorm\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer79_residual_tp1 -> layer79_post_norm_tp1
+	layer79_ffn_gate_tp1 [label="Layer 79 FFN Gate\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer79_post_norm_tp1 -> layer79_ffn_gate_tp1
+	layer79_ffn_up_tp1 [label="Layer 79 FFN Up\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer79_post_norm_tp1 -> layer79_ffn_up_tp1
+	layer79_ffn_activation_tp1 [label="Layer 79 FFN SwiGLU\nGPU 7\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, intermediate=14336]" fillcolor=lightgreen shape=rectangle]
+	layer79_ffn_gate_tp1 -> layer79_ffn_activation_tp1
+	layer79_ffn_up_tp1 -> layer79_ffn_activation_tp1
+	layer79_ffn_down_tp1 [label="Layer 79 FFN Down\nGPU 7\nInput: [batch_size=B, seq_len=S, intermediate=14336]\nOutput: [batch_size=B, seq_len=S, hidden=4096]" fillcolor=lightgreen shape=rectangle]
+	layer79_ffn_activation_tp1 -> layer79_ffn_down_tp1
+	layer79_ffn_allreduce_tp1 [label="Layer 79 FFN All-Reduce\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=4096]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightblue shape=ellipse]
+	layer79_ffn_down_tp1 -> layer79_ffn_allreduce_tp1
+	layer79_ffn_allreduce_tp1 -> layer79_ffn_allreduce_tp0 [label="TP sync" style=dashed]
+	layer79_final_residual_tp1 [label="Layer 79 Final Residual\nGPU 7\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightgreen shape=rectangle]
+	layer79_ffn_allreduce_tp1 -> layer79_final_residual_tp1
+	layer79_residual_tp1 -> layer79_final_residual_tp1
+	output [label="OUTPUT\nInput: [batch_size=B, seq_len=S, hidden=8192]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=lightcyan shape=rectangle]
+	layer79_final_residual_tp0 -> output
+	layer79_final_residual_tp1 -> output
+}

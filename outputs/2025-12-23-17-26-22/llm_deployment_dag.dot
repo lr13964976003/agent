@@ -1,0 +1,132 @@
+// LLM Deployment DAG - TP=2, PP=4 on 8x H100
+digraph {
+	nodesep=0.8 rankdir=TB ranksep=1.2 splines=true
+	input [label="Input\nInput: [batch_size=B, seq_len=S]\nOutput: [batch_size=B, seq_len=S, hidden=8192]" fillcolor=white shape=ellipse style=filled]
+	embed_tp0 [label="Embedding TP0\nGPU: 0,2,4,6\nInput: [B,S]\nOutput: [B,S,8192]" fillcolor=lightgreen shape=box]
+	embed_tp1 [label="Embedding TP1\nGPU: 1,3,5,7\nInput: [B,S]\nOutput: [B,S,8192]" fillcolor=lightgreen shape=box]
+	embed_allreduce [label="Embedding All-Reduce\nGPUs: 0-7\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	input -> embed_tp0
+	input -> embed_tp1
+	embed_tp0 -> embed_allreduce
+	embed_tp1 -> embed_allreduce
+	layer0_qkv_tp0 [label="Layer 0 QKV Proj TP0\nGPU: 0\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer0_qkv_tp1 [label="Layer 0 QKV Proj TP1\nGPU: 1\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer0_attn_allreduce [label="Layer 0 Attention All-Reduce\nGPUs: 0-1\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer0_ffn1_tp0 [label="Layer 0 FFN1 TP0\nGPU: 0\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer0_ffn1_tp1 [label="Layer 0 FFN1 TP1\nGPU: 1\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer0_ffn_allreduce [label="Layer 0 FFN All-Reduce\nGPUs: 0-1\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	embed_allreduce -> layer0_qkv_tp0
+	embed_allreduce -> layer0_qkv_tp1
+	layer0_qkv_tp0 -> layer0_attn_allreduce
+	layer0_qkv_tp1 -> layer0_attn_allreduce
+	layer0_attn_allreduce -> layer0_ffn1_tp0
+	layer0_attn_allreduce -> layer0_ffn1_tp1
+	layer0_ffn1_tp0 -> layer0_ffn_allreduce
+	layer0_ffn1_tp1 -> layer0_ffn_allreduce
+	layer19_qkv_tp0 [label="Layer 19 QKV Proj TP0\nGPU: 0\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer19_qkv_tp1 [label="Layer 19 QKV Proj TP1\nGPU: 1\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer19_attn_allreduce [label="Layer 19 Attention All-Reduce\nGPUs: 0-1\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer19_ffn1_tp0 [label="Layer 19 FFN1 TP0\nGPU: 0\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer19_ffn1_tp1 [label="Layer 19 FFN1 TP1\nGPU: 1\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer19_ffn_allreduce [label="Layer 19 FFN All-Reduce\nGPUs: 0-1\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer19_qkv_tp0 -> layer19_attn_allreduce
+	layer19_qkv_tp1 -> layer19_attn_allreduce
+	layer19_attn_allreduce -> layer19_ffn1_tp0
+	layer19_attn_allreduce -> layer19_ffn1_tp1
+	layer19_ffn1_tp0 -> layer19_ffn_allreduce
+	layer19_ffn1_tp1 -> layer19_ffn_allreduce
+	layer20_qkv_tp0 [label="Layer 20 QKV Proj TP0\nGPU: 2\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer20_qkv_tp1 [label="Layer 20 QKV Proj TP1\nGPU: 3\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer20_attn_allreduce [label="Layer 20 Attention All-Reduce\nGPUs: 2-3\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer20_ffn1_tp0 [label="Layer 20 FFN1 TP0\nGPU: 2\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer20_ffn1_tp1 [label="Layer 20 FFN1 TP1\nGPU: 3\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer20_ffn_allreduce [label="Layer 20 FFN All-Reduce\nGPUs: 2-3\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer19_ffn_allreduce -> layer20_qkv_tp0
+	layer19_ffn_allreduce -> layer20_qkv_tp1
+	layer20_qkv_tp0 -> layer20_attn_allreduce
+	layer20_qkv_tp1 -> layer20_attn_allreduce
+	layer20_attn_allreduce -> layer20_ffn1_tp0
+	layer20_attn_allreduce -> layer20_ffn1_tp1
+	layer20_ffn1_tp0 -> layer20_ffn_allreduce
+	layer20_ffn1_tp1 -> layer20_ffn_allreduce
+	layer39_qkv_tp0 [label="Layer 39 QKV Proj TP0\nGPU: 2\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer39_qkv_tp1 [label="Layer 39 QKV Proj TP1\nGPU: 3\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer39_attn_allreduce [label="Layer 39 Attention All-Reduce\nGPUs: 2-3\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer39_ffn1_tp0 [label="Layer 39 FFN1 TP0\nGPU: 2\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer39_ffn1_tp1 [label="Layer 39 FFN1 TP1\nGPU: 3\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer39_ffn_allreduce [label="Layer 39 FFN All-Reduce\nGPUs: 2-3\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer39_qkv_tp0 -> layer39_attn_allreduce
+	layer39_qkv_tp1 -> layer39_attn_allreduce
+	layer39_attn_allreduce -> layer39_ffn1_tp0
+	layer39_attn_allreduce -> layer39_ffn1_tp1
+	layer39_ffn1_tp0 -> layer39_ffn_allreduce
+	layer39_ffn1_tp1 -> layer39_ffn_allreduce
+	layer40_qkv_tp0 [label="Layer 40 QKV Proj TP0\nGPU: 4\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer40_qkv_tp1 [label="Layer 40 QKV Proj TP1\nGPU: 5\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer40_attn_allreduce [label="Layer 40 Attention All-Reduce\nGPUs: 4-5\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer40_ffn1_tp0 [label="Layer 40 FFN1 TP0\nGPU: 4\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer40_ffn1_tp1 [label="Layer 40 FFN1 TP1\nGPU: 5\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer40_ffn_allreduce [label="Layer 40 FFN All-Reduce\nGPUs: 4-5\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer39_ffn_allreduce -> layer40_qkv_tp0
+	layer39_ffn_allreduce -> layer40_qkv_tp1
+	layer40_qkv_tp0 -> layer40_attn_allreduce
+	layer40_qkv_tp1 -> layer40_attn_allreduce
+	layer40_attn_allreduce -> layer40_ffn1_tp0
+	layer40_attn_allreduce -> layer40_ffn1_tp1
+	layer40_ffn1_tp0 -> layer40_ffn_allreduce
+	layer40_ffn1_tp1 -> layer40_ffn_allreduce
+	layer59_qkv_tp0 [label="Layer 59 QKV Proj TP0\nGPU: 4\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer59_qkv_tp1 [label="Layer 59 QKV Proj TP1\nGPU: 5\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer59_attn_allreduce [label="Layer 59 Attention All-Reduce\nGPUs: 4-5\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer59_ffn1_tp0 [label="Layer 59 FFN1 TP0\nGPU: 4\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer59_ffn1_tp1 [label="Layer 59 FFN1 TP1\nGPU: 5\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer59_ffn_allreduce [label="Layer 59 FFN All-Reduce\nGPUs: 4-5\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer59_qkv_tp0 -> layer59_attn_allreduce
+	layer59_qkv_tp1 -> layer59_attn_allreduce
+	layer59_attn_allreduce -> layer59_ffn1_tp0
+	layer59_attn_allreduce -> layer59_ffn1_tp1
+	layer59_ffn1_tp0 -> layer59_ffn_allreduce
+	layer59_ffn1_tp1 -> layer59_ffn_allreduce
+	layer60_qkv_tp0 [label="Layer 60 QKV Proj TP0\nGPU: 6\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer60_qkv_tp1 [label="Layer 60 QKV Proj TP1\nGPU: 7\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer60_attn_allreduce [label="Layer 60 Attention All-Reduce\nGPUs: 6-7\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer60_ffn1_tp0 [label="Layer 60 FFN1 TP0\nGPU: 6\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer60_ffn1_tp1 [label="Layer 60 FFN1 TP1\nGPU: 7\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer60_ffn_allreduce [label="Layer 60 FFN All-Reduce\nGPUs: 6-7\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer59_ffn_allreduce -> layer60_qkv_tp0
+	layer59_ffn_allreduce -> layer60_qkv_tp1
+	layer60_qkv_tp0 -> layer60_attn_allreduce
+	layer60_qkv_tp1 -> layer60_attn_allreduce
+	layer60_attn_allreduce -> layer60_ffn1_tp0
+	layer60_attn_allreduce -> layer60_ffn1_tp1
+	layer60_ffn1_tp0 -> layer60_ffn_allreduce
+	layer60_ffn1_tp1 -> layer60_ffn_allreduce
+	layer79_qkv_tp0 [label="Layer 79 QKV Proj TP0\nGPU: 6\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer79_qkv_tp1 [label="Layer 79 QKV Proj TP1\nGPU: 7\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer79_attn_allreduce [label="Layer 79 Attention All-Reduce\nGPUs: 6-7\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer79_ffn1_tp0 [label="Layer 79 FFN1 TP0\nGPU: 6\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer79_ffn1_tp1 [label="Layer 79 FFN1 TP1\nGPU: 7\nInput: [B,S,8192]\nOutput: [B,S,16384]" fillcolor=lightgreen shape=box]
+	layer79_ffn_allreduce [label="Layer 79 FFN All-Reduce\nGPUs: 6-7\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	layer79_qkv_tp0 -> layer79_attn_allreduce
+	layer79_qkv_tp1 -> layer79_attn_allreduce
+	layer79_attn_allreduce -> layer79_ffn1_tp0
+	layer79_attn_allreduce -> layer79_ffn1_tp1
+	layer79_ffn1_tp0 -> layer79_ffn_allreduce
+	layer79_ffn1_tp1 -> layer79_ffn_allreduce
+	final_ln_tp0 [label="Final LayerNorm TP0\nGPU: 6\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	final_ln_tp1 [label="Final LayerNorm TP1\nGPU: 7\nInput: [B,S,8192]\nOutput: [B,S,4096]" fillcolor=lightgreen shape=box]
+	layer79_ffn_allreduce -> final_ln_tp0
+	layer79_ffn_allreduce -> final_ln_tp1
+	final_allreduce [label="Final All-Reduce\nGPUs: 6-7\nInput: [B,S,4096]\nOutput: [B,S,8192]" fillcolor=lightblue shape=ellipse]
+	final_ln_tp0 -> final_allreduce
+	final_ln_tp1 -> final_allreduce
+	output_proj_tp0 [label="Output Projection TP0\nGPU: 6\nInput: [B,S,8192]\nOutput: [B,S,16000]" fillcolor=lightgreen shape=box]
+	output_proj_tp1 [label="Output Projection TP1\nGPU: 7\nInput: [B,S,8192]\nOutput: [B,S,16000]" fillcolor=lightgreen shape=box]
+	final_allreduce -> output_proj_tp0
+	final_allreduce -> output_proj_tp1
+	output_allreduce [label="Output All-Reduce\nGPUs: 6-7\nInput: [B,S,16000]\nOutput: [B,S,32000]" fillcolor=lightblue shape=ellipse]
+	output_proj_tp0 -> output_allreduce
+	output_proj_tp1 -> output_allreduce
+	output [label="Output\nInput: [B,S,32000]\nOutput: [B,S,32000]" fillcolor=white shape=ellipse style=filled]
+	output_allreduce -> output
+}
