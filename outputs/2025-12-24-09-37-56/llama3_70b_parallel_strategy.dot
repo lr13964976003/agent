@@ -1,0 +1,398 @@
+digraph "LLaMA3-70B-Parallel-Strategy-DAG" {
+	dpi=300 rankdir=TB size="30,40"
+	graph [bgcolor=white fontname=Arial]
+	node [fontname=Arial fontsize=10]
+	edge [fontname=Arial fontsize=9]
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	subgraph cluster_stage0 {
+		fillcolor=lightyellow fontname="Arial Bold" label="Pipeline Stage 0: Layers 0-39 (GPUs 0,1,2,3)" style="rounded,filled"
+		input_stage0 [label="Input Embedding
+GPU: [0,1,2,3]
+Input: [batch_size=8, seq_len=4096]
+Output: [batch_size=8, seq_len=4096, hidden=8192]" fillcolor=lightgreen]
+		layer0_qkv_proj [label="Layer 0: QKV Projection
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=64, d_k=128]" fillcolor=lightblue]
+		layer0_qkv_split [label="Layer 0: QKV Split (TP=4)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=16, d_k=128] per GPU" fillcolor=lightcyan shape=parallelogram]
+		layer0_attention [label="Layer 0: Attention Compute
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, heads=16, d_k=128]" fillcolor=lightblue]
+		layer0_attn_allreduce [label="Layer 0: Attention All-Reduce
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer0_ffn_gate [label="Layer 0: FFN Gate Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer0_ffn_up [label="Layer 0: FFN Up Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer0_ffn_down [label="Layer 0: FFN Down Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, ffn_dim=2752]
+Output: [batch=8, seq=4096, hidden=8192] per GPU" fillcolor=lightblue]
+		layer0_ffn_allreduce [label="Layer 0: FFN All-Reduce
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=2048] per GPU
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer0_norm1 [label="Layer 0: RMSNorm (Pre-Attn)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer0_norm2 [label="Layer 0: RMSNorm (Pre-FFN)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer10_qkv_proj [label="Layer 10: QKV Projection
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=64, d_k=128]" fillcolor=lightblue]
+		layer10_qkv_split [label="Layer 10: QKV Split (TP=4)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=16, d_k=128] per GPU" fillcolor=lightcyan shape=parallelogram]
+		layer10_attention [label="Layer 10: Attention Compute
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, heads=16, d_k=128]" fillcolor=lightblue]
+		layer10_attn_allreduce [label="Layer 10: Attention All-Reduce
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer10_ffn_gate [label="Layer 10: FFN Gate Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer10_ffn_up [label="Layer 10: FFN Up Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer10_ffn_down [label="Layer 10: FFN Down Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, ffn_dim=2752]
+Output: [batch=8, seq=4096, hidden=8192] per GPU" fillcolor=lightblue]
+		layer10_ffn_allreduce [label="Layer 10: FFN All-Reduce
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=2048] per GPU
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer10_norm1 [label="Layer 10: RMSNorm (Pre-Attn)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer10_norm2 [label="Layer 10: RMSNorm (Pre-FFN)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer20_qkv_proj [label="Layer 20: QKV Projection
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=64, d_k=128]" fillcolor=lightblue]
+		layer20_qkv_split [label="Layer 20: QKV Split (TP=4)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=16, d_k=128] per GPU" fillcolor=lightcyan shape=parallelogram]
+		layer20_attention [label="Layer 20: Attention Compute
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, heads=16, d_k=128]" fillcolor=lightblue]
+		layer20_attn_allreduce [label="Layer 20: Attention All-Reduce
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer20_ffn_gate [label="Layer 20: FFN Gate Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer20_ffn_up [label="Layer 20: FFN Up Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer20_ffn_down [label="Layer 20: FFN Down Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, ffn_dim=2752]
+Output: [batch=8, seq=4096, hidden=8192] per GPU" fillcolor=lightblue]
+		layer20_ffn_allreduce [label="Layer 20: FFN All-Reduce
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=2048] per GPU
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer20_norm1 [label="Layer 20: RMSNorm (Pre-Attn)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer20_norm2 [label="Layer 20: RMSNorm (Pre-FFN)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer30_qkv_proj [label="Layer 30: QKV Projection
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=64, d_k=128]" fillcolor=lightblue]
+		layer30_qkv_split [label="Layer 30: QKV Split (TP=4)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=16, d_k=128] per GPU" fillcolor=lightcyan shape=parallelogram]
+		layer30_attention [label="Layer 30: Attention Compute
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, heads=16, d_k=128]" fillcolor=lightblue]
+		layer30_attn_allreduce [label="Layer 30: Attention All-Reduce
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer30_ffn_gate [label="Layer 30: FFN Gate Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer30_ffn_up [label="Layer 30: FFN Up Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer30_ffn_down [label="Layer 30: FFN Down Proj
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, ffn_dim=2752]
+Output: [batch=8, seq=4096, hidden=8192] per GPU" fillcolor=lightblue]
+		layer30_ffn_allreduce [label="Layer 30: FFN All-Reduce
+GPU: [0,1,2,3] TP=4
+Input: [batch=8, seq=4096, hidden=2048] per GPU
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer30_norm1 [label="Layer 30: RMSNorm (Pre-Attn)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer30_norm2 [label="Layer 30: RMSNorm (Pre-FFN)
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		stage0_output [label="Stage 0 Output
+GPU: [0,1,2,3]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightgreen]
+	}
+	subgraph cluster_stage1 {
+		fillcolor=lightsteelblue fontname="Arial Bold" label="Pipeline Stage 1: Layers 40-79 (GPUs 4,5,6,7)" style="rounded,filled"
+		input_stage1 [label="Stage 1 Input
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightgreen]
+		layer40_qkv_proj [label="Layer 40: QKV Projection
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=64, d_k=128]" fillcolor=lightblue]
+		layer40_qkv_split [label="Layer 40: QKV Split (TP=4)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=16, d_k=128] per GPU" fillcolor=lightcyan shape=parallelogram]
+		layer40_attention [label="Layer 40: Attention Compute
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, heads=16, d_k=128]" fillcolor=lightblue]
+		layer40_attn_allreduce [label="Layer 40: Attention All-Reduce
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer40_ffn_gate [label="Layer 40: FFN Gate Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer40_ffn_up [label="Layer 40: FFN Up Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer40_ffn_down [label="Layer 40: FFN Down Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, ffn_dim=2752]
+Output: [batch=8, seq=4096, hidden=8192] per GPU" fillcolor=lightblue]
+		layer40_ffn_allreduce [label="Layer 40: FFN All-Reduce
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=2048] per GPU
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer40_norm1 [label="Layer 40: RMSNorm (Pre-Attn)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer40_norm2 [label="Layer 40: RMSNorm (Pre-FFN)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer50_qkv_proj [label="Layer 50: QKV Projection
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=64, d_k=128]" fillcolor=lightblue]
+		layer50_qkv_split [label="Layer 50: QKV Split (TP=4)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=16, d_k=128] per GPU" fillcolor=lightcyan shape=parallelogram]
+		layer50_attention [label="Layer 50: Attention Compute
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, heads=16, d_k=128]" fillcolor=lightblue]
+		layer50_attn_allreduce [label="Layer 50: Attention All-Reduce
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer50_ffn_gate [label="Layer 50: FFN Gate Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer50_ffn_up [label="Layer 50: FFN Up Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer50_ffn_down [label="Layer 50: FFN Down Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, ffn_dim=2752]
+Output: [batch=8, seq=4096, hidden=8192] per GPU" fillcolor=lightblue]
+		layer50_ffn_allreduce [label="Layer 50: FFN All-Reduce
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=2048] per GPU
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer50_norm1 [label="Layer 50: RMSNorm (Pre-Attn)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer50_norm2 [label="Layer 50: RMSNorm (Pre-FFN)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer60_qkv_proj [label="Layer 60: QKV Projection
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=64, d_k=128]" fillcolor=lightblue]
+		layer60_qkv_split [label="Layer 60: QKV Split (TP=4)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=16, d_k=128] per GPU" fillcolor=lightcyan shape=parallelogram]
+		layer60_attention [label="Layer 60: Attention Compute
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, heads=16, d_k=128]" fillcolor=lightblue]
+		layer60_attn_allreduce [label="Layer 60: Attention All-Reduce
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer60_ffn_gate [label="Layer 60: FFN Gate Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer60_ffn_up [label="Layer 60: FFN Up Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer60_ffn_down [label="Layer 60: FFN Down Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, ffn_dim=2752]
+Output: [batch=8, seq=4096, hidden=8192] per GPU" fillcolor=lightblue]
+		layer60_ffn_allreduce [label="Layer 60: FFN All-Reduce
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=2048] per GPU
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer60_norm1 [label="Layer 60: RMSNorm (Pre-Attn)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer60_norm2 [label="Layer 60: RMSNorm (Pre-FFN)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer70_qkv_proj [label="Layer 70: QKV Projection
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=64, d_k=128]" fillcolor=lightblue]
+		layer70_qkv_split [label="Layer 70: QKV Split (TP=4)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, heads=16, d_k=128] per GPU" fillcolor=lightcyan shape=parallelogram]
+		layer70_attention [label="Layer 70: Attention Compute
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, heads=16, d_k=128]" fillcolor=lightblue]
+		layer70_attn_allreduce [label="Layer 70: Attention All-Reduce
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, heads=16, d_k=128]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer70_ffn_gate [label="Layer 70: FFN Gate Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer70_ffn_up [label="Layer 70: FFN Up Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, ffn_dim=2752] per GPU" fillcolor=lightblue]
+		layer70_ffn_down [label="Layer 70: FFN Down Proj
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, ffn_dim=2752]
+Output: [batch=8, seq=4096, hidden=8192] per GPU" fillcolor=lightblue]
+		layer70_ffn_allreduce [label="Layer 70: FFN All-Reduce
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=2048] per GPU
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightpink shape=ellipse]
+		layer70_norm1 [label="Layer 70: RMSNorm (Pre-Attn)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		layer70_norm2 [label="Layer 70: RMSNorm (Pre-FFN)
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		final_norm [label="Final RMSNorm
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, hidden=8192]" fillcolor=lightblue]
+		logits_projection [label="Logits Projection
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, hidden=8192]
+Output: [batch=8, seq=4096, vocab=128256] per GPU" fillcolor=lightblue]
+		logits_allgather [label="Logits All-Gather
+GPU: [4,5,6,7] TP=4
+Input: [batch=8, seq=4096, vocab=32064] per GPU
+Output: [batch=8, seq=4096, vocab=128256]" fillcolor=lightpink shape=ellipse]
+		output [label="Final Output
+GPU: [4,5,6,7]
+Input: [batch=8, seq=4096, vocab=128256]
+Output: [batch=8, seq=4096, vocab=128256]" fillcolor=lightgreen]
+	}
+	pipeline_comm [label="Pipeline Communication
+Stage 0 → Stage 1
+GPU: [0,1,2,3] → [4,5,6,7]
+Data: [batch=8, seq=4096, hidden=8192]" fillcolor=yellow shape=ellipse style="filled,dashed"]
+	input_stage0 -> layer0_qkv_proj
+	layer0_qkv_proj -> layer0_qkv_split
+	layer0_qkv_split -> layer0_attention
+	layer0_attention -> layer0_attn_allreduce
+	layer0_attn_allreduce -> layer0_norm1
+	layer0_norm1 -> layer0_ffn_gate
+	layer0_ffn_gate -> layer0_ffn_up
+	layer0_ffn_up -> layer0_ffn_down
+	layer0_ffn_down -> layer0_ffn_allreduce
+	layer0_ffn_allreduce -> layer0_norm2
+	layer0_norm2 -> layer10_qkv_proj [label="Layers 1-9" style=dashed]
+	layer10_norm2 -> layer20_qkv_proj [label="Layers 11-19" style=dashed]
+	layer20_norm2 -> layer30_qkv_proj [label="Layers 21-29" style=dashed]
+	layer30_norm2 -> stage0_output [label="Layers 31-39" style=dashed]
+	stage0_output -> pipeline_comm
+	pipeline_comm -> input_stage1
+	input_stage1 -> layer40_qkv_proj
+	layer40_qkv_proj -> layer40_qkv_split
+	layer40_qkv_split -> layer40_attention
+	layer40_attention -> layer40_attn_allreduce
+	layer40_attn_allreduce -> layer40_norm1
+	layer40_norm1 -> layer40_ffn_gate
+	layer40_ffn_gate -> layer40_ffn_up
+	layer40_ffn_up -> layer40_ffn_down
+	layer40_ffn_down -> layer40_ffn_allreduce
+	layer40_ffn_allreduce -> layer40_norm2
+	layer40_norm2 -> layer50_qkv_proj [label="Layers 41-49" style=dashed]
+	layer50_norm2 -> layer60_qkv_proj [label="Layers 51-59" style=dashed]
+	layer60_norm2 -> layer70_qkv_proj [label="Layers 61-69" style=dashed]
+	layer70_norm2 -> final_norm [label="Layers 71-79" style=dashed]
+	final_norm -> logits_projection
+	logits_projection -> logits_allgather
+	logits_allgather -> output
+}

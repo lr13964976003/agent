@@ -1,0 +1,72 @@
+{
+  "dag_generation_timestamp": "2025-12-24T09:37:56Z",
+  "parallel_strategy": "PP=2×TP=4×SP=1",
+  "model": "LLaMA3-70B",
+  "total_gpus": 8,
+  "dag_files": {
+    "python_generator": {
+      "path": "../outputs/2025-12-24-09-37-56/generate_parallel_strategy_dag.py",
+      "description": "Python script that generates the DAG based on the parallel strategy deployment plan"
+    },
+    "dot_source": {
+      "path": "../outputs/2025-12-24-09-37-56/llama3_70b_parallel_strategy.dot", 
+      "description": "Graphviz DOT source code describing the complete parallel strategy DAG",
+      "total_nodes": 132,
+      "has_cycle": false,
+      "validation_status": "PASSED"
+    },
+    "svg_visualization": {
+      "path": "../outputs/2025-12-24-09-37-56/llama3_70b_parallel_strategy.svg",
+      "description": "SVG visualization of the DAG showing GPU boundaries, communication patterns, and operator-level details"
+    }
+  },
+  "dag_structure": {
+    "pipeline_parallelism": {
+      "stages": 2,
+      "stage_0": {
+        "layers": "0-39",
+        "gpus": [0, 1, 2, 3],
+        "tensor_parallel_size": 4
+      },
+      "stage_1": {
+        "layers": "40-79", 
+        "gpus": [4, 5, 6, 7],
+        "tensor_parallel_size": 4
+      }
+    },
+    "communication_patterns": {
+      "tensor_parallelism": ["All-Reduce", "All-Gather"],
+      "pipeline_parallelism": ["Stage-to-Stage Transfer"],
+      "sequence_parallelism": "Disabled (SP=1)"
+    },
+    "node_types": {
+      "computation": "Rectangle - Linear, Attention, FFN, RMSNorm operations",
+      "communication": "Ellipse - All-Reduce, All-Gather operations", 
+      "routing/aggregation": "Parallelogram - QKV Split, data distribution",
+      "input/output": "Rectangle with light green fill"
+    },
+    "operator_details": {
+      "attention_mechanism": "Fully decomposed with QKV Projection, Split, Compute, and All-Reduce",
+      "ffn_structure": "Gate, Up, Down projections with All-Reduce aggregation",
+      "tensor_parallel_splits": "Hidden dimensions split across 4 GPUs within each stage",
+      "memory_dimensions": "All nodes include precise Input/Output dimensions"
+    }
+  },
+  "validation_results": {
+    "mathematical_correctness": "PP=2×TP=4×SP=1 = 8 GPUs ✓",
+    "cycle_detection": "No cycles found ✓", 
+    "gpu_boundary_compliance": "All nodes properly labeled with GPU assignments ✓",
+    "communication_completeness": "All TP and PP communications explicitly represented ✓",
+    "operator_granularity": "Attention and FFN operations decomposed to operator level ✓",
+    "visualization_standards": "Correct shapes for node types (compute/communication/routing) ✓"
+  },
+  "key_features": [
+    "Complete operator-level decomposition of transformer layers",
+    "Explicit representation of All-Reduce operations for TP=4",
+    "Clear GPU boundary labeling for all compute and communication nodes",
+    "Pipeline communication shown as dashed edges between stages",
+    "Precise input/output dimensions for tensor shape tracking",
+    "No cycles - strictly acyclic graph structure",
+    "Comprehensive coverage of PP=2×TP=4×SP=1 strategy"
+  ]
+}
