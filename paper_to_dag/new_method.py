@@ -8,7 +8,7 @@ from crewai_tools import ScrapeWebsiteTool, FileReadTool, FileWriterTool
 from langchain_openai import ChatOpenAI
 import re
 from _my_tools import *
-from build_agent import *
+from build_agents import *
 from datetime import datetime 
 from opentelemetry import trace
 
