@@ -90,11 +90,12 @@ def main():
     agents = []
     tasks = []
     i = 0
+	expected_outputs = ["The path of parallelism strategy deployment method file", "Check Result", "The path of graphviz code describing the DAG", "Check Result"]
     for k in variant.keys():
         prompt = fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"])
         tools = variant[k]["tools"]
         agents.append(Engineer("openai/Kimi-K2",tools))
-        tasks.append(build_task(prompt, agents[i]))
+        tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
     
     method_loop = ReviewLoop(worker=agents[0], reviewer=agents[1], work_task=tasks[0], review_task=tasks[1])
