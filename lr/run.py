@@ -88,32 +88,27 @@ def main():
                      ]
                  }
             }
-
+    prompts = []
+	tools = []
     expected_outputs = ["The path of parallelism strategy deployment method file", "Performance Evaluation and Modify", "The path of graphviz code describing the DAG", "DAG Modify Method"]
-    
+    for k in variant.keys():
+        prompts.append(fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"]))
+        tools = variant[k]["tools"]
 	# Generate_Method_Agent
-    prompt = fetch_prompt_local(variant[0]["slug"], variant[0]["inputs"])
-    tools = variant[0]["tools"]
-    GMA = Researcher("openai/Kimi-K2",tools)
-    GMT = build_task(prompt, expected_outputs[0], GMA)
+    GMA = Researcher("openai/Kimi-K2",tools[0])
+    GMT = build_task(prompts[0], expected_outputs[0], GMA)
 
 	# Performance_Evaluation_Agent
-    prompt = fetch_prompt_local(variant[1]["slug"], variant[1]["inputs"])
-    tools = variant[1]["tools"]
-    PEA = Researcher("openai/Kimi-K2",tools)
-    PET = build_task(prompt, expected_outputs[1], PEA)
+    PEA = Researcher("openai/Kimi-K2",tools[1])
+    PET = build_task(prompts[1], expected_outputs[1], PEA)
 
 	# Generate_DAG_Agent
-    prompt = fetch_prompt_local(variant[2]["slug"], variant[2]["inputs"])
-    tools = variant[2]["tools"]
-    GDA = Engineer("openai/Kimi-K2",tools)
-    GDT = build_task(prompt, expected_outputs[2], PEA)
+    GDA = Engineer("openai/Kimi-K2",tools[2])
+    GDT = build_task(prompts[2], expected_outputs[2], PEA)
 
 	# Check_DAG_Agent
-    prompt = fetch_prompt_local(variant[3]["slug"], variant[3]["inputs"])
-    tools = variant[3]["tools"]
-    CDA = Engineer("openai/Kimi-K2",tools)
-    CDT = build_task(prompt, expected_outputs[3], CDA)
+    CDA = Engineer("openai/Kimi-K2",tools[3])
+    CDT = build_task(prompts[3], expected_outputs[3], CDA)
 
     # Method_Loop
     method_loop = ReviewLoop(worker=GMA, reviewer=PEA, work_task=GMT, review_task=PET)
