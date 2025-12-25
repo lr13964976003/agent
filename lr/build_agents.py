@@ -85,6 +85,7 @@ def Researcher(model: str, tools: list):
 def build_task(description, agent):
     task = Task(
         description=description,
+        expected_output=expected_output,
         agent=agent
     )
     return task
