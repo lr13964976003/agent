@@ -1,0 +1,370 @@
+{
+  "deployment_configurations": {
+    "baseline_tp8_pp2": {
+      "name": "Baseline Tensor Parallelism 8 + Pipeline Parallelism 2",
+      "model_architecture": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "mlp_hidden_size": 32768,
+        "token_dimension": 8192,
+        "attention_heads": 16,
+        "head_dimension": 512,
+        "precision": "FP16"
+      },
+      "parallel_strategy": {
+        "tensor_parallelism": {
+          "degree": 8,
+          "partitioning": "column_row_combined",
+          "implementation": "MLP_tensor_parallel"
+        },
+        "pipeline_parallelism": {
+          "degree": 2,
+          "stages": 2,
+          "gpus_per_stage": 8
+        },
+        "expert_parallelism": {
+          "degree": 1,
+          "experts_per_gpu": 8,
+          "placement": "colocated"
+        }
+      },
+      "gpu_configuration": {
+        "total_gpus": 16,
+        "gpu_type": "H100",
+        "device_mapping": [
+          {
+            "device_id": 0,
+            "stage": 0,
+            "tp_rank": 0,
+            "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 1,
+            "stage": 0,
+            "tp_rank": 1,
+            "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 2,
+            "stage": 0,
+            "tp_rank": 2,
+            "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 3,
+            "stage": 0,
+            "tp_rank": 3,
+            "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 4,
+            "stage": 0,
+            "tp_rank": 4,
+            "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 5,
+            "stage": 0,
+            "tp_rank": 5,
+            "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 6,
+            "stage": 0,
+            "tp_rank": 6,
+            "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 7,
+            "stage": 0,
+            "tp_rank": 7,
+            "experts": [0, 1, 2, 3, 4, 5, 6, 7],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 8,
+            "stage": 1,
+            "tp_rank": 0,
+            "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 9,
+            "stage": 1,
+            "tp_rank": 1,
+            "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 10,
+            "stage": 1,
+            "tp_rank": 2,
+            "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 11,
+            "stage": 1,
+            "tp_rank": 3,
+            "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 12,
+            "stage": 1,
+            "tp_rank": 4,
+            "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 13,
+            "stage": 1,
+            "tp_rank": 5,
+            "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 14,
+            "stage": 1,
+            "tp_rank": 6,
+            "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_shard": "1/8_column_parallel"
+          },
+          {
+            "device_id": 15,
+            "stage": 1,
+            "tp_rank": 7,
+            "experts": [8, 9, 10, 11, 12, 13, 14, 15],
+            "tensor_shard": "1/8_column_parallel"
+          }
+        ]
+      },
+      "performance_metrics": {
+        "tps": 120000,
+        "tpot_ms": 8.3
+      }
+    },
+    "proposed_cross_node_ep16": {
+      "name": "Proposed Cross-Node Expert Parallelism 16",
+      "model_architecture": {
+        "layers": 4,
+        "experts_per_layer": 16,
+        "expert_type": "MLP",
+        "mlp_hidden_size": 32768,
+        "token_dimension": 8192,
+        "attention_heads": 16,
+        "head_dimension": 512,
+        "precision": "FP16"
+      },
+      "parallel_strategy": {
+        "expert_parallelism": {
+          "degree": 16,
+          "experts_per_gpu": 1,
+          "placement": "distributed_one_per_gpu",          "placement_strategy": "topology_aware"
+        },
+        "tensor_parallelism": {
+          "degree": 1,
+          "enabled": false
+        },
+        "pipeline_parallelism": {
+          "degree": 1,
+          "enabled": false
+        },
+        "communication_strategy": {
+          "token_routing": "asynchronous",
+          "batching": "by_destination_expert",
+          "overlap": "compute_communication",
+          "libraries": ["NCCL", "CUDA_streams"]
+        }
+      },
+      "gpu_configuration": {
+        "total_gpus": 16,
+        "gpu_type": "H100",
+        "device_mapping": [
+          {
+            "device_id": 0,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 0, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 0, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 0, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 0, "type": "MLP", "hidden_size": 32768}
+            },
+            "memory_allocation": {
+              "expert_weights": "32768 * 8192 * 2 bytes (FP16) * 4 layers",
+              "activation_buffer": "8192 * batch_size * sequence_length"
+            }
+          },
+          {
+            "device_id": 1,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 1, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 1, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 1, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 1, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 2,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 2, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 2, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 2, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 2, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 3,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 3, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 3, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 3, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 3, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 4,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 4, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 4, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 4, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 4, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 5,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 5, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 5, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 5, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 5, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 6,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 6, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 6, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 6, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 6, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 7,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 7, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 7, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 7, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 7, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 8,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 8, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 8, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 8, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 8, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 9,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 9, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 9, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 9, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 9, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 10,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 10, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 10, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 10, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 10, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 11,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 11, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 11, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 11, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 11, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 12,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 12, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 12, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 12, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 12, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 13,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 13, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 13, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 13, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 13, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 14,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 14, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 14, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 14, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 14, "type": "MLP", "hidden_size": 32768}
+            }
+          },
+          {
+            "device_id": 15,
+            "expert_assignments": {
+              "layer_0": {"expert_id": 15, "type": "MLP", "hidden_size": 32768},
+              "layer_1": {"expert_id": 15, "type": "MLP", "hidden_size": 32768},
+              "layer_2": {"expert_id": 15, "type": "MLP", "hidden_size": 32768},
+              "layer_3": {"expert_id": 15, "type": "MLP", "hidden_size": 32768}
+            }
+          }
+        ]
+      },
+      "communication_details": {
+        "token_routing": {
+          "method": "asynchronous_with_batching",
+          "batch_size": 1024,
+          "sequence_length": 10000,
+          "routing_algorithm": "top_k_gating",
+          "load_balancing": "dynamic_probability_adjustment"
+        },
+        "inter_gpu_bandwidth": "NVLink_InfiniBand",
+        "latency_hiding": "CUDA_streams_overlap"
+      },
+      "performance_metrics": {
+        "tps": 450000,
+        "tpot_ms": 2.2,
+        "improvement_factor": {
+          "throughput": 3.75,
+          "latency": 3.8
+        }
+      }
+    }
+  },
+  "batch_configuration": {
+    "batch_size": 1024,
+    "sequence_length": 10000,
+    "total_tokens_per_batch": 10240000,
+    "precision": "FP16",
+    "memory_per_token_bytes": 2
+  }
+}
