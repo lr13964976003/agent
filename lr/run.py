@@ -15,8 +15,8 @@ from opentelemetry import trace
 
 now = datetime.now()
 submission_dir = now.strftime("%Y-%m-%d-%H-%M-%S")
-if os.path.exists(f"../output/{submission_dir}") is False:
-    os.mkdir(f"../outputs/{submission_dir}")
+if os.path.exists(f"./output/{submission_dir}") is False:
+    os.mkdir(f"./outputs/{submission_dir}")
 
 def fetch_prompt_local(slug:str, inputs:dict) -> str:
     with open(f"./prompts/{slug}.md","r") as f:
@@ -100,9 +100,9 @@ def main():
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
     
-
     method_loop = ReviewLoop(worker=agents[0], reviewer=agents[1], work_task=tasks[0], review_task=tasks[1])
     method_result = method_loop.run()
+	return 
     dag_loop = ReviewLoop(worker=agents[2], reviewer=agents[3], work_task=tasks[2], review_task=tasks[3], inputs=method_result)
     dag_result = dag_loop.run()
     
