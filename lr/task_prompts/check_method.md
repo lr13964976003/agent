@@ -7,7 +7,7 @@ RESOURCES
 
 ---
 
-You have been provided with the parallel strategy deployment method file provided by the previous agent. <<<提供部署方案文件>>>
+You have been provided with the parallel strategy deployment method file located at {task_path}. <<<提供部署方案文件>>>
 
 TASK
 
