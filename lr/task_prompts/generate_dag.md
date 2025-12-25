@@ -4,8 +4,6 @@ RESOURCES
 
 You have been provided with a parallelism strategy deployment method file of LLM located at {method_path}.  
 
-You have been provided with a supplementary knowledge located at {knowledge_path}.<<<提供知识路径>>>
-
 
 TASK
 
