@@ -93,7 +93,7 @@ def main():
     expected_outputs = ["The path of parallelism strategy deployment method file", "Performance Evaluation and Modify", "The path of graphviz code describing the DAG", "DAG Modify Method"]
     for k in variant.keys():
         prompts.append(fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"]))
-        tools = variant[k]["tools"]
+        tools.append(variant[k]["tools"])
 	# Generate_Method_Agent
     GMA = Researcher("openai/Kimi-K2",tools[0])
     GMT = build_task(prompts[0], expected_outputs[0], GMA)
