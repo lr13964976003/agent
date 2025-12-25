@@ -13,7 +13,7 @@ TASK
 
 You are tested to completed the following tasks:
 
-Requires a deep understanding of the hardware environment, models, and performance requirements. . <<<要求理解输入文件>>> 
+Requires a deep understanding of the hardware environment, models, and performance requirements. <<<要求理解输入文件>>> 
 
 Propose the optimal parallel strategy for the model based on the current hardware environment, while meeting basic performance requirements. <<<要求在满足基本性能需求的前提下，提出基于当前硬件环境下模型的最优并行策略>>>
 
@@ -41,7 +41,7 @@ SUBMISSION
 
 ---
 
-The a parallel strategy deployment plan should be saved in {save_path}. 
+The parallel strategy deployment plan should be saved in {save_path}. 
 
 You don't need to submit the complete content because it is too large. Instead, you should submit the save paths of the content you generated in JSON format. <<<提交路径而不是content>>>
 
