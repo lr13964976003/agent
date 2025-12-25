@@ -89,7 +89,7 @@ def main():
                  }
             }
     prompts = []
-	tools = []
+    tools = []
     expected_outputs = ["The path of parallelism strategy deployment method file", "Performance Evaluation and Modify", "The path of graphviz code describing the DAG", "DAG Modify Method"]
     for k in variant.keys():
         prompts.append(fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"]))
