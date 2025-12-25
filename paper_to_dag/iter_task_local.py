@@ -144,9 +144,7 @@ def main():
 
     paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], work_task=tasks[1], review_task=tasks[2])
     paper_result = paper_loop.run()
-	
 	return
-
     dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=paper_result)
     dag_result = dag_loop.run()
     
@@ -187,4 +185,5 @@ if __name__ == "__main__":
     #with tracer.start_as_current_span("workflow-root") as root:
 
     main()
+
 
