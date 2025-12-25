@@ -36,7 +36,7 @@ def main():
                  "version": 1,
                  "inputs": {
 					 "task_path": "./inputs/task.md",
-                     "save_path": f"../outputs/{submission_dir}"
+                     "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
                      FileReadTool(),
@@ -49,7 +49,7 @@ def main():
                  "slug": "chain_check_method",
                  "version": 1,
                  "inputs": {
-                     "save_path": f"../outputs/{submission_dir}"
+                     "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
                      FileReadTool(),
@@ -62,7 +62,7 @@ def main():
                 "slug": "chain_generate_DAG",
                 "version": 1,
                 "inputs": {
-                    "save_path": f"../outputs/{submission_dir}"
+                    "save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
                     FileReadTool(),
@@ -76,7 +76,7 @@ def main():
                  "slug": "chain_check_DAG",
                  "version": 1,
                  "inputs": {
-                     "save_path": f"../outputs/{submission_dir}"
+                     "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
                     FileReadTool(),
