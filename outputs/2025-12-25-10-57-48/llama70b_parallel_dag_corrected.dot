@@ -1,0 +1,304 @@
+// Llama3-70B Parallel Strategy Deployment DAG - CORRECTED
+// This version includes missing attention gate nodes for all stages
+digraph {
+    rankdir=TB
+    size="20,30"
+    node [fontname=Arial fontsize=10]
+    edge [fontname=Arial fontsize=8]
+    
+    // Define node styles
+    node [fillcolor=lightblue shape=ellipse style=filled]  // Communication nodes
+    node [fillcolor=lightgreen shape=rectangle style=filled]  // Computation nodes
+    node [fillcolor=lightyellow shape=parallelogram style=filled]  // Routing/aggregation nodes
+    
+    // Input node
+    input [label="Input\nInput: [batch_size=64, seq_len=8192, hidden_size=8192]\nOutput: [batch_size=64, seq_len=8192, hidden_size=8192]" fillcolor=lightpink shape=diamond style=filled]
+    
+    // Stage 0: GPUs 0,1 (Layers 0-19)
+    subgraph cluster_stage0 {
+        fillcolor=lightgray
+        label="Stage 0: GPUs 0,1 (Layers 0-19)"
+        style="rounded, filled"
+        
+        subgraph cluster_gpu0 {
+            label="GPU 0"
+            style=rounded
+            
+            // Layer 0 - Complete with attention gate
+            gpu0_layer0_attn_qkv [label="Layer 0 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu0_layer0_attn_gate [label="Layer 0 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu0_layer0_attn_out [label="Layer 0 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu0_layer0_mlp_gate [label="Layer 0 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu0_layer0_mlp_up [label="Layer 0 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu0_layer0_mlp_down [label="Layer 0 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+        }
+        
+        subgraph cluster_gpu1 {
+            label="GPU 1"
+            style=rounded
+            
+            // Layer 0 - Complete with attention gate
+            gpu1_layer0_attn_qkv [label="Layer 0 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu1_layer0_attn_gate [label="Layer 0 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu1_layer0_attn_out [label="Layer 0 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu1_layer0_mlp_gate [label="Layer 0 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu1_layer0_mlp_up [label="Layer 0 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu1_layer0_mlp_down [label="Layer 0 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+        }
+        
+        // Communication nodes for Stage 0
+        stage0_tp_allreduce1 [label="TP All-Reduce\nAttention Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+        stage0_tp_allreduce2 [label="TP All-Reduce\nMLP Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+        stage0_output [label="Stage 0 Output\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightcoral shape=diamond style=filled]
+    }
+    
+    // Stage 1: GPUs 2,3 (Layers 20-39)
+    subgraph cluster_stage1 {
+        fillcolor=lightgray
+        label="Stage 1: GPUs 2,3 (Layers 20-39)"
+        style="rounded, filled"
+        
+        subgraph cluster_gpu2 {
+            label="GPU 2"
+            style=rounded
+            
+            // Layer 20 - NOW WITH attention gate (previously missing)
+            gpu2_layer20_attn_qkv [label="Layer 20 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu2_layer20_attn_gate [label="Layer 20 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu2_layer20_attn_out [label="Layer 20 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu2_layer20_mlp_gate [label="Layer 20 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu2_layer20_mlp_up [label="Layer 20 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu2_layer20_mlp_down [label="Layer 20 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+        }
+        
+        subgraph cluster_gpu3 {
+            label="GPU 3"
+            style=rounded
+            
+            // Layer 20 - NOW WITH attention gate (previously missing)
+            gpu3_layer20_attn_qkv [label="Layer 20 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu3_layer20_attn_gate [label="Layer 20 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu3_layer20_attn_out [label="Layer 20 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu3_layer20_mlp_gate [label="Layer 20 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu3_layer20_mlp_up [label="Layer 20 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu3_layer20_mlp_down [label="Layer 20 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+        }
+        
+        // Communication nodes for Stage 1
+        stage1_tp_allreduce1 [label="TP All-Reduce\nAttention Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+        stage1_tp_allreduce2 [label="TP All-Reduce\nMLP Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+        p2p_send_0_1 [label="Pipeline Send\nStage0→Stage1\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+        p2p_recv_0_1 [label="Pipeline Receive\nStage0→Stage1\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+        stage1_output [label="Stage 1 Output\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightcoral shape=diamond style=filled]
+    }
+    
+    // Stage 2: GPUs 4,5 (Layers 40-59)
+    subgraph cluster_stage2 {
+        fillcolor=lightgray
+        label="Stage 2: GPUs 4,5 (Layers 40-59)"
+        style="rounded, filled"
+        
+        subgraph cluster_gpu4 {
+            label="GPU 4"
+            style=rounded
+            
+            // Layer 40 - NOW WITH attention gate (previously missing)
+            gpu4_layer40_attn_qkv [label="Layer 40 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu4_layer40_attn_gate [label="Layer 40 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu4_layer40_attn_out [label="Layer 40 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu4_layer40_mlp_gate [label="Layer 40 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu4_layer40_mlp_up [label="Layer 40 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu4_layer40_mlp_down [label="Layer 40 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+        }
+        
+        subgraph cluster_gpu5 {
+            label="GPU 5"
+            style=rounded
+            
+            // Layer 40 - NOW WITH attention gate (previously missing)
+            gpu5_layer40_attn_qkv [label="Layer 40 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu5_layer40_attn_gate [label="Layer 40 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu5_layer40_attn_out [label="Layer 40 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu5_layer40_mlp_gate [label="Layer 40 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu5_layer40_mlp_up [label="Layer 40 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu5_layer40_mlp_down [label="Layer 40 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+        }
+        
+        // Communication nodes for Stage 2
+        stage2_tp_allreduce1 [label="TP All-Reduce\nAttention Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+        stage2_tp_allreduce2 [label="TP All-Reduce\nMLP Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+        p2p_send_1_2 [label="Pipeline Send\nStage1→Stage2\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+        p2p_recv_1_2 [label="Pipeline Receive\nStage1→Stage2\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+        stage2_output [label="Stage 2 Output\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightcoral shape=diamond style=filled]
+    }
+    
+    // Stage 3: GPUs 6,7 (Layers 60-79)
+    subgraph cluster_stage3 {
+        fillcolor=lightgray
+        label="Stage 3: GPUs 6,7 (Layers 60-79)"
+        style="rounded, filled"
+        
+        subgraph cluster_gpu6 {
+            label="GPU 6"
+            style=rounded
+            
+            // Layer 60 - NOW WITH attention gate (previously missing)
+            gpu6_layer60_attn_qkv [label="Layer 60 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu6_layer60_attn_gate [label="Layer 60 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu6_layer60_attn_out [label="Layer 60 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu6_layer60_mlp_gate [label="Layer 60 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu6_layer60_mlp_up [label="Layer 60 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu6_layer60_mlp_down [label="Layer 60 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu6_lm_head [label="LM Head\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 128256]" fillcolor=lightgreen shape=rectangle style=filled]
+        }
+        
+        subgraph cluster_gpu7 {
+            label="GPU 7"
+            style=rounded
+            
+            // Layer 60 - NOW WITH attention gate (previously missing)
+            gpu7_layer60_attn_qkv [label="Layer 60 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu7_layer60_attn_gate [label="Layer 60 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu7_layer60_attn_out [label="Layer 60 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu7_layer60_mlp_gate [label="Layer 60 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+            gpu7_layer60_mlp_up [label="Layer 60 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu7_layer60_mlp_down [label="Layer 60 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+            gpu7_lm_head [label="LM Head\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 128256]" fillcolor=lightgreen shape=rectangle style=filled]
+        }
+        
+        // Communication nodes for Stage 3
+        stage3_tp_allreduce1 [label="TP All-Reduce\nAttention Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+        stage3_tp_allreduce2 [label="TP All-Reduce\nMLP Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+        p2p_send_2_3 [label="Pipeline Send\nStage2→Stage3\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+        p2p_recv_2_3 [label="Pipeline Receive\nStage2→Stage3\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+        final_allreduce [label="Final All-Reduce\nLM Head Output\nInput: [64, 8192, 128256]\nOutput: [64, 8192, 128256]" fillcolor=lightblue shape=ellipse style=filled]
+        output [label="Final Output\nInput: [64, 8192, 128256]\nOutput: [64, 8192, 128256]" fillcolor=lightpink shape=diamond style=filled]
+    }
+    
+    // === CONNECTIONS ===
+    // Input to Stage 0
+    input -> gpu0_layer0_attn_qkv
+    input -> gpu1_layer0_attn_qkv
+    
+    // Stage 0: GPU 0 Layer 0 - CORRECTED FLOW with attention gate
+    gpu0_layer0_attn_qkv -> gpu0_layer0_attn_gate
+    gpu0_layer0_attn_gate -> gpu0_layer0_attn_out
+    gpu0_layer0_attn_out -> stage0_tp_allreduce1
+    
+    // Stage 0: GPU 1 Layer 0 - CORRECTED FLOW with attention gate
+    gpu1_layer0_attn_qkv -> gpu1_layer0_attn_gate
+    gpu1_layer0_attn_gate -> gpu1_layer0_attn_out
+    gpu1_layer0_attn_out -> stage0_tp_allreduce1
+    
+    // Stage 0: MLP after attention
+    stage0_tp_allreduce1 -> gpu0_layer0_mlp_gate
+    stage0_tp_allreduce1 -> gpu0_layer0_mlp_up
+    stage0_tp_allreduce1 -> gpu1_layer0_mlp_gate
+    stage0_tp_allreduce1 -> gpu1_layer0_mlp_up
+    
+    gpu0_layer0_mlp_gate -> gpu0_layer0_mlp_down
+    gpu1_layer0_mlp_gate -> gpu1_layer0_mlp_down
+    gpu0_layer0_mlp_up -> gpu0_layer0_mlp_down
+    gpu1_layer0_mlp_up -> gpu1_layer0_mlp_down
+    
+    gpu0_layer0_mlp_down -> stage0_tp_allreduce2
+    gpu1_layer0_mlp_down -> stage0_tp_allreduce2
+    stage0_tp_allreduce2 -> stage0_output
+    
+    // Pipeline communication Stage 0 -> Stage 1
+    stage0_output -> p2p_send_0_1
+    p2p_send_0_1 -> p2p_recv_0_1
+    
+    // Stage 1: GPU 2 Layer 20 - NOW WITH attention gate (CORRECTED)
+    p2p_recv_0_1 -> gpu2_layer20_attn_qkv
+    p2p_recv_0_1 -> gpu3_layer20_attn_qkv
+    
+    gpu2_layer20_attn_qkv -> gpu2_layer20_attn_gate  // FIXED: Added missing gate
+    gpu2_layer20_attn_gate -> gpu2_layer20_attn_out  // FIXED: Added missing gate connection
+    gpu2_layer20_attn_out -> stage1_tp_allreduce1
+    
+    // Stage 1: GPU 3 Layer 20 - NOW WITH attention gate (CORRECTED)
+    gpu3_layer20_attn_qkv -> gpu3_layer20_attn_gate  // FIXED: Added missing gate
+    gpu3_layer20_attn_gate -> gpu3_layer20_attn_out  // FIXED: Added missing gate connection
+    gpu3_layer20_attn_out -> stage1_tp_allreduce1
+    
+    // Stage 1: MLP after attention
+    stage1_tp_allreduce1 -> gpu2_layer20_mlp_up
+    stage1_tp_allreduce1 -> gpu3_layer20_mlp_up
+    
+    gpu2_layer20_mlp_gate -> gpu2_layer20_mlp_down
+    gpu3_layer20_mlp_gate -> gpu3_layer20_mlp_down
+    gpu2_layer20_mlp_up -> gpu2_layer20_mlp_down
+    gpu3_layer20_mlp_up -> gpu3_layer20_mlp_down
+    
+    gpu2_layer20_mlp_down -> stage1_tp_allreduce2
+    gpu3_layer20_mlp_down -> stage1_tp_allreduce2
+    stage1_tp_allreduce2 -> stage1_output
+    
+    // Pipeline communication Stage 1 -> Stage 2
+    stage1_output -> p2p_send_1_2
+    p2p_send_1_2 -> p2p_recv_1_2
+    
+    // Stage 2: GPU 4 Layer 40 - NOW WITH attention gate (CORRECTED)
+    p2p_recv_1_2 -> gpu4_layer40_attn_qkv
+    p2p_recv_1_2 -> gpu5_layer40_attn_qkv
+    
+    gpu4_layer40_attn_qkv -> gpu4_layer40_attn_gate  // FIXED: Added missing gate
+    gpu4_layer40_attn_gate -> gpu4_layer40_attn_out  // FIXED: Added missing gate connection
+    gpu4_layer40_attn_out -> stage2_tp_allreduce1
+    
+    // Stage 2: GPU 5 Layer 40 - NOW WITH attention gate (CORRECTED)
+    gpu5_layer40_attn_qkv -> gpu5_layer40_attn_gate  // FIXED: Added missing gate
+    gpu5_layer40_attn_gate -> gpu5_layer40_attn_out  // FIXED: Added missing gate connection
+    gpu5_layer40_attn_out -> stage2_tp_allreduce1
+    
+    // Stage 2: MLP after attention
+    stage2_tp_allreduce1 -> gpu4_layer40_mlp_up
+    stage2_tp_allreduce1 -> gpu5_layer40_mlp_up
+    
+    gpu4_layer40_mlp_gate -> gpu4_layer40_mlp_down
+    gpu5_layer40_mlp_gate -> gpu5_layer40_mlp_down
+    gpu4_layer40_mlp_up -> gpu4_layer40_mlp_down
+    gpu5_layer40_mlp_up -> gpu5_layer40_mlp_down
+    
+    gpu4_layer40_mlp_down -> stage2_tp_allreduce2
+    gpu5_layer40_mlp_down -> stage2_tp_allreduce2
+    stage2_tp_allreduce2 -> stage2_output
+    
+    // Pipeline communication Stage 2 -> Stage 3
+    stage2_output -> p2p_send_2_3
+    p2p_send_2_3 -> p2p_recv_2_3
+    
+    // Stage 3: GPU 6 Layer 60 - NOW WITH attention gate (CORRECTED)
+    p2p_recv_2_3 -> gpu6_layer60_attn_qkv
+    p2p_recv_2_3 -> gpu7_layer60_attn_qkv
+    
+    gpu6_layer60_attn_qkv -> gpu6_layer60_attn_gate  // FIXED: Added missing gate
+    gpu6_layer60_attn_gate -> gpu6_layer60_attn_out  // FIXED: Added missing gate connection
+    gpu6_layer60_attn_out -> stage3_tp_allreduce1
+    
+    // Stage 3: GPU 7 Layer 60 - NOW WITH attention gate (CORRECTED)
+    gpu7_layer60_attn_qkv -> gpu7_layer60_attn_gate  // FIXED: Added missing gate
+    gpu7_layer60_attn_gate -> gpu7_layer60_attn_out  // FIXED: Added missing gate connection
+    gpu7_layer60_attn_out -> stage3_tp_allreduce1
+    
+    // Stage 3: MLP after attention
+    stage3_tp_allreduce1 -> gpu6_layer60_mlp_up
+    stage3_tp_allreduce1 -> gpu7_layer60_mlp_up
+    
+    gpu6_layer60_mlp_gate -> gpu6_layer60_mlp_down
+    gpu7_layer60_mlp_gate -> gpu7_layer60_mlp_down
+    gpu6_layer60_mlp_up -> gpu6_layer60_mlp_down
+    gpu7_layer60_mlp_up -> gpu7_layer60_mlp_down
+    
+    gpu6_layer60_mlp_down -> stage3_tp_allreduce2
+    gpu7_layer60_mlp_down -> stage3_tp_allreduce2
+    
+    // Final LM Head
+    stage3_tp_allreduce2 -> gpu6_lm_head
+    stage3_tp_allreduce2 -> gpu7_lm_head
+    
+    gpu6_lm_head -> final_allreduce
+    gpu7_lm_head -> final_allreduce
+    final_allreduce -> output
+}

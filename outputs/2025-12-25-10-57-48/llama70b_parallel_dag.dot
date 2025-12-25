@@ -1,0 +1,171 @@
+// Llama3-70B Parallel Strategy Deployment DAG
+digraph {
+	rankdir=TB size="20,30"
+	node [fontname=Arial fontsize=10]
+	edge [fontname=Arial fontsize=8]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input\nInput: [batch_size=64, seq_len=8192, hidden_size=8192]\nOutput: [batch_size=64, seq_len=8192, hidden_size=8192]" fillcolor=lightpink shape=diamond style=filled]
+	subgraph cluster_stage0 {
+		fillcolor=lightgray label="Stage 0: GPUs 0,1 (Layers 0-19)" style="rounded, filled"
+		subgraph cluster_gpu0 {
+			label="GPU 0" style=rounded
+			gpu0_layer0_attn_qkv [label="Layer 0 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu0_layer0_attn_gate [label="Layer 0 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+			gpu0_layer0_attn_out [label="Layer 0 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu0_layer0_mlp_gate [label="Layer 0 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+			gpu0_layer0_mlp_up [label="Layer 0 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu0_layer0_mlp_down [label="Layer 0 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+		}
+		subgraph cluster_gpu1 {
+			label="GPU 1" style=rounded
+			gpu1_layer0_attn_qkv [label="Layer 0 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu1_layer0_attn_gate [label="Layer 0 Attention Gate\nRouting\nInput: [64, 8192, 3072]\nOutput: [64, 8192, 1536]" fillcolor=lightyellow shape=parallelogram style=filled]
+			gpu1_layer0_attn_out [label="Layer 0 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu1_layer0_mlp_gate [label="Layer 0 MLP Gate\nRouting\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightyellow shape=parallelogram style=filled]
+			gpu1_layer0_mlp_up [label="Layer 0 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu1_layer0_mlp_down [label="Layer 0 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+		}
+		stage0_tp_allreduce1 [label="TP All-Reduce\nAttention Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+		stage0_tp_allreduce2 [label="TP All-Reduce\nMLP Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+		stage0_output [label="Stage 0 Output\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightcoral shape=diamond style=filled]
+	}
+	subgraph cluster_stage1 {
+		fillcolor=lightgray label="Stage 1: GPUs 2,3 (Layers 20-39)" style="rounded, filled"
+		subgraph cluster_gpu2 {
+			label="GPU 2" style=rounded
+			gpu2_layer20_attn_qkv [label="Layer 20 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu2_layer20_attn_out [label="Layer 20 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu2_layer20_mlp_up [label="Layer 20 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu2_layer20_mlp_down [label="Layer 20 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+		}
+		subgraph cluster_gpu3 {
+			label="GPU 3" style=rounded
+			gpu3_layer20_attn_qkv [label="Layer 20 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu3_layer20_attn_out [label="Layer 20 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu3_layer20_mlp_up [label="Layer 20 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu3_layer20_mlp_down [label="Layer 20 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+		}
+		stage1_tp_allreduce1 [label="TP All-Reduce\nAttention Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+		stage1_tp_allreduce2 [label="TP All-Reduce\nMLP Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+		p2p_send_0_1 [label="Pipeline Send\nStage0→Stage1\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+		p2p_recv_0_1 [label="Pipeline Receive\nStage0→Stage1\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+		stage1_output [label="Stage 1 Output\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightcoral shape=diamond style=filled]
+	}
+	subgraph cluster_stage2 {
+		fillcolor=lightgray label="Stage 2: GPUs 4,5 (Layers 40-59)" style="rounded, filled"
+		subgraph cluster_gpu4 {
+			label="GPU 4" style=rounded
+			gpu4_layer40_attn_qkv [label="Layer 40 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu4_layer40_attn_out [label="Layer 40 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu4_layer40_mlp_up [label="Layer 40 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu4_layer40_mlp_down [label="Layer 40 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+		}
+		subgraph cluster_gpu5 {
+			label="GPU 5" style=rounded
+			gpu5_layer40_attn_qkv [label="Layer 40 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu5_layer40_attn_out [label="Layer 40 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu5_layer40_mlp_up [label="Layer 40 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu5_layer40_mlp_down [label="Layer 40 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+		}
+		stage2_tp_allreduce1 [label="TP All-Reduce\nAttention Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+		stage2_tp_allreduce2 [label="TP All-Reduce\nMLP Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+		p2p_send_1_2 [label="Pipeline Send\nStage1→Stage2\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+		p2p_recv_1_2 [label="Pipeline Receive\nStage1→Stage2\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+		stage2_output [label="Stage 2 Output\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightcoral shape=diamond style=filled]
+	}
+	subgraph cluster_stage3 {
+		fillcolor=lightgray label="Stage 3: GPUs 6,7 (Layers 60-79)" style="rounded, filled"
+		subgraph cluster_gpu6 {
+			label="GPU 6" style=rounded
+			gpu6_layer60_attn_qkv [label="Layer 60 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu6_layer60_attn_out [label="Layer 60 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu6_layer60_mlp_up [label="Layer 60 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu6_layer60_mlp_down [label="Layer 60 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu6_lm_head [label="LM Head\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 128256]" fillcolor=lightgreen shape=rectangle style=filled]
+		}
+		subgraph cluster_gpu7 {
+			label="GPU 7" style=rounded
+			gpu7_layer60_attn_qkv [label="Layer 60 Attention QKV Linear\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 3072]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu7_layer60_attn_out [label="Layer 60 Attention Output Linear\nRow Parallel\nInput: [64, 8192, 1536]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu7_layer60_mlp_up [label="Layer 60 MLP Up Linear\nColumn Parallel\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 28672]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu7_layer60_mlp_down [label="Layer 60 MLP Down Linear\nRow Parallel\nInput: [64, 8192, 28672]\nOutput: [64, 8192, 4096]" fillcolor=lightgreen shape=rectangle style=filled]
+			gpu7_lm_head [label="LM Head\nColumn Parallel\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 128256]" fillcolor=lightgreen shape=rectangle style=filled]
+		}
+		stage3_tp_allreduce1 [label="TP All-Reduce\nAttention Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+		stage3_tp_allreduce2 [label="TP All-Reduce\nMLP Output\nInput: [64, 8192, 4096]\nOutput: [64, 8192, 4096]" fillcolor=lightblue shape=ellipse style=filled]
+		p2p_send_2_3 [label="Pipeline Send\nStage2→Stage3\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+		p2p_recv_2_3 [label="Pipeline Receive\nStage2→Stage3\nInput: [64, 8192, 8192]\nOutput: [64, 8192, 8192]" fillcolor=lightblue shape=ellipse style=filled]
+		final_allreduce [label="Final All-Reduce\nLM Head Output\nInput: [64, 8192, 128256]\nOutput: [64, 8192, 128256]" fillcolor=lightblue shape=ellipse style=filled]
+		output [label="Final Output\nInput: [64, 8192, 128256]\nOutput: [64, 8192, 128256]" fillcolor=lightpink shape=diamond style=filled]
+	}
+	input -> gpu0_layer0_attn_qkv
+	input -> gpu1_layer0_attn_qkv
+	gpu0_layer0_attn_qkv -> gpu0_layer0_attn_gate
+	gpu1_layer0_attn_qkv -> gpu1_layer0_attn_gate
+	gpu0_layer0_attn_gate -> gpu0_layer0_attn_out
+	gpu1_layer0_attn_gate -> gpu1_layer0_attn_out
+	gpu0_layer0_attn_out -> stage0_tp_allreduce1
+	gpu1_layer0_attn_out -> stage0_tp_allreduce1
+	stage0_tp_allreduce1 -> gpu0_layer0_mlp_gate
+	stage0_tp_allreduce1 -> gpu0_layer0_mlp_up
+	stage0_tp_allreduce1 -> gpu1_layer0_mlp_gate
+	stage0_tp_allreduce1 -> gpu1_layer0_mlp_up
+	gpu0_layer0_mlp_gate -> gpu0_layer0_mlp_down
+	gpu1_layer0_mlp_gate -> gpu1_layer0_mlp_down
+	gpu0_layer0_mlp_up -> gpu0_layer0_mlp_down
+	gpu1_layer0_mlp_up -> gpu1_layer0_mlp_down
+	gpu0_layer0_mlp_down -> stage0_tp_allreduce2
+	gpu1_layer0_mlp_down -> stage0_tp_allreduce2
+	stage0_tp_allreduce2 -> stage0_output
+	stage0_output -> p2p_send_0_1
+	p2p_send_0_1 -> p2p_recv_0_1
+	p2p_recv_0_1 -> gpu2_layer20_attn_qkv
+	p2p_recv_0_1 -> gpu3_layer20_attn_qkv
+	gpu2_layer20_attn_qkv -> gpu2_layer20_attn_out
+	gpu3_layer20_attn_qkv -> gpu3_layer20_attn_out
+	gpu2_layer20_attn_out -> stage1_tp_allreduce1
+	gpu3_layer20_attn_out -> stage1_tp_allreduce1
+	stage1_tp_allreduce1 -> gpu2_layer20_mlp_up
+	stage1_tp_allreduce1 -> gpu3_layer20_mlp_up
+	gpu2_layer20_mlp_up -> gpu2_layer20_mlp_down
+	gpu3_layer20_mlp_up -> gpu3_layer20_mlp_down
+	gpu2_layer20_mlp_down -> stage1_tp_allreduce2
+	gpu3_layer20_mlp_down -> stage1_tp_allreduce2
+	stage1_tp_allreduce2 -> stage1_output
+	stage1_output -> p2p_send_1_2
+	p2p_send_1_2 -> p2p_recv_1_2
+	p2p_recv_1_2 -> gpu4_layer40_attn_qkv
+	p2p_recv_1_2 -> gpu5_layer40_attn_qkv
+	gpu4_layer40_attn_qkv -> gpu4_layer40_attn_out
+	gpu5_layer40_attn_qkv -> gpu5_layer40_attn_out
+	gpu4_layer40_attn_out -> stage2_tp_allreduce1
+	gpu5_layer40_attn_out -> stage2_tp_allreduce1
+	stage2_tp_allreduce1 -> gpu4_layer40_mlp_up
+	stage2_tp_allreduce1 -> gpu5_layer40_mlp_up
+	gpu4_layer40_mlp_up -> gpu4_layer40_mlp_down
+	gpu5_layer40_mlp_up -> gpu5_layer40_mlp_down
+	gpu4_layer40_mlp_down -> stage2_tp_allreduce2
+	gpu5_layer40_mlp_down -> stage2_tp_allreduce2
+	stage2_tp_allreduce2 -> stage2_output
+	stage2_output -> p2p_send_2_3
+	p2p_send_2_3 -> p2p_recv_2_3
+	p2p_recv_2_3 -> gpu6_layer60_attn_qkv
+	p2p_recv_2_3 -> gpu7_layer60_attn_qkv
+	gpu6_layer60_attn_qkv -> gpu6_layer60_attn_out
+	gpu7_layer60_attn_qkv -> gpu7_layer60_attn_out
+	gpu6_layer60_attn_out -> stage3_tp_allreduce1
+	gpu7_layer60_attn_out -> stage3_tp_allreduce1
+	stage3_tp_allreduce1 -> gpu6_layer60_mlp_up
+	stage3_tp_allreduce1 -> gpu7_layer60_mlp_up
+	gpu6_layer60_mlp_up -> gpu6_layer60_mlp_down
+	gpu7_layer60_mlp_up -> gpu7_layer60_mlp_down
+	gpu6_layer60_mlp_down -> stage3_tp_allreduce2
+	gpu7_layer60_mlp_down -> stage3_tp_allreduce2
+	stage3_tp_allreduce2 -> gpu6_lm_head
+	stage3_tp_allreduce2 -> gpu7_lm_head
+	gpu6_lm_head -> final_allreduce
+	gpu7_lm_head -> final_allreduce
+	final_allreduce -> output
+}
