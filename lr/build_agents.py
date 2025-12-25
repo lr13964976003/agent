@@ -8,7 +8,6 @@ from opentelemetry import trace, context
 import re
 
 
-
 ag.init()  # 会读取 AGENTA_HOST / AGENTA_API_KEY
 #tracer = trace.get_tracer(__name__)
 
