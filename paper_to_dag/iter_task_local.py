@@ -145,9 +145,10 @@ def main():
 
     #paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], work_task=tasks[1], review_task=tasks[2])
     #paper_result = paper_loop.run()
-    method_path = "./inputs/deployment.json"
+    method_path = "./outputs/2025-12-23-11-54-48/parallel_strategy_deployment_plan.json"
     dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=method_path)
     dag_result = dag_loop.run()
+	return
     
     perf_task = tasks[5]
     perf_task.description = tasks[5].description + \
@@ -186,6 +187,7 @@ if __name__ == "__main__":
     #with tracer.start_as_current_span("workflow-root") as root:
 
     main()
+
 
 
 
