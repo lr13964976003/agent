@@ -49,6 +49,7 @@ def main():
                  "slug": "check_method",
                  "version": 1,
                  "inputs": {
+					 "task_path": "./inputs/task.md",
                      "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
