@@ -19,7 +19,7 @@ if os.path.exists(f"./output/{submission_dir}") is False:
     os.mkdir(f"./outputs/{submission_dir}")
 
 def fetch_prompt_local(slug:str, inputs:dict) -> str:
-    with open(f"./prompts/{slug}.md","r") as f:
+    with open(f"./task_prompts/{slug}.md","r") as f:
         prompt = f.read()
     prompt = re.sub(r'<<<.*?>>>', '', prompt, flags=re.DOTALL)
     prompt = prompt.format(**inputs)
@@ -32,11 +32,10 @@ def main():
 
     variant = {
 		    "generate_method": {
-                 "slug": "chain_generate_method",
+                 "slug": "generate_method",
                  "version": 1,
                  "inputs": {
-					 "task_path": "../environment/EP/deployment.md",
-					 "knowledge_path": "../knowledges/llm_simple.md",
+					 "task_path": "./inputs/task.md",
                      "save_path": f"../outputs/{submission_dir}"
                      },
                  "tools": [
@@ -63,7 +62,6 @@ def main():
                 "slug": "chain_generate_DAG",
                 "version": 1,
                 "inputs": {
-					"knowledge_path": "../knowledges/llm_simple.md",
                     "save_path": f"../outputs/{submission_dir}"
                     },
                 "tools": [
