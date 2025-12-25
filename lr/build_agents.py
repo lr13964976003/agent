@@ -29,17 +29,20 @@ def fetch_prompt(app_slug: str, variant_slug: str, variant_version: int, inputs:
     return prompt
 
 #@ag.instrument()
-def build_agent(model: str, tools: list):
+def Engineer(model: str, tools: list):
     llm = ChatOpenAI(
             model = model,
-            temperature = 0.7,
-            max_tokens = 16384,
+            temperature = 0.0,
+            max_tokens = 65536,
             request_timeout = 1800
             )
     agent = Agent(
-                role="Assistant",
-                goal="Complete the tasks assigned to you with the utmost seriousness, ensuring that the results fully meet the requirements.",
-                backstory="You are a researcher working on an engineering-level project with other researchers, and this project absolutely cannot have any mistakes.",
+                role="Engineer",
+                goal="Accurately and deterministically complete assigned engineering tasks.",
+                backstory=(
+                    "You are a senior engineer working on a production-grade system. "
+                    "Correctness, reproducibility, and clarity are mandatory."
+                ),
                 tools=tools,
                 allow_delegation=False,
                 allow_code_execution=True,
@@ -48,6 +51,35 @@ def build_agent(model: str, tools: list):
                 llm=llm
             )
     return agent
+
+def Researcher(model: str, tools: list):
+    llm = ChatOpenAI(
+            model = model,
+            temperature = 0.8,
+            max_tokens = 65536,
+            request_timeout = 1800
+            )
+    agent = Agent(
+                role="Engineer",
+                goal=(
+                     "Explore the problem space thoroughly, propose multiple hypotheses "
+                     "or solution paths, and analyze their trade-offs."
+                ),
+                backstory=(
+                     "You are a research-oriented agent collaborating with other researchers. "
+                     "You are encouraged to explore unconventional ideas, tolerate intermediate "
+                     "mistakes, and refine your understanding iteratively."
+                ),
+                tools=tools,
+                allow_delegation=False,
+                allow_code_execution=True,
+                verbose=True,
+                max_execution_time=1800,
+                llm=llm
+            )
+    return agent
+
+
 
 #@ag.instrument()
 def build_task(description, expected_output, agent):
