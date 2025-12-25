@@ -99,7 +99,7 @@ def main():
     
     method_loop = ReviewLoop(worker=agents[0], reviewer=agents[1], work_task=tasks[0], review_task=tasks[1])
     method_result = method_loop.run()
-
+    return
     dag_loop = ReviewLoop(worker=agents[2], reviewer=agents[3], work_task=tasks[2], review_task=tasks[3], inputs=method_result)
     dag_result = dag_loop.run()
     
