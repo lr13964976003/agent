@@ -98,19 +98,19 @@ def main():
     GMT = build_task(prompt, expected_outputs[0], GMA)
 
 	# Performance_Evaluation_Agent
-	prompt = fetch_prompt_local(variant[1]["slug"], variant[1]["inputs"])
+    prompt = fetch_prompt_local(variant[1]["slug"], variant[1]["inputs"])
     tools = variant[1]["tools"]
     PEA = Researcher("openai/Kimi-K2",tools)
     PET = build_task(prompt, expected_outputs[1], PEA)
 
 	# Generate_DAG_Agent
-	prompt = fetch_prompt_local(variant[2]["slug"], variant[2]["inputs"])
+    prompt = fetch_prompt_local(variant[2]["slug"], variant[2]["inputs"])
     tools = variant[2]["tools"]
     GDA = Engineer("openai/Kimi-K2",tools)
     GDT = build_task(prompt, expected_outputs[2], PEA)
 
 	# Check_DAG_Agent
-	prompt = fetch_prompt_local(variant[3]["slug"], variant[3]["inputs"])
+    prompt = fetch_prompt_local(variant[3]["slug"], variant[3]["inputs"])
     tools = variant[3]["tools"]
     CDA = Engineer("openai/Kimi-K2",tools)
     CDT = build_task(prompt, expected_outputs[3], CDA)
