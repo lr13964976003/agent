@@ -100,9 +100,6 @@ def main():
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
     
-    # check_result = run_pipeline([agents[0]], [tasks[0]])
-    #if "failed" in check_result.lower():
-    #    return "The paper is not relevant to the topic"
 
     method_loop = ReviewLoop(worker=agents[0], reviewer=agents[1], work_task=tasks[0], review_task=tasks[1])
     method_result = method_loop.run()
