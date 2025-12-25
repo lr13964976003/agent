@@ -72,7 +72,6 @@ def Researcher(model: str, tools: list):
                 ),
                 tools=tools,
                 allow_delegation=False,
-                allow_code_execution=True,
                 verbose=True,
                 max_execution_time=3600,
                 llm=llm
