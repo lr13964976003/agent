@@ -47,7 +47,7 @@ def Engineer(model: str, tools: list):
                 allow_delegation=False,
                 allow_code_execution=True,
                 verbose=True,
-                max_execution_time=1800,
+                max_execution_time=3600,
                 llm=llm
             )
     return agent
@@ -74,7 +74,7 @@ def Researcher(model: str, tools: list):
                 allow_delegation=False,
                 allow_code_execution=True,
                 verbose=True,
-                max_execution_time=1800,
+                max_execution_time=3600,
                 llm=llm
             )
     return agent
