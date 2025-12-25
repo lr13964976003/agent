@@ -46,7 +46,7 @@ def main():
                      ]
                  },
 		     "check_method": {
-                 "slug": "chain_check_method",
+                 "slug": "check_method",
                  "version": 1,
                  "inputs": {
                      "save_path": f"./outputs/{submission_dir}"
@@ -59,7 +59,7 @@ def main():
                      ]
                  },
             "generate_dag": {
-                "slug": "chain_generate_DAG",
+                "slug": "generate_dag",
                 "version": 1,
                 "inputs": {
                     "save_path": f"./outputs/{submission_dir}"
@@ -73,7 +73,7 @@ def main():
                     ]
                 },
              "check_dag": {
-                 "slug": "chain_check_DAG",
+                 "slug": "check_dag",
                  "version": 1,
                  "inputs": {
                      "save_path": f"./outputs/{submission_dir}"
