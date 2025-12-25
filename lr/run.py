@@ -12,12 +12,13 @@ from build_agents import *
 from datetime import datetime 
 from opentelemetry import trace
 
-
+# 结果保存
 now = datetime.now()
 submission_dir = now.strftime("%Y-%m-%d-%H-%M-%S")
 if os.path.exists(f"./output/{submission_dir}") is False:
     os.mkdir(f"./outputs/{submission_dir}")
-
+	
+# 取本地promopt
 def fetch_prompt_local(slug:str, inputs:dict) -> str:
     with open(f"./task_prompts/{slug}.md","r") as f:
         prompt = f.read()
