@@ -26,7 +26,6 @@ def fetch_prompt(app_slug: str, variant_slug: str, variant_version: int, inputs:
     prompt = config["prompt"]["messages"][0]["content"]
     prompt = re.sub(r'<<<.*?>>>', '', prompt, flags=re.DOTALL)
     prompt = prompt.format(**inputs)
-    #print(prompt)
     return prompt
 
 #@ag.instrument()
@@ -43,7 +42,7 @@ def build_agent(model: str, tools: list):
                 backstory="You are a researcher working on an engineering-level project with other researchers, and this project absolutely cannot have any mistakes.",
                 tools=tools,
                 allow_delegation=False,
-		# allow_code_execution=True,
+                allow_code_execution=True,
                 verbose=True,
                 max_execution_time=1800,
                 llm=llm
