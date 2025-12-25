@@ -82,7 +82,7 @@ def Researcher(model: str, tools: list):
 
 
 #@ag.instrument()
-def build_task(description, agent):
+def build_task(description, expected_output, agent):
     task = Task(
         description=description,
         expected_output=expected_output,
