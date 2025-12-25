@@ -139,14 +139,14 @@ def main():
         tasks.append(build_task(prompt, expected_outputs[i], agents[i]))
         i = i + 1
     
-    check_result = run_pipeline([agents[0]], [tasks[0]])
-    if "failed" in check_result.lower():
-        return "The paper is not relevant to the topic"
+    #check_result = run_pipeline([agents[0]], [tasks[0]])
+    #if "failed" in check_result.lower():
+        #return "The paper is not relevant to the topic"
 
-    paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], work_task=tasks[1], review_task=tasks[2])
-    paper_result = paper_loop.run()
-    return
-    dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=paper_result)
+    #paper_loop = ReviewLoop(worker=agents[1], reviewer=agents[2], work_task=tasks[1], review_task=tasks[2])
+    #paper_result = paper_loop.run()
+    method_path = "./inputs/deployment.json"
+    dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=method_path)
     dag_result = dag_loop.run()
     
     perf_task = tasks[5]
@@ -186,6 +186,7 @@ if __name__ == "__main__":
     #with tracer.start_as_current_span("workflow-root") as root:
 
     main()
+
 
 
 
