@@ -36,7 +36,8 @@ def main():
                 "version": 10,
                 "inputs": {
                     "paper_path": "../papers/EP/paper.md",
-                    "score_path": "../knowledges/llm_parallelism_classification_schema.json"
+                    "score_path": "../knowledges/llm_parallelism_classification_schema.json",
+					"save_path": f"../outputs/{submission_dir}"
                 },
                 "tools": [
                 FileReadTool()
@@ -185,6 +186,7 @@ if __name__ == "__main__":
     #with tracer.start_as_current_span("workflow-root") as root:
 
     main()
+
 
 
 
