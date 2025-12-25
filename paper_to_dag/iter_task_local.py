@@ -77,6 +77,7 @@ def main():
                 "slug": "chain_generate_DAG",
                 "version": 15,
                 "inputs": {
+					"method_path": "./outputs/2025-12-23-11-54-48/parallel_strategy_deployment_plan.json",
                     "knowledge_path": "../knowledges/llm_parallel_strategies.md",
                     "save_path": f"../outputs/{submission_dir}"
                     },
@@ -186,6 +187,7 @@ if __name__ == "__main__":
     #with tracer.start_as_current_span("workflow-root") as root:
 
     main()
+
 
 
 
