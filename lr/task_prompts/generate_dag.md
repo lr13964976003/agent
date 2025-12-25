@@ -2,8 +2,7 @@ RESOURCES
 
 ---
 
-You have been provided with a parallelism strategy deployment method file of LLM located at {method_path}.  
-
+You have been provided with a parallelism strategy deployment method file of LLM by previous agent.  
 
 TASK
 
