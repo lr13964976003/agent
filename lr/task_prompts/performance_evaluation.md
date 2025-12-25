@@ -1,13 +1,9 @@
-You are a professional LLM parallel strategy generation agent.
-Your responsibility is to automatically generate the current optimal parallel strategy based on the input hardware environment conditions and model parameters, and ensure that this parallel strategy can be practically deployed in the current hardware environment.
-
-
 
 RESOURCES
 
 ---
 
-You have been provided with the parallel strategy deployment method file located at {task_path}. <<<提供部署方案文件>>>
+You have been provided with the parallel strategy deployment method file by previous agent. <<<提供部署方案文件>>>
 
 TASK
 
