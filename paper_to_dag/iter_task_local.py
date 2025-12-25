@@ -74,7 +74,7 @@ def main():
                     ]
                 },
             "generate_dag": {
-                "slug": "chain_generate_dag",
+                "slug": "chain_generate_DAG",
                 "version": 15,
                 "inputs": {
                     "knowledge_path": "../knowledges/llm_parallel_strategies.md",
@@ -89,7 +89,7 @@ def main():
                     ]
                 },
              "check_dag": {
-                 "slug": "chain_check_dag",
+                 "slug": "chain_check_DAG",
                  "version": 3,
                  "inputs": {
                      "save_path": f"../outputs/{submission_dir}"
@@ -186,6 +186,7 @@ if __name__ == "__main__":
     #with tracer.start_as_current_span("workflow-root") as root:
 
     main()
+
 
 
 
