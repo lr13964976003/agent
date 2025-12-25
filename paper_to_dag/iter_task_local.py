@@ -148,8 +148,7 @@ def main():
     method_path = "./outputs/2025-12-23-11-54-48/parallel_strategy_deployment_plan.json"
     dag_loop = ReviewLoop(worker=agents[3], reviewer=agents[4], work_task=tasks[3], review_task=tasks[4], inputs=method_path)
     dag_result = dag_loop.run()
-	return
-    
+    return
     perf_task = tasks[5]
     perf_task.description = tasks[5].description + \
     f"There are the submissions of previous agents: \n\n{dag_result}"
@@ -187,6 +186,7 @@ if __name__ == "__main__":
     #with tracer.start_as_current_span("workflow-root") as root:
 
     main()
+
 
 
 
