@@ -31,7 +31,13 @@ SUBMISSION
 
 ---
 
-Is this parallel strategy deployment method incorrect. If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
+Is this parallel strategy deployment method incorrect. If incorrect, how to modify.  
+
+Has this parallel strategy deployment plan met the basic performance requirements. If not, how to modify.
+
+Has this parallel strategy deployment plan achieved the optimal outcome under the current environment. If not, how to modify
+
+Save the nodes that need to be modified in markdown format at the {save_path}.
 
 If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method in JSON format.
 
@@ -43,6 +49,6 @@ Understand: We will check whether you have read and understood the the deploymen
 
 Result: We will check whether your conclusion meets the expected standards.
 
-Performance: We will rigorously evaluate whether the parallel strategies you generate are the optimal solutions under current deployment conditions.
+Performance: We will rigorously evaluate whether the parallel strategy is the optimal solutions under current deployment conditions.
 
 
