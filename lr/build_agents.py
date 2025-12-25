@@ -33,7 +33,7 @@ def Engineer(model: str, tools: list):
     llm = ChatOpenAI(
             model = model,
             temperature = 0.0,
-            max_tokens = 65536,
+            max_tokens = 16384,
             request_timeout = 1800
             )
     agent = Agent(
@@ -56,7 +56,7 @@ def Researcher(model: str, tools: list):
     llm = ChatOpenAI(
             model = model,
             temperature = 0.8,
-            max_tokens = 65536,
+            max_tokens = 16384,
             request_timeout = 1800
             )
     agent = Agent(
