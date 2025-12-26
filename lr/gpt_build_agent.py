@@ -1,5 +1,5 @@
 from langchain.chat_models import ChatOpenAI
-from crewai import Agent
+from crewai import Agent, Task
 
 INFERENCE_DAG_SYSTEM_PROMPT = """
 You are an engineering-grade autonomous agent specialized in
