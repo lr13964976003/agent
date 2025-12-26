@@ -49,21 +49,16 @@ def main():
             }
     prompts = []
     tools = []
-    expected_outputs = ["The path of parallelism strategy deployment method file", "Performance Evaluation and Modify", "The path of graphviz code describing the DAG", "DAG Modify Method"]
+    expected_outputs = "Parallelism strategy deployment method file and Graphviz code describing the DAG"
     for k in variant.keys():
         prompts.append(fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"]))
         tools.append(variant[k]["tools"])
 	# GPT
     agent = build_agent("openai/Kimi-K2",tools[0])
-    task = build_task(prompts[0], expected_outputs[0], GMA))
+    task = build_task(prompts[0], expected_outputs, agent))
+	task.run()
+    return 
 
-    # Method_Loop
-    method_loop = ReviewLoop(worker=GMA, reviewer=PEA, work_task=GMT, review_task=PET)
-    method_result = method_loop.run()
-
-    # DAG_Loop
-    dag_loop = ReviewLoop(worker=GDA, reviewer=CDA, work_task=GDT, review_task=CDT, inputs=method_result)
-    dag_result = dag_loop.run()
     
 
 if __name__ == "__main__":
