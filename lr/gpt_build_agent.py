@@ -59,6 +59,11 @@ Performance comes second.
 Speculation comes never.
 """.strip()
 
+KNOWLEDGE = [
+    "knowledge/01_model_semantics/attention_structure.md",
+    "knowledge/04_parallel_primitives/tensor_parallelism.md",
+    "knowledge/11_dag_validation_and_autofix.md"
+]
 
 def build_agent(
     model: str,
@@ -91,7 +96,7 @@ def build_agent(
             "or system outages and is unacceptable."
         ),
         tools=tools,
-        knowledge=knowledge or [],
+        knowledge=KNOWLEDGE,
         allow_delegation=False,
         allow_code_execution=False,   # 非必须不要开
         verbose=True,
