@@ -1,0 +1,557 @@
+digraph {
+	graph [bb="0,0,4917.2,1026.8",
+		dpi=300,
+		rankdir=TB,
+		size="20,30"
+	];
+	node [fillcolor=lightyellow,
+		fontsize=10,
+		label="\N",
+		shape=parallelogram,
+		style=filled
+	];
+	edge [fontsize=8];
+	subgraph cluster_input {
+		graph [bb="859,907.27,1205,987.27",
+			fillcolor=lightgray,
+			label="Input Layer",
+			lheight=0.21,
+			lp="1032,975.77",
+			lwidth=1.17,
+			style=rounded
+		];
+		input	[fillcolor=lightgreen,
+			height=0.56944,
+			label="Input
+Input: [batch_size=128, seq_len=10240, heads=16, d_k=32]
+Output: [batch_size=128, seq_len=10240, heads=16, d_k=32]",
+			pos="1032,935.77",
+			shape=rectangle,
+			width=4.5833];
+	}
+	subgraph cluster_gpu0_s0 {
+		graph [bb="8,453.5,943,848.77",
+			fillcolor=white,
+			label="GPU 0",
+			lheight=0.21,
+			lp="475.5,837.27",
+			lwidth=0.64,
+			style=rounded
+		];
+		gpu0_embed	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Embedding Layer
+GPU: 0
+Input: [batch_size=43, seq_len=10240, heads=16, d_k=32]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="777,791.77",
+			shape=rectangle,
+			width=4.3889];
+		gpu0_l0_attn	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Layer 0 Attention
+GPU: 0
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="785,663",
+			shape=rectangle,
+			width=4.1528];
+		gpu0_embed -> gpu0_l0_attn	[pos="e,783.4,689.43 778.58,765.72 779.77,746.84 781.42,720.67 782.75,699.61"];
+		gpu0_l0_moe	[fillcolor=lightgreen,
+			height=0.875,
+			label="Layer 0 MoE
+GPU: 0
+8 Experts
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="785,493",
+			shape=rectangle,
+			width=4.1528];
+		gpu0_l0_attn -> gpu0_l0_moe	[pos="e,785,524.75 785,636.85 785,609.96 785,566.89 785,535.07"];
+		gpu0_l0_gate	[height=1.4444,
+			label="Gate Router
+GPU: 0
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: routing decisions",
+			pos="317,663",
+			style=dashed,
+			width=8.3516];
+		gpu0_l0_gate -> gpu0_l0_moe	[label=routing,
+			lp="538,588.5",
+			pos="e,699.78,524.59 459.32,610.91 534.17,584.04 623.87,551.84 690.17,528.04",
+			style=dashed];
+	}
+	subgraph cluster_gpu1_s0 {
+		graph [bb="951,433,2538,576",
+			fillcolor=white,
+			label="GPU 1",
+			lheight=0.21,
+			lp="1744.5,564.5",
+			lwidth=0.64,
+			style=rounded
+		];
+		gpu1_embed	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Embedding Layer
+GPU: 1
+Input: [batch_size=43, seq_len=10240, heads=16, d_k=32]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="1737,493",
+			shape=rectangle,
+			width=4.3889];
+		gpu1_l0_attn	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Layer 0 Attention
+GPU: 1
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="2063,493",
+			shape=rectangle,
+			width=4.1528];
+		gpu1_l0_moe	[fillcolor=lightgreen,
+			height=0.875,
+			label="Layer 0 MoE
+GPU: 1
+8 Experts
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="2380,493",
+			shape=rectangle,
+			width=4.1528];
+		gpu1_l0_gate	[height=1.4444,
+			label="Gate Router
+GPU: 1
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: routing decisions",
+			pos="1260,493",
+			style=dashed,
+			width=8.3516];
+	}
+	subgraph cluster_tp_01_s0 {
+		graph [fillcolor=lightyellow,
+			label="TP Group (0,1)",
+			style=rounded
+		];
+	}
+	subgraph cluster_tp_pairs_s0 {
+		graph [bb="1945,618.23,2181,730.77",
+			fillcolor=lightyellow,
+			label="Tensor Parallel Groups",
+			lheight=0.21,
+			lp="2063,719.27",
+			lwidth=2.26,
+			style=rounded
+		];
+		tp_01_comm	[fillcolor=lightblue,
+			height=1.0214,
+			label="TP All-Reduce
+GPUs: 0,1
+Input: partial results
+Output: aggregated results",
+			pos="2063,663",
+			shape=ellipse,
+			width=3.0445];
+	}
+	subgraph cluster_layer1_s0 {
+		graph [bb="157,263,2280,406",
+			fillcolor=white,
+			label="Layer 1",
+			lheight=0.21,
+			lp="1218.5,394.5",
+			lwidth=0.76,
+			style=rounded
+		];
+		gpu0_l1_attn	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Layer 1 Attention
+GPU: 0
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="1488,323",
+			shape=rectangle,
+			width=4.1528];
+		gpu0_l1_moe	[fillcolor=lightgreen,
+			height=0.875,
+			label="Layer 1 MoE
+GPU: 0
+8 Experts
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="1805,323",
+			shape=rectangle,
+			width=4.1528];
+		gpu1_l1_attn	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Layer 1 Attention
+GPU: 1
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="2122,323",
+			shape=rectangle,
+			width=4.1528];
+		gpu1_l1_moe	[fillcolor=lightgreen,
+			height=0.875,
+			label="Layer 1 MoE
+GPU: 1
+8 Experts
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="1171,323",
+			shape=rectangle,
+			width=4.1528];
+		gate_l1_01	[height=1.4444,
+			label="Gate Router
+GPUs: 0,1
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: routing decisions",
+			pos="703,323",
+			style=dashed,
+			width=8.3516];
+		tp_l1_01_comm	[fillcolor=lightblue,
+			height=1.0214,
+			label="TP All-Reduce
+GPUs: 0,1
+Input: partial results
+Output: aggregated results",
+			pos="275,323",
+			shape=ellipse,
+			width=3.0445];
+	}
+	subgraph cluster_layer2_s0 {
+		graph [bb="1879,875.77,4002,1018.8",
+			fillcolor=white,
+			label="Layer 2",
+			lheight=0.21,
+			lp="2940.5,1007.3",
+			lwidth=0.76,
+			style=rounded
+		];
+		gpu0_l2_attn	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Layer 2 Attention
+GPU: 0
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="3844,935.77",
+			shape=rectangle,
+			width=4.1528];
+		gpu0_l2_moe	[fillcolor=lightgreen,
+			height=0.875,
+			label="Layer 2 MoE
+GPU: 0
+8 Experts
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="3527,935.77",
+			shape=rectangle,
+			width=4.1528];
+		gpu1_l2_attn	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Layer 2 Attention
+GPU: 1
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="3210,935.77",
+			shape=rectangle,
+			width=4.1528];
+		gpu1_l2_moe	[fillcolor=lightgreen,
+			height=0.875,
+			label="Layer 2 MoE
+GPU: 1
+8 Experts
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="2893,935.77",
+			shape=rectangle,
+			width=4.1528];
+		gate_l2_01	[height=1.4444,
+			label="Gate Router
+GPUs: 0,1
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: routing decisions",
+			pos="2425,935.77",
+			style=dashed,
+			width=8.3516];
+		tp_l2_01_comm	[fillcolor=lightblue,
+			height=1.0214,
+			label="TP All-Reduce
+GPUs: 0,1
+Input: partial results
+Output: aggregated results",
+			pos="1997,935.77",
+			shape=ellipse,
+			width=3.0445];
+	}
+	subgraph cluster_layer3_s0 {
+		graph [bb="2546,433,4669,576",
+			fillcolor=white,
+			label="Layer 3",
+			lheight=0.21,
+			lp="3607.5,564.5",
+			lwidth=0.76,
+			style=rounded
+		];
+		gpu0_l3_attn	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Layer 3 Attention
+GPU: 0
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="4511,493",
+			shape=rectangle,
+			width=4.1528];
+		gpu0_l3_moe	[fillcolor=lightgreen,
+			height=0.875,
+			label="Layer 3 MoE
+GPU: 0
+8 Experts
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="4194,493",
+			shape=rectangle,
+			width=4.1528];
+		gpu1_l3_attn	[fillcolor=lightgreen,
+			height=0.72222,
+			label="Layer 3 Attention
+GPU: 1
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="3877,493",
+			shape=rectangle,
+			width=4.1528];
+		gpu1_l3_moe	[fillcolor=lightgreen,
+			height=0.875,
+			label="Layer 3 MoE
+GPU: 1
+8 Experts
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: [batch_size=43, seq_len=10240, d_model=512]",
+			pos="3560,493",
+			shape=rectangle,
+			width=4.1528];
+		gate_l3_01	[height=1.4444,
+			label="Gate Router
+GPUs: 0,1
+Input: [batch_size=43, seq_len=10240, d_model=512]
+Output: routing decisions",
+			pos="3092,493",
+			style=dashed,
+			width=8.3516];
+		tp_l3_01_comm	[fillcolor=lightblue,
+			height=1.0214,
+			label="TP All-Reduce
+GPUs: 0,1
+Input: partial results
+Output: aggregated results",
+			pos="2664,493",
+			shape=ellipse,
+			width=3.0445];
+	}
+	subgraph cluster_pp0_stage0 {
+		graph [fillcolor=lightpink,
+			label="Pipeline Stage 0
+Ranks 0-7",
+			style=rounded
+		];
+	}
+	subgraph cluster_pp0_stage1 {
+		graph [bb="4741,130,4875,236",
+			fillcolor=lightpink,
+			label="Pipeline Stage 1
+Ranks 8-15",
+			lheight=0.42,
+			lp="4808,217",
+			lwidth=1.64,
+			style=rounded
+		];
+		pp0_s1_summary	[fillcolor=lightgray,
+			height=0.72222,
+			label="Layers 8-15
+GPUs: 8-15
+Similar structure
+8 layers per GPU",
+			pos="4801,164",
+			shape=rectangle,
+			width=1.4306];
+	}
+	subgraph cluster_dp0 {
+		graph [fillcolor=lightcyan,
+			label="DP Group 0",
+			style=rounded
+		];
+	}
+	subgraph cluster_dp1 {
+		graph [bb="4343,901.77,4493,992.77",
+			fillcolor=lightcyan,
+			label="DP Group 1",
+			lheight=0.21,
+			lp="4418,981.27",
+			lwidth=1.17,
+			style=rounded
+		];
+		dp1_summary	[fillcolor=lightgray,
+			height=0.72222,
+			label="DP Group 1
+Ranks 16-23
+Same structure as DP0
+Duplicate computation",
+			pos="4418,935.77",
+			shape=rectangle,
+			width=1.8472];
+	}
+	subgraph cluster_dp {
+		graph [fillcolor=lightcyan,
+			label="Data Parallel (3 groups)",
+			style=rounded
+		];
+	}
+	subgraph cluster_communication {
+		graph [bb="3595,278.23,4593,390.77",
+			fillcolor=lightcoral,
+			label="Inter-GPU Communication",
+			lheight=0.21,
+			lp="4094,379.27",
+			lwidth=2.62,
+			style=rounded
+		];
+		dp_allreduce	[fillcolor=lightblue,
+			height=1.0214,
+			label="DP All-Sum
+GPUs: 0-23
+Input: gradient chunks
+Output: synchronized gradients",
+			pos="4458,323",
+			shape=ellipse,
+			width=3.5159];
+		pp_sendrecv	[fillcolor=lightblue,
+			height=1.0214,
+			label="PP Send/Recv
+GPUs: stage0→stage1
+Input: activations
+Output: forwarded activations",
+			pos="4194,323",
+			shape=ellipse,
+			width=3.3195];
+		ep_all2all	[fillcolor=lightblue,
+			height=1.0214,
+			label="EP All-to-All
+GPUs: per EP group
+Input: token representations
+Output: routed tokens",
+			pos="3942,323",
+			shape=ellipse,
+			width=3.182];
+		tp_allreduce	[fillcolor=lightblue,
+			height=1.0214,
+			label="TP All-Reduce
+GPUs: per TP pair
+Input: partial tensors
+Output: complete tensors",
+			pos="3706,323",
+			shape=ellipse,
+			width=2.8677];
+	}
+	subgraph cluster_routing {
+		graph [bb="4071,115,4733,236",
+			fillcolor=lightgoldenrodyellow,
+			label="Routing & Aggregation",
+			lheight=0.21,
+			lp="4402,224.5",
+			lwidth=2.31,
+			style=rounded
+		];
+		global_agg	[height=1.1389,
+			label="Global Aggregation
+Input: distributed results
+Output: final predictions",
+			pos="4228,164",
+			width=4.147];
+		load_balance	[height=1.1389,
+			label="Load Balancer
+Input: GPU loads
+Output: balancing decisions",
+			pos="4560,164",
+			width=4.579];
+	}
+	subgraph cluster_output {
+		graph [bb="4072,8,4384,88",
+			fillcolor=lightgray,
+			label="Output Layer",
+			lheight=0.21,
+			lp="4228,76.5",
+			lwidth=1.33,
+			style=rounded
+		];
+		output	[fillcolor=lightgreen,
+			height=0.56944,
+			label="Output
+Input: [batch_size=128, seq_len=10240, d_model=512]
+Output: [batch_size=128, seq_len=10240, vocab_size]",
+			pos="4228,36.5",
+			shape=rectangle,
+			width=4.1111];
+	}
+	input -> gpu0_embed	[label="batch split",
+		lp="926,861.27",
+		pos="e,822.13,817.9 996.81,915.17 953.89,891.27 880.89,850.62 830.88,822.77"];
+	input -> gpu1_embed	[label="batch split",
+		lp="1075,743.27",
+		pos="e,1698.4,519.06 1031.5,915.25 1031.2,854.01 1039.6,664.92 1150,584 1168.8,570.2 1547.3,581.5 1570,576 1612.8,565.64 1657.3,543.09 \
+1689.6,524.26"];
+	gpu0_l0_attn -> tp_01_comm	[label="partial results",
+		lp="1443.9,670.5",
+		pos="e,1953.1,663 934.73,663 1191,663 1708.5,663 1942.8,663"];
+	gpu0_l0_moe -> gpu0_l1_attn	[pos="e,1450.3,349.04 855.51,461.47 883.48,450.65 916.26,439.55 947,433 1113.5,397.53 1165.1,451.95 1329,406 1369.1,394.74 1410.9,372.74 \
+1441.6,354.36"];
+	gpu0_l0_moe -> ep_all2all	[label=tokens,
+		lp="3339,418.5",
+		pos="e,3903.7,357.75 852.94,461.42 881.39,450.17 915.19,438.77 947,433 986.24,425.89 3779.9,417.66 3818,406 3846,397.43 3873.6,380.34 \
+3895.5,363.97"];
+	gpu1_l0_attn -> tp_01_comm	[label="partial results",
+		lp="2090.5,588.5",
+		pos="e,2063,625.96 2063,519.08 2063,544.54 2063,584.53 2063,615.74"];
+	gpu1_l0_moe -> gpu1_l1_attn	[pos="e,2160.7,349.2 2333,461.38 2286.5,431.09 2215.6,384.98 2169.1,354.67"];
+	gpu1_l0_moe -> ep_all2all	[label=tokens,
+		lp="3782,418.5",
+		pos="e,3903.4,357.83 2448.4,461.46 2476.7,450.28 2510.4,438.93 2542,433 2681.4,406.89 3682.6,448.28 3818,406 3845.9,397.3 3873.3,380.29 \
+3895.2,364.01"];
+	tp_01_comm -> gpu0_l0_moe	[label=aggregated,
+		lp="1039,588.5",
+		pos="e,832.94,524.57 1953.9,659 1711.5,651.45 1134.4,628.41 947,576 910.11,565.68 871.75,546.69 841.62,529.57"];
+	tp_01_comm -> gpu1_l0_moe	[label=aggregated,
+		lp="2225,588.5",
+		pos="e,2322.2,524.62 2120.4,631.58 2174.7,602.81 2256.1,559.66 2313.3,529.37"];
+	gpu0_l3_moe -> pp_sendrecv	[label=activations,
+		lp="4215.5,418.5",
+		pos="e,4194,359.87 4194,461.19 4194,435.71 4194,399.14 4194,370.16"];
+	dp_allreduce -> global_agg	[label=synchronized,
+		lp="4327,248.5",
+		pos="e,4254.6,205.44 4389.3,291.96 4368.1,282.67 4344.6,272.4 4323,263 4312.8,258.55 4308.9,259.72 4300,253 4285.5,242.05 4272.2,227.61 \
+4261,213.61"];
+	pp_sendrecv -> pp0_s1_summary	[label=forwarded,
+		lp="4735,248.5",
+		pos="e,4785.6,190.34 4250.7,290.45 4272.3,279.85 4297.7,269.17 4322,263 4411.6,240.28 4653.8,276.29 4737,236 4754.1,227.71 4768.7,212.63 \
+4779.6,198.49"];
+	global_agg -> output	[label="final result",
+		lp="4249.5,100.5",
+		pos="e,4228,57.205 4228,122.95 4228,104.94 4228,84.051 4228,67.435"];
+	gate_l0_01	[height=0.5,
+		pos="4560,36.5",
+		width=1.7022];
+	load_balance -> gate_l0_01	[label=balancing,
+		lp="4580,100.5",
+		pos="e,4560,54.524 4560,122.95 4560,104 4560,81.859 4560,64.864",
+		style=dashed];
+	dp0_final	[height=0.5,
+		pos="4734,493",
+		width=1.5344];
+	dp0_final -> dp_allreduce	[label=gradients,
+		lp="4675,418.5",
+		pos="e,4529.3,353.61 4718.9,474.81 4707.2,462.2 4690.2,445.22 4673,433 4631.3,403.32 4580.4,377.12 4538.6,357.86"];
+	dp1_final	[height=0.5,
+		pos="4862,493",
+		width=1.5344];
+	dp1_final -> dp_allreduce	[label=gradients,
+		lp="4791,418.5",
+		pos="e,4560.6,344.59 4847.3,474.83 4835.2,461.73 4817.1,444.11 4798,433 4727.4,391.88 4639.4,364.22 4570.6,347.05"];
+}

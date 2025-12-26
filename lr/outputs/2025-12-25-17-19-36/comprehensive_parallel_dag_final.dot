@@ -1,0 +1,1930 @@
+digraph ComprehensiveParallelDAG {
+    graph [bb="0,0,8000,6000",
+           dpi=300,
+           rankdir=TB,
+           size="30,40",
+           bgcolor=white,
+           fontname="Arial"];
+    node [fontname="Arial",
+          fontsize=10,
+          style=filled];
+    edge [fontname="Arial",
+          fontsize=8];
+
+    // Node shape definitions
+    node [fillcolor=lightyellow,
+          shape=parallelogram]; // Default for routing/aggregation
+    
+    // Global settings
+    ranksep=1.5;
+    nodesep=0.8;
+
+    // ==================== INPUT LAYER ====================
+    subgraph cluster_input {
+        graph [fillcolor=lightgray,
+               label="Input Layer (Batch Size 128, Seq Len 10240)",
+               style=rounded];
+        
+        input_node [fillcolor=lightgreen,
+                   shape=rectangle,
+                   label="Input Tokens
+GPU: ALL
+Input: [batch_size=128, seq_len=10240]
+Output: [batch_size=128, seq_len=10240, vocab_size]"];
+    }
+
+    // ==================== DATA PARALLEL SPLIT ====================
+    subgraph cluster_dp_split {
+        graph [fillcolor=lightcyan,
+               label="Data Parallel Split (3 groups)",
+               style=rounded];
+        
+        dp_split [fillcolor=lightblue,
+                 shape=ellipse,
+                 label="DP Data Split
+GPUs: 0-23
+Input: [batch_size=128, seq_len=10240]
+Output: [batch_size=43, seq_len=10240] per DP group"];
+    }
+
+    // ==================== GPU CLUSTERS (24 GPUs) ====================
+    
+    // GPU 0: Pipeline Stage 0, DP Group 0
+    subgraph cluster_gpu_0 {
+        graph [fillcolor=white,
+               label="GPU 0 (PP Stage 0, DP Group 0, TP Partner 1)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_0_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 0\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_0_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 0\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 0
+        gpu_0_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_0_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_0_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_0_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 0\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_0_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 0\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 0
+        gpu_0_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_0_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 1: Pipeline Stage 0, DP Group 0
+    subgraph cluster_gpu_1 {
+        graph [fillcolor=white,
+               label="GPU 1 (PP Stage 0, DP Group 0, TP Partner 0)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_1_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 1\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_1_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 1\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 1
+        gpu_1_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_1_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_1_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_1_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 1\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_1_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 1\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 1
+        gpu_1_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_1_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 2: Pipeline Stage 0, DP Group 0
+    subgraph cluster_gpu_2 {
+        graph [fillcolor=white,
+               label="GPU 2 (PP Stage 0, DP Group 0, TP Partner 3)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_2_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 2\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_2_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 2\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 2
+        gpu_2_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 2\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_2_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 2\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_2_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 2\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_2_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 2\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_2_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 2\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 2
+        gpu_2_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 2\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_2_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 2\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 3: Pipeline Stage 0, DP Group 0
+    subgraph cluster_gpu_3 {
+        graph [fillcolor=white,
+               label="GPU 3 (PP Stage 0, DP Group 0, TP Partner 2)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_3_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 3\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_3_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 3\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 3
+        gpu_3_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 3\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_3_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 3\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_3_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 3\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_3_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 3\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_3_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 3\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 3
+        gpu_3_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 3\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_3_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 3\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 4: Pipeline Stage 0, DP Group 0
+    subgraph cluster_gpu_4 {
+        graph [fillcolor=white,
+               label="GPU 4 (PP Stage 0, DP Group 0, TP Partner 5)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_4_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 4\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_4_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 4\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 4
+        gpu_4_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 4\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_4_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 4\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_4_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 4\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_4_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 4\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_4_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 4\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 4
+        gpu_4_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 4\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_4_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 4\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 5: Pipeline Stage 0, DP Group 0
+    subgraph cluster_gpu_5 {
+        graph [fillcolor=white,
+               label="GPU 5 (PP Stage 0, DP Group 0, TP Partner 4)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_5_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 5\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_5_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 5\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 5
+        gpu_5_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 5\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_5_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 5\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_5_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 5\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_5_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 5\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_5_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 5\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 5
+        gpu_5_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 5\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_5_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 5\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 6: Pipeline Stage 0, DP Group 0
+    subgraph cluster_gpu_6 {
+        graph [fillcolor=white,
+               label="GPU 6 (PP Stage 0, DP Group 0, TP Partner 7)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_6_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 6\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_6_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 6\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 6
+        gpu_6_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 6\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_6_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 6\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_6_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 6\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_6_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 6\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_6_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 6\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 6
+        gpu_6_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 6\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_6_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 6\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 7: Pipeline Stage 0, DP Group 0
+    subgraph cluster_gpu_7 {
+        graph [fillcolor=white,
+               label="GPU 7 (PP Stage 0, DP Group 0, TP Partner 6)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_7_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 7\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_7_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 7\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 7
+        gpu_7_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 7\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_7_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 7\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_7_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 7\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_7_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 7\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_7_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 7\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 7
+        gpu_7_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 7\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_7_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 7\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 8: Pipeline Stage 1, DP Group 1
+    subgraph cluster_gpu_8 {
+        graph [fillcolor=white,
+               label="GPU 8 (PP Stage 1, DP Group 1, TP Partner 9)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_8_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 8\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_8_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 8\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 8
+        gpu_8_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 8\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_8_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 8\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_8_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 8\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_8_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 8\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_8_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 8\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 8
+        gpu_8_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 8\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_8_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 8\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 9: Pipeline Stage 1, DP Group 1
+    subgraph cluster_gpu_9 {
+        graph [fillcolor=white,
+               label="GPU 9 (PP Stage 1, DP Group 1, TP Partner 8)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_9_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 9\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_9_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 9\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 9
+        gpu_9_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 9\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_9_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 9\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_9_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 9\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_9_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 9\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_9_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 9\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 9
+        gpu_9_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 9\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_9_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 9\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 10: Pipeline Stage 1, DP Group 1
+    subgraph cluster_gpu_10 {
+        graph [fillcolor=white,
+               label="GPU 10 (PP Stage 1, DP Group 1, TP Partner 11)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_10_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 10\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_10_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 10\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 10
+        gpu_10_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 10\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_10_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 10\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_10_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 10\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_10_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 10\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_10_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 10\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 10
+        gpu_10_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 10\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_10_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 10\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 11: Pipeline Stage 1, DP Group 1
+    subgraph cluster_gpu_11 {
+        graph [fillcolor=white,
+               label="GPU 11 (PP Stage 1, DP Group 1, TP Partner 10)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_11_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 11\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_11_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 11\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 11
+        gpu_11_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 11\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_11_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 11\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_11_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 11\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_11_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 11\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_11_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 11\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 11
+        gpu_11_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 11\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_11_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 11\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 12: Pipeline Stage 1, DP Group 1
+    subgraph cluster_gpu_12 {
+        graph [fillcolor=white,
+               label="GPU 12 (PP Stage 1, DP Group 1, TP Partner 13)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_12_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 12\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_12_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 12\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 12
+        gpu_12_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 12\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_12_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 12\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_12_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 12\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_12_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 12\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_12_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 12\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 12
+        gpu_12_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 12\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_12_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 12\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 13: Pipeline Stage 1, DP Group 1
+    subgraph cluster_gpu_13 {
+        graph [fillcolor=white,
+               label="GPU 13 (PP Stage 1, DP Group 1, TP Partner 12)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_13_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 13\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_13_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 13\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 13
+        gpu_13_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 13\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_13_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 13\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_13_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 13\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_13_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 13\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_13_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 13\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 13
+        gpu_13_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 13\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_13_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 13\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 14: Pipeline Stage 1, DP Group 1
+    subgraph cluster_gpu_14 {
+        graph [fillcolor=white,
+               label="GPU 14 (PP Stage 1, DP Group 1, TP Partner 15)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_14_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 14\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_14_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 14\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 14
+        gpu_14_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 14\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_14_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 14\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_14_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 14\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_14_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 14\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_14_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 14\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 14
+        gpu_14_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 14\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_14_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 14\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 15: Pipeline Stage 1, DP Group 1
+    subgraph cluster_gpu_15 {
+        graph [fillcolor=white,
+               label="GPU 15 (PP Stage 1, DP Group 1, TP Partner 14)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_15_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 15\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_15_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 15\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 15
+        gpu_15_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 15\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_15_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 15\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_15_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 15\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_15_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 15\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_15_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 15\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 15
+        gpu_15_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 15\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_15_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 15\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 16: Pipeline Stage 2, DP Group 2
+    subgraph cluster_gpu_16 {
+        graph [fillcolor=white,
+               label="GPU 16 (PP Stage 2, DP Group 2, TP Partner 17)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_16_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 16\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_16_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 16\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 16
+        gpu_16_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 16\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_16_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 16\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_16_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 16\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_16_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 16\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_16_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 16\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 16
+        gpu_16_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 16\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_16_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 16\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 17: Pipeline Stage 2, DP Group 2
+    subgraph cluster_gpu_17 {
+        graph [fillcolor=white,
+               label="GPU 17 (PP Stage 2, DP Group 2, TP Partner 16)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_17_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 17\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_17_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 17\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 17
+        gpu_17_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 17\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_17_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 17\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_17_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 17\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_17_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 17\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_17_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 17\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 17
+        gpu_17_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 17\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_17_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 17\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 18: Pipeline Stage 2, DP Group 2
+    subgraph cluster_gpu_18 {
+        graph [fillcolor=white,
+               label="GPU 18 (PP Stage 2, DP Group 2, TP Partner 19)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_18_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 18\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_18_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 18\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 18
+        gpu_18_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 18\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_18_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 18\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_18_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 18\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_18_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 18\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_18_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 18\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 18
+        gpu_18_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 18\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_18_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 18\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 19: Pipeline Stage 2, DP Group 2
+    subgraph cluster_gpu_19 {
+        graph [fillcolor=white,
+               label="GPU 19 (PP Stage 2, DP Group 2, TP Partner 18)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_19_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 19\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_19_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 19\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 19
+        gpu_19_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 19\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_19_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 19\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_19_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 19\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_19_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 19\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_19_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 19\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 19
+        gpu_19_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 19\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_19_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 19\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 20: Pipeline Stage 2, DP Group 2
+    subgraph cluster_gpu_20 {
+        graph [fillcolor=white,
+               label="GPU 20 (PP Stage 2, DP Group 2, TP Partner 21)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_20_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 20\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_20_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 20\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 20
+        gpu_20_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 20\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_20_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 20\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_20_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 20\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_20_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 20\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_20_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 20\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 20
+        gpu_20_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 20\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_20_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 20\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 21: Pipeline Stage 2, DP Group 2
+    subgraph cluster_gpu_21 {
+        graph [fillcolor=white,
+               label="GPU 21 (PP Stage 2, DP Group 2, TP Partner 20)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_21_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 21\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_21_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 21\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 21
+        gpu_21_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 21\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_21_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 21\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_21_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 21\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_21_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 21\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_21_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 21\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 21
+        gpu_21_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 21\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_21_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 21\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 22: Pipeline Stage 2, DP Group 2
+    subgraph cluster_gpu_22 {
+        graph [fillcolor=white,
+               label="GPU 22 (PP Stage 2, DP Group 2, TP Partner 23)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_22_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 22\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_22_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 22\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 22
+        gpu_22_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 22\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_22_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 22\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_22_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 22\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_22_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 22\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_22_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 22\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 22
+        gpu_22_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 22\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_22_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 22\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    // GPU 23: Pipeline Stage 2, DP Group 2
+    subgraph cluster_gpu_23 {
+        graph [fillcolor=white,
+               label="GPU 23 (PP Stage 2, DP Group 2, TP Partner 22)",
+               style=rounded];
+        
+        // Input handling for this GPU
+        gpu_23_input [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Input Handler\nGPU: 23\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Embedding layer
+        gpu_23_embed [fillcolor=lightgreen,
+                           shape=rectangle,
+                           label="Embedding Layer\nGPU: 23\nInput: [batch_size=43, seq_len=10240]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 0 Attention - GPU 23
+        gpu_23_l0_q_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 Q Projection\nGPU: 23\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_23_l0_k_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 K Projection\nGPU: 23\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_23_l0_v_proj [fillcolor=lightgreen,
+                                            shape=rectangle,
+                                            label="Layer 0 V Projection\nGPU: 23\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_23_l0_attn_scores [fillcolor=lightgreen,
+                                                 shape=rectangle,
+                                                 label="Layer 0 Attention Scores\nGPU: 23\nInput: Q,K,V [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu_23_l0_attn_out [fillcolor=lightgreen,
+                                              shape=rectangle,
+                                              label="Layer 0 Attention Output\nGPU: 23\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+        // Layer 0 MoE - GPU 23
+        gpu_23_l0_gate [shape=parallelogram,
+                                          style=dashed,
+                                          label="Layer 0 Gate Router\nGPU: 23\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions for experts"];
+        
+        gpu_23_l0_moe [fillcolor=lightgreen,
+                                         shape=rectangle,
+                                         label="Layer 0 MoE (1 Expert)\nGPU: 23\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+            
+    }
+    
+    
+    // ==================== COMMUNICATION PATTERNS ====================
+    
+    // Data Parallel Communication Groups
+    subgraph cluster_dp_comm {
+        graph [fillcolor=lightcyan,
+               label="Data Parallel Communication",
+               style=rounded];
+        
+        dp_allreduce_grads [fillcolor=lightblue,
+                           shape=ellipse,
+                           label="DP All-Reduce Gradients\nGPUs: 0-23\nInput: gradient chunks from all GPUs\nOutput: synchronized gradients across DP groups"];
+    }
+
+    
+    // Tensor Parallel Communication Groups
+    subgraph cluster_tp_comm {
+        graph [fillcolor=lightyellow,
+               label="Tensor Parallel All-Reduce Groups",
+               style=rounded];
+        
+        tp_allreduce_0 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 0\nGPUs: 0,1\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_1 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 1\nGPUs: 2,3\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_2 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 2\nGPUs: 4,5\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_3 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 3\nGPUs: 6,7\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_4 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 4\nGPUs: 8,9\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_5 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 5\nGPUs: 10,11\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_6 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 6\nGPUs: 12,13\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_7 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 7\nGPUs: 14,15\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_8 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 8\nGPUs: 16,17\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_9 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 9\nGPUs: 18,19\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_10 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 10\nGPUs: 20,21\nInput: partial attention results\nOutput: complete attention results"];
+        
+        tp_allreduce_11 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="TP All-Reduce Group 11\nGPUs: 22,23\nInput: partial attention results\nOutput: complete attention results"];
+        
+    }
+
+    
+    // Pipeline Parallel Communications
+    subgraph cluster_pp_comm {
+        graph [fillcolor=lightpink,
+               label="Pipeline Parallel Communications",
+               style=rounded];
+        
+        pp_sendrecv_stage0_to_1 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="PP Send/Recv Stage0->Stage1\nGPUs: 0-7 -> 8-15\nInput: activations from stage 0\nOutput: forwarded activations to stage 1"];
+        
+        pp_sendrecv_stage1_to_2 [fillcolor=lightblue,
+                                shape=ellipse,
+                                label="PP Send/Recv Stage1->Stage2\nGPUs: 8-15 -> 16-23\nInput: activations from stage 1\nOutput: forwarded activations to stage 2"];
+    }
+
+    
+    // Expert Parallel Communications
+    subgraph cluster_ep_comm {
+        graph [fillcolor=lightgoldenrodyellow,
+               label="Expert Parallel All-to-All",
+               style=rounded];
+        
+        ep_all2all_stage0 [fillcolor=lightblue,
+                          shape=ellipse,
+                          label="EP All-to-All Stage 0\nGPUs: 0-7\nInput: token representations\nOutput: routed tokens to expert GPUs"];
+        
+        ep_all2all_stage1 [fillcolor=lightblue,
+                          shape=ellipse,
+                          label="EP All-to-All Stage 1\nGPUs: 8-15\nInput: token representations\nOutput: routed tokens to expert GPUs"];
+        
+        ep_all2all_stage2 [fillcolor=lightblue,
+                          shape=ellipse,
+                          label="EP All-to-All Stage 2\nGPUs: 16-23\nInput: token representations\nOutput: routed tokens to expert GPUs"];
+    }
+
+    
+    // Global Components
+    subgraph cluster_global {
+        graph [fillcolor=lightgray,
+               label="Global Aggregation and Control",
+               style=rounded];
+        
+        load_balancer [shape=parallelogram,
+                      label="Global Load Balancer\nInput: GPU load metrics\nOutput: balancing decisions for experts and data"];
+        
+        final_output [fillcolor=lightgreen,
+                     shape=rectangle,
+                     label="Final Output Layer\nInput: [batch_size=128, seq_len=10240, d_model=512]\nOutput: [batch_size=128, seq_len=10240, vocab_size]"];
+    }
+
+    
+    // ==================== CONNECTIONS ====================
+    
+    // Input to DP split
+    input_node -> dp_split [label="full batch"];
+    
+    // DP split to individual GPUs
+    
+    dp_split -> gpu_0_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_1_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_2_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_3_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_4_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_5_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_6_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_7_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_8_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_9_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_10_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_11_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_12_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_13_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_14_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_15_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_16_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_17_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_18_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_19_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_20_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_21_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_22_input [label="DP split 43 seqs"];
+    
+    dp_split -> gpu_23_input [label="DP split 43 seqs"];
+    
+    gpu_0_input -> gpu_0_embed [label="processed input"];
+    
+    gpu_1_input -> gpu_1_embed [label="processed input"];
+    
+    gpu_2_input -> gpu_2_embed [label="processed input"];
+    
+    gpu_3_input -> gpu_3_embed [label="processed input"];
+    
+    gpu_4_input -> gpu_4_embed [label="processed input"];
+    
+    gpu_5_input -> gpu_5_embed [label="processed input"];
+    
+    gpu_6_input -> gpu_6_embed [label="processed input"];
+    
+    gpu_7_input -> gpu_7_embed [label="processed input"];
+    
+    gpu_8_input -> gpu_8_embed [label="processed input"];
+    
+    gpu_9_input -> gpu_9_embed [label="processed input"];
+    
+    gpu_10_input -> gpu_10_embed [label="processed input"];
+    
+    gpu_11_input -> gpu_11_embed [label="processed input"];
+    
+    gpu_12_input -> gpu_12_embed [label="processed input"];
+    
+    gpu_13_input -> gpu_13_embed [label="processed input"];
+    
+    gpu_14_input -> gpu_14_embed [label="processed input"];
+    
+    gpu_15_input -> gpu_15_embed [label="processed input"];
+    
+    gpu_16_input -> gpu_16_embed [label="processed input"];
+    
+    gpu_17_input -> gpu_17_embed [label="processed input"];
+    
+    gpu_18_input -> gpu_18_embed [label="processed input"];
+    
+    gpu_19_input -> gpu_19_embed [label="processed input"];
+    
+    gpu_20_input -> gpu_20_embed [label="processed input"];
+    
+    gpu_21_input -> gpu_21_embed [label="processed input"];
+    
+    gpu_22_input -> gpu_22_embed [label="processed input"];
+    
+    gpu_23_input -> gpu_23_embed [label="processed input"];
+    
+    // Layer 0 connections for GPU 0
+    gpu_0_embed -> gpu_0_l0_q_proj [label="embedded tokens"];
+    gpu_0_embed -> gpu_0_l0_k_proj [label="embedded tokens"];  
+    gpu_0_embed -> gpu_0_l0_v_proj [label="embedded tokens"];
+            
+    gpu_0_l0_q_proj -> gpu_0_l0_attn_scores [label="Q projections"];
+    gpu_0_l0_k_proj -> gpu_0_l0_attn_scores [label="K projections"];
+    gpu_0_l0_v_proj -> gpu_0_l0_attn_scores [label="V projections"];
+    gpu_0_l0_attn_scores -> gpu_0_l0_attn_out [label="attention weights"];
+            
+    gpu_0_l0_attn_out -> gpu_0_l0_gate [label="routing decision", style=dashed];
+            
+    gpu_0_l0_attn_out -> gpu_0_l0_moe [label="attention output"];
+    gpu_0_l0_gate -> gpu_0_l0_moe [label="expert selection", style=dashed];
+            
+    // Layer 1 connections for GPU 1
+    gpu_1_embed -> gpu_1_l1_q_proj [label="embedded tokens"];
+    gpu_1_embed -> gpu_1_l1_k_proj [label="embedded tokens"];  
+    gpu_1_embed -> gpu_1_l1_v_proj [label="embedded tokens"];
+            
+    gpu_1_l1_q_proj -> gpu_1_l1_attn_scores [label="Q projections"];
+    gpu_1_l1_k_proj -> gpu_1_l1_attn_scores [label="K projections"];
+    gpu_1_l1_v_proj -> gpu_1_l1_attn_scores [label="V projections"];
+    gpu_1_l1_attn_scores -> gpu_1_l1_attn_out [label="attention weights"];
+            
+    gpu_1_l1_attn_out -> gpu_1_l1_gate [label="routing decision", style=dashed];
+            
+    gpu_1_l1_attn_out -> gpu_1_l1_moe [label="attention output"];
+    gpu_1_l1_gate -> gpu_1_l1_moe [label="expert selection", style=dashed];
+            
+    // Layer 2 connections for GPU 2
+    gpu_2_embed -> gpu_2_l2_q_proj [label="embedded tokens"];
+    gpu_2_embed -> gpu_2_l2_k_proj [label="embedded tokens"];  
+    gpu_2_embed -> gpu_2_l2_v_proj [label="embedded tokens"];
+            
+    gpu_2_l2_q_proj -> gpu_2_l2_attn_scores [label="Q projections"];
+    gpu_2_l2_k_proj -> gpu_2_l2_attn_scores [label="K projections"];
+    gpu_2_l2_v_proj -> gpu_2_l2_attn_scores [label="V projections"];
+    gpu_2_l2_attn_scores -> gpu_2_l2_attn_out [label="attention weights"];
+            
+    gpu_2_l2_attn_out -> gpu_2_l2_gate [label="routing decision", style=dashed];
+            
+    gpu_2_l2_attn_out -> gpu_2_l2_moe [label="attention output"];
+    gpu_2_l2_gate -> gpu_2_l2_moe [label="expert selection", style=dashed];
+            
+    // Layer 3 connections for GPU 3
+    gpu_3_embed -> gpu_3_l3_q_proj [label="embedded tokens"];
+    gpu_3_embed -> gpu_3_l3_k_proj [label="embedded tokens"];  
+    gpu_3_embed -> gpu_3_l3_v_proj [label="embedded tokens"];
+            
+    gpu_3_l3_q_proj -> gpu_3_l3_attn_scores [label="Q projections"];
+    gpu_3_l3_k_proj -> gpu_3_l3_attn_scores [label="K projections"];
+    gpu_3_l3_v_proj -> gpu_3_l3_attn_scores [label="V projections"];
+    gpu_3_l3_attn_scores -> gpu_3_l3_attn_out [label="attention weights"];
+            
+    gpu_3_l3_attn_out -> gpu_3_l3_gate [label="routing decision", style=dashed];
+            
+    gpu_3_l3_attn_out -> gpu_3_l3_moe [label="attention output"];
+    gpu_3_l3_gate -> gpu_3_l3_moe [label="expert selection", style=dashed];
+            
+    // Layer 4 connections for GPU 4
+    gpu_4_embed -> gpu_4_l4_q_proj [label="embedded tokens"];
+    gpu_4_embed -> gpu_4_l4_k_proj [label="embedded tokens"];  
+    gpu_4_embed -> gpu_4_l4_v_proj [label="embedded tokens"];
+            
+    gpu_4_l4_q_proj -> gpu_4_l4_attn_scores [label="Q projections"];
+    gpu_4_l4_k_proj -> gpu_4_l4_attn_scores [label="K projections"];
+    gpu_4_l4_v_proj -> gpu_4_l4_attn_scores [label="V projections"];
+    gpu_4_l4_attn_scores -> gpu_4_l4_attn_out [label="attention weights"];
+            
+    gpu_4_l4_attn_out -> gpu_4_l4_gate [label="routing decision", style=dashed];
+            
+    gpu_4_l4_attn_out -> gpu_4_l4_moe [label="attention output"];
+    gpu_4_l4_gate -> gpu_4_l4_moe [label="expert selection", style=dashed];
+            
+    // Layer 5 connections for GPU 5
+    gpu_5_embed -> gpu_5_l5_q_proj [label="embedded tokens"];
+    gpu_5_embed -> gpu_5_l5_k_proj [label="embedded tokens"];  
+    gpu_5_embed -> gpu_5_l5_v_proj [label="embedded tokens"];
+            
+    gpu_5_l5_q_proj -> gpu_5_l5_attn_scores [label="Q projections"];
+    gpu_5_l5_k_proj -> gpu_5_l5_attn_scores [label="K projections"];
+    gpu_5_l5_v_proj -> gpu_5_l5_attn_scores [label="V projections"];
+    gpu_5_l5_attn_scores -> gpu_5_l5_attn_out [label="attention weights"];
+            
+    gpu_5_l5_attn_out -> gpu_5_l5_gate [label="routing decision", style=dashed];
+            
+    gpu_5_l5_attn_out -> gpu_5_l5_moe [label="attention output"];
+    gpu_5_l5_gate -> gpu_5_l5_moe [label="expert selection", style=dashed];
+            
+    // Layer 6 connections for GPU 6
+    gpu_6_embed -> gpu_6_l6_q_proj [label="embedded tokens"];
+    gpu_6_embed -> gpu_6_l6_k_proj [label="embedded tokens"];  
+    gpu_6_embed -> gpu_6_l6_v_proj [label="embedded tokens"];
+            
+    gpu_6_l6_q_proj -> gpu_6_l6_attn_scores [label="Q projections"];
+    gpu_6_l6_k_proj -> gpu_6_l6_attn_scores [label="K projections"];
+    gpu_6_l6_v_proj -> gpu_6_l6_attn_scores [label="V projections"];
+    gpu_6_l6_attn_scores -> gpu_6_l6_attn_out [label="attention weights"];
+            
+    gpu_6_l6_attn_out -> gpu_6_l6_gate [label="routing decision", style=dashed];
+            
+    gpu_6_l6_attn_out -> gpu_6_l6_moe [label="attention output"];
+    gpu_6_l6_gate -> gpu_6_l6_moe [label="expert selection", style=dashed];
+            
+    // Layer 7 connections for GPU 7
+    gpu_7_embed -> gpu_7_l7_q_proj [label="embedded tokens"];
+    gpu_7_embed -> gpu_7_l7_k_proj [label="embedded tokens"];  
+    gpu_7_embed -> gpu_7_l7_v_proj [label="embedded tokens"];
+            
+    gpu_7_l7_q_proj -> gpu_7_l7_attn_scores [label="Q projections"];
+    gpu_7_l7_k_proj -> gpu_7_l7_attn_scores [label="K projections"];
+    gpu_7_l7_v_proj -> gpu_7_l7_attn_scores [label="V projections"];
+    gpu_7_l7_attn_scores -> gpu_7_l7_attn_out [label="attention weights"];
+            
+    gpu_7_l7_attn_out -> gpu_7_l7_gate [label="routing decision", style=dashed];
+            
+    gpu_7_l7_attn_out -> gpu_7_l7_moe [label="attention output"];
+    gpu_7_l7_gate -> gpu_7_l7_moe [label="expert selection", style=dashed];
+            
+    // Layer 8 connections for GPU 8
+    gpu_8_embed -> gpu_8_l8_q_proj [label="embedded tokens"];
+    gpu_8_embed -> gpu_8_l8_k_proj [label="embedded tokens"];  
+    gpu_8_embed -> gpu_8_l8_v_proj [label="embedded tokens"];
+            
+    gpu_8_l8_q_proj -> gpu_8_l8_attn_scores [label="Q projections"];
+    gpu_8_l8_k_proj -> gpu_8_l8_attn_scores [label="K projections"];
+    gpu_8_l8_v_proj -> gpu_8_l8_attn_scores [label="V projections"];
+    gpu_8_l8_attn_scores -> gpu_8_l8_attn_out [label="attention weights"];
+            
+    gpu_8_l8_attn_out -> gpu_8_l8_gate [label="routing decision", style=dashed];
+            
+    gpu_8_l8_attn_out -> gpu_8_l8_moe [label="attention output"];
+    gpu_8_l8_gate -> gpu_8_l8_moe [label="expert selection", style=dashed];
+            
+    // Layer 9 connections for GPU 9
+    gpu_9_embed -> gpu_9_l9_q_proj [label="embedded tokens"];
+    gpu_9_embed -> gpu_9_l9_k_proj [label="embedded tokens"];  
+    gpu_9_embed -> gpu_9_l9_v_proj [label="embedded tokens"];
+            
+    gpu_9_l9_q_proj -> gpu_9_l9_attn_scores [label="Q projections"];
+    gpu_9_l9_k_proj -> gpu_9_l9_attn_scores [label="K projections"];
+    gpu_9_l9_v_proj -> gpu_9_l9_attn_scores [label="V projections"];
+    gpu_9_l9_attn_scores -> gpu_9_l9_attn_out [label="attention weights"];
+            
+    gpu_9_l9_attn_out -> gpu_9_l9_gate [label="routing decision", style=dashed];
+            
+    gpu_9_l9_attn_out -> gpu_9_l9_moe [label="attention output"];
+    gpu_9_l9_gate -> gpu_9_l9_moe [label="expert selection", style=dashed];
+            
+    // Layer 10 connections for GPU 10
+    gpu_10_embed -> gpu_10_l10_q_proj [label="embedded tokens"];
+    gpu_10_embed -> gpu_10_l10_k_proj [label="embedded tokens"];  
+    gpu_10_embed -> gpu_10_l10_v_proj [label="embedded tokens"];
+            
+    gpu_10_l10_q_proj -> gpu_10_l10_attn_scores [label="Q projections"];
+    gpu_10_l10_k_proj -> gpu_10_l10_attn_scores [label="K projections"];
+    gpu_10_l10_v_proj -> gpu_10_l10_attn_scores [label="V projections"];
+    gpu_10_l10_attn_scores -> gpu_10_l10_attn_out [label="attention weights"];
+            
+    gpu_10_l10_attn_out -> gpu_10_l10_gate [label="routing decision", style=dashed];
+            
+    gpu_10_l10_attn_out -> gpu_10_l10_moe [label="attention output"];
+    gpu_10_l10_gate -> gpu_10_l10_moe [label="expert selection", style=dashed];
+            
+    // Layer 11 connections for GPU 11
+    gpu_11_embed -> gpu_11_l11_q_proj [label="embedded tokens"];
+    gpu_11_embed -> gpu_11_l11_k_proj [label="embedded tokens"];  
+    gpu_11_embed -> gpu_11_l11_v_proj [label="embedded tokens"];
+            
+    gpu_11_l11_q_proj -> gpu_11_l11_attn_scores [label="Q projections"];
+    gpu_11_l11_k_proj -> gpu_11_l11_attn_scores [label="K projections"];
+    gpu_11_l11_v_proj -> gpu_11_l11_attn_scores [label="V projections"];
+    gpu_11_l11_attn_scores -> gpu_11_l11_attn_out [label="attention weights"];
+            
+    gpu_11_l11_attn_out -> gpu_11_l11_gate [label="routing decision", style=dashed];
+            
+    gpu_11_l11_attn_out -> gpu_11_l11_moe [label="attention output"];
+    gpu_11_l11_gate -> gpu_11_l11_moe [label="expert selection", style=dashed];
+            
+    // Layer 12 connections for GPU 12
+    gpu_12_embed -> gpu_12_l12_q_proj [label="embedded tokens"];
+    gpu_12_embed -> gpu_12_l12_k_proj [label="embedded tokens"];  
+    gpu_12_embed -> gpu_12_l12_v_proj [label="embedded tokens"];
+            
+    gpu_12_l12_q_proj -> gpu_12_l12_attn_scores [label="Q projections"];
+    gpu_12_l12_k_proj -> gpu_12_l12_attn_scores [label="K projections"];
+    gpu_12_l12_v_proj -> gpu_12_l12_attn_scores [label="V projections"];
+    gpu_12_l12_attn_scores -> gpu_12_l12_attn_out [label="attention weights"];
+            
+    gpu_12_l12_attn_out -> gpu_12_l12_gate [label="routing decision", style=dashed];
+            
+    gpu_12_l12_attn_out -> gpu_12_l12_moe [label="attention output"];
+    gpu_12_l12_gate -> gpu_12_l12_moe [label="expert selection", style=dashed];
+            
+    // Layer 13 connections for GPU 13
+    gpu_13_embed -> gpu_13_l13_q_proj [label="embedded tokens"];
+    gpu_13_embed -> gpu_13_l13_k_proj [label="embedded tokens"];  
+    gpu_13_embed -> gpu_13_l13_v_proj [label="embedded tokens"];
+            
+    gpu_13_l13_q_proj -> gpu_13_l13_attn_scores [label="Q projections"];
+    gpu_13_l13_k_proj -> gpu_13_l13_attn_scores [label="K projections"];
+    gpu_13_l13_v_proj -> gpu_13_l13_attn_scores [label="V projections"];
+    gpu_13_l13_attn_scores -> gpu_13_l13_attn_out [label="attention weights"];
+            
+    gpu_13_l13_attn_out -> gpu_13_l13_gate [label="routing decision", style=dashed];
+            
+    gpu_13_l13_attn_out -> gpu_13_l13_moe [label="attention output"];
+    gpu_13_l13_gate -> gpu_13_l13_moe [label="expert selection", style=dashed];
+            
+    // Layer 14 connections for GPU 14
+    gpu_14_embed -> gpu_14_l14_q_proj [label="embedded tokens"];
+    gpu_14_embed -> gpu_14_l14_k_proj [label="embedded tokens"];  
+    gpu_14_embed -> gpu_14_l14_v_proj [label="embedded tokens"];
+            
+    gpu_14_l14_q_proj -> gpu_14_l14_attn_scores [label="Q projections"];
+    gpu_14_l14_k_proj -> gpu_14_l14_attn_scores [label="K projections"];
+    gpu_14_l14_v_proj -> gpu_14_l14_attn_scores [label="V projections"];
+    gpu_14_l14_attn_scores -> gpu_14_l14_attn_out [label="attention weights"];
+            
+    gpu_14_l14_attn_out -> gpu_14_l14_gate [label="routing decision", style=dashed];
+            
+    gpu_14_l14_attn_out -> gpu_14_l14_moe [label="attention output"];
+    gpu_14_l14_gate -> gpu_14_l14_moe [label="expert selection", style=dashed];
+            
+    // Layer 15 connections for GPU 15
+    gpu_15_embed -> gpu_15_l15_q_proj [label="embedded tokens"];
+    gpu_15_embed -> gpu_15_l15_k_proj [label="embedded tokens"];  
+    gpu_15_embed -> gpu_15_l15_v_proj [label="embedded tokens"];
+            
+    gpu_15_l15_q_proj -> gpu_15_l15_attn_scores [label="Q projections"];
+    gpu_15_l15_k_proj -> gpu_15_l15_attn_scores [label="K projections"];
+    gpu_15_l15_v_proj -> gpu_15_l15_attn_scores [label="V projections"];
+    gpu_15_l15_attn_scores -> gpu_15_l15_attn_out [label="attention weights"];
+            
+    gpu_15_l15_attn_out -> gpu_15_l15_gate [label="routing decision", style=dashed];
+            
+    gpu_15_l15_attn_out -> gpu_15_l15_moe [label="attention output"];
+    gpu_15_l15_gate -> gpu_15_l15_moe [label="expert selection", style=dashed];
+            
+    // TP Group 0 connections
+    gpu_0_l0_attn_out -> tp_allreduce_0 [label="partial attention 0"];
+    gpu_1_l1_attn_out -> tp_allreduce_0 [label="partial attention 1"];
+    tp_allreduce_0 -> gpu_0_l0_moe [label="complete attention 0"];
+    tp_allreduce_0 -> gpu_1_l1_moe [label="complete attention 1"];
+            
+    // TP Group 1 connections
+    gpu_2_l2_attn_out -> tp_allreduce_1 [label="partial attention 2"];
+    gpu_3_l3_attn_out -> tp_allreduce_1 [label="partial attention 3"];
+    tp_allreduce_1 -> gpu_2_l2_moe [label="complete attention 2"];
+    tp_allreduce_1 -> gpu_3_l3_moe [label="complete attention 3"];
+            
+    // TP Group 2 connections
+    gpu_4_l4_attn_out -> tp_allreduce_2 [label="partial attention 4"];
+    gpu_5_l5_attn_out -> tp_allreduce_2 [label="partial attention 5"];
+    tp_allreduce_2 -> gpu_4_l4_moe [label="complete attention 4"];
+    tp_allreduce_2 -> gpu_5_l5_moe [label="complete attention 5"];
+            
+    // TP Group 3 connections
+    gpu_6_l6_attn_out -> tp_allreduce_3 [label="partial attention 6"];
+    gpu_7_l7_attn_out -> tp_allreduce_3 [label="partial attention 7"];
+    tp_allreduce_3 -> gpu_6_l6_moe [label="complete attention 6"];
+    tp_allreduce_3 -> gpu_7_l7_moe [label="complete attention 7"];
+            
+    // TP Group 4 connections
+    gpu_8_l8_attn_out -> tp_allreduce_4 [label="partial attention 8"];
+    gpu_9_l9_attn_out -> tp_allreduce_4 [label="partial attention 9"];
+    tp_allreduce_4 -> gpu_8_l8_moe [label="complete attention 8"];
+    tp_allreduce_4 -> gpu_9_l9_moe [label="complete attention 9"];
+            
+    // TP Group 5 connections
+    gpu_10_l10_attn_out -> tp_allreduce_5 [label="partial attention 10"];
+    gpu_11_l11_attn_out -> tp_allreduce_5 [label="partial attention 11"];
+    tp_allreduce_5 -> gpu_10_l10_moe [label="complete attention 10"];
+    tp_allreduce_5 -> gpu_11_l11_moe [label="complete attention 11"];
+            
+    // TP Group 6 connections
+    gpu_12_l12_attn_out -> tp_allreduce_6 [label="partial attention 12"];
+    gpu_13_l13_attn_out -> tp_allreduce_6 [label="partial attention 13"];
+    tp_allreduce_6 -> gpu_12_l12_moe [label="complete attention 12"];
+    tp_allreduce_6 -> gpu_13_l13_moe [label="complete attention 13"];
+            
+    // TP Group 7 connections
+    gpu_14_l14_attn_out -> tp_allreduce_7 [label="partial attention 14"];
+    gpu_15_l15_attn_out -> tp_allreduce_7 [label="partial attention 15"];
+    tp_allreduce_7 -> gpu_14_l14_moe [label="complete attention 14"];
+    tp_allreduce_7 -> gpu_15_l15_moe [label="complete attention 15"];
+            
+    gpu_0_l0_moe -> pp_sendrecv_stage0_to_1 [label="layer 0 activations"];
+            
+    gpu_1_l1_moe -> pp_sendrecv_stage0_to_1 [label="layer 1 activations"];
+            
+    gpu_2_l2_moe -> pp_sendrecv_stage0_to_1 [label="layer 2 activations"];
+            
+    gpu_3_l3_moe -> pp_sendrecv_stage0_to_1 [label="layer 3 activations"];
+            
+    gpu_4_l4_moe -> pp_sendrecv_stage0_to_1 [label="layer 4 activations"];
+            
+    gpu_5_l5_moe -> pp_sendrecv_stage0_to_1 [label="layer 5 activations"];
+            
+    gpu_6_l6_moe -> pp_sendrecv_stage0_to_1 [label="layer 6 activations"];
+            
+    gpu_7_l7_moe -> pp_sendrecv_stage0_to_1 [label="layer 7 activations"];
+            
+    pp_sendrecv_stage0_to_1 -> gpu_8_l8_q_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_8_l8_k_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_8_l8_v_proj [label="forwarded activations"];
+            
+    pp_sendrecv_stage0_to_1 -> gpu_9_l9_q_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_9_l9_k_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_9_l9_v_proj [label="forwarded activations"];
+            
+    pp_sendrecv_stage0_to_1 -> gpu_10_l10_q_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_10_l10_k_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_10_l10_v_proj [label="forwarded activations"];
+            
+    pp_sendrecv_stage0_to_1 -> gpu_11_l11_q_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_11_l11_k_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_11_l11_v_proj [label="forwarded activations"];
+            
+    pp_sendrecv_stage0_to_1 -> gpu_12_l12_q_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_12_l12_k_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_12_l12_v_proj [label="forwarded activations"];
+            
+    pp_sendrecv_stage0_to_1 -> gpu_13_l13_q_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_13_l13_k_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_13_l13_v_proj [label="forwarded activations"];
+            
+    pp_sendrecv_stage0_to_1 -> gpu_14_l14_q_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_14_l14_k_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_14_l14_v_proj [label="forwarded activations"];
+            
+    pp_sendrecv_stage0_to_1 -> gpu_15_l15_q_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_15_l15_k_proj [label="forwarded activations"];
+    pp_sendrecv_stage0_to_1 -> gpu_15_l15_v_proj [label="forwarded activations"];
+            
+    gpu_8_l8_moe -> pp_sendrecv_stage1_to_2 [label="layer 8 activations"];
+            
+    gpu_9_l9_moe -> pp_sendrecv_stage1_to_2 [label="layer 9 activations"];
+            
+    gpu_10_l10_moe -> pp_sendrecv_stage1_to_2 [label="layer 10 activations"];
+            
+    gpu_11_l11_moe -> pp_sendrecv_stage1_to_2 [label="layer 11 activations"];
+            
+    gpu_12_l12_moe -> pp_sendrecv_stage1_to_2 [label="layer 12 activations"];
+            
+    gpu_13_l13_moe -> pp_sendrecv_stage1_to_2 [label="layer 13 activations"];
+            
+    gpu_14_l14_moe -> pp_sendrecv_stage1_to_2 [label="layer 14 activations"];
+            
+    gpu_15_l15_moe -> pp_sendrecv_stage1_to_2 [label="layer 15 activations"];
+            
+    pp_sendrecv_stage1_to_2 -> gpu_16_input [label="forwarded activations"];
+        
+    pp_sendrecv_stage1_to_2 -> gpu_17_input [label="forwarded activations"];
+        
+    pp_sendrecv_stage1_to_2 -> gpu_18_input [label="forwarded activations"];
+        
+    pp_sendrecv_stage1_to_2 -> gpu_19_input [label="forwarded activations"];
+        
+    pp_sendrecv_stage1_to_2 -> gpu_20_input [label="forwarded activations"];
+        
+    pp_sendrecv_stage1_to_2 -> gpu_21_input [label="forwarded activations"];
+        
+    pp_sendrecv_stage1_to_2 -> gpu_22_input [label="forwarded activations"];
+        
+    pp_sendrecv_stage1_to_2 -> gpu_23_input [label="forwarded activations"];
+        
+    gpu_0_l0_moe -> ep_all2all_stage0 [label="tokens for routing"];
+                
+    gpu_1_l1_moe -> ep_all2all_stage0 [label="tokens for routing"];
+                
+    gpu_2_l2_moe -> ep_all2all_stage0 [label="tokens for routing"];
+                
+    gpu_3_l3_moe -> ep_all2all_stage0 [label="tokens for routing"];
+                
+    gpu_4_l4_moe -> ep_all2all_stage0 [label="tokens for routing"];
+                
+    gpu_5_l5_moe -> ep_all2all_stage0 [label="tokens for routing"];
+                
+    gpu_6_l6_moe -> ep_all2all_stage0 [label="tokens for routing"];
+                
+    gpu_7_l7_moe -> ep_all2all_stage0 [label="tokens for routing"];
+                
+    gpu_8_l8_moe -> ep_all2all_stage1 [label="tokens for routing"];
+                
+    gpu_9_l9_moe -> ep_all2all_stage1 [label="tokens for routing"];
+                
+    gpu_10_l10_moe -> ep_all2all_stage1 [label="tokens for routing"];
+                
+    gpu_11_l11_moe -> ep_all2all_stage1 [label="tokens for routing"];
+                
+    gpu_12_l12_moe -> ep_all2all_stage1 [label="tokens for routing"];
+                
+    gpu_13_l13_moe -> ep_all2all_stage1 [label="tokens for routing"];
+                
+    gpu_14_l14_moe -> ep_all2all_stage1 [label="tokens for routing"];
+                
+    gpu_15_l15_moe -> ep_all2all_stage1 [label="tokens for routing"];
+                
+    gpu_0_l0_moe -> dp_allreduce_grads [label="gradients from GPU 0"];
+        
+    gpu_1_l1_moe -> dp_allreduce_grads [label="gradients from GPU 1"];
+        
+    gpu_2_l2_moe -> dp_allreduce_grads [label="gradients from GPU 2"];
+        
+    gpu_3_l3_moe -> dp_allreduce_grads [label="gradients from GPU 3"];
+        
+    gpu_4_l4_moe -> dp_allreduce_grads [label="gradients from GPU 4"];
+        
+    gpu_5_l5_moe -> dp_allreduce_grads [label="gradients from GPU 5"];
+        
+    gpu_6_l6_moe -> dp_allreduce_grads [label="gradients from GPU 6"];
+        
+    gpu_7_l7_moe -> dp_allreduce_grads [label="gradients from GPU 7"];
+        
+    gpu_8_l8_moe -> dp_allreduce_grads [label="gradients from GPU 8"];
+        
+    gpu_9_l9_moe -> dp_allreduce_grads [label="gradients from GPU 9"];
+        
+    gpu_10_l10_moe -> dp_allreduce_grads [label="gradients from GPU 10"];
+        
+    gpu_11_l11_moe -> dp_allreduce_grads [label="gradients from GPU 11"];
+        
+    gpu_12_l12_moe -> dp_allreduce_grads [label="gradients from GPU 12"];
+        
+    gpu_13_l13_moe -> dp_allreduce_grads [label="gradients from GPU 13"];
+        
+    gpu_14_l14_moe -> dp_allreduce_grads [label="gradients from GPU 14"];
+        
+    gpu_15_l15_moe -> dp_allreduce_grads [label="gradients from GPU 15"];
+        
+    gpu_16_embed -> dp_allreduce_grads [label="gradients from GPU 16"];
+        
+    gpu_17_embed -> dp_allreduce_grads [label="gradients from GPU 17"];
+        
+    gpu_18_embed -> dp_allreduce_grads [label="gradients from GPU 18"];
+        
+    gpu_19_embed -> dp_allreduce_grads [label="gradients from GPU 19"];
+        
+    gpu_20_embed -> dp_allreduce_grads [label="gradients from GPU 20"];
+        
+    gpu_21_embed -> dp_allreduce_grads [label="gradients from GPU 21"];
+        
+    gpu_22_embed -> dp_allreduce_grads [label="gradients from GPU 22"];
+        
+    gpu_23_embed -> dp_allreduce_grads [label="gradients from GPU 23"];
+        
+    // Load balancer connections
+    dp_allreduce_grads -> load_balancer [label="gradient sync complete"];
+    
+    load_balancer -> gpu_0_l0_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_1_l1_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_2_l2_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_3_l3_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_4_l4_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_5_l5_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_6_l6_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_7_l7_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_8_l8_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_9_l9_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_10_l10_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_11_l11_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_12_l12_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_13_l13_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_14_l14_gate [label="expert balancing", style=dashed];
+            
+    load_balancer -> gpu_15_l15_gate [label="expert balancing", style=dashed];
+            
+    gpu_16_embed -> final_output [label="final features from GPU 16"];
+        
+    gpu_17_embed -> final_output [label="final features from GPU 17"];
+        
+    gpu_18_embed -> final_output [label="final features from GPU 18"];
+        
+    gpu_19_embed -> final_output [label="final features from GPU 19"];
+        
+    gpu_20_embed -> final_output [label="final features from GPU 20"];
+        
+    gpu_21_embed -> final_output [label="final features from GPU 21"];
+        
+    gpu_22_embed -> final_output [label="final features from GPU 22"];
+        
+    gpu_23_embed -> final_output [label="final features from GPU 23"];
+        
+    dp_allreduce_grads -> final_output [label="synchronized gradients"];
+    

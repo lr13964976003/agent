@@ -1,0 +1,286 @@
+digraph LLM_Parallel_Strategy {
+    graph [rankdir=TB, bgcolor=white, fontname="Arial", fontsize=12, dpi=300];
+    node [fontname="Arial", fontsize=10, style=filled];
+    edge [fontname="Arial", fontsize=8];
+
+    // Color definitions
+    node [fillcolor=lightgreen]; // Computation nodes
+    
+    // ========== INPUT LAYER ==========
+    subgraph cluster_input {
+        label="Input Layer";
+        style=rounded;
+        fillcolor=lightgray;
+        
+        input_node [shape=rectangle, 
+                   label="Input\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=10240, heads=16, d_k=32]"];
+    }
+
+    // ========== DATA PARALLEL SPLIT ==========
+    dp_split [shape=parallelogram, fillcolor=lightyellow,
+             label="DP Batch Split\nInput: [batch_size=128, ...]\nOutput: 3×[batch_size=43, ...]"];
+    
+    input_node -> dp_split [label="full batch"];
+
+    // ========== GPU 0: COMPLETE ATTENTION DECOMPOSITION ==========
+    subgraph cluster_gpu0_complete {
+        label="GPU 0 (Complete Stack)";
+        style=rounded;
+        fillcolor=white;
+        
+        // Layer 0 - Decomposed Attention
+        gpu0_l0_q_proj [shape=rectangle, 
+                       label="L0 Q Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu0_l0_k_proj [shape=rectangle,
+                       label="L0 K Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu0_l0_v_proj [shape=rectangle,
+                       label="L0 V Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu0_l0_attn_scores [shape=rectangle,
+                            label="L0 Attention Scores\nGPU: 0\nInput: QKV [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu0_l0_out_proj [shape=rectangle,
+                         label="L0 Output Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // MoE Layer 0
+        gpu0_l0_gate [shape=parallelogram, style=dashed, fillcolor=lightyellow,
+                     label="L0 Gate Router\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions"];
+        
+        gpu0_l0_moe [shape=rectangle,
+                    label="L0 MoE (8 experts)\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 1 - Decomposed Attention
+        gpu0_l1_q_proj [shape=rectangle,
+                       label="L1 Q Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu0_l1_k_proj [shape=rectangle,
+                       label="L1 K Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu0_l1_v_proj [shape=rectangle,
+                       label="L1 V Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu0_l1_attn_scores [shape=rectangle,
+                            label="L1 Attention Scores\nGPU: 0\nInput: QKV [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu0_l1_out_proj [shape=rectangle,
+                         label="L1 Output Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // MoE Layer 1
+        gpu0_l1_gate [shape=parallelogram, style=dashed, fillcolor=lightyellow,
+                     label="L1 Gate Router\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions"];
+        
+        gpu0_l1_moe [shape=rectangle,
+                    label="L1 MoE (8 experts)\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+    }
+
+    // ========== GPU 1: COMPLETE ATTENTION DECOMPOSITION ==========
+    subgraph cluster_gpu1_complete {
+        label="GPU 1 (Complete Stack)";
+        style=rounded;
+        fillcolor=white;
+        
+        // Layer 0 - Decomposed Attention
+        gpu1_l0_q_proj [shape=rectangle,
+                       label="L0 Q Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu1_l0_k_proj [shape=rectangle,
+                       label="L0 K Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu1_l0_v_proj [shape=rectangle,
+                       label="L0 V Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu1_l0_attn_scores [shape=rectangle,
+                            label="L0 Attention Scores\nGPU: 1\nInput: QKV [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu1_l0_out_proj [shape=rectangle,
+                         label="L0 Output Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // MoE Layer 0
+        gpu1_l0_gate [shape=parallelogram, style=dashed, fillcolor=lightyellow,
+                     label="L0 Gate Router\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions"];
+        
+        gpu1_l0_moe [shape=rectangle,
+                    label="L0 MoE (8 experts)\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // Layer 1 - Decomposed Attention
+        gpu1_l1_q_proj [shape=rectangle,
+                       label="L1 Q Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu1_l1_k_proj [shape=rectangle,
+                       label="L1 K Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu1_l1_v_proj [shape=rectangle,
+                       label="L1 V Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu1_l1_attn_scores [shape=rectangle,
+                            label="L1 Attention Scores\nGPU: 1\nInput: QKV [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, heads=8, d_k=32]"];
+        
+        gpu1_l1_out_proj [shape=rectangle,
+                         label="L1 Output Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, heads=8, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+        
+        // MoE Layer 1
+        gpu1_l1_gate [shape=parallelogram, style=dashed, fillcolor=lightyellow,
+                     label="L1 Gate Router\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions"];
+        
+        gpu1_l1_moe [shape=rectangle,
+                    label="L1 MoE (8 experts)\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]"];
+    }
+
+    // ========== COMMUNICATION NODES ==========
+    
+    // Tensor Parallel All-Reduce for Layer 0
+    tp_l0_allreduce [shape=ellipse, fillcolor=lightblue,
+                    label="TP All-Reduce L0\nGPUs: 0,1\nInput: partial tensors\nOutput: complete tensors"];
+    
+    // Tensor Parallel All-Reduce for Layer 1  
+    tp_l1_allreduce [shape=ellipse, fillcolor=lightblue,
+                    label="TP All-Reduce L1\nGPUs: 0,1\nInput: partial tensors\nOutput: complete tensors"];
+    
+    // Expert Parallel All-to-All
+    ep_all2all [shape=ellipse, fillcolor=lightblue,
+               label="EP All-to-All\nGPUs: 0,1\nInput: token representations\nOutput: routed tokens"];
+    
+    // Load Balancer
+    load_balancer [shape=parallelogram, fillcolor=lightyellow,
+                  label="Load Balancer\nInput: GPU utilization stats\nOutput: balancing decisions"];
+
+    // ========== COMPLETE CONNECTIONS FOR GPU 0 ==========
+    
+    // DP split to GPU 0
+    dp_split -> gpu0_l0_q_proj [label="batch 0"];
+    dp_split -> gpu0_l0_k_proj [label="batch 0"];
+    dp_split -> gpu0_l0_v_proj [label="batch 0"];
+    
+    // Layer 0 attention flow
+    gpu0_l0_q_proj -> gpu0_l0_attn_scores;
+    gpu0_l0_k_proj -> gpu0_l0_attn_scores;
+    gpu0_l0_v_proj -> gpu0_l0_attn_scores;
+    gpu0_l0_attn_scores -> gpu0_l0_out_proj;
+    gpu0_l0_out_proj -> tp_l0_allreduce;
+    
+    // Layer 0 MoE flow
+    tp_l0_allreduce -> gpu0_l0_gate [label="attention output"];
+    tp_l0_allreduce -> gpu0_l0_moe [label="attention output"];
+    gpu0_l0_gate -> gpu0_l0_moe [label="routing decisions", style=dashed];
+    
+    // Expert parallel routing
+    gpu0_l0_moe -> ep_all2all [label="tokens to route"];
+    
+    // Layer 1 attention flow
+    gpu0_l0_moe -> gpu0_l1_q_proj [label="layer 0 output"];
+    gpu0_l0_moe -> gpu0_l1_k_proj [label="layer 0 output"];
+    gpu0_l0_moe -> gpu0_l1_v_proj [label="layer 0 output"];
+    
+    gpu0_l1_q_proj -> gpu0_l1_attn_scores;
+    gpu0_l1_k_proj -> gpu0_l1_attn_scores;
+    gpu0_l1_v_proj -> gpu0_l1_attn_scores;
+    gpu0_l1_attn_scores -> gpu0_l1_out_proj;
+    gpu0_l1_out_proj -> tp_l1_allreduce;
+    
+    // Layer 1 MoE flow
+    tp_l1_allreduce -> gpu0_l1_gate [label="attention output"];
+    tp_l1_allreduce -> gpu0_l1_moe [label="attention output"];
+    gpu0_l1_gate -> gpu0_l1_moe [label="routing decisions", style=dashed];
+
+    // ========== COMPLETE CONNECTIONS FOR GPU 1 ==========
+    
+    // DP split to GPU 1
+    dp_split -> gpu1_l0_q_proj [label="batch 1"];
+    dp_split -> gpu1_l0_k_proj [label="batch 1"];
+    dp_split -> gpu1_l0_v_proj [label="batch 1"];
+    
+    // Layer 0 attention flow
+    gpu1_l0_q_proj -> gpu1_l0_attn_scores;
+    gpu1_l0_k_proj -> gpu1_l0_attn_scores;
+    gpu1_l0_v_proj -> gpu1_l0_attn_scores;
+    gpu1_l0_attn_scores -> gpu1_l0_out_proj;
+    gpu1_l0_out_proj -> tp_l0_allreduce;
+    
+    // Layer 0 MoE flow
+    tp_l0_allreduce -> gpu1_l0_gate [label="attention output"];
+    tp_l0_allreduce -> gpu1_l0_moe [label="attention output"];
+    gpu1_l0_gate -> gpu1_l0_moe [label="routing decisions", style=dashed];
+    
+    // Expert parallel routing
+    gpu1_l0_moe -> ep_all2all [label="tokens to route"];
+    
+    // Layer 1 attention flow
+    gpu1_l0_moe -> gpu1_l1_q_proj [label="layer 0 output"];
+    gpu1_l0_moe -> gpu1_l1_k_proj [label="layer 0 output"];
+    gpu1_l0_moe -> gpu1_l1_v_proj [label="layer 0 output"];
+    
+    gpu1_l1_q_proj -> gpu1_l1_attn_scores;
+    gpu1_l1_k_proj -> gpu1_l1_attn_scores;
+    gpu1_l1_v_proj -> gpu1_l1_attn_scores;
+    gpu1_l1_attn_scores -> gpu1_l1_out_proj;
+    gpu1_l1_out_proj -> tp_l1_allreduce;
+    
+    // Layer 1 MoE flow
+    tp_l1_allreduce -> gpu1_l1_gate [label="attention output"];
+    tp_l1_allreduce -> gpu1_l1_moe [label="attention output"];
+    gpu1_l1_gate -> gpu1_l1_moe [label="routing decisions", style=dashed];
+
+    // ========== EXPERT PARALLEL RETURN PATH ==========
+    ep_all2all -> gpu0_l0_moe [label="routed tokens back"];
+    ep_all2all -> gpu1_l0_moe [label="routed tokens back"];
+
+    // ========== LOAD BALANCER CONNECTIONS ==========
+    load_balancer -> gpu0_l0_gate [label="balancing", style=dashed];
+    load_balancer -> gpu0_l1_gate [label="balancing", style=dashed];
+    load_balancer -> gpu1_l0_gate [label="balancing", style=dashed];
+    load_balancer -> gpu1_l1_gate [label="balancing", style=dashed];
+
+    // ========== REMAINING GPUs (2-23) SUMMARY ==========
+    subgraph cluster_remaining_gpus {
+        label="GPUs 2-23 (Similar Structure)";
+        style=rounded;
+        fillcolor=lightgray;
+        
+        remaining_gpus [shape=rectangle,
+                       label="GPUs 2-23\nSame attention decomposition\nSame parallel patterns\nComplete connectivity"];
+    }
+    
+    // Connect to remaining GPUs through pipeline parallel
+    pp_stage0 [shape=ellipse, fillcolor=lightblue,
+              label="PP Stage 0→1\nGPUs: 0-7 → 8-15\nInput: activations\nOutput: forwarded activations"];
+    
+    pp_stage1 [shape=ellipse, fillcolor=lightblue,
+              label="PP Stage 1→2\nGPUs: 8-15 → 16-23\nInput: activations\nOutput: forwarded activations"];
+    
+    // GPU 0,1 outputs go to remaining GPUs
+    gpu0_l1_moe -> pp_stage0 [label="stage 0 output"];
+    gpu1_l1_moe -> pp_stage0 [label="stage 0 output"];
+    pp_stage0 -> remaining_gpus [label="forwarded activations"];
+    remaining_gpus -> pp_stage1 [label="stage 1 output"];
+
+    // ========== DATA PARALLEL GRADIENT SYNCHRONIZATION ==========
+    dp_allreduce [shape=ellipse, fillcolor=lightblue,
+                 label="DP All-Sum\nGPUs: 0-23\nInput: gradient chunks\nOutput: synchronized gradients"];
+    
+    remaining_gpus -> dp_allreduce [label="gradients"];
+
+    // ========== FINAL OUTPUT AGGREGATION ==========
+    output_aggregation [shape=parallelogram, fillcolor=lightyellow,
+                       label="Output Aggregation\nInput: distributed results\nOutput: final predictions"];
+    
+    remaining_gpus -> output_aggregation;
+    pp_stage1 -> output_aggregation;
+
+    // ========== FINAL OUTPUT ==========
+    subgraph cluster_output_final {
+        label="Final Output Layer";
+        style=rounded;
+        fillcolor=lightgray;
+        
+        final_output [shape=rectangle,
+                     label="Final Output\nInput: [batch_size=128, seq_len=10240, d_model=512]\nOutput: [batch_size=128, seq_len=10240, vocab_size]"];
+    }
+    
+    output_aggregation -> final_output [label="aggregated result"];
+    dp_allreduce -> final_output [label="synchronized"];
+
+    // Ensure no cycles - use proper acyclic flow
+    rankdir = TB;  // Top to bottom flow prevents cycles
+}

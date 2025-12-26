@@ -1,0 +1,229 @@
+digraph {
+	graph [bb="0,0,4917.2,1026.8",
+		dpi=300,
+		rankdir=TB,
+		size="20,30"
+	];
+	node [fillcolor=lightyellow,
+		fontsize=10,
+		label="\N",
+		shape=parallelogram,
+		style=filled
+	];
+	edge [fontsize=8];
+
+	subgraph cluster_input {
+		graph [fillcolor=lightgray,
+			label="Input Layer",
+			style=rounded
+		];
+		input	[fillcolor=lightgreen,
+			label="Input\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=10240, heads=16, d_k=32]",
+			shape=rectangle];
+	}
+
+	subgraph cluster_gpu0_s0 {
+		graph [fillcolor=white,
+			label="GPU 0",
+			style=rounded
+		];
+		
+		gpu0_embed	[fillcolor=lightgreen,
+			label="Embedding Layer\nGPU: 0\nInput: [batch_size=43, seq_len=10240, heads=16, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gpu0_l0_qkv_proj	[fillcolor=lightgreen,
+			label="Layer 0 QKV Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=16, d_k=32]",
+			shape=rectangle];
+		
+		gpu0_l0_attn_comp	[fillcolor=lightgreen,
+			label="Layer 0 Attention Computation\nGPU: 0\nInput: QKV tensors\nOutput: attention output",
+			shape=rectangle];
+		
+		gpu0_l0_out_proj	[fillcolor=lightgreen,
+			label="Layer 0 Output Projection\nGPU: 0\nInput: attention output\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gpu0_l0_moe	[fillcolor=lightgreen,
+			label="Layer 0 MoE\nGPU: 0\n8 Experts\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gpu0_l0_gate	[fillcolor=lightyellow,
+			label="Gate Router\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions",
+			style=dashed];
+	}
+
+	subgraph cluster_gpu1_s0 {
+		graph [fillcolor=white,
+			label="GPU 1",
+			style=rounded
+		];
+		
+		gpu1_embed	[fillcolor=lightgreen,
+			label="Embedding Layer\nGPU: 1\nInput: [batch_size=43, seq_len=10240, heads=16, d_k=32]\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gpu1_l0_qkv_proj	[fillcolor=lightgreen,
+			label="Layer 0 QKV Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=16, d_k=32]",
+			shape=rectangle];
+		
+		gpu1_l0_attn_comp	[fillcolor=lightgreen,
+			label="Layer 0 Attention Computation\nGPU: 1\nInput: QKV tensors\nOutput: attention output",
+			shape=rectangle];
+		
+		gpu1_l0_out_proj	[fillcolor=lightgreen,
+			label="Layer 0 Output Projection\nGPU: 1\nInput: attention output\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gpu1_l0_moe	[fillcolor=lightgreen,
+			label="Layer 0 MoE\nGPU: 1\n8 Experts\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gpu1_l0_gate	[fillcolor=lightyellow,
+			label="Gate Router\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions",
+			style=dashed];
+	}
+
+	subgraph cluster_tp_pairs_s0 {
+		graph [fillcolor=lightyellow,
+			label="Tensor Parallel Groups",
+			style=rounded
+		];
+		tp_01_qkv_comm	[fillcolor=lightblue,
+			label="TP All-Reduce QKV\nGPUs: 0,1\nInput: partial QKV results\nOutput: aggregated QKV",
+			shape=ellipse];
+		tp_01_attn_comm	[fillcolor=lightblue,
+			label="TP All-Reduce Attention\nGPUs: 0,1\nInput: partial attention results\nOutput: aggregated attention",
+			shape=ellipse];
+		tp_01_out_comm	[fillcolor=lightblue,
+			label="TP All-Reduce Output\nGPUs: 0,1\nInput: partial output results\nOutput: aggregated output",
+			shape=ellipse];
+	}
+
+	subgraph cluster_layer1_s0 {
+		graph [fillcolor=white,
+			label="Layer 1",
+			style=rounded
+		];
+		
+		gpu0_l1_qkv_proj	[fillcolor=lightgreen,
+			label="Layer 1 QKV Projection\nGPU: 0\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=16, d_k=32]",
+			shape=rectangle];
+		
+		gpu0_l1_attn_comp	[fillcolor=lightgreen,
+			label="Layer 1 Attention Computation\nGPU: 0\nInput: QKV tensors\nOutput: attention output",
+			shape=rectangle];
+		
+		gpu0_l1_out_proj	[fillcolor=lightgreen,
+			label="Layer 1 Output Projection\nGPU: 0\nInput: attention output\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gpu0_l1_moe	[fillcolor=lightgreen,
+			label="Layer 1 MoE\nGPU: 0\n8 Experts\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gpu1_l1_qkv_proj	[fillcolor=lightgreen,
+			label="Layer 1 QKV Projection\nGPU: 1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, heads=16, d_k=32]",
+			shape=rectangle];
+		
+		gpu1_l1_attn_comp	[fillcolor=lightgreen,
+			label="Layer 1 Attention Computation\nGPU: 1\nInput: QKV tensors\nOutput: attention output",
+			shape=rectangle];
+		
+		gpu1_l1_out_proj	[fillcolor=lightgreen,
+			label="Layer 1 Output Projection\nGPU: 1\nInput: attention output\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gpu1_l1_moe	[fillcolor=lightgreen,
+			label="Layer 1 MoE\nGPU: 1\n8 Experts\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: [batch_size=43, seq_len=10240, d_model=512]",
+			shape=rectangle];
+		
+		gate_l1_01	[fillcolor=lightyellow,
+			label="Gate Router\nGPUs: 0,1\nInput: [batch_size=43, seq_len=10240, d_model=512]\nOutput: routing decisions",
+			style=dashed];
+		tp_l1_01_comm	[fillcolor=lightblue,
+			label="TP All-Reduce\nGPUs: 0,1\nInput: partial results\nOutput: aggregated results",
+			shape=ellipse];
+	}
+
+	subgraph cluster_communication {
+		graph [fillcolor=lightcoral,
+			label="Inter-GPU Communication",
+			style=rounded
+		];
+		dp_allreduce	[fillcolor=lightblue,
+			label="DP All-Sum\nGPUs: 0-23\nInput: gradient chunks\nOutput: synchronized gradients",
+			shape=ellipse];
+		pp_sendrecv	[fillcolor=lightblue,
+			label="PP Send/Recv\nGPUs: stage0→stage1\nInput: activations\nOutput: forwarded activations",
+			shape=ellipse];
+		ep_all2all	[fillcolor=lightblue,
+			label="EP All-to-All\nGPUs: per EP group\nInput: token representations\nOutput: routed tokens",
+			shape=ellipse];
+		tp_allreduce	[fillcolor=lightblue,
+			label="TP All-Reduce\nGPUs: per TP pair\nInput: partial tensors\nOutput: complete tensors",
+			shape=ellipse];
+	}
+
+	s_output {
+		graph [fillcolor=lightgray,
+			label="Output Layer",
+			style=rounded
+		];
+		output	[fillcolor=lightgreen,
+			label="Output\nInput: [batch_size=128, seq_len=10240, d_model=512]\nOutput: [batch_size=128, seq_len=10240, vocab_size]",
+			shape=rectangle];
+	}
+
+	input -> gpu0_embed	[label="batch split"];
+	input -> gpu1_embed	[label="batch split"];
+	
+	gpu0_embed -> gpu0_l0_qkv_proj;
+	gpu0_l0_qkv_proj -> gpu0_l0_attn_comp;
+	gpu0_l0_attn_comp -> gpu0_l0_out_proj;
+	gpu0_l0_out_proj -> gpu0_l0_moe;
+	
+	gpu1_embed -> gpu1_l0_qkv_proj;
+	gpu1_l0_qkv_proj -> gpu1_l0_attn_comp;
+	gpu1_l0_attn_comp -> gpu1_l0_out_proj;
+	gpu1_l0_out_proj -> gpu1_l0_moe;
+	
+	gpu0_l0_qkv_proj -> tp_01_qkv_comm	[label="partial QKV"];
+	gpu1_l0_qkv_proj -> tp_01_qkv_comm	[label="partial QKV"];
+	tp_01_qkv_comm -> gpu0_l0_attn_comp	[label="aggregated QKV"];
+	tp_01_qkv_comm -> gpu1_l0_attn_comp	[label="aggregated QKV"];
+	
+	gpu0_l0_attn_comp -> tp_01_attn_comm	[label="partial attention"];
+	gpu1_l0_attn_comp -> tp_01_attn_comm	[label="partial attention"];
+	tp_01_attn_comm -> gpu0_l0_out_proj	[label="aggregated attention"];
+	tp_01_attn_comm -> gpu1_l0_out_proj	[label="aggregated attention"];
+	
+	gpu0_l0_out_proj -> tp_01_out_comm	[label="partial output"];
+	gpu1_l0_out_proj -> tp_01_out_comm	[label="partial output"];
+	tp_01_out_comm -> gpu0_l0_moe	[label="aggregated output"];
+	tp_01_out_comm -> gpu1_l0_moe	[label="aggregated output"];
+	
+	gpu0_l0_gate -> gpu0_l0_moe	[label=routing, style=dashed];
+	gpu1_l0_gate -> gpu1_l0_moe	[label=routing, style=dashed];
+	
+	gpu0_l0_moe -> ep_all2all	[label=tokens];
+	gpu1_l0_moe -> ep_all2all	[label=tokens];
+	ep_all2all -> gpu0_l1_qkv_proj	[label=routed tokens];
+	ep_all2all -> gpu1_l1_qkv_proj	[label=routed tokens];
+	
+	gpu0_l1_qkv_proj -> gpu0_l1_attn_comp;
+	gpu0_l1_attn_comp -> gpu0_l1_out_proj;
+	gpu0_l1_out_proj -> gpu0_l1_moe;
+	
+	gpu1_l1_qkv_proj -> gpu1_l1_attn_comp;
+	gpu1_l1_attn_comp -> gpu1_l1_out_proj;
+	gpu1_l1_out_proj -> gpu1_l1_moe;
+	
+	gate_l1_01 -> gpu0_l1_moe	[label=routing, style=dashed];
+	gate_l1_01 -> gpu1_l1_moe	[label=routing, style=dashed];
+	
+	gpu0_l1_moe -> dp_allreduce	[label=gradients];
+	gpu1_l1_moe -> dp_allreduce	[label=gradients];
+	
+	dp_allreduce -> output	[label=synchronized];
+}

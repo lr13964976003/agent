@@ -1,0 +1,128 @@
+digraph {
+	graph [bb="0,0,608.8,718.85",
+		dpi=300,
+		rankdir=TB,
+		size="15,20"
+	];
+	node [fontsize=10,
+		label="\N"
+	];
+	input	[fillcolor=lightgreen,
+		height=0.5,
+		label="Input
+[batch=128, seq=10240]",
+		pos="110.93,700.85",
+		shape=rectangle,
+		width=1.9583];
+	dp_split	[fillcolor=lightyellow,
+		height=0.83333,
+		label="Data Parallel Split
+3 groups",
+		pos="110.93,615.85",
+		shape=parallelogram,
+		width=3.0815];
+	input -> dp_split	[pos="e,110.93,646.12 110.93,682.66 110.93,675 110.93,665.63 110.93,656.4"];
+	pp_stage0	[fillcolor=lightgreen,
+		height=0.56944,
+		label="Pipeline Stage 0
+Layers 0-7
+GPUs: 0-7",
+		pos="185.93,514.35",
+		shape=rectangle,
+		width=1.375];
+	dp_split -> pp_stage0	[label="group 0",
+		lp="185.93,560.35",
+		pos="e,171.02,535.13 132.83,585.81 142.9,572.44 154.8,556.65 164.78,543.41"];
+	pp_stage1	[fillcolor=lightgreen,
+		height=0.56944,
+		label="Pipeline Stage 1
+Layers 8-15
+GPUs: 8-15",
+		pos="189.93,172.93",
+		shape=rectangle,
+		width=1.375];
+	dp_split -> pp_stage1	[label="group 1",
+		lp="122.93,395.35",
+		pos="e,140.21,193.11 103.68,585.45 99.448,565.74 94.933,539.15 94.933,515.35 94.933,515.35 94.933,515.35 94.933,250.64 94.933,227.74 \
+111.85,210.51 131.4,198.24"];
+	tp_group0	[fillcolor=lightgreen,
+		height=0.5,
+		label="TP Group (0,1)
+Attention + MoE",
+		pos="304.93,438.85",
+		shape=rectangle,
+		width=1.4028];
+	pp_stage0 -> tp_group0	[pos="e,277.26,456.94 217.51,493.85 233.2,484.16 252.23,472.4 268.53,462.34"];
+	tp_group1	[fillcolor=lightgreen,
+		height=0.5,
+		label="TP Group (2,3)
+Attention + MoE",
+		pos="185.93,438.85",
+		shape=rectangle,
+		width=1.4028];
+	pp_stage0 -> tp_group1	[pos="e,185.93,457.1 185.93,493.66 185.93,485.55 185.93,476.03 185.93,467.27"];
+	dp_comm	[fillcolor=lightblue,
+		height=0.58926,
+		label="DP All-Reduce
+Across replicas",
+		pos="237.93,94.213",
+		shape=ellipse,
+		width=1.8267];
+	pp_stage1 -> dp_comm	[pos="e,225.45,115.17 202.29,152.17 207.68,143.56 214.1,133.3 220,123.87"];
+	gate0	[fillcolor=lightyellow,
+		height=0.83333,
+		label="Gate Router
+GPU 0-1",
+		pos="527.93,339.85",
+		shape=parallelogram,
+		style=dashed,
+		width=2.2463];
+	tp_group0 -> gate0	[pos="e,476.28,363.32 344.03,420.85 378.03,406.06 427.85,384.39 467.07,367.33",
+		style=dashed];
+	tp_comm	[fillcolor=lightblue,
+		height=0.58926,
+		label="TP All-Reduce
+Across pairs",
+		pos="185.93,339.85",
+		shape=ellipse,
+		width=1.7481];
+	tp_group0 -> tp_comm	[pos="e,209.17,359.79 283.93,420.73 265.44,405.66 238.24,383.49 217.19,366.33"];
+	gate1	[fillcolor=lightyellow,
+		height=0.83333,
+		label="Gate Router
+GPU 2-3",
+		pos="347.93,339.85",
+		shape=parallelogram,
+		style=dashed,
+		width=2.2463];
+	tp_group1 -> gate1	[pos="e,299.95,369.58 214.52,420.73 235.74,408.03 265.37,390.29 291.31,374.75",
+		style=dashed];
+	tp_group1 -> tp_comm	[pos="e,185.93,361.41 185.93,420.51 185.93,406.92 185.93,387.67 185.93,371.5"];
+	ep_comm	[fillcolor=lightblue,
+		height=0.58926,
+		label="EP All-to-All
+Expert routing",
+		pos="347.93,251.64",
+		shape=ellipse,
+		width=1.8071];
+	gate0 -> ep_comm	[pos="e,383.18,269.52 467.24,309.79 442.67,298.01 414.81,284.67 392.2,273.84"];
+	gate1 -> ep_comm	[pos="e,347.93,273.09 347.93,309.66 347.93,301.12 347.93,291.76 347.93,283.14"];
+	pp_comm	[fillcolor=lightblue,
+		height=0.58926,
+		label="PP Send/Recv
+Stage0→Stage1",
+		pos="189.93,251.64",
+		shape=ellipse,
+		width=1.866];
+	tp_comm -> pp_comm	[pos="e,188.99,272.92 186.88,318.42 187.37,307.9 187.97,294.86 188.52,283.17"];
+	pp_comm -> pp_stage1	[pos="e,189.93,193.48 189.93,230.08 189.93,222 189.93,212.57 189.93,203.77"];
+	output	[fillcolor=lightgreen,
+		height=0.5,
+		label="Output
+[batch=128, predictions]",
+		pos="292.93,18",
+		shape=rectangle,
+		width=1.9722];
+	dp_comm -> output	[pos="e,280.03,36.414 252.67,73.325 259.2,64.516 266.96,54.042 273.92,44.653"];
+	ep_comm -> output	[pos="e,300.14,36.276 345.03,230.41 340.02,197.18 328.74,129.12 312.93,73 310.4,64.009 307.05,54.387 303.82,45.793"];
+}
