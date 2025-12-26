@@ -100,3 +100,11 @@ def build_agent(
     )
 
     return agent
+    
+def build_task(description, expected_output, agent):
+    task = Task(
+        description=description,
+        expected_output=expected_output,
+        agent=agent
+    )
+    return task
