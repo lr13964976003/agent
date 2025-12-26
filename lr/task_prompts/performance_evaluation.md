@@ -5,6 +5,8 @@ RESOURCES
 
 You have been provided with the parallel strategy deployment method file by previous agent. <<<提供部署方案文件>>>
 
+Provided knowledge file about MOE located at {knowledge_path}.
+
 TASK
 
 ---
