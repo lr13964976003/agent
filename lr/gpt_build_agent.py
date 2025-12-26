@@ -60,9 +60,11 @@ Speculation comes never.
 """.strip()
 
 KNOWLEDGE = [
-    "knowledge/01_model_semantics/attention_structure.md",
-    "knowledge/04_parallel_primitives/tensor_parallelism.md",
-    "knowledge/11_dag_validation_and_autofix.md"
+    "knowledge/04_sequence_parallelism.md",
+    "knowledge/04_tensor_parallelism.md",
+    "knowledge/04_expert_parallelism.md",
+    "knowledge/04_data_parallelism.md",
+    "knowledge/04_pipeline_parallelism.md",
 ]
 
 def build_agent(
