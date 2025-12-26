@@ -45,9 +45,11 @@ SUBMISSION
 
 ---
 
-Is this DAG incorrect. If incorrect, where to modify.  Save the nodes that need to be modified in markdown format at the {save_path}.
+Is this DAG incorrect. If incorrect, where to modify.
 
 If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the DAG in JSON format.
+
+You only need to save the final parallel strategy deployment plan  at the {save_path} and delete other intermediate result files.
 
 How we would grade this:
 
