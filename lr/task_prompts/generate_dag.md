@@ -60,8 +60,6 @@ Only the final graphviz codes need to be saved in DOT format.<<<需要提交grap
 
 Only the final images need to be saved in SVG format. <<<指定图像保存格式为svg>>>
 
-Other intermediate results generated during the DAG graph creation process can be saved to files as needed, but they should be deleted at the end, leaving only the final result.
-
 <<<用评分标准约束Agent行为>>>
 
 How we would grade this:
