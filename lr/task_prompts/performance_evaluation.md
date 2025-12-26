@@ -17,6 +17,12 @@ Check whether the performance is optimized while meeting basic performance requi
 
 Ensure that the refined version of deployment method file retains sufficient information to generate the directed acyclic graph for the deployment of the experimental model in the paper.<<<提醒要保留足够的信息来生成dag>>>
 
+Is this parallel strategy deployment method incorrect. If incorrect, how to modify.  
+
+Has this parallel strategy deployment plan met the basic performance requirements. If not, how to modify.
+
+Has this parallel strategy deployment plan achieved the optimal outcome under the current environment. If not, how to modify.
+
 
 NOTE
 
@@ -30,12 +36,6 @@ Do not make any changes to the original file.<<<禁止修改源文件>>>
 SUBMISSION
 
 ---
-
-Is this parallel strategy deployment method incorrect. If incorrect, how to modify.  
-
-Has this parallel strategy deployment plan met the basic performance requirements. If not, how to modify.
-
-Has this parallel strategy deployment plan achieved the optimal outcome under the current environment. If not, how to modify
 
 You only need to save the final parallel strategy deployment plan in markdown format at the {save_path} and delete other intermediate result files.
 
