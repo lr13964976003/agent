@@ -1,0 +1,903 @@
+// Hybrid Expert-Tensor-Pipeline Parallelism DAG
+digraph {
+	dpi=300 rankdir=TB size="200,100"
+	node [fontname=Arial fontsize=10]
+	edge [fontname=Arial fontsize=9]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=box style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" fillcolor=lightgray shape=ellipse]
+	subgraph cluster_pipeline_0 {
+		fillcolor=lightcyan label="Pipeline Stage 0 (Layers 0-7)" style="rounded,filled"
+		subgraph cluster_expert_0_p0 {
+			fillcolor=lightpink label="Expert Group 0 (GPU 0-3)" style="rounded,filled"
+			gate_e0_p0 [label="Gate Selection\nGPU: 0-3\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e0_p0 [label="Local All-to-All\nGPU: 0-3\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e0_t0_p0 [label="Attention\nGPU: 0\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e0_t0_e0_p0 [label="MoE Expert 0\nGPU: 0\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e0_t0_e1_p0 [label="MoE Expert 1\nGPU: 0\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e0_t0_p0 [label="Tensor Reduction\nGPU: 0\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e0_t1_p0 [label="Attention\nGPU: 1\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e0_t1_e0_p0 [label="MoE Expert 0\nGPU: 1\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e0_t1_e1_p0 [label="MoE Expert 1\nGPU: 1\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e0_t1_p0 [label="Tensor Reduction\nGPU: 1\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e0_t2_p0 [label="Attention\nGPU: 2\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e0_t2_e0_p0 [label="MoE Expert 0\nGPU: 2\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e0_t2_e1_p0 [label="MoE Expert 1\nGPU: 2\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e0_t2_p0 [label="Tensor Reduction\nGPU: 2\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e0_t3_p0 [label="Attention\nGPU: 3\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e0_t3_e0_p0 [label="MoE Expert 0\nGPU: 3\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e0_t3_e1_p0 [label="MoE Expert 1\nGPU: 3\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e0_t3_p0 [label="Tensor Reduction\nGPU: 3\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_1_p0 {
+			fillcolor=lightpink label="Expert Group 1 (GPU 4-7)" style="rounded,filled"
+			gate_e1_p0 [label="Gate Selection\nGPU: 4-7\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e1_p0 [label="Local All-to-All\nGPU: 4-7\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e1_t0_p0 [label="Attention\nGPU: 4\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e1_t0_e0_p0 [label="MoE Expert 0\nGPU: 4\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e1_t0_e1_p0 [label="MoE Expert 1\nGPU: 4\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e1_t0_p0 [label="Tensor Reduction\nGPU: 4\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e1_t1_p0 [label="Attention\nGPU: 5\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e1_t1_e0_p0 [label="MoE Expert 0\nGPU: 5\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e1_t1_e1_p0 [label="MoE Expert 1\nGPU: 5\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e1_t1_p0 [label="Tensor Reduction\nGPU: 5\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e1_t2_p0 [label="Attention\nGPU: 6\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e1_t2_e0_p0 [label="MoE Expert 0\nGPU: 6\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e1_t2_e1_p0 [label="MoE Expert 1\nGPU: 6\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e1_t2_p0 [label="Tensor Reduction\nGPU: 6\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e1_t3_p0 [label="Attention\nGPU: 7\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e1_t3_e0_p0 [label="MoE Expert 0\nGPU: 7\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e1_t3_e1_p0 [label="MoE Expert 1\nGPU: 7\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e1_t3_p0 [label="Tensor Reduction\nGPU: 7\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_2_p0 {
+			fillcolor=lightpink label="Expert Group 2 (GPU 8-11)" style="rounded,filled"
+			gate_e2_p0 [label="Gate Selection\nGPU: 8-11\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e2_p0 [label="Local All-to-All\nGPU: 8-11\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e2_t0_p0 [label="Attention\nGPU: 8\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e2_t0_e0_p0 [label="MoE Expert 0\nGPU: 8\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e2_t0_e1_p0 [label="MoE Expert 1\nGPU: 8\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e2_t0_p0 [label="Tensor Reduction\nGPU: 8\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e2_t1_p0 [label="Attention\nGPU: 9\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e2_t1_e0_p0 [label="MoE Expert 0\nGPU: 9\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e2_t1_e1_p0 [label="MoE Expert 1\nGPU: 9\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e2_t1_p0 [label="Tensor Reduction\nGPU: 9\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e2_t2_p0 [label="Attention\nGPU: 10\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e2_t2_e0_p0 [label="MoE Expert 0\nGPU: 10\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e2_t2_e1_p0 [label="MoE Expert 1\nGPU: 10\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e2_t2_p0 [label="Tensor Reduction\nGPU: 10\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e2_t3_p0 [label="Attention\nGPU: 11\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e2_t3_e0_p0 [label="MoE Expert 0\nGPU: 11\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e2_t3_e1_p0 [label="MoE Expert 1\nGPU: 11\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e2_t3_p0 [label="Tensor Reduction\nGPU: 11\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_3_p0 {
+			fillcolor=lightpink label="Expert Group 3 (GPU 12-15)" style="rounded,filled"
+			gate_e3_p0 [label="Gate Selection\nGPU: 12-15\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e3_p0 [label="Local All-to-All\nGPU: 12-15\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e3_t0_p0 [label="Attention\nGPU: 12\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e3_t0_e0_p0 [label="MoE Expert 0\nGPU: 12\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e3_t0_e1_p0 [label="MoE Expert 1\nGPU: 12\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e3_t0_p0 [label="Tensor Reduction\nGPU: 12\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e3_t1_p0 [label="Attention\nGPU: 13\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e3_t1_e0_p0 [label="MoE Expert 0\nGPU: 13\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e3_t1_e1_p0 [label="MoE Expert 1\nGPU: 13\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e3_t1_p0 [label="Tensor Reduction\nGPU: 13\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e3_t2_p0 [label="Attention\nGPU: 14\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e3_t2_e0_p0 [label="MoE Expert 0\nGPU: 14\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e3_t2_e1_p0 [label="MoE Expert 1\nGPU: 14\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e3_t2_p0 [label="Tensor Reduction\nGPU: 14\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e3_t3_p0 [label="Attention\nGPU: 15\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e3_t3_e0_p0 [label="MoE Expert 0\nGPU: 15\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e3_t3_e1_p0 [label="MoE Expert 1\nGPU: 15\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e3_t3_p0 [label="Tensor Reduction\nGPU: 15\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_4_p0 {
+			fillcolor=lightpink label="Expert Group 4 (GPU 16-19)" style="rounded,filled"
+			gate_e4_p0 [label="Gate Selection\nGPU: 16-19\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e4_p0 [label="Local All-to-All\nGPU: 16-19\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e4_t0_p0 [label="Attention\nGPU: 16\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e4_t0_e0_p0 [label="MoE Expert 0\nGPU: 16\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e4_t0_e1_p0 [label="MoE Expert 1\nGPU: 16\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e4_t0_p0 [label="Tensor Reduction\nGPU: 16\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e4_t1_p0 [label="Attention\nGPU: 17\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e4_t1_e0_p0 [label="MoE Expert 0\nGPU: 17\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e4_t1_e1_p0 [label="MoE Expert 1\nGPU: 17\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e4_t1_p0 [label="Tensor Reduction\nGPU: 17\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e4_t2_p0 [label="Attention\nGPU: 18\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e4_t2_e0_p0 [label="MoE Expert 0\nGPU: 18\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e4_t2_e1_p0 [label="MoE Expert 1\nGPU: 18\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e4_t2_p0 [label="Tensor Reduction\nGPU: 18\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e4_t3_p0 [label="Attention\nGPU: 19\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e4_t3_e0_p0 [label="MoE Expert 0\nGPU: 19\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e4_t3_e1_p0 [label="MoE Expert 1\nGPU: 19\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e4_t3_p0 [label="Tensor Reduction\nGPU: 19\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_5_p0 {
+			fillcolor=lightpink label="Expert Group 5 (GPU 20-23)" style="rounded,filled"
+			gate_e5_p0 [label="Gate Selection\nGPU: 20-23\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e5_p0 [label="Local All-to-All\nGPU: 20-23\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e5_t0_p0 [label="Attention\nGPU: 20\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e5_t0_e0_p0 [label="MoE Expert 0\nGPU: 20\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e5_t0_e1_p0 [label="MoE Expert 1\nGPU: 20\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e5_t0_p0 [label="Tensor Reduction\nGPU: 20\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e5_t1_p0 [label="Attention\nGPU: 21\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e5_t1_e0_p0 [label="MoE Expert 0\nGPU: 21\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e5_t1_e1_p0 [label="MoE Expert 1\nGPU: 21\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e5_t1_p0 [label="Tensor Reduction\nGPU: 21\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e5_t2_p0 [label="Attention\nGPU: 22\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e5_t2_e0_p0 [label="MoE Expert 0\nGPU: 22\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e5_t2_e1_p0 [label="MoE Expert 1\nGPU: 22\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e5_t2_p0 [label="Tensor Reduction\nGPU: 22\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e5_t3_p0 [label="Attention\nGPU: 23\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e5_t3_e0_p0 [label="MoE Expert 0\nGPU: 23\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e5_t3_e1_p0 [label="MoE Expert 1\nGPU: 23\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e5_t3_p0 [label="Tensor Reduction\nGPU: 23\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_6_p0 {
+			fillcolor=lightpink label="Expert Group 6 (GPU 24-27)" style="rounded,filled"
+			gate_e6_p0 [label="Gate Selection\nGPU: 24-27\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e6_p0 [label="Local All-to-All\nGPU: 24-27\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e6_t0_p0 [label="Attention\nGPU: 24\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e6_t0_e0_p0 [label="MoE Expert 0\nGPU: 24\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e6_t0_e1_p0 [label="MoE Expert 1\nGPU: 24\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e6_t0_p0 [label="Tensor Reduction\nGPU: 24\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e6_t1_p0 [label="Attention\nGPU: 25\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e6_t1_e0_p0 [label="MoE Expert 0\nGPU: 25\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e6_t1_e1_p0 [label="MoE Expert 1\nGPU: 25\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e6_t1_p0 [label="Tensor Reduction\nGPU: 25\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e6_t2_p0 [label="Attention\nGPU: 26\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e6_t2_e0_p0 [label="MoE Expert 0\nGPU: 26\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e6_t2_e1_p0 [label="MoE Expert 1\nGPU: 26\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e6_t2_p0 [label="Tensor Reduction\nGPU: 26\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e6_t3_p0 [label="Attention\nGPU: 27\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e6_t3_e0_p0 [label="MoE Expert 0\nGPU: 27\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e6_t3_e1_p0 [label="MoE Expert 1\nGPU: 27\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e6_t3_p0 [label="Tensor Reduction\nGPU: 27\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_7_p0 {
+			fillcolor=lightpink label="Expert Group 7 (GPU 28-31)" style="rounded,filled"
+			gate_e7_p0 [label="Gate Selection\nGPU: 28-31\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e7_p0 [label="Local All-to-All\nGPU: 28-31\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e7_t0_p0 [label="Attention\nGPU: 28\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e7_t0_e0_p0 [label="MoE Expert 0\nGPU: 28\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e7_t0_e1_p0 [label="MoE Expert 1\nGPU: 28\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e7_t0_p0 [label="Tensor Reduction\nGPU: 28\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e7_t1_p0 [label="Attention\nGPU: 29\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e7_t1_e0_p0 [label="MoE Expert 0\nGPU: 29\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e7_t1_e1_p0 [label="MoE Expert 1\nGPU: 29\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e7_t1_p0 [label="Tensor Reduction\nGPU: 29\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e7_t2_p0 [label="Attention\nGPU: 30\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e7_t2_e0_p0 [label="MoE Expert 0\nGPU: 30\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e7_t2_e1_p0 [label="MoE Expert 1\nGPU: 30\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e7_t2_p0 [label="Tensor Reduction\nGPU: 30\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e7_t3_p0 [label="Attention\nGPU: 31\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e7_t3_e0_p0 [label="MoE Expert 0\nGPU: 31\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e7_t3_e1_p0 [label="MoE Expert 1\nGPU: 31\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e7_t3_p0 [label="Tensor Reduction\nGPU: 31\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+	}
+	subgraph cluster_pipeline_1 {
+		fillcolor=lightsteelblue label="Pipeline Stage 1 (Layers 8-15)" style="rounded,filled"
+		subgraph cluster_expert_0_p1 {
+			fillcolor=lightcoral label="Expert Group 0 (GPU 32-35)" style="rounded,filled"
+			gate_e0_p1 [label="Gate Selection\nGPU: 32-35\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e0_p1 [label="Local All-to-All\nGPU: 32-35\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e0_t0_p1 [label="Attention\nGPU: 32\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e0_t0_e0_p1 [label="MoE Expert 0\nGPU: 32\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e0_t0_e1_p1 [label="MoE Expert 1\nGPU: 32\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e0_t0_p1 [label="Tensor Reduction\nGPU: 32\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e0_t1_p1 [label="Attention\nGPU: 33\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e0_t1_e0_p1 [label="MoE Expert 0\nGPU: 33\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e0_t1_e1_p1 [label="MoE Expert 1\nGPU: 33\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e0_t1_p1 [label="Tensor Reduction\nGPU: 33\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e0_t2_p1 [label="Attention\nGPU: 34\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e0_t2_e0_p1 [label="MoE Expert 0\nGPU: 34\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e0_t2_e1_p1 [label="MoE Expert 1\nGPU: 34\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e0_t2_p1 [label="Tensor Reduction\nGPU: 34\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e0_t3_p1 [label="Attention\nGPU: 35\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e0_t3_e0_p1 [label="MoE Expert 0\nGPU: 35\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e0_t3_e1_p1 [label="MoE Expert 1\nGPU: 35\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e0_t3_p1 [label="Tensor Reduction\nGPU: 35\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_1_p1 {
+			fillcolor=lightcoral label="Expert Group 1 (GPU 36-39)" style="rounded,filled"
+			gate_e1_p1 [label="Gate Selection\nGPU: 36-39\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e1_p1 [label="Local All-to-All\nGPU: 36-39\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e1_t0_p1 [label="Attention\nGPU: 36\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e1_t0_e0_p1 [label="MoE Expert 0\nGPU: 36\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e1_t0_e1_p1 [label="MoE Expert 1\nGPU: 36\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e1_t0_p1 [label="Tensor Reduction\nGPU: 36\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e1_t1_p1 [label="Attention\nGPU: 37\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e1_t1_e0_p1 [label="MoE Expert 0\nGPU: 37\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e1_t1_e1_p1 [label="MoE Expert 1\nGPU: 37\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e1_t1_p1 [label="Tensor Reduction\nGPU: 37\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e1_t2_p1 [label="Attention\nGPU: 38\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e1_t2_e0_p1 [label="MoE Expert 0\nGPU: 38\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e1_t2_e1_p1 [label="MoE Expert 1\nGPU: 38\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e1_t2_p1 [label="Tensor Reduction\nGPU: 38\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e1_t3_p1 [label="Attention\nGPU: 39\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e1_t3_e0_p1 [label="MoE Expert 0\nGPU: 39\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e1_t3_e1_p1 [label="MoE Expert 1\nGPU: 39\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e1_t3_p1 [label="Tensor Reduction\nGPU: 39\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_2_p1 {
+			fillcolor=lightcoral label="Expert Group 2 (GPU 40-43)" style="rounded,filled"
+			gate_e2_p1 [label="Gate Selection\nGPU: 40-43\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e2_p1 [label="Local All-to-All\nGPU: 40-43\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e2_t0_p1 [label="Attention\nGPU: 40\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e2_t0_e0_p1 [label="MoE Expert 0\nGPU: 40\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e2_t0_e1_p1 [label="MoE Expert 1\nGPU: 40\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e2_t0_p1 [label="Tensor Reduction\nGPU: 40\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e2_t1_p1 [label="Attention\nGPU: 41\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e2_t1_e0_p1 [label="MoE Expert 0\nGPU: 41\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e2_t1_e1_p1 [label="MoE Expert 1\nGPU: 41\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e2_t1_p1 [label="Tensor Reduction\nGPU: 41\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e2_t2_p1 [label="Attention\nGPU: 42\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e2_t2_e0_p1 [label="MoE Expert 0\nGPU: 42\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e2_t2_e1_p1 [label="MoE Expert 1\nGPU: 42\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e2_t2_p1 [label="Tensor Reduction\nGPU: 42\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e2_t3_p1 [label="Attention\nGPU: 43\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e2_t3_e0_p1 [label="MoE Expert 0\nGPU: 43\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e2_t3_e1_p1 [label="MoE Expert 1\nGPU: 43\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e2_t3_p1 [label="Tensor Reduction\nGPU: 43\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_3_p1 {
+			fillcolor=lightcoral label="Expert Group 3 (GPU 44-47)" style="rounded,filled"
+			gate_e3_p1 [label="Gate Selection\nGPU: 44-47\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e3_p1 [label="Local All-to-All\nGPU: 44-47\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e3_t0_p1 [label="Attention\nGPU: 44\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e3_t0_e0_p1 [label="MoE Expert 0\nGPU: 44\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e3_t0_e1_p1 [label="MoE Expert 1\nGPU: 44\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e3_t0_p1 [label="Tensor Reduction\nGPU: 44\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e3_t1_p1 [label="Attention\nGPU: 45\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e3_t1_e0_p1 [label="MoE Expert 0\nGPU: 45\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e3_t1_e1_p1 [label="MoE Expert 1\nGPU: 45\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e3_t1_p1 [label="Tensor Reduction\nGPU: 45\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e3_t2_p1 [label="Attention\nGPU: 46\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e3_t2_e0_p1 [label="MoE Expert 0\nGPU: 46\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e3_t2_e1_p1 [label="MoE Expert 1\nGPU: 46\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e3_t2_p1 [label="Tensor Reduction\nGPU: 46\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e3_t3_p1 [label="Attention\nGPU: 47\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e3_t3_e0_p1 [label="MoE Expert 0\nGPU: 47\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e3_t3_e1_p1 [label="MoE Expert 1\nGPU: 47\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e3_t3_p1 [label="Tensor Reduction\nGPU: 47\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_4_p1 {
+			fillcolor=lightcoral label="Expert Group 4 (GPU 48-51)" style="rounded,filled"
+			gate_e4_p1 [label="Gate Selection\nGPU: 48-51\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e4_p1 [label="Local All-to-All\nGPU: 48-51\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e4_t0_p1 [label="Attention\nGPU: 48\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e4_t0_e0_p1 [label="MoE Expert 0\nGPU: 48\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e4_t0_e1_p1 [label="MoE Expert 1\nGPU: 48\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e4_t0_p1 [label="Tensor Reduction\nGPU: 48\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e4_t1_p1 [label="Attention\nGPU: 49\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e4_t1_e0_p1 [label="MoE Expert 0\nGPU: 49\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e4_t1_e1_p1 [label="MoE Expert 1\nGPU: 49\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e4_t1_p1 [label="Tensor Reduction\nGPU: 49\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e4_t2_p1 [label="Attention\nGPU: 50\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e4_t2_e0_p1 [label="MoE Expert 0\nGPU: 50\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e4_t2_e1_p1 [label="MoE Expert 1\nGPU: 50\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e4_t2_p1 [label="Tensor Reduction\nGPU: 50\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e4_t3_p1 [label="Attention\nGPU: 51\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e4_t3_e0_p1 [label="MoE Expert 0\nGPU: 51\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e4_t3_e1_p1 [label="MoE Expert 1\nGPU: 51\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e4_t3_p1 [label="Tensor Reduction\nGPU: 51\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_5_p1 {
+			fillcolor=lightcoral label="Expert Group 5 (GPU 52-55)" style="rounded,filled"
+			gate_e5_p1 [label="Gate Selection\nGPU: 52-55\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e5_p1 [label="Local All-to-All\nGPU: 52-55\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e5_t0_p1 [label="Attention\nGPU: 52\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e5_t0_e0_p1 [label="MoE Expert 0\nGPU: 52\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e5_t0_e1_p1 [label="MoE Expert 1\nGPU: 52\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e5_t0_p1 [label="Tensor Reduction\nGPU: 52\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e5_t1_p1 [label="Attention\nGPU: 53\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e5_t1_e0_p1 [label="MoE Expert 0\nGPU: 53\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e5_t1_e1_p1 [label="MoE Expert 1\nGPU: 53\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e5_t1_p1 [label="Tensor Reduction\nGPU: 53\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e5_t2_p1 [label="Attention\nGPU: 54\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e5_t2_e0_p1 [label="MoE Expert 0\nGPU: 54\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e5_t2_e1_p1 [label="MoE Expert 1\nGPU: 54\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e5_t2_p1 [label="Tensor Reduction\nGPU: 54\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e5_t3_p1 [label="Attention\nGPU: 55\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e5_t3_e0_p1 [label="MoE Expert 0\nGPU: 55\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e5_t3_e1_p1 [label="MoE Expert 1\nGPU: 55\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e5_t3_p1 [label="Tensor Reduction\nGPU: 55\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_6_p1 {
+			fillcolor=lightcoral label="Expert Group 6 (GPU 56-59)" style="rounded,filled"
+			gate_e6_p1 [label="Gate Selection\nGPU: 56-59\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e6_p1 [label="Local All-to-All\nGPU: 56-59\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e6_t0_p1 [label="Attention\nGPU: 56\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e6_t0_e0_p1 [label="MoE Expert 0\nGPU: 56\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e6_t0_e1_p1 [label="MoE Expert 1\nGPU: 56\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e6_t0_p1 [label="Tensor Reduction\nGPU: 56\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e6_t1_p1 [label="Attention\nGPU: 57\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e6_t1_e0_p1 [label="MoE Expert 0\nGPU: 57\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e6_t1_e1_p1 [label="MoE Expert 1\nGPU: 57\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e6_t1_p1 [label="Tensor Reduction\nGPU: 57\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e6_t2_p1 [label="Attention\nGPU: 58\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e6_t2_e0_p1 [label="MoE Expert 0\nGPU: 58\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e6_t2_e1_p1 [label="MoE Expert 1\nGPU: 58\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e6_t2_p1 [label="Tensor Reduction\nGPU: 58\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e6_t3_p1 [label="Attention\nGPU: 59\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e6_t3_e0_p1 [label="MoE Expert 0\nGPU: 59\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e6_t3_e1_p1 [label="MoE Expert 1\nGPU: 59\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e6_t3_p1 [label="Tensor Reduction\nGPU: 59\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+		subgraph cluster_expert_7_p1 {
+			fillcolor=lightcoral label="Expert Group 7 (GPU 60-63)" style="rounded,filled"
+			gate_e7_p1 [label="Gate Selection\nGPU: 60-63\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+			all2all_local_e7_p1 [label="Local All-to-All\nGPU: 60-63\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=2560, hidden=512]" shape=ellipse]
+			attention_e7_t0_p1 [label="Attention\nGPU: 60\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e7_t0_e0_p1 [label="MoE Expert 0\nGPU: 60\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e7_t0_e1_p1 [label="MoE Expert 1\nGPU: 60\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e7_t0_p1 [label="Tensor Reduction\nGPU: 60\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e7_t1_p1 [label="Attention\nGPU: 61\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e7_t1_e0_p1 [label="MoE Expert 0\nGPU: 61\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e7_t1_e1_p1 [label="MoE Expert 1\nGPU: 61\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e7_t1_p1 [label="Tensor Reduction\nGPU: 61\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e7_t2_p1 [label="Attention\nGPU: 62\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e7_t2_e0_p1 [label="MoE Expert 0\nGPU: 62\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e7_t2_e1_p1 [label="MoE Expert 1\nGPU: 62\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e7_t2_p1 [label="Tensor Reduction\nGPU: 62\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+			attention_e7_t3_p1 [label="Attention\nGPU: 63\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+			moe_e7_t3_e0_p1 [label="MoE Expert 0\nGPU: 63\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			moe_e7_t3_e1_p1 [label="MoE Expert 1\nGPU: 63\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+			tensor_reduce_e7_t3_p1 [label="Tensor Reduction\nGPU: 63\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+		}
+	}
+	all2all_global_p0 [label="Global All-to-All\nGPU: 0-31\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" fillcolor=lightblue shape=ellipse]
+	all2all_global_p1 [label="Global All-to-All\nGPU: 32-63\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" fillcolor=lightblue shape=ellipse]
+	pipeline_transfer [label="Pipeline Transfer\nGPU: 0-31 → 32-63\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" fillcolor=orange shape=ellipse]
+	output [label="Output\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, vocab_size=50000]" fillcolor=lightgray shape=ellipse]
+	input -> all2all_global_p0
+	all2all_global_p0 -> gate_e0_p0
+	all2all_global_p0 -> gate_e1_p0
+	all2all_global_p0 -> gate_e2_p0
+	all2all_global_p0 -> gate_e3_p0
+	all2all_global_p0 -> gate_e4_p0
+	all2all_global_p0 -> gate_e5_p0
+	all2all_global_p0 -> gate_e6_p0
+	all2all_global_p0 -> gate_e7_p0
+	gate_e0_p0 -> all2all_local_e0_p0
+	all2all_local_e0_p0 -> attention_e0_t0_p0
+	attention_e0_t0_p0 -> moe_e0_t0_e0_p0
+	attention_e0_t0_p0 -> moe_e0_t0_e1_p0
+	moe_e0_t0_e0_p0 -> tensor_reduce_e0_t0_p0
+	moe_e0_t0_e1_p0 -> tensor_reduce_e0_t0_p0
+	all2all_local_e0_p0 -> attention_e0_t1_p0
+	attention_e0_t1_p0 -> moe_e0_t1_e0_p0
+	attention_e0_t1_p0 -> moe_e0_t1_e1_p0
+	moe_e0_t1_e0_p0 -> tensor_reduce_e0_t1_p0
+	moe_e0_t1_e1_p0 -> tensor_reduce_e0_t1_p0
+	all2all_local_e0_p0 -> attention_e0_t2_p0
+	attention_e0_t2_p0 -> moe_e0_t2_e0_p0
+	attention_e0_t2_p0 -> moe_e0_t2_e1_p0
+	moe_e0_t2_e0_p0 -> tensor_reduce_e0_t2_p0
+	moe_e0_t2_e1_p0 -> tensor_reduce_e0_t2_p0
+	all2all_local_e0_p0 -> attention_e0_t3_p0
+	attention_e0_t3_p0 -> moe_e0_t3_e0_p0
+	attention_e0_t3_p0 -> moe_e0_t3_e1_p0
+	moe_e0_t3_e0_p0 -> tensor_reduce_e0_t3_p0
+	moe_e0_t3_e1_p0 -> tensor_reduce_e0_t3_p0
+	gate_e1_p0 -> all2all_local_e1_p0
+	all2all_local_e1_p0 -> attention_e1_t0_p0
+	attention_e1_t0_p0 -> moe_e1_t0_e0_p0
+	attention_e1_t0_p0 -> moe_e1_t0_e1_p0
+	moe_e1_t0_e0_p0 -> tensor_reduce_e1_t0_p0
+	moe_e1_t0_e1_p0 -> tensor_reduce_e1_t0_p0
+	all2all_local_e1_p0 -> attention_e1_t1_p0
+	attention_e1_t1_p0 -> moe_e1_t1_e0_p0
+	attention_e1_t1_p0 -> moe_e1_t1_e1_p0
+	moe_e1_t1_e0_p0 -> tensor_reduce_e1_t1_p0
+	moe_e1_t1_e1_p0 -> tensor_reduce_e1_t1_p0
+	all2all_local_e1_p0 -> attention_e1_t2_p0
+	attention_e1_t2_p0 -> moe_e1_t2_e0_p0
+	attention_e1_t2_p0 -> moe_e1_t2_e1_p0
+	moe_e1_t2_e0_p0 -> tensor_reduce_e1_t2_p0
+	moe_e1_t2_e1_p0 -> tensor_reduce_e1_t2_p0
+	all2all_local_e1_p0 -> attention_e1_t3_p0
+	attention_e1_t3_p0 -> moe_e1_t3_e0_p0
+	attention_e1_t3_p0 -> moe_e1_t3_e1_p0
+	moe_e1_t3_e0_p0 -> tensor_reduce_e1_t3_p0
+	moe_e1_t3_e1_p0 -> tensor_reduce_e1_t3_p0
+	gate_e2_p0 -> all2all_local_e2_p0
+	all2all_local_e2_p0 -> attention_e2_t0_p0
+	attention_e2_t0_p0 -> moe_e2_t0_e0_p0
+	attention_e2_t0_p0 -> moe_e2_t0_e1_p0
+	moe_e2_t0_e0_p0 -> tensor_reduce_e2_t0_p0
+	moe_e2_t0_e1_p0 -> tensor_reduce_e2_t0_p0
+	all2all_local_e2_p0 -> attention_e2_t1_p0
+	attention_e2_t1_p0 -> moe_e2_t1_e0_p0
+	attention_e2_t1_p0 -> moe_e2_t1_e1_p0
+	moe_e2_t1_e0_p0 -> tensor_reduce_e2_t1_p0
+	moe_e2_t1_e1_p0 -> tensor_reduce_e2_t1_p0
+	all2all_local_e2_p0 -> attention_e2_t2_p0
+	attention_e2_t2_p0 -> moe_e2_t2_e0_p0
+	attention_e2_t2_p0 -> moe_e2_t2_e1_p0
+	moe_e2_t2_e0_p0 -> tensor_reduce_e2_t2_p0
+	moe_e2_t2_e1_p0 -> tensor_reduce_e2_t2_p0
+	all2all_local_e2_p0 -> attention_e2_t3_p0
+	attention_e2_t3_p0 -> moe_e2_t3_e0_p0
+	attention_e2_t3_p0 -> moe_e2_t3_e1_p0
+	moe_e2_t3_e0_p0 -> tensor_reduce_e2_t3_p0
+	moe_e2_t3_e1_p0 -> tensor_reduce_e2_t3_p0
+	gate_e3_p0 -> all2all_local_e3_p0
+	all2all_local_e3_p0 -> attention_e3_t0_p0
+	attention_e3_t0_p0 -> moe_e3_t0_e0_p0
+	attention_e3_t0_p0 -> moe_e3_t0_e1_p0
+	moe_e3_t0_e0_p0 -> tensor_reduce_e3_t0_p0
+	moe_e3_t0_e1_p0 -> tensor_reduce_e3_t0_p0
+	all2all_local_e3_p0 -> attention_e3_t1_p0
+	attention_e3_t1_p0 -> moe_e3_t1_e0_p0
+	attention_e3_t1_p0 -> moe_e3_t1_e1_p0
+	moe_e3_t1_e0_p0 -> tensor_reduce_e3_t1_p0
+	moe_e3_t1_e1_p0 -> tensor_reduce_e3_t1_p0
+	all2all_local_e3_p0 -> attention_e3_t2_p0
+	attention_e3_t2_p0 -> moe_e3_t2_e0_p0
+	attention_e3_t2_p0 -> moe_e3_t2_e1_p0
+	moe_e3_t2_e0_p0 -> tensor_reduce_e3_t2_p0
+	moe_e3_t2_e1_p0 -> tensor_reduce_e3_t2_p0
+	all2all_local_e3_p0 -> attention_e3_t3_p0
+	attention_e3_t3_p0 -> moe_e3_t3_e0_p0
+	attention_e3_t3_p0 -> moe_e3_t3_e1_p0
+	moe_e3_t3_e0_p0 -> tensor_reduce_e3_t3_p0
+	moe_e3_t3_e1_p0 -> tensor_reduce_e3_t3_p0
+	gate_e4_p0 -> all2all_local_e4_p0
+	all2all_local_e4_p0 -> attention_e4_t0_p0
+	attention_e4_t0_p0 -> moe_e4_t0_e0_p0
+	attention_e4_t0_p0 -> moe_e4_t0_e1_p0
+	moe_e4_t0_e0_p0 -> tensor_reduce_e4_t0_p0
+	moe_e4_t0_e1_p0 -> tensor_reduce_e4_t0_p0
+	all2all_local_e4_p0 -> attention_e4_t1_p0
+	attention_e4_t1_p0 -> moe_e4_t1_e0_p0
+	attention_e4_t1_p0 -> moe_e4_t1_e1_p0
+	moe_e4_t1_e0_p0 -> tensor_reduce_e4_t1_p0
+	moe_e4_t1_e1_p0 -> tensor_reduce_e4_t1_p0
+	all2all_local_e4_p0 -> attention_e4_t2_p0
+	attention_e4_t2_p0 -> moe_e4_t2_e0_p0
+	attention_e4_t2_p0 -> moe_e4_t2_e1_p0
+	moe_e4_t2_e0_p0 -> tensor_reduce_e4_t2_p0
+	moe_e4_t2_e1_p0 -> tensor_reduce_e4_t2_p0
+	all2all_local_e4_p0 -> attention_e4_t3_p0
+	attention_e4_t3_p0 -> moe_e4_t3_e0_p0
+	attention_e4_t3_p0 -> moe_e4_t3_e1_p0
+	moe_e4_t3_e0_p0 -> tensor_reduce_e4_t3_p0
+	moe_e4_t3_e1_p0 -> tensor_reduce_e4_t3_p0
+	gate_e5_p0 -> all2all_local_e5_p0
+	all2all_local_e5_p0 -> attention_e5_t0_p0
+	attention_e5_t0_p0 -> moe_e5_t0_e0_p0
+	attention_e5_t0_p0 -> moe_e5_t0_e1_p0
+	moe_e5_t0_e0_p0 -> tensor_reduce_e5_t0_p0
+	moe_e5_t0_e1_p0 -> tensor_reduce_e5_t0_p0
+	all2all_local_e5_p0 -> attention_e5_t1_p0
+	attention_e5_t1_p0 -> moe_e5_t1_e0_p0
+	attention_e5_t1_p0 -> moe_e5_t1_e1_p0
+	moe_e5_t1_e0_p0 -> tensor_reduce_e5_t1_p0
+	moe_e5_t1_e1_p0 -> tensor_reduce_e5_t1_p0
+	all2all_local_e5_p0 -> attention_e5_t2_p0
+	attention_e5_t2_p0 -> moe_e5_t2_e0_p0
+	attention_e5_t2_p0 -> moe_e5_t2_e1_p0
+	moe_e5_t2_e0_p0 -> tensor_reduce_e5_t2_p0
+	moe_e5_t2_e1_p0 -> tensor_reduce_e5_t2_p0
+	all2all_local_e5_p0 -> attention_e5_t3_p0
+	attention_e5_t3_p0 -> moe_e5_t3_e0_p0
+	attention_e5_t3_p0 -> moe_e5_t3_e1_p0
+	moe_e5_t3_e0_p0 -> tensor_reduce_e5_t3_p0
+	moe_e5_t3_e1_p0 -> tensor_reduce_e5_t3_p0
+	gate_e6_p0 -> all2all_local_e6_p0
+	all2all_local_e6_p0 -> attention_e6_t0_p0
+	attention_e6_t0_p0 -> moe_e6_t0_e0_p0
+	attention_e6_t0_p0 -> moe_e6_t0_e1_p0
+	moe_e6_t0_e0_p0 -> tensor_reduce_e6_t0_p0
+	moe_e6_t0_e1_p0 -> tensor_reduce_e6_t0_p0
+	all2all_local_e6_p0 -> attention_e6_t1_p0
+	attention_e6_t1_p0 -> moe_e6_t1_e0_p0
+	attention_e6_t1_p0 -> moe_e6_t1_e1_p0
+	moe_e6_t1_e0_p0 -> tensor_reduce_e6_t1_p0
+	moe_e6_t1_e1_p0 -> tensor_reduce_e6_t1_p0
+	all2all_local_e6_p0 -> attention_e6_t2_p0
+	attention_e6_t2_p0 -> moe_e6_t2_e0_p0
+	attention_e6_t2_p0 -> moe_e6_t2_e1_p0
+	moe_e6_t2_e0_p0 -> tensor_reduce_e6_t2_p0
+	moe_e6_t2_e1_p0 -> tensor_reduce_e6_t2_p0
+	all2all_local_e6_p0 -> attention_e6_t3_p0
+	attention_e6_t3_p0 -> moe_e6_t3_e0_p0
+	attention_e6_t3_p0 -> moe_e6_t3_e1_p0
+	moe_e6_t3_e0_p0 -> tensor_reduce_e6_t3_p0
+	moe_e6_t3_e1_p0 -> tensor_reduce_e6_t3_p0
+	gate_e7_p0 -> all2all_local_e7_p0
+	all2all_local_e7_p0 -> attention_e7_t0_p0
+	attention_e7_t0_p0 -> moe_e7_t0_e0_p0
+	attention_e7_t0_p0 -> moe_e7_t0_e1_p0
+	moe_e7_t0_e0_p0 -> tensor_reduce_e7_t0_p0
+	moe_e7_t0_e1_p0 -> tensor_reduce_e7_t0_p0
+	all2all_local_e7_p0 -> attention_e7_t1_p0
+	attention_e7_t1_p0 -> moe_e7_t1_e0_p0
+	attention_e7_t1_p0 -> moe_e7_t1_e1_p0
+	moe_e7_t1_e0_p0 -> tensor_reduce_e7_t1_p0
+	moe_e7_t1_e1_p0 -> tensor_reduce_e7_t1_p0
+	all2all_local_e7_p0 -> attention_e7_t2_p0
+	attention_e7_t2_p0 -> moe_e7_t2_e0_p0
+	attention_e7_t2_p0 -> moe_e7_t2_e1_p0
+	moe_e7_t2_e0_p0 -> tensor_reduce_e7_t2_p0
+	moe_e7_t2_e1_p0 -> tensor_reduce_e7_t2_p0
+	all2all_local_e7_p0 -> attention_e7_t3_p0
+	attention_e7_t3_p0 -> moe_e7_t3_e0_p0
+	attention_e7_t3_p0 -> moe_e7_t3_e1_p0
+	moe_e7_t3_e0_p0 -> tensor_reduce_e7_t3_p0
+	moe_e7_t3_e1_p0 -> tensor_reduce_e7_t3_p0
+	tensor_reduce_e0_t0_p0 -> pipeline_transfer
+	tensor_reduce_e0_t1_p0 -> pipeline_transfer
+	tensor_reduce_e0_t2_p0 -> pipeline_transfer
+	tensor_reduce_e0_t3_p0 -> pipeline_transfer
+	tensor_reduce_e1_t0_p0 -> pipeline_transfer
+	tensor_reduce_e1_t1_p0 -> pipeline_transfer
+	tensor_reduce_e1_t2_p0 -> pipeline_transfer
+	tensor_reduce_e1_t3_p0 -> pipeline_transfer
+	tensor_reduce_e2_t0_p0 -> pipeline_transfer
+	tensor_reduce_e2_t1_p0 -> pipeline_transfer
+	tensor_reduce_e2_t2_p0 -> pipeline_transfer
+	tensor_reduce_e2_t3_p0 -> pipeline_transfer
+	tensor_reduce_e3_t0_p0 -> pipeline_transfer
+	tensor_reduce_e3_t1_p0 -> pipeline_transfer
+	tensor_reduce_e3_t2_p0 -> pipeline_transfer
+	tensor_reduce_e3_t3_p0 -> pipeline_transfer
+	tensor_reduce_e4_t0_p0 -> pipeline_transfer
+	tensor_reduce_e4_t1_p0 -> pipeline_transfer
+	tensor_reduce_e4_t2_p0 -> pipeline_transfer
+	tensor_reduce_e4_t3_p0 -> pipeline_transfer
+	tensor_reduce_e5_t0_p0 -> pipeline_transfer
+	tensor_reduce_e5_t1_p0 -> pipeline_transfer
+	tensor_reduce_e5_t2_p0 -> pipeline_transfer
+	tensor_reduce_e5_t3_p0 -> pipeline_transfer
+	tensor_reduce_e6_t0_p0 -> pipeline_transfer
+	tensor_reduce_e6_t1_p0 -> pipeline_transfer
+	tensor_reduce_e6_t2_p0 -> pipeline_transfer
+	tensor_reduce_e6_t3_p0 -> pipeline_transfer
+	tensor_reduce_e7_t0_p0 -> pipeline_transfer
+	tensor_reduce_e7_t1_p0 -> pipeline_transfer
+	tensor_reduce_e7_t2_p0 -> pipeline_transfer
+	tensor_reduce_e7_t3_p0 -> pipeline_transfer
+	pipeline_transfer -> all2all_global_p1
+	all2all_global_p1 -> gate_e0_p1
+	all2all_global_p1 -> gate_e1_p1
+	all2all_global_p1 -> gate_e2_p1
+	all2all_global_p1 -> gate_e3_p1
+	all2all_global_p1 -> gate_e4_p1
+	all2all_global_p1 -> gate_e5_p1
+	all2all_global_p1 -> gate_e6_p1
+	all2all_global_p1 -> gate_e7_p1
+	gate_e0_p1 -> all2all_local_e0_p1
+	all2all_local_e0_p1 -> attention_e0_t0_p1
+	attention_e0_t0_p1 -> moe_e0_t0_e0_p1
+	attention_e0_t0_p1 -> moe_e0_t0_e1_p1
+	moe_e0_t0_e0_p1 -> tensor_reduce_e0_t0_p1
+	moe_e0_t0_e1_p1 -> tensor_reduce_e0_t0_p1
+	all2all_local_e0_p1 -> attention_e0_t1_p1
+	attention_e0_t1_p1 -> moe_e0_t1_e0_p1
+	attention_e0_t1_p1 -> moe_e0_t1_e1_p1
+	moe_e0_t1_e0_p1 -> tensor_reduce_e0_t1_p1
+	moe_e0_t1_e1_p1 -> tensor_reduce_e0_t1_p1
+	all2all_local_e0_p1 -> attention_e0_t2_p1
+	attention_e0_t2_p1 -> moe_e0_t2_e0_p1
+	attention_e0_t2_p1 -> moe_e0_t2_e1_p1
+	moe_e0_t2_e0_p1 -> tensor_reduce_e0_t2_p1
+	moe_e0_t2_e1_p1 -> tensor_reduce_e0_t2_p1
+	all2all_local_e0_p1 -> attention_e0_t3_p1
+	attention_e0_t3_p1 -> moe_e0_t3_e0_p1
+	attention_e0_t3_p1 -> moe_e0_t3_e1_p1
+	moe_e0_t3_e0_p1 -> tensor_reduce_e0_t3_p1
+	moe_e0_t3_e1_p1 -> tensor_reduce_e0_t3_p1
+	gate_e1_p1 -> all2all_local_e1_p1
+	all2all_local_e1_p1 -> attention_e1_t0_p1
+	attention_e1_t0_p1 -> moe_e1_t0_e0_p1
+	attention_e1_t0_p1 -> moe_e1_t0_e1_p1
+	moe_e1_t0_e0_p1 -> tensor_reduce_e1_t0_p1
+	moe_e1_t0_e1_p1 -> tensor_reduce_e1_t0_p1
+	all2all_local_e1_p1 -> attention_e1_t1_p1
+	attention_e1_t1_p1 -> moe_e1_t1_e0_p1
+	attention_e1_t1_p1 -> moe_e1_t1_e1_p1
+	moe_e1_t1_e0_p1 -> tensor_reduce_e1_t1_p1
+	moe_e1_t1_e1_p1 -> tensor_reduce_e1_t1_p1
+	all2all_local_e1_p1 -> attention_e1_t2_p1
+	attention_e1_t2_p1 -> moe_e1_t2_e0_p1
+	attention_e1_t2_p1 -> moe_e1_t2_e1_p1
+	moe_e1_t2_e0_p1 -> tensor_reduce_e1_t2_p1
+	moe_e1_t2_e1_p1 -> tensor_reduce_e1_t2_p1
+	all2all_local_e1_p1 -> attention_e1_t3_p1
+	attention_e1_t3_p1 -> moe_e1_t3_e0_p1
+	attention_e1_t3_p1 -> moe_e1_t3_e1_p1
+	moe_e1_t3_e0_p1 -> tensor_reduce_e1_t3_p1
+	moe_e1_t3_e1_p1 -> tensor_reduce_e1_t3_p1
+	gate_e2_p1 -> all2all_local_e2_p1
+	all2all_local_e2_p1 -> attention_e2_t0_p1
+	attention_e2_t0_p1 -> moe_e2_t0_e0_p1
+	attention_e2_t0_p1 -> moe_e2_t0_e1_p1
+	moe_e2_t0_e0_p1 -> tensor_reduce_e2_t0_p1
+	moe_e2_t0_e1_p1 -> tensor_reduce_e2_t0_p1
+	all2all_local_e2_p1 -> attention_e2_t1_p1
+	attention_e2_t1_p1 -> moe_e2_t1_e0_p1
+	attention_e2_t1_p1 -> moe_e2_t1_e1_p1
+	moe_e2_t1_e0_p1 -> tensor_reduce_e2_t1_p1
+	moe_e2_t1_e1_p1 -> tensor_reduce_e2_t1_p1
+	all2all_local_e2_p1 -> attention_e2_t2_p1
+	attention_e2_t2_p1 -> moe_e2_t2_e0_p1
+	attention_e2_t2_p1 -> moe_e2_t2_e1_p1
+	moe_e2_t2_e0_p1 -> tensor_reduce_e2_t2_p1
+	moe_e2_t2_e1_p1 -> tensor_reduce_e2_t2_p1
+	all2all_local_e2_p1 -> attention_e2_t3_p1
+	attention_e2_t3_p1 -> moe_e2_t3_e0_p1
+	attention_e2_t3_p1 -> moe_e2_t3_e1_p1
+	moe_e2_t3_e0_p1 -> tensor_reduce_e2_t3_p1
+	moe_e2_t3_e1_p1 -> tensor_reduce_e2_t3_p1
+	gate_e3_p1 -> all2all_local_e3_p1
+	all2all_local_e3_p1 -> attention_e3_t0_p1
+	attention_e3_t0_p1 -> moe_e3_t0_e0_p1
+	attention_e3_t0_p1 -> moe_e3_t0_e1_p1
+	moe_e3_t0_e0_p1 -> tensor_reduce_e3_t0_p1
+	moe_e3_t0_e1_p1 -> tensor_reduce_e3_t0_p1
+	all2all_local_e3_p1 -> attention_e3_t1_p1
+	attention_e3_t1_p1 -> moe_e3_t1_e0_p1
+	attention_e3_t1_p1 -> moe_e3_t1_e1_p1
+	moe_e3_t1_e0_p1 -> tensor_reduce_e3_t1_p1
+	moe_e3_t1_e1_p1 -> tensor_reduce_e3_t1_p1
+	all2all_local_e3_p1 -> attention_e3_t2_p1
+	attention_e3_t2_p1 -> moe_e3_t2_e0_p1
+	attention_e3_t2_p1 -> moe_e3_t2_e1_p1
+	moe_e3_t2_e0_p1 -> tensor_reduce_e3_t2_p1
+	moe_e3_t2_e1_p1 -> tensor_reduce_e3_t2_p1
+	all2all_local_e3_p1 -> attention_e3_t3_p1
+	attention_e3_t3_p1 -> moe_e3_t3_e0_p1
+	attention_e3_t3_p1 -> moe_e3_t3_e1_p1
+	moe_e3_t3_e0_p1 -> tensor_reduce_e3_t3_p1
+	moe_e3_t3_e1_p1 -> tensor_reduce_e3_t3_p1
+	gate_e4_p1 -> all2all_local_e4_p1
+	all2all_local_e4_p1 -> attention_e4_t0_p1
+	attention_e4_t0_p1 -> moe_e4_t0_e0_p1
+	attention_e4_t0_p1 -> moe_e4_t0_e1_p1
+	moe_e4_t0_e0_p1 -> tensor_reduce_e4_t0_p1
+	moe_e4_t0_e1_p1 -> tensor_reduce_e4_t0_p1
+	all2all_local_e4_p1 -> attention_e4_t1_p1
+	attention_e4_t1_p1 -> moe_e4_t1_e0_p1
+	attention_e4_t1_p1 -> moe_e4_t1_e1_p1
+	moe_e4_t1_e0_p1 -> tensor_reduce_e4_t1_p1
+	moe_e4_t1_e1_p1 -> tensor_reduce_e4_t1_p1
+	all2all_local_e4_p1 -> attention_e4_t2_p1
+	attention_e4_t2_p1 -> moe_e4_t2_e0_p1
+	attention_e4_t2_p1 -> moe_e4_t2_e1_p1
+	moe_e4_t2_e0_p1 -> tensor_reduce_e4_t2_p1
+	moe_e4_t2_e1_p1 -> tensor_reduce_e4_t2_p1
+	all2all_local_e4_p1 -> attention_e4_t3_p1
+	attention_e4_t3_p1 -> moe_e4_t3_e0_p1
+	attention_e4_t3_p1 -> moe_e4_t3_e1_p1
+	moe_e4_t3_e0_p1 -> tensor_reduce_e4_t3_p1
+	moe_e4_t3_e1_p1 -> tensor_reduce_e4_t3_p1
+	gate_e5_p1 -> all2all_local_e5_p1
+	all2all_local_e5_p1 -> attention_e5_t0_p1
+	attention_e5_t0_p1 -> moe_e5_t0_e0_p1
+	attention_e5_t0_p1 -> moe_e5_t0_e1_p1
+	moe_e5_t0_e0_p1 -> tensor_reduce_e5_t0_p1
+	moe_e5_t0_e1_p1 -> tensor_reduce_e5_t0_p1
+	all2all_local_e5_p1 -> attention_e5_t1_p1
+	attention_e5_t1_p1 -> moe_e5_t1_e0_p1
+	attention_e5_t1_p1 -> moe_e5_t1_e1_p1
+	moe_e5_t1_e0_p1 -> tensor_reduce_e5_t1_p1
+	moe_e5_t1_e1_p1 -> tensor_reduce_e5_t1_p1
+	all2all_local_e5_p1 -> attention_e5_t2_p1
+	attention_e5_t2_p1 -> moe_e5_t2_e0_p1
+	attention_e5_t2_p1 -> moe_e5_t2_e1_p1
+	moe_e5_t2_e0_p1 -> tensor_reduce_e5_t2_p1
+	moe_e5_t2_e1_p1 -> tensor_reduce_e5_t2_p1
+	all2all_local_e5_p1 -> attention_e5_t3_p1
+	attention_e5_t3_p1 -> moe_e5_t3_e0_p1
+	attention_e5_t3_p1 -> moe_e5_t3_e1_p1
+	moe_e5_t3_e0_p1 -> tensor_reduce_e5_t3_p1
+	moe_e5_t3_e1_p1 -> tensor_reduce_e5_t3_p1
+	gate_e6_p1 -> all2all_local_e6_p1
+	all2all_local_e6_p1 -> attention_e6_t0_p1
+	attention_e6_t0_p1 -> moe_e6_t0_e0_p1
+	attention_e6_t0_p1 -> moe_e6_t0_e1_p1
+	moe_e6_t0_e0_p1 -> tensor_reduce_e6_t0_p1
+	moe_e6_t0_e1_p1 -> tensor_reduce_e6_t0_p1
+	all2all_local_e6_p1 -> attention_e6_t1_p1
+	attention_e6_t1_p1 -> moe_e6_t1_e0_p1
+	attention_e6_t1_p1 -> moe_e6_t1_e1_p1
+	moe_e6_t1_e0_p1 -> tensor_reduce_e6_t1_p1
+	moe_e6_t1_e1_p1 -> tensor_reduce_e6_t1_p1
+	all2all_local_e6_p1 -> attention_e6_t2_p1
+	attention_e6_t2_p1 -> moe_e6_t2_e0_p1
+	attention_e6_t2_p1 -> moe_e6_t2_e1_p1
+	moe_e6_t2_e0_p1 -> tensor_reduce_e6_t2_p1
+	moe_e6_t2_e1_p1 -> tensor_reduce_e6_t2_p1
+	all2all_local_e6_p1 -> attention_e6_t3_p1
+	attention_e6_t3_p1 -> moe_e6_t3_e0_p1
+	attention_e6_t3_p1 -> moe_e6_t3_e1_p1
+	moe_e6_t3_e0_p1 -> tensor_reduce_e6_t3_p1
+	moe_e6_t3_e1_p1 -> tensor_reduce_e6_t3_p1
+	gate_e7_p1 -> all2all_local_e7_p1
+	all2all_local_e7_p1 -> attention_e7_t0_p1
+	attention_e7_t0_p1 -> moe_e7_t0_e0_p1
+	attention_e7_t0_p1 -> moe_e7_t0_e1_p1
+	moe_e7_t0_e0_p1 -> tensor_reduce_e7_t0_p1
+	moe_e7_t0_e1_p1 -> tensor_reduce_e7_t0_p1
+	all2all_local_e7_p1 -> attention_e7_t1_p1
+	attention_e7_t1_p1 -> moe_e7_t1_e0_p1
+	attention_e7_t1_p1 -> moe_e7_t1_e1_p1
+	moe_e7_t1_e0_p1 -> tensor_reduce_e7_t1_p1
+	moe_e7_t1_e1_p1 -> tensor_reduce_e7_t1_p1
+	all2all_local_e7_p1 -> attention_e7_t2_p1
+	attention_e7_t2_p1 -> moe_e7_t2_e0_p1
+	attention_e7_t2_p1 -> moe_e7_t2_e1_p1
+	moe_e7_t2_e0_p1 -> tensor_reduce_e7_t2_p1
+	moe_e7_t2_e1_p1 -> tensor_reduce_e7_t2_p1
+	all2all_local_e7_p1 -> attention_e7_t3_p1
+	attention_e7_t3_p1 -> moe_e7_t3_e0_p1
+	attention_e7_t3_p1 -> moe_e7_t3_e1_p1
+	moe_e7_t3_e0_p1 -> tensor_reduce_e7_t3_p1
+	moe_e7_t3_e1_p1 -> tensor_reduce_e7_t3_p1
+	tensor_reduce_e0_t0_p1 -> output
+	tensor_reduce_e0_t1_p1 -> output
+	tensor_reduce_e0_t2_p1 -> output
+	tensor_reduce_e0_t3_p1 -> output
+	tensor_reduce_e1_t0_p1 -> output
+	tensor_reduce_e1_t1_p1 -> output
+	tensor_reduce_e1_t2_p1 -> output
+	tensor_reduce_e1_t3_p1 -> output
+	tensor_reduce_e2_t0_p1 -> output
+	tensor_reduce_e2_t1_p1 -> output
+	tensor_reduce_e2_t2_p1 -> output
+	tensor_reduce_e2_t3_p1 -> output
+	tensor_reduce_e3_t0_p1 -> output
+	tensor_reduce_e3_t1_p1 -> output
+	tensor_reduce_e3_t2_p1 -> output
+	tensor_reduce_e3_t3_p1 -> output
+	tensor_reduce_e4_t0_p1 -> output
+	tensor_reduce_e4_t1_p1 -> output
+	tensor_reduce_e4_t2_p1 -> output
+	tensor_reduce_e4_t3_p1 -> output
+	tensor_reduce_e5_t0_p1 -> output
+	tensor_reduce_e5_t1_p1 -> output
+	tensor_reduce_e5_t2_p1 -> output
+	tensor_reduce_e5_t3_p1 -> output
+	tensor_reduce_e6_t0_p1 -> output
+	tensor_reduce_e6_t1_p1 -> output
+	tensor_reduce_e6_t2_p1 -> output
+	tensor_reduce_e6_t3_p1 -> output
+	tensor_reduce_e7_t0_p1 -> output
+	tensor_reduce_e7_t1_p1 -> output
+	tensor_reduce_e7_t2_p1 -> output
+	tensor_reduce_e7_t3_p1 -> output
+	edge [style=dashed]
+	gate_e0_p0 -> moe_e0_t0_e0_p0
+	gate_e0_p1 -> moe_e0_t0_e0_p1
+	gate_e0_p0 -> moe_e0_t0_e1_p0
+	gate_e0_p1 -> moe_e0_t0_e1_p1
+	gate_e0_p0 -> moe_e0_t1_e0_p0
+	gate_e0_p1 -> moe_e0_t1_e0_p1
+	gate_e0_p0 -> moe_e0_t1_e1_p0
+	gate_e0_p1 -> moe_e0_t1_e1_p1
+	gate_e0_p0 -> moe_e0_t2_e0_p0
+	gate_e0_p1 -> moe_e0_t2_e0_p1
+	gate_e0_p0 -> moe_e0_t2_e1_p0
+	gate_e0_p1 -> moe_e0_t2_e1_p1
+	gate_e0_p0 -> moe_e0_t3_e0_p0
+	gate_e0_p1 -> moe_e0_t3_e0_p1
+	gate_e0_p0 -> moe_e0_t3_e1_p0
+	gate_e0_p1 -> moe_e0_t3_e1_p1
+	gate_e1_p0 -> moe_e1_t0_e0_p0
+	gate_e1_p1 -> moe_e1_t0_e0_p1
+	gate_e1_p0 -> moe_e1_t0_e1_p0
+	gate_e1_p1 -> moe_e1_t0_e1_p1
+	gate_e1_p0 -> moe_e1_t1_e0_p0
+	gate_e1_p1 -> moe_e1_t1_e0_p1
+	gate_e1_p0 -> moe_e1_t1_e1_p0
+	gate_e1_p1 -> moe_e1_t1_e1_p1
+	gate_e1_p0 -> moe_e1_t2_e0_p0
+	gate_e1_p1 -> moe_e1_t2_e0_p1
+	gate_e1_p0 -> moe_e1_t2_e1_p0
+	gate_e1_p1 -> moe_e1_t2_e1_p1
+	gate_e1_p0 -> moe_e1_t3_e0_p0
+	gate_e1_p1 -> moe_e1_t3_e0_p1
+	gate_e1_p0 -> moe_e1_t3_e1_p0
+	gate_e1_p1 -> moe_e1_t3_e1_p1
+	gate_e2_p0 -> moe_e2_t0_e0_p0
+	gate_e2_p1 -> moe_e2_t0_e0_p1
+	gate_e2_p0 -> moe_e2_t0_e1_p0
+	gate_e2_p1 -> moe_e2_t0_e1_p1
+	gate_e2_p0 -> moe_e2_t1_e0_p0
+	gate_e2_p1 -> moe_e2_t1_e0_p1
+	gate_e2_p0 -> moe_e2_t1_e1_p0
+	gate_e2_p1 -> moe_e2_t1_e1_p1
+	gate_e2_p0 -> moe_e2_t2_e0_p0
+	gate_e2_p1 -> moe_e2_t2_e0_p1
+	gate_e2_p0 -> moe_e2_t2_e1_p0
+	gate_e2_p1 -> moe_e2_t2_e1_p1
+	gate_e2_p0 -> moe_e2_t3_e0_p0
+	gate_e2_p1 -> moe_e2_t3_e0_p1
+	gate_e2_p0 -> moe_e2_t3_e1_p0
+	gate_e2_p1 -> moe_e2_t3_e1_p1
+	gate_e3_p0 -> moe_e3_t0_e0_p0
+	gate_e3_p1 -> moe_e3_t0_e0_p1
+	gate_e3_p0 -> moe_e3_t0_e1_p0
+	gate_e3_p1 -> moe_e3_t0_e1_p1
+	gate_e3_p0 -> moe_e3_t1_e0_p0
+	gate_e3_p1 -> moe_e3_t1_e0_p1
+	gate_e3_p0 -> moe_e3_t1_e1_p0
+	gate_e3_p1 -> moe_e3_t1_e1_p1
+	gate_e3_p0 -> moe_e3_t2_e0_p0
+	gate_e3_p1 -> moe_e3_t2_e0_p1
+	gate_e3_p0 -> moe_e3_t2_e1_p0
+	gate_e3_p1 -> moe_e3_t2_e1_p1
+	gate_e3_p0 -> moe_e3_t3_e0_p0
+	gate_e3_p1 -> moe_e3_t3_e0_p1
+	gate_e3_p0 -> moe_e3_t3_e1_p0
+	gate_e3_p1 -> moe_e3_t3_e1_p1
+	gate_e4_p0 -> moe_e4_t0_e0_p0
+	gate_e4_p1 -> moe_e4_t0_e0_p1
+	gate_e4_p0 -> moe_e4_t0_e1_p0
+	gate_e4_p1 -> moe_e4_t0_e1_p1
+	gate_e4_p0 -> moe_e4_t1_e0_p0
+	gate_e4_p1 -> moe_e4_t1_e0_p1
+	gate_e4_p0 -> moe_e4_t1_e1_p0
+	gate_e4_p1 -> moe_e4_t1_e1_p1
+	gate_e4_p0 -> moe_e4_t2_e0_p0
+	gate_e4_p1 -> moe_e4_t2_e0_p1
+	gate_e4_p0 -> moe_e4_t2_e1_p0
+	gate_e4_p1 -> moe_e4_t2_e1_p1
+	gate_e4_p0 -> moe_e4_t3_e0_p0
+	gate_e4_p1 -> moe_e4_t3_e0_p1
+	gate_e4_p0 -> moe_e4_t3_e1_p0
+	gate_e4_p1 -> moe_e4_t3_e1_p1
+	gate_e5_p0 -> moe_e5_t0_e0_p0
+	gate_e5_p1 -> moe_e5_t0_e0_p1
+	gate_e5_p0 -> moe_e5_t0_e1_p0
+	gate_e5_p1 -> moe_e5_t0_e1_p1
+	gate_e5_p0 -> moe_e5_t1_e0_p0
+	gate_e5_p1 -> moe_e5_t1_e0_p1
+	gate_e5_p0 -> moe_e5_t1_e1_p0
+	gate_e5_p1 -> moe_e5_t1_e1_p1
+	gate_e5_p0 -> moe_e5_t2_e0_p0
+	gate_e5_p1 -> moe_e5_t2_e0_p1
+	gate_e5_p0 -> moe_e5_t2_e1_p0
+	gate_e5_p1 -> moe_e5_t2_e1_p1
+	gate_e5_p0 -> moe_e5_t3_e0_p0
+	gate_e5_p1 -> moe_e5_t3_e0_p1
+	gate_e5_p0 -> moe_e5_t3_e1_p0
+	gate_e5_p1 -> moe_e5_t3_e1_p1
+	gate_e6_p0 -> moe_e6_t0_e0_p0
+	gate_e6_p1 -> moe_e6_t0_e0_p1
+	gate_e6_p0 -> moe_e6_t0_e1_p0
+	gate_e6_p1 -> moe_e6_t0_e1_p1
+	gate_e6_p0 -> moe_e6_t1_e0_p0
+	gate_e6_p1 -> moe_e6_t1_e0_p1
+	gate_e6_p0 -> moe_e6_t1_e1_p0
+	gate_e6_p1 -> moe_e6_t1_e1_p1
+	gate_e6_p0 -> moe_e6_t2_e0_p0
+	gate_e6_p1 -> moe_e6_t2_e0_p1
+	gate_e6_p0 -> moe_e6_t2_e1_p0
+	gate_e6_p1 -> moe_e6_t2_e1_p1
+	gate_e6_p0 -> moe_e6_t3_e0_p0
+	gate_e6_p1 -> moe_e6_t3_e0_p1
+	gate_e6_p0 -> moe_e6_t3_e1_p0
+	gate_e6_p1 -> moe_e6_t3_e1_p1
+	gate_e7_p0 -> moe_e7_t0_e0_p0
+	gate_e7_p1 -> moe_e7_t0_e0_p1
+	gate_e7_p0 -> moe_e7_t0_e1_p0
+	gate_e7_p1 -> moe_e7_t0_e1_p1
+	gate_e7_p0 -> moe_e7_t1_e0_p0
+	gate_e7_p1 -> moe_e7_t1_e0_p1
+	gate_e7_p0 -> moe_e7_t1_e1_p0
+	gate_e7_p1 -> moe_e7_t1_e1_p1
+	gate_e7_p0 -> moe_e7_t2_e0_p0
+	gate_e7_p1 -> moe_e7_t2_e0_p1
+	gate_e7_p0 -> moe_e7_t2_e1_p0
+	gate_e7_p1 -> moe_e7_t2_e1_p1
+	gate_e7_p0 -> moe_e7_t3_e0_p0
+	gate_e7_p1 -> moe_e7_t3_e0_p1
+	gate_e7_p0 -> moe_e7_t3_e1_p0
+	gate_e7_p1 -> moe_e7_t3_e1_p1
+}

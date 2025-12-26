@@ -1,0 +1,186 @@
+digraph {
+    dpi=300 rankdir=TB size="200,100"
+    node [fontname=Arial fontsize=10]
+    edge [fontname=Arial fontsize=9]
+    node [fillcolor=lightblue shape=ellipse style=filled]
+    node [fillcolor=lightgreen shape=box style=filled]
+    node [fillcolor=lightyellow shape=parallelogram style=filled]
+    
+    // Input and Output nodes
+    input [label="Input\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" fillcolor=lightgray shape=ellipse]
+    output [label="Output\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" fillcolor=lightgray shape=ellipse]
+    
+    subgraph cluster_pipeline_0 {
+        fillcolor=lightcyan label="Pipeline Stage 0 (Layers 0-7)" style="rounded,filled"
+        
+        // Expert Group 0 (GPU 0-3)
+        subgraph cluster_expert_0_p0 {
+            fillcolor=lightpink label="Expert Group 0 (GPU 0-3)" style="rounded,filled"
+            
+            // Gate Selection - distributes tokens to experts
+            gate_e0_p0 [label="Gate Selection\nGPU: 0-3\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+            
+            // All-to-All Communication - redistributes tokens
+            all2all_local_e0_p0 [label="Local All-to-All\nGPU: 0-3\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=ellipse]
+            
+            // Attention Block - Decomposed into submodules
+            attention_qkv_e0_t0_p0 [label="QKV Projection\nGPU: 0\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            attention_score_e0_t0_p0 [label="Attention Computation\nGPU: 0\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+            attention_out_e0_t0_p0 [label="Attention Output Projection\nGPU: 0\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            
+            attention_qkv_e0_t1_p0 [label="QKV Projection\nGPU: 1\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            attention_score_e0_t1_p0 [label="Attention Computation\nGPU: 1\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+            attention_out_e0_t1_p0 [label="Attention Output Projection\nGPU: 1\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            
+            attention_qkv_e0_t2_p0 [label="QKV Projection\nGPU: 2\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            attention_score_e0_t2_p0 [label="Attention Computation\nGPU: 2\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+            attention_out_e0_t2_p0 [label="Attention Output Projection\nGPU: 2\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            
+            attention_qkv_e0_t3_p0 [label="QKV Projection\nGPU: 3\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            attention_score_e0_t3_p0 [label="Attention Computation\nGPU: 3\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+            attention_out_e0_t3_p0 [label="Attention Output Projection\nGPU: 3\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            
+            // MoE Experts - Parallel processing
+            moe_e0_t0_e0_p0 [label="MoE Expert 0\nGPU: 0\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e0_t0_e1_p0 [label="MoE Expert 1\nGPU: 0\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e0_t1_e0_p0 [label="MoE Expert 0\nGPU: 1\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e0_t1_e1_p0 [label="MoE Expert 1\nGPU: 1\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e0_t2_e0_p0 [label="MoE Expert 0\nGPU: 2\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e0_t2_e1_p0 [label="MoE Expert 1\nGPU: 2\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e0_t3_e0_p0 [label="MoE Expert 0\nGPU: 3\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e0_t3_e1_p0 [label="MoE Expert 1\nGPU: 3\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            
+            // Tensor Reduction - Combines expert outputs
+            tensor_reduce_e0_t0_p0 [label="Tensor Reduction\nGPU: 0\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+            tensor_reduce_e0_t1_p0 [label="Tensor Reduction\nGPU: 1\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+            tensor_reduce_e0_t2_p0 [label="Tensor Reduction\nGPU: 2\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+            tensor_reduce_e0_t3_p0 [label="Tensor Reduction\nGPU: 3\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+        }
+        
+        // Expert Group 1 (GPU 4-7) - Similar structure
+        subgraph cluster_expert_1_p0 {
+            fillcolor=lightpink label="Expert Group 1 (GPU 4-7)" style="rounded,filled"
+            
+            gate_e1_p0 [label="Gate Selection\nGPU: 4-7\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=128, seq_len=10240, hidden=512]" shape=parallelogram]
+            all2all_local_e1_p0 [label="Local All-to-All\nGPU: 4-7\nInput: [batch_size=128, seq_len=10240, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=ellipse]
+            
+            // Attention submodules for expert group 1
+            attention_qkv_e1_t0_p0 [label="QKV Projection\nGPU: 4\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            attention_score_e1_t0_p0 [label="Attention Computation\nGPU: 4\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+            attention_out_e1_t0_p0 [label="Attention Output Projection\nGPU: 4\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            
+            attention_qkv_e1_t1_p0 [label="QKV Projection\nGPU: 5\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            attention_score_e1_t1_p0 [label="Attention Computation\nGPU: 5\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+            attention_out_e1_t1_p0 [label="Attention Output Projection\nGPU: 5\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            
+            attention_qkv_e1_t2_p0 [label="QKV Projection\nGPU: 6\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            attention_score_e1_t2_p0 [label="Attention Computation\nGPU: 6\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+            attention_out_e1_t2_p0 [label="Attention Output Projection\nGPU: 6\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            
+            attention_qkv_e1_t3_p0 [label="QKV Projection\nGPU: 7\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            attention_score_e1_t3_p0 [label="Attention Computation\nGPU: 7\nInput: [batch_size=32, seq_len=2560, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=2560, heads=4, d_k=32]" shape=box]
+            attention_out_e1_t3_p0 [label="Attention Output Projection\nGPU: 7\nInput: [batch_size=32, seq_len=2560, hidden=512]\nOutput: [batch_size=32, seq_len=2560, hidden=512]" shape=box]
+            
+            // MoE Experts
+            moe_e1_t0_e0_p0 [label="MoE Expert 0\nGPU: 4\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e1_t0_e1_p0 [label="MoE Expert 1\nGPU: 4\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e1_t1_e0_p0 [label="MoE Expert 0\nGPU: 5\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e1_t1_e1_p0 [label="MoE Expert 1\nGPU: 5\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e1_t2_e0_p0 [label="MoE Expert 0\nGPU: 6\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e1_t2_e1_p0 [label="MoE Expert 1\nGPU: 6\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e1_t3_e0_p0 [label="MoE Expert 0\nGPU: 7\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            moe_e1_t3_e1_p0 [label="MoE Expert 1\nGPU: 7\nInput: [batch_size=16, seq_len=2560, hidden=256]\nOutput: [batch_size=16, seq_len=2560, hidden=256]" shape=box]
+            
+            // Tensor Reduction
+            tensor_reduce_e1_t0_p0 [label="Tensor Reduction\nGPU: 4\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+            tensor_reduce_e1_t1_p0 [label="Tensor Reduction\nGPU: 5\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+            tensor_reduce_e1_t2_p0 [label="Tensor Reduction\nGPU: 6\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+            tensor_reduce_e1_t3_p0 [label="Tensor Reduction\nGPU: 7\nInput: [batch_size=32, seq_len=2560, hidden=256]\nOutput: [batch_size=32, seq_len=2560, hidden=256]" shape=ellipse]
+        }
+    }
+    
+    // Define all edges for complete data flow
+    // Input flows to both expert groups
+    input -> gate_e0_p0
+    input -> gate_e1_p0
+    
+    // Expert Group 0 data flow
+    gate_e0_p0 -> all2all_local_e0_p0
+    all2all_local_e0_p0 -> attention_qkv_e0_t0_p0
+    all2all_local_e0_p0 -> attention_qkv_e0_t1_p0
+    all2all_local_e0_p0 -> attention_qkv_e0_t2_p0
+    all2all_local_e0_p0 -> attention_qkv_e0_t3_p0
+    
+    attention_qkv_e0_t0_p0 -> attention_score_e0_t0_p0
+    attention_score_e0_t0_p0 -> attention_out_e0_t0_p0
+    attention_out_e0_t0_p0 -> moe_e0_t0_e0_p0
+    attention_out_e0_t0_p0 -> moe_e0_t0_e1_p0
+    moe_e0_t0_e0_p0 -> tensor_reduce_e0_t0_p0
+    moe_e0_t0_e1_p0 -> tensor_reduce_e0_t0_p0
+    
+    attention_qkv_e0_t1_p0 -> attention_score_e0_t1_p0
+    attention_score_e0_t1_p0 -> attention_out_e0_t1_p0
+    attention_out_e0_t1_p0 -> moe_e0_t1_e0_p0
+    attention_out_e0_t1_p0 -> moe_e0_t1_e1_p0
+    moe_e0_t1_e0_p0 -> tensor_reduce_e0_t1_p0
+    moe_e0_t1_e1_p0 -> tensor_reduce_e0_t1_p0
+    
+    attention_qkv_e0_t2_p0 -> attention_score_e0_t2_p0
+    attention_score_e0_t2_p0 -> attention_out_e0_t2_p0
+    attention_out_e0_t2_p0 -> moe_e0_t2_e0_p0
+    attention_out_e0_t2_p0 -> moe_e0_t2_e1_p0
+    moe_e0_t2_e0_p0 -> tensor_reduce_e0_t2_p0
+    moe_e0_t2_e1_p0 -> tensor_reduce_e0_t2_p0
+    
+    attention_qkv_e0_t3_p0 -> attention_score_e0_t3_p0
+    attention_score_e0_t3_p0 -> attention_out_e0_t3_p0
+    attention_out_e0_t3_p0 -> moe_e0_t3_e0_p0
+    attention_out_e0_t3_p0 -> moe_e0_t3_e1_p0
+    moe_e0_t3_e0_p0 -> tensor_reduce_e0_t3_p0
+    moe_e0_t3_e1_p0 -> tensor_reduce_e0_t3_p0
+    
+    // Expert Group 1 data flow
+    gate_e1_p0 -> all2all_local_e1_p0
+    all2all_local_e1_p0 -> attention_qkv_e1_t0_p0
+    all2all_local_e1_p0 -> attention_qkv_e1_t1_p0
+    all2all_local_e1_p0 -> attention_qkv_e1_t2_p0
+    all2all_local_e1_p0 -> attention_qkv_e1_t3_p0
+    
+    attention_qkv_e1_t0_p0 -> attention_score_e1_t0_p0
+    attention_score_e1_t0_p0 -> attention_out_e1_t0_p0
+    attention_out_e1_t0_p0 -> moe_e1_t0_e0_p0
+    attention_out_e1_t0_p0 -> moe_e1_t0_e1_p0
+    moe_e1_t0_e0_p0 -> tensor_reduce_e1_t0_p0
+    moe_e1_t0_e1_p0 -> tensor_reduce_e1_t0_p0
+    
+    attention_qkv_e1_t1_p0 -> attention_score_e1_t1_p0
+    attention_score_e1_t1_p0 -> attention_out_e1_t1_p0
+    attention_out_e1_t1_p0 -> moe_e1_t1_e0_p0
+    attention_out_e1_t1_p0 -> moe_e1_t1_e1_p0
+    moe_e1_t1_e0_p0 -> tensor_reduce_e1_t1_p0
+    moe_e1_t1_e1_p0 -> tensor_reduce_e1_t1_p0
+    
+    attention_qkv_e1_t2_p0 -> attention_score_e1_t2_p0
+    attention_score_e1_t2_p0 -> attention_out_e1_t2_p0
+    attention_out_e1_t2_p0 -> moe_e1_t2_e0_p0
+    attention_out_e1_t2_p0 -> moe_e1_t2_e1_p0
+    moe_e1_t2_e0_p0 -> tensor_reduce_e1_t2_p0
+    moe_e1_t2_e1_p0 -> tensor_reduce_e1_t2_p0
+    
+    attention_qkv_e1_t3_p0 -> attention_score_e1_t3_p0
+    attention_score_e1_t3_p0 -> attention_out_e1_t3_p0
+    attention_out_e1_t3_p0 -> moe_e1_t3_e0_p0
+    attention_out_e1_t3_p0 -> moe_e1_t3_e1_p0
+    moe_e1_t3_e0_p0 -> tensor_reduce_e1_t3_p0
+    moe_e1_t3_e1_p0 -> tensor_reduce_e1_t3_p0
+    
+    // All tensor reductions flow to output
+    tensor_reduce_e0_t0_p0 -> output
+    tensor_reduce_e0_t1_p0 -> output
+    tensor_reduce_e0_t2_p0 -> output
+    tensor_reduce_e0_t3_p0 -> output
+    tensor_reduce_e1_t0_p0 -> output
+    tensor_reduce_e1_t1_p0 -> output
+    tensor_reduce_e1_t2_p0 -> output
+    tensor_reduce_e1_t3_p0 -> output
+}
