@@ -1,0 +1,476 @@
+#!/usr/bin/env python3
+
+import os
+
+def create_comprehensive_parallel_dag():
+    """Generate a comprehensive DAG for the 64-GPU parallel LLM deployment"""
+    
+    dot_content = '''digraph LLM_Parallel_Deployment {
+    rankdir=TB;
+    nodesep=0.8;
+    ranksep=1.2;
+    bgcolor=white;
+    
+    node [fontname="Arial", fontsize=9, shape=box, style=filled];
+    edge [fontname="Arial", fontsize=8];
+    
+    // Global input node
+    input [label="Global Input\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+           shape=ellipse, fillcolor=lightcoral, peripheries=2];
+    
+    // ====================================================================================
+    // PIPELINE STAGE 0: Layers 0-3 (GPUs 0-15)
+    // ====================================================================================
+    
+    subgraph cluster_stage0 {
+        label="Pipeline Stage 0: Layers 0-3\\nGPUs 0-15 (DP Group 0)";
+        style=rounded;
+        fillcolor=lightblue;
+        color=blue;
+        
+        // Layer 0 - Complete decomposition
+        layer0_norm [label="Layer 0 RMSNorm\\nGPU 0\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                     fillcolor=lightyellow, shape=parallelogram];
+        
+        // Attention with Tensor Parallelism (4-way TP across GPUs 0-3)
+        layer0_q_proj_gpu0 [label="Layer 0 Q Projection (TP 0/4)\\nGPU 0\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        layer0_q_proj_gpu1 [label="Layer 0 Q Projection (TP 1/4)\\nGPU 1\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        layer0_q_proj_gpu2 [label="Layer 0 Q Projection (TP 2/4)\\nGPU 2\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        layer0_q_proj_gpu3 [label="Layer 0 Q Projection (TP 3/4)\\nGPU 3\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        
+        layer0_k_proj_gpu0 [label="Layer 0 K Projection (TP 0/4)\\nGPU 0\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        layer0_k_proj_gpu1 [label="Layer 0 K Projection (TP 1/4)\\nGPU 1\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        layer0_k_proj_gpu2 [label="Layer 0 K Projection (TP 2/4)\\nGPU 2\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        layer0_k_proj_gpu3 [label="Layer 0 K Projection (TP 3/4)\\nGPU 3\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        
+        layer0_v_proj_gpu0 [label="Layer 0 V Projection (TP 0/4)\\nGPU 0\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        layer0_v_proj_gpu1 [label="Layer 0 V Projection (TP 1/4)\\nGPU 1\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        layer0_v_proj_gpu2 [label="Layer 0 V Projection (TP 2/4)\\nGPU 2\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        layer0_v_proj_gpu3 [label="Layer 0 V Projection (TP 3/4)\\nGPU 3\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                           fillcolor=lightgreen];
+        
+        // Attention computation and communication
+        layer0_attn_scores_gpu0 [label="Layer 0 Attention Scores (TP 0/4)\\nGPU 0\\nInput: [batch_size=128, seq_len=512, heads=4, d_k=32]\\nOutput: [batch_size=128, seq_len=512, heads=4, seq_len=512]", 
+                                fillcolor=lightcyan];
+        layer0_attn_scores_gpu1 [label="Layer 0 Attention Scores (TP 1/4)\\nGPU 1\\nInput: [batch_size=128, seq_len=512, heads=4, d_k=32]\\nOutput: [batch_size=128, seq_len=512, heads=4, seq_len=512]", 
+                                fillcolor=lightcyan];
+        layer0_attn_scores_gpu2 [label="Layer 0 Attention Scores (TP 2/4)\\nGPU 2\\nInput: [batch_size=128, seq_len=512, heads=4, d_k=32]\\nOutput: [batch_size=128, seq_len=512, heads=4, seq_len=512]", 
+                                fillcolor=lightcyan];
+        layer0_attn_scores_gpu3 [label="Layer 0 Attention Scores (TP 3/4)\\nGPU 3\\nInput: [batch_size=128, seq_len=512, heads=4, d_k=32]\\nOutput: [batch_size=128, seq_len=512, heads=4, seq_len=512]", 
+                                fillcolor=lightcyan];
+        
+        layer0_attn_softmax_gpu0 [label="Layer 0 Attention Softmax (TP 0/4)\\nGPU 0\\nInput: [batch_size=128, seq_len=512, heads=4, seq_len=512]\\nOutput: [batch_size=128, seq_len=512, heads=4, seq_len=512]", 
+                                 fillcolor=lightcyan];
+        layer0_attn_softmax_gpu1 [label="Layer 0 Attention Softmax (TP 1/4)\\nGPU 1\\nInput: [batch_size=128, seq_len=512, heads=4, seq_len=512]\\nOutput: [batch_size=128, seq_len=512, heads=4, seq_len=512]", 
+                                 fillcolor=lightcyan];
+        layer0_attn_softmax_gpu2 [label="Layer 0 Attention Softmax (TP 2/4)\\nGPU 2\\nInput: [batch_size=128, seq_len=512, heads=4, seq_len=512]\\nOutput: [batch_size=128, seq_len=512, heads=4, seq_len=512]", 
+                                 fillcolor=lightcyan];
+        layer0_attn_softmax_gpu3 [label="Layer 0 Attention Softmax (TP 3/4)\\nGPU 3\\nInput: [batch_size=128, seq_len=512, heads=4, seq_len=512]\\nOutput: [batch_size=128, seq_len=512, heads=4, seq_len=512]", 
+                                 fillcolor=lightcyan];
+        
+        layer0_attn_out_gpu0 [label="Layer 0 Attention Output (TP 0/4)\\nGPU 0\\nInput: [batch_size=128, seq_len=512, heads=4, d_k=32]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                              fillcolor=lightgreen];
+        layer0_attn_out_gpu1 [label="Layer 0 Attention Output (TP 1/4)\\nGPU 1\\nInput: [batch_size=128, seq_len=512, heads=4, d_k=32]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                              fillcolor=lightgreen];
+        layer0_attn_out_gpu2 [label="Layer 0 Attention Output (TP 2/4)\\nGPU 2\\nInput: [batch_size=128, seq_len=512, heads=4, d_k=32]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                              fillcolor=lightgreen];
+        layer0_attn_out_gpu3 [label="Layer 0 Attention Output (TP 3/4)\\nGPU 3\\nInput: [batch_size=128, seq_len=512, heads=4, d_k=32]\\nOutput: [batch_size=128, seq_len=512, hidden=256]", 
+                              fillcolor=lightgreen];
+        
+        // TP All-reduce for attention
+        layer0_attn_allreduce [label="Attention All-Reduce (TP)\\nGPUs 0-3\\nInput: [batch_size=128, seq_len=512, hidden=256]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                               shape=ellipse, fillcolor=yellow, peripheries=2];
+        
+        // MoE Router
+        layer0_moe_router [label="Layer 0 MoE Router\\nGPU 0\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, experts=2]", 
+                           shape=parallelogram, fillcolor=orange];
+        
+        // Gate Selection (dashed)
+        layer0_gate [label="Gate Selection\\nLayer 0\\nGPU 0\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, experts=2]", 
+                      shape=diamond, fillcolor=pink, peripheries=2];
+        
+        // MoE Experts - 16 experts distributed across 4 GPUs (4 experts per GPU)
+        layer0_experts_gpu0 [label="Layer 0 Experts (4/16)\\nGPU 0\\nInput: [batch_size=128, seq_len=512, experts=2]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                              fillcolor=lightblue];
+        layer0_experts_gpu1 [label="Layer 0 Experts (4/16)\\nGPU 1\\nInput: [batch_size=128, seq_len=512, experts=2]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                              fillcolor=lightblue];
+        layer0_experts_gpu2 [label="Layer 0 Experts (4/16)\\nGPU 2\\nInput: [batch_size=128, seq_len=512, experts=2]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                              fillcolor=lightblue];
+        layer0_experts_gpu3 [label="Layer 0 Experts (4/16)\\nGPU 3\\nInput: [batch_size=128, seq_len=512, experts=2]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                              fillcolor=lightblue];
+        
+        // Expert All-to-all communication
+        layer0_expert_send_gpu0 [label="Expert Send (All-to-all)\\nGPU 0\\nInput: [batch_size=128, seq_len=512, tokens=?]\\nOutput: [batch_size=128, seq_len=512, tokens=?]", 
+                                  shape=ellipse, fillcolor=lightgreen, peripheries=2];
+        layer0_expert_send_gpu1 [label="Expert Send (All-to-all)\\nGPU 1\\nInput: [batch_size=128, seq_len=512, tokens=?]\\nOutput: [batch_size=128, seq_len=512, tokens=?]", 
+                                  shape=ellipse, fillcolor=lightgreen, peripheries=2];
+        layer0_expert_send_gpu2 [label="Expert Send (All-to-all)\\nGPU 2\\nInput: [batch_size=128, seq_len=512, tokens=?]\\nOutput: [batch_size=128, seq_len=512, tokens=?]", 
+                                  shape=ellipse, fillcolor=lightgreen, peripheries=2];
+        layer0_expert_send_gpu3 [label="Expert Send (All-to-all)\\nGPU 3\\nInput: [batch_size=128, seq_len=512, tokens=?]\\nOutput: [batch_size=128, seq_len=512, tokens=?]", 
+                                  shape=ellipse, fillcolor=lightgreen, peripheries=2];
+        
+        layer0_expert_recv_gpu0 [label="Expert Receive (All-to-all)\\nGPU 0\\nInput: [batch_size=128, seq_len=512, tokens=?]\\nOutput: [batch_size=128, seq_len=512, tokens=?]", 
+                                  shape=ellipse, fillcolor=lightgreen, peripheries=2];
+        layer0_expert_recv_gpu1 [label="Expert Receive (All-to-all)\\nGPU 1\\nInput: [batch_size=128, seq_len=512, tokens=?]\\nOutput: [batch_size=128, seq_len=512, tokens=?]", 
+                                  shape=ellipse, fillcolor=lightgreen, peripheries=2];
+        layer0_expert_recv_gpu2 [label="Expert Receive (All-to-all)\\nGPU 2\\nInput: [batch_size=128, seq_len=512, tokens=?]\\nOutput: [batch_size=128, seq_len=512, tokens=?]", 
+                                  shape=ellipse, fillcolor=lightgreen, peripheries=2];
+        layer0_expert_recv_gpu3 [label="Expert Receive (All-to-all)\\nGPU 3\\nInput: [batch_size=128, seq_len=512, tokens=?]\\nOutput: [batch_size=128, seq_len=512, tokens=?]", 
+                                  shape=ellipse, fillcolor=lightgreen, peripheries=2];
+        
+        // MoE Aggregation
+        layer0_moe_agg [label="Layer 0 MoE Aggregate\\nGPU 0\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                         shape=parallelogram, fillcolor=orange];
+        
+        // Layer 0 residual and normalization
+        layer0_residual [label="Layer 0 Residual + Dropout\\nGPU 0\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          fillcolor=lightyellow, shape=parallelogram];
+    }
+    
+    // ====================================================================================
+    // PIPELINE STAGE 1: Layers 4-7 (GPUs 16-31)
+    // ====================================================================================
+    
+    subgraph cluster_stage1 {
+        label="Pipeline Stage 1: Layers 4-7\\nGPUs 16-31 (DP Group 1)";
+        style=rounded;
+        fillcolor=lightblue;
+        color=blue;
+        
+        // Pipeline communication from stage 0 to stage 1
+        pipe_comm_0_1 [label="Pipeline Communication\\nStage 0 → Stage 1\\nGPUs 0-15 → GPUs 16-31\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                        shape=ellipse, fillcolor=red, peripheries=3];
+        
+        // Simplified representation for remaining layers (full decomposition would be similar to layer 0)
+        layer4_attn [label="Layer 4 Attention (TP across GPUs 16-19)\\nGPUs 16-19\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightgreen];
+        layer4_moe [label="Layer 4 MoE (EP across GPUs 16-19)\\nGPUs 16-19\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                     fillcolor=lightblue];
+        layer4_residual [label="Layer 4 Residual\\nGPU 16\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          fillcolor=lightyellow, shape=parallelogram];
+        
+        layer5_attn [label="Layer 5 Attention (TP across GPUs 20-23)\\nGPUs 20-23\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightgreen];
+        layer5_moe [label="Layer 5 MoE (EP across GPUs 20-23)\\nGPUs 20-23\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                     fillcolor=lightblue];
+        layer5_residual [label="Layer 5 Residual\\nGPU 20\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          fillcolor=lightyellow, shape=parallelogram];
+        
+        layer6_attn [label="Layer 6 Attention (TP across GPUs 24-27)\\nGPUs 24-27\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightgreen];
+        layer6_moe [label="Layer 6 MoE (EP across GPUs 24-27)\\nGPUs 24-27\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                     fillcolor=lightblue];
+        layer6_residual [label="Layer 6 Residual\\nGPU 24\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          fillcolor=lightyellow, shape=parallelogram];
+        
+        layer7_attn [label="Layer 7 Attention (TP across GPUs 28-31)\\nGPUs 28-31\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightgreen];
+        layer7_moe [label="Layer 7 MoE (EP across GPUs 28-31)\\nGPUs 28-31\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                     fillcolor=lightblue];
+        layer7_residual [label="Layer 7 Residual\\nGPU 28\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          fillcolor=lightyellow, shape=parallelogram];
+    }
+    
+    // ====================================================================================
+    // PIPELINE STAGE 2: Layers 8-11 (GPUs 32-47)
+    // ====================================================================================
+    
+    subgraph cluster_stage2 {
+        label="Pipeline Stage 2: Layers 8-11\\nGPUs 32-47 (DP Group 2)";
+        style=rounded;
+        fillcolor=lightblue;
+        color=blue;
+        
+        // Pipeline communication from stage 1 to stage 2
+        pipe_comm_1_2 [label="Pipeline Communication\\nStage 1 → Stage 2\\nGPUs 16-31 → GPUs 32-47\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                        shape=ellipse, fillcolor=red, peripheries=3];
+        
+        layer8_attn [label="Layer 8 Attention (TP across GPUs 32-35)\\nGPUs 32-35\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightgreen];
+        layer8_moe [label="Layer 8 MoE (EP across GPUs 32-35)\\nGPUs 32-35\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                     fillcolor=lightblue];
+        layer8_residual [label="Layer 8 Residual\\nGPU 32\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          fillcolor=lightyellow, shape=parallelogram];
+        
+        layer9_attn [label="Layer 9 Attention (TP across GPUs 36-39)\\nGPUs 36-39\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightgreen];
+        layer9_moe [label="Layer 9 MoE (EP across GPUs 36-39)\\nGPUs 36-39\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                     fillcolor=lightblue];
+        layer9_residual [label="Layer 9 Residual\\nGPU 36\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          fillcolor=lightyellow, shape=parallelogram];
+        
+        layer10_attn [label="Layer 10 Attention (TP across GPUs 40-43)\\nGPUs 40-43\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                       fillcolor=lightgreen];
+        layer10_moe [label="Layer 10 MoE (EP across GPUs 40-43)\\nGPUs 40-43\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightblue];
+        layer10_residual [label="Layer 10 Residual\\nGPU 40\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                           fillcolor=lightyellow, shape=parallelogram];
+        
+        layer11_attn [label="Layer 11 Attention (TP across GPUs 44-47)\\nGPUs 44-47\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]",                        fillcolor=lightgreen];
+        layer11_moe [label="Layer 11 MoE (EP across GPUs 44-47)\\nGPUs 44-47\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightblue];
+        layer11_residual [label="Layer 11 Residual\\nGPU 44\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          fillcolor=lightyellow, shape=parallelogram];
+    }
+    
+    // ====================================================================================
+    // PIPELINE STAGE 3: Layers 12-15 (GPUs 48-63)
+    // ====================================================================================
+    
+    subgraph cluster_stage3 {
+        label="Pipeline Stage 3: Layers 12-15\\nGPUs 48-63 (DP Group 3)";
+        style=rounded;
+        fillcolor=lightblue;
+        color=blue;
+        
+        // Pipeline communication from stage 2 to stage 3
+        pipe_comm_2_3 [label="Pipeline Communication\\nStage 2 → Stage 3\\nGPUs 32-47 → GPUs 48-63\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024五年", 
+                        shape=ellipse, fillcolor=red, peripheries=3];
+        
+        layer12_attn [label="Layer 12 Attention (TP across GPUs 48-51)\\nGPUs 48-51\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                       fillcolor=lightgreen];
+        layer12_moe [label="Layer 12 MoE (EP across GPUs 48-51)\\nGPUs 48-51\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightblue];
+        layer12_residual [label="Layer 12 Residual\\nGPU 48\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                           fillcolor=lightyellow, shape=parallelogram];
+        
+        layer13_attn [label="Layer 13 Attention (TP across GPUs 52-55)\\nGPUs 52-55\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                       fillcolor=lightgreen];
+        layer13_moe [label="Layer 13 MoE (EP across GPUs 52-55)\\nGPUs 52-55\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightblue];
+        layer13_residual [label="Layer 13 Residual\\nGPU 52\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                           fillcolor=lightyellow, shape=parallelogram];
+        
+        layer14_attn [label="Layer 14 Attention (TP across GPUs 56-59)\\nGPUs 56-59\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                       fillcolor=lightgreen];
+        layer14_moe [label="Layer 14 MoE (EP across GPUs 56-59)\\nGPUs 56-59\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightblue];
+        layer14_residual [label="Layer 14 Residual\\nGPU 56\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                           fillcolor=lightyellow, shape=parallelogram];
+        
+        layer15_attn [label="Layer 15 Attention (TP across GPUs 60-63)\\nGPUs 60-63\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                       fillcolor=lightgreen];
+        layer15_moe [label="Layer 15 MoE (EP across GPUs 60-63)\\nGPUs 60-63\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                      fillcolor=lightblue];
+        layer15_residual [label="Layer 15 Residual\\nGPU 60\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                           fillcolor=lightyellow, shape=parallelogram];
+        
+        // Final output processing
+        final_norm [label="Final RMSNorm\\nGPU 60\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                       shape=parallelogram, fillcolor=lightyellow];
+        
+        output_proj [label="Output Projection\\nGPU 60\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, vocab_size=50257]", 
+                        fillcolor=lightgreen];
+    }
+    
+    // ====================================================================================
+    // DATA PARALLEL ALL-REDUCE OPERATIONS
+    // ====================================================================================
+    
+    dp_allreduce_group0 [label="Data Parallel All-Reduce\\nDP Group 0\\nGPUs 0,4,8,12\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          shape=ellipse, fillcolor=purple, peripheries=3];
+    
+    dp_allreduce_group1 [label="Data Parallel All-Reduce\\nDP Group 1\\nGPUs 16,20,24,28\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          shape=ellipse, fillcolor=purple, peripheries=3];
+    
+    dp_allreduce_group2 [label="Data Parallel All-Reduce\\nDP Group 2\\nGPUs 32,36,40,44\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          shape=ellipse, fillcolor=purple, peripheries=3];
+    
+    dp_allreduce_group3 [label="Data Parallel All-Reduce\\nDP Group 3\\nGPUs 48,52,56,60\\nInput: [batch_size=128, seq_len=512, hidden=1024]\\nOutput: [batch_size=128, seq_len=512, hidden=1024]", 
+                          shape=ellipse, fillcolor=purple, peripheries=3];
+    
+    // Final output node
+    final_output [label="Final Output\\nInput: [batch_size=128, seq_len=512, vocab_size=50257]\\nOutput: [batch_size=128, seq_len=512, vocab_size=50257]", 
+                   shape=ellipse, fillcolor=lightcoral, peripheries=2];
+    
+    // ====================================================================================
+    // CONNECTIONS FOR LAYER 0 (DETAILED)
+    // ====================================================================================
+    
+    input -> layer0_norm;
+    
+    // Input to attention projections
+    layer0_norm -> layer0_q_proj_gpu0;
+    layer0_norm -> layer0_q_proj_gpu1;
+    layer0_norm -> layer0_q_proj_gpu2;
+    layer0_norm -> layer0_q_proj_gpu3;
+    layer0_norm -> layer0_k_proj_gpu0;
+    layer0_norm -> layer0_k_proj_gpu1;
+    layer0_norm -> layer0_k_proj_gpu2;
+    layer0_norm -> layer0_k_proj_gpu3;
+    layer0_norm -> layer0_v_proj_gpu0;
+    layer0_norm -> layer0_v_proj_gpu1;
+    layer0_norm -> layer0_v_proj_gpu2;
+    layer0_norm -> layer0_v_proj_gpu3;
+    
+    // Attention computation
+    layer0_q_proj_gpu0 -> layer0_attn_scores_gpu0;
+    layer0_q_proj_gpu1 -> layer0_attn_scores_gpu1;
+    layer0_q_proj_gpu2 -> layer0_attn_scores_gpu2;
+    layer0_q_proj_gpu3 -> layer0_attn_scores_gpu3;
+    layer0_k_proj_gpu0 -> layer0_attn_scores_gpu0;
+    layer0_k_proj_gpu1 -> layer0_attn_scores_gpu1;
+    layer0_k_proj_gpu2 -> layer0_attn_scores_gpu2;
+    layer0_k_proj_gpu3 -> layer0_attn_scores_gpu3;
+    layer0_v_proj_gpu0 -> layer0_attn_out_gpu0;
+    layer0_v_proj_gpu1 -> layer0_attn_out_gpu1;
+    layer0_v_proj_gpu2 -> layer0_attn_out_gpu2;
+    layer0_v_proj_gpu3 -> layer0_attn_out_gpu3;
+    
+    layer0_attn_scores_gpu0 -> layer0_attn_softmax_gpu0;
+    layer0_attn_scores_gpu1 -> layer0_attn_softmax_gpu1;
+    layer0_attn_scores_gpu2 -> layer0_attn_softmax_gpu2;
+    layer0_attn_scores_gpu3 -> layer0_attn_softmax_gpu3;
+    
+    layer0_attn_softmax_gpu0 -> layer0_attn_out_gpu0;
+    layer0_attn_softmax_gpu1 -> layer0_attn_out_gpu1;
+    layer0_attn_softmax_gpu2 -> layer0_attn_out_gpu2;
+    layer0_attn_softmax_gpu3 -> layer0_attn_out_gpu3;
+    
+    // TP All-reduce
+    layer0_attn_out_gpu0 -> layer0_attn_allreduce;
+    layer0_attn_out_gpu1 -> layer0_attn_allreduce;
+    layer0_attn_out_gpu2 -> layer0_attn_allreduce;
+    layer0_attn_out_gpu3 -> layer0_attn_allreduce;
+    
+    // MoE routing
+    layer0_attn_allreduce -> layer0_moe_router;
+    layer0_attn_allreduce -> layer0_gate [style=dashed];
+    layer0_gate -> layer0_experts_gpu0 [style=dashed];
+    layer0_gate -> layer0_experts_gpu1 [style=dashed];
+    layer0_gate -> layer0_experts_gpu2 [style=dashed];
+    layer0_gate -> layer0_experts_gpu3 [style=dashed];
+    
+    // Expert computation and communication
+    layer0_moe_router -> layer0_expert_send_gpu0;
+    layer0_moe_router -> layer0_expert_send_gpu1;
+    layer0_moe_router -> layer0_expert_send_gpu2;
+    layer0_moe_router -> layer0_expert_send_gpu3;
+    
+    layer0_expert_send_gpu0 -> layer0_expert_recv_gpu0;
+    layer0_expert_send_gpu1 -> layer0_expert_recv_gpu1;
+    layer0_expert_send_gpu2 -> layer0_expert_recv_gpu2;
+    layer0_expert_send_gpu3 -> layer0_expert_recv_gpu3;
+    
+    layer0_expert_recv_gpu0 -> layer0_experts_gpu0;
+    layer0_expert_recv_gpu1 -> layer0_experts_gpu1;
+    layer0_expert_recv_gpu2 -> layer0_experts_gpu2;
+    layer0_expert_recv_gpu3 -> layer0_experts_gpu3;
+    
+    layer0_experts_gpu0 -> layer0_moe_agg;
+    layer0_experts_gpu1 -> layer0_moe_agg;
+    layer0_experts_gpu2 -> layer0_moe_agg;
+    layer0_experts_gpu3 -> layer0_moe_agg;
+    
+    // Residual connection
+    layer0_moe_agg -> layer0_residual;
+    layer0_norm -> layer0_residual [style=dotted, dir=back];
+    
+    // ====================================================================================
+    // CONNECTIONS FOR REMAINING LAYERS (SIMPLIFIED)
+    // ====================================================================================
+    
+    // Stage 0 completion to stage 1
+    layer0_residual -> pipe_comm_0_1;
+    
+    // Stage 1 layers
+    pipe_comm_0_1 -> layer4_attn;
+    layer4_attn -> layer4_moe;
+    layer4_moe -> layer4_residual;
+    layer4_residual -> layer5_attn;
+    layer5_attn -> layer5_moe;
+    layer5_moe -> layer5_residual;
+    layer5_residual -> layer6_attn;
+    layer6_attn -> layer6_moe;
+    layer6_moe -> layer6_residual;
+    layer6_residual -> layer7_attn;
+    layer7_attn -> layer7_moe;
+    layer7_moe -> layer7_residual;
+    
+    // Stage 1 to stage 2
+    layer7_residual -> pipe_comm_1_2;
+    
+    // Stage 2 layers
+    pipe_comm_1_2 -> layer8_attn;
+    layer8_attn -> layer8_moe;
+    layer8_moe -> layer8_residual;
+    layer8_residual -> layer9_attn;
+    layer9_attn -> layer9_moe;
+    layer9_moe -> layer9_residual;
+    layer9_residual -> layer10_attn;
+    layer10_attn -> layer10_moe;
+    layer10_moe -> layer10_residual;
+    layer10_residual -> layer11_attn;
+    layer11_attn -> layer11_moe;
+    layer11_moe -> layer11_residual;
+    
+    // Stage 2 to stage 3
+    layer11_residual -> pipe_comm_2_3;
+    
+    // Stage 3 layers
+    pipe_comm_2_3 -> layer12_attn;
+    layer12_attn -> layer12_moe;
+    layer12_moe -> layer12_residual;
+    layer12_residual -> layer13_attn;
+    layer13_attn -> layer13_moe;
+    layer13_moe -> layer13_residual;
+    layer13_residual -> layer14_attn;
+    layer14_attn -> layer14_moe;
+    layer14_moe -> layer14_residual;
+    layer14_residual -> layer15_attn;
+    layer15_attn -> layer15_moe;
+    layer15_moe -> layer15_residual;
+    
+    // Final processing
+    layer15_residual -> final_norm;
+    final_norm -> output_proj;
+    output_proj -> final_output;
+    
+    // Data parallel all-reduce connections (gradient synchronization)
+    final_output -> dp_allreduce_group0;
+    final_output -> dp_allreduce_group1;
+    final_output -> dp_allreduce_group2;
+    final_output -> dp_allreduce_group3;
+    
+    // DP all-reduce feeds back to input for next iteration
+    dp_allreduce_group0 -> input [style=dashed, label="Next Iteration"];
+    dp_allreduce_group1 -> input [style=dashed, label="Next Iteration"];
+    dp_allreduce_group2 -> input [style=dashed, label="Next Iteration"];
+    dp_allreduce_group3 -> input [style=dashed, label="Next Iteration"];
+}'''
+    
+    return dot_content
+
+def main():
+    # Create output directory
+    os.makedirs("./outputs/2025-12-26-11-27-33", exist_ok=True)
+    
+    # Generate the comprehensive DAG
+    dot_content = create_comprehensive_parallel_dag()
+    
+    # Save DOT file
+    with open("./outputs/2025-12-26-11-27-33/llm_parallel_deployment.dag", "w") as f:
+        f.write(dot_content)
+    
+    # Also save as .dot file for graphviz
+    with open("./outputs/2025-12-26-11-27-33/llm_parallel_deployment.dot", "w") as f:
+        f.write(dot_content)
+    
+    print("Generated comprehensive parallel deployment DAG")
+    print("Files saved:")
+    print("- ./outputs/2025-12-26-11-27-33/llm_parallel_deployment.dag")
+    print("- ./outputs/2025-12-26-11-27-33/llm_parallel_deployment.dot")
+
+if __name__ == "__main__":
+    main()

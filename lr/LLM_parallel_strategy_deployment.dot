@@ -1,0 +1,74 @@
+digraph {
+	nodesep=1 rankdir=TB ranksep=2 size="100,200"
+	node [fontname=Arial fontsize=10]
+	subgraph cluster_stage0 {
+		fillcolor=lightgray label="Pipeline Stage 0 (Layers 0-3)
+GPUs 0-15" style="rounded,filled"
+		input [label="Input\nInput: [batch_size=128, seq_len=512, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=512, heads=16, d_k=32]" fillcolor=lightcoral shape=ellipse style=filled]
+		layer0_attn_gpu0 [label="Layer 0 Attention\nGPU 0\nInput: [batch_size=128, seq_len=512, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=512, heads=16, d_k=32]" fillcolor=lightblue shape=rectangle style=filled]
+		layer0_moe_route_gpu0 [label="Layer 0 MoE Router\nGPU 0\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, experts=2]" fillcolor=lightyellow shape=parallelogram style=filled]
+		gate_layer0 [label="Gate Selection\nLayer 0\nGPU 0\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, experts=2]" fillcolor=pink peripheries=2 shape=diamond style=filled]
+		layer0_experts_gpu0 [label="Layer 0 Experts (4/16)\nGPU 0\nInput: [batch_size=128, seq_len=512, experts=2]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+		layer0_experts_gpu1 [label="Layer 0 Experts (4/16)\nGPU 1\nInput: [batch_size=128, seq_len=512, experts=2]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+		layer0_experts_gpu2 [label="Layer 0 Experts (4/16)\nGPU 2\nInput: [batch_size=128, seq_len=512, experts=2]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+		layer0_experts_gpu3 [label="Layer 0 Experts (4/16)\nGPU 3\nInput: [batch_size=128, seq_len=512, experts=2]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+		layer0_expert_comm_gpu0 [label="Expert All-to-all\nGPU 0\nInput: [batch_size=128, seq_len=512, tokens=?]\nOutput: [batch_size=128, seq_len=512, tokens=?]" fillcolor=lightgreen shape=ellipse style=filled]
+		layer0_expert_comm_gpu1 [label="Expert All-to-all\nGPU 1\nInput: [batch_size=128, seq_len=512, tokens=?]\nOutput: [batch_size=128, seq_len=512, tokens=?]" fillcolor=lightgreen shape=ellipse style=filled]
+		layer0_expert_comm_gpu2 [label="Expert All-to-all\nGPU 2\nInput: [batch_size=128, seq_len=512, tokens=?]\nOutput: [batch_size=128, seq_len=512, tokens=?]" fillcolor=lightgreen shape=ellipse style=filled]
+		layer0_expert_comm_gpu3 [label="Expert All-to-all\nGPU 3\nInput: [batch_size=128, seq_len=512, tokens=?]\nOutput: [batch_size=128, seq_len=512, tokens=?]" fillcolor=lightgreen shape=ellipse style=filled]
+		layer0_moe_agg_gpu0 [label="Layer 0 MoE Aggregate\nGPU 0\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightyellow shape=parallelogram style=filled]
+	}
+	subgraph cluster_stage1 {
+		fillcolor=lightgray label="Pipeline Stage 1 (Layers 4-7)
+GPUs 16-31" style="rounded,filled"
+		pipe_comm_0_1 [label="Pipeline Communication\nStage 0 to 1\nGPUs 0-15 to GPUs 16-31\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+		layer4_attn_gpu16 [label="Layer 4 Attention\nGPU 16\nInput: [batch_size=128, seq_len=512, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=512, heads=16, d_k=32]" fillcolor=lightblue shape=rectangle style=filled]
+		layer4_experts_gpu16 [label="Layer 4 Experts (4/16)\nGPU 16\nInput: [batch_size=128, seq_len=512, experts=2]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+		layer4_experts_gpu17 [label="Layer 4 Experts (4/16)\nGPU 17\nInput: [batch_size=128, seq_len=512, experts=2]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+		layer4_experts_gpu18 [label="Layer 4 Experts (4/16)\nGPU 18\nInput: [batch_size=128, seq_len=512, experts=2]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+		layer4_experts_gpu19 [label="Layer 4 Experts (4/16)\nGPU 19\nInput: [batch_size=128, seq_len=512, experts=2]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_stage2 {
+		fillcolor=lightgray label="Pipeline Stage 2 (Layers 8-11)
+GPUs 32-47" style="rounded,filled"
+		pipe_comm_1_2 [label="Pipeline Communication\nStage 1 to 2\nGPUs 16-31 to GPUs 32-47\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+		layer8_attn_gpu32 [label="Layer 8 Attention\nGPU 32\nInput: [batch_size=128, seq_len=512, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=512, heads=16, d_k=32]" fillcolor=lightblue shape=rectangle style=filled]
+	}
+	subgraph cluster_stage3 {
+		fillcolor=lightgray label="Pipeline Stage 3 (Layers 12-15)
+GPUs 48-63" style="rounded,filled"
+		pipe_comm_2_3 [label="Pipeline Communication\nStage 2 to 3\nGPUs 32-47 to GPUs 48-63\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+		layer12_attn_gpu48 [label="Layer 12 Attention\nGPU 48\nInput: [batch_size=128, seq_len=512, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=512, heads=16, d_k=32]" fillcolor=lightblue shape=rectangle shape=rectangle style=filled]
+		output [label="Output\nInput: [batch_size=128, seq_len=512, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=512, heads=16, d_k=32]" fillcolor=lightcoral shape=ellipse style=filled]
+	}
+	dp_comm_group0 [label="Data Parallel All-Reduce\nDP Group 0\nGPUs 0-15\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	dp_comm_group1 [label="Data Parallel All-Reduce\nDP Group 1\nGPUs 16-31\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	dp_comm_group2 [label="Data Parallel All-Reduce\nDP Group 2\nGPUs 32-47\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	dp_comm_group3 [label="Data Parallel All-Reduce\nDP Group 3\nGPUs 48-63\nInput: [batch_size=128, seq_len=512, hidden=1024]\nOutput: [batch_size=128, seq_len=512, hidden=1024]" fillcolor=lightgreen shape=ellipse style=filled]
+	input -> layer0_attn_gpu0
+	layer0_attn_gpu0 -> layer0_moe_route_gpu0
+	layer0_moe_route_gpu0 -> gate_layer0 [style=dashed]
+	gate_layer0 -> layer0_experts_gpu0 [style=dashed]
+	gate_layer0 -> layer0_experts_gpu1 [style=dashed]
+	gate_layer0 -> layer0_experts_gpu2 [style=dashed]
+	gate_layer0 -> layer0_experts_gpu3 [style=dashed]
+	layer0_experts_gpu0 -> layer0_expert_comm_gpu0
+	layer0_expert_comm_gpu0 -> layer0_moe_agg_gpu0
+	layer0_experts_gpu1 -> layer0_expert_comm_gpu1
+	layer0_expert_comm_gpu1 -> layer0_moe_agg_gpu0
+	layer0_experts_gpu2 -> layer0_expert_comm_gpu2
+	layer0_expert_comm_gpu2 -> layer0_moe_agg_gpu0
+	layer0_experts_gpu3 -> layer0_expert_comm_gpu3
+	layer0_expert_comm_gpu3 -> layer0_moe_agg_gpu0
+	layer0_moe_agg_gpu0 -> pipe_comm_0_1
+	pipe_comm_0_1 -> layer4_attn_gpu16
+	layer4_attn_gpu16 -> pipe_comm_1_2
+	pipe_comm_1_2 -> layer8_attn_gpu32
+	layer8_attn_gpu32 -> pipe_comm_2_3
+	pipe_comm_2_3 -> layer12_attn_gpu48
+	layer12_attn_gpu48 -> output
+	output -> dp_comm_group0
+	output -> dp_comm_group1
+	output -> dp_comm_group2
+	output -> dp_comm_group3
+}
