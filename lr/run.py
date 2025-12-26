@@ -37,6 +37,7 @@ def main():
                 "version": 1,
                 "inputs": {
 					"task_path": "./inputs/task.md",
+					"knowledge_path": "./knowledge/moe_parallelism.md",
                     "save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
@@ -51,6 +52,7 @@ def main():
                  "version": 1,
                  "inputs": {
 					 "task_path": "./inputs/task.md",
+					 "knowledge_path": "./knowledge/moe_parallelism.md",
                      "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
