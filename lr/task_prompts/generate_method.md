@@ -5,6 +5,7 @@ RESOURCES
 
 Provide input file located at {task_path} containing hardware environment conditions, model configurations, and basic performance requirements. <<<提供包含硬件环境和模型参数以及性能需求的输入文件>>>
 
+Provided knowledge file about MOE located at {knowledge_path}.
 
 
 TASK
