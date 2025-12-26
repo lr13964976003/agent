@@ -1,4 +1,4 @@
-ls# main.py
+# main.py
 import os
 import time
 import agenta as ag
