@@ -1,0 +1,65 @@
+// 10B MoE Transformer 4D Hybrid Parallelism DAG
+digraph {
+	nodesep=0.8 rankdir=TB ranksep=1.2 splines=ortho
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	subgraph cluster_input {
+		fillcolor=lightgray label="Input Layer" style=rounded
+		input [label="Input\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=white shape=box]
+	}
+	subgraph cluster_stage1 {
+		fillcolor=lightcyan label="Pipeline Stage 1: Layers 0-7 (GPUs 0-127)" style=rounded
+		layernorm0 [label="LayerNorm (Layer 0)\nGPU: 0-127\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightgreen shape=rectangle]
+		qkv_proj [label="QKV Projection TP=4\nGPU: 0-127 (TP groups)\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, heads=16, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		qkv_allreduce [label="TP All-Reduce QKV\nGPU: 0-127 (TP groups)\nInput: [batch_size=32, seq_len=1024, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=1024, heads=16, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attention [label="Multi-Head Attention\nGPU: 0-127\nInput: [batch_size=32, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=32, seq_len=1024, heads=16, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_out [label="Attention Output Projection TP=4\nGPU: 0-127 (TP groups)\nInput: [batch_size=32, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=32, seq_len=1024, token_dim=128]" fillcolor=lightgreen shape=rectangle]
+		attn_allreduce [label="TP All-Reduce Attention\nGPU: 0-127 (TP groups)\nInput: [batch_size=32, seq_len=1024, token_dim=128]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightblue shape=ellipse]
+		residual1 [label="Residual Connection\nGPU: 0-127\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightgreen shape=rectangle]
+		moe_gate [label="MoE Gate (Expert Selection)\nGPU: 0-127\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, num_experts=16]" fillcolor=lightyellow shape=parallelogram]
+		expert_route [label="Expert Routing EP=8\nGPU: 0-127\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, experts=2]" fillcolor=lightyellow shape=parallelogram]
+		expert_0 [label="Expert 0 Computation\nGPU: 0-127 (2 experts per GPU)\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightgreen shape=rectangle]
+		expert_1 [label="Expert 1 Computation\nGPU: 0-127 (2 experts per GPU)\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightgreen shape=rectangle]
+		expert_combine [label="Expert Combination EP=8\nGPU: 0-127\nInput: [batch_size=32, seq_len=1024, experts=2]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightyellow shape=parallelogram]
+	}
+	stage1_to_stage2 [label="Pipeline Communication PP=2\nGPU: 0-127 → 128-255\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightblue shape=ellipse]
+	subgraph cluster_stage2 {
+		fillcolor=lightpink label="Pipeline Stage 2: Layers 8-15 (GPUs 128-255)" style=rounded
+		layernorm8 [label="LayerNorm (Layer 8)\nGPU: 128-255\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightgreen shape=rectangle]
+		qkv_proj2 [label="QKV Projection TP=4\nGPU: 128-255 (TP groups)\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, heads=16, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		qkv_allreduce2 [label="TP All-Reduce QKV\nGPU: 128-255 (TP groups)\nInput: [batch_size=32, seq_len=1024, heads=4, d_k=32]\nOutput: [batch_size=32, seq_len=1024, heads=16, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attention2 [label="Multi-Head Attention\nGPU: 128-255\nInput: [batch_size=32, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=32, seq_len=1024, heads=16, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_out2 [label="Attention Output Projection TP=4\nGPU: 128-255 (TP groups)\nInput: [batch_size=32, seq_len=1024, heads=16, d_k=32]\nOutput: [batch_size=32, seq_len=1024, token_dim=128]" fillcolor=lightgreen shape=rectangle]
+		attn_allreduce2 [label="TP All-Reduce Attention\nGPU: 128-255 (TP groups)\nInput: [batch_size=32, seq_len=1024, token_dim=128]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightblue shape=ellipse]
+		final_layernorm [label="Final LayerNorm\nGPU: 128-255\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_output {
+		fillcolor=lightgray label="Output Layer" style=rounded
+		output [label="Output\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, vocab_size=V]" fillcolor=white shape=box]
+	}
+	dp_sync [label="Data Parallelism Sync DP=4\nGPU: All DP groups\nInput: [batch_size=32, seq_len=1024, token_dim=512]\nOutput: [batch_size=32, seq_len=1024, token_dim=512]" fillcolor=lightblue shape=ellipse]
+	input -> layernorm0
+	layernorm0 -> qkv_proj
+	qkv_proj -> qkv_allreduce
+	qkv_allreduce -> attention
+	attention -> attn_out
+	attn_out -> attn_allreduce
+	attn_allreduce -> residual1
+	residual1 -> moe_gate
+	moe_gate -> expert_route
+	expert_route -> expert_0 [style=dashed]
+	expert_0 -> expert_combine
+	expert_route -> expert_1 [style=dashed]
+	expert_1 -> expert_combine
+	expert_combine -> stage1_to_stage2
+	stage1_to_stage2 -> layernorm8
+	layernorm8 -> qkv_proj2
+	qkv_proj2 -> qkv_allreduce2
+	qkv_allreduce2 -> attention2
+	attention2 -> attn_out2
+	attn_out2 -> attn_allreduce2
+	attn_allreduce2 -> final_layernorm
+	final_layernorm -> output
+	output -> dp_sync [constraint=false style=dashed]
+}
