@@ -56,12 +56,11 @@ SUBMISSION
 
 The generated DAG should be saved in {save_path}. 
 
-All graphviz codes need to be saved in DOT format.<<<需要提交graphviz代码>>>
+Only the final graphviz codes need to be saved in DOT format.<<<需要提交graphviz代码>>>
 
-All images need to be saved in SVG format. <<<指定图像保存格式为svg>>>
+Only the final images need to be saved in SVG format. <<<指定图像保存格式为svg>>>
 
-Submit the save paths of all DAGs you generated in JSON format. <<<要求用json格式提交生成dag的路径>>>
-
+Other intermediate results generated during the DAG graph creation process can be saved to files as needed, but they should be deleted at the end, leaving only the final result.
 
 <<<用评分标准约束Agent行为>>>
 
