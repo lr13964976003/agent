@@ -23,7 +23,7 @@
 
 ## **Input Data**
 * **Batch size**: Each batch consists of 128 sequences.
-* **Sequence Length**: 128 ~ 10240 tokens per sequences in each batch.
+* **Sequence Length**: The sequence length for each batch is variable, ranging from [128, 10240].
 
 ---
 
