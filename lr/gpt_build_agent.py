@@ -70,7 +70,7 @@ KNOWLEDGE = [
 def build_agent(
     model: str,
     tools: list,
-    knowledge: list | None = None
+    knowledge: list
 ):
     """
     Production-grade Inference DAG Agent
