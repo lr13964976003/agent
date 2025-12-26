@@ -55,7 +55,7 @@ def main():
         tools.append(variant[k]["tools"])
 	# GPT
     agent = build_agent("openai/Kimi-K2",tools[0])
-    task = build_task(prompts[0], expected_outputs, agent))
+    task = build_task(prompts[0], expected_outputs, agent)
 	task.run()
     return 
 
