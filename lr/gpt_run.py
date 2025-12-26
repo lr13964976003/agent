@@ -54,12 +54,12 @@ def main():
         prompts.append(fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"]))
         tools.append(variant[k]["tools"])
 	# GPT
-	KNOWLEDGE = [
-    "knowledge/04_sequence_parallelism.md",
-    "knowledge/04_tensor_parallelism.md",
-    "knowledge/04_expert_parallelism.md",
-    "knowledge/04_data_parallelism.md",
-    "knowledge/04_pipeline_parallelism.md"
+    KNOWLEDGE = [
+        "knowledge/04_sequence_parallelism.md",
+        "knowledge/04_tensor_parallelism.md",
+        "knowledge/04_expert_parallelism.md",
+        "knowledge/04_data_parallelism.md",
+        "knowledge/04_pipeline_parallelism.md"
     ]
     agent = build_agent("openai/Kimi-K2",tools[0],KNOWLEDGE)
     task = build_task(prompts[0], expected_outputs, agent)
