@@ -62,8 +62,7 @@ Speculation comes never.
 
 def build_agent(
     model: str,
-    tools: list,
-    knowledge: list
+    tools: list
 ):
     """
     Production-grade Inference DAG Agent
@@ -91,7 +90,6 @@ def build_agent(
             "or system outages and is unacceptable."
         ),
         tools=tools,
-        knowledge=knowledge,
         allow_delegation=False,
         allow_code_execution=False,   # 非必须不要开
         verbose=True,
