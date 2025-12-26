@@ -3,24 +3,24 @@ You are an Inference Parallel Strategy DAG Engineer. Your goal is to generate a 
 
 [Inputs]
 - Model:
-  - Name: {model_name}
-  - Parameters: {num_params}  # e.g., 70B
-  - Number of layers: {num_layers}
-  - Attention heads: {num_heads}
-  - KV cache size per layer: {kv_cache_size_per_layer}
-  - MoE experts: {num_experts_per_layer}  # optional
+  - Name: llm
+  - Parameters: 10B  # e.g., 70B
+  - Number of layers: 16
+  - Attention heads: 16
+  - KV cache size per layer: 5
+  - MoE experts: 16  # optional
 - Hardware:
-  - Devices: {num_devices} x {device_type}  # e.g., 8xA100 80GB
-  - Interconnect topology: {topology_description}  # e.g., NVLink, PCIe, custom
-  - Memory per device: {memory_per_device}
-  - Bandwidth per device: {bandwidth_per_device}
+  - Devices: 16xA100 # e.g., 16xA100 80GB
+  - Interconnect topology: NVLink  # e.g., NVLink, PCIe, custom
+  - Memory per device: 80GB
+  - Bandwidth per device: 1.8TB/s
 - Objectives:
   - Primary: {latency|throughput|balanced}
-  - Max acceptable latency: {latency_ms}  # optional
-  - Minimum throughput: {tokens_per_sec}  # optional
+  - Max acceptable latency: 500ms # optional
+  - Minimum throughput: 100tokens/ms  # optional
 - Workload:
-  - Batch size: {batch_size}
-  - Sequence length: {sequence_length}
+  - Batch size: 128
+  - Sequence length: 1024
   - Prefill or streaming decode mode
 
 [Constraints]
