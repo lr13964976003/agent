@@ -3,7 +3,7 @@ RESOURCES
 
 ---
 
-You have been provided with a parallelism strategy deployment method file of LLM by previous agent. 
+You have been provided with a DAG of LLM by previous agent. 
 
 TASK
 
@@ -49,7 +49,7 @@ Is this DAG incorrect. If incorrect, where to modify.
 
 If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the DAG in JSON format.
 
-You only need to save the final parallel strategy deployment plan  at the {save_path} and delete other intermediate result files.
+You only need to save the DAG at the {save_path} and delete other intermediate result files.
 
 How we would grade this:
 
