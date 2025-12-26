@@ -64,7 +64,7 @@ KNOWLEDGE = [
     "knowledge/04_tensor_parallelism.md",
     "knowledge/04_expert_parallelism.md",
     "knowledge/04_data_parallelism.md",
-    "knowledge/04_pipeline_parallelism.md",
+    "knowledge/04_pipeline_parallelism.md"
 ]
 
 def build_agent(
