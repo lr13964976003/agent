@@ -100,7 +100,7 @@ def main():
     GMT = build_task(prompts[0], expected_outputs[0], GMA)
 
 	# Performance_Evaluation_Agent
-    PEA = Researcher("openai/Kimi-K2",tools[1])
+    PEA = Engineer("openai/Kimi-K2",tools[1])
     PET = build_task(prompts[1], expected_outputs[1], PEA)
 
 	# Generate_DAG_Agent
