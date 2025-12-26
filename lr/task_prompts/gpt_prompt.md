@@ -15,7 +15,6 @@ You are an Inference Parallel Strategy DAG Engineer. Your goal is to generate a 
   - Memory per device: 80GB
   - Bandwidth per device: 1.8TB/s
 - Objectives:
-  - Primary:  500ms | 100tokens/ms | balanced
   - Max acceptable latency: 500ms # optional
   - Minimum throughput: 100tokens/ms  # optional
 - Workload:
