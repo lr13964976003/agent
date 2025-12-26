@@ -2,7 +2,7 @@ RESOURCES
 
 ---
 
-You have been provided with a parallelism strategy deployment method file of LLM by previous agent.  
+You have been provided with a parallelism strategy deployment method file of LLM by previous agent located at {save_path}.  
 
 TASK
 
@@ -56,9 +56,9 @@ SUBMISSION
 
 The generated DAG should be saved in {save_path}. 
 
-Only the final graphviz codes need to be saved in DOT format.<<<需要提交graphviz代码>>>
+Only the final graphviz codes in DOT forma need to be saved t.<<<需要提交graphviz代码>>>
 
-Only the final images need to be saved in SVG format. <<<指定图像保存格式为svg>>>
+Only the final images in SVG format need to be saved . <<<指定图像保存格式为svg>>>
 
 <<<用评分标准约束Agent行为>>>
 
