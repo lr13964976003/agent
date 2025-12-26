@@ -37,9 +37,9 @@ Has this parallel strategy deployment plan met the basic performance requirement
 
 Has this parallel strategy deployment plan achieved the optimal outcome under the current environment. If not, how to modify
 
-Save the nodes that need to be modified in markdown format at the {save_path}.
+You only need to save the final parallel strategy deployment plan in markdown format at the {save_path} and delete other intermediate result files.
 
-If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method in JSON format.
+If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method in markdown format.
 
 ---
 
