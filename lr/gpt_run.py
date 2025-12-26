@@ -61,7 +61,7 @@ def main():
         "knowledge/04_data_parallelism.md",
         "knowledge/04_pipeline_parallelism.md"
     ]
-    agent = build_agent("openai/Kimi-K2",tools[0],KNOWLEDGE)
+    agent = build_agent("openai/Kimi-K2",tools[0],KNOWLEDGE[2])
     task = build_task(prompts[0], expected_outputs, agent)
     task.run()
     return 
