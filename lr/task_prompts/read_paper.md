@@ -42,7 +42,7 @@ SUBMISSION
 
 ---
 
-The deployment file should be saved in {save_path}.
+The refined content of the paper should be saved in {save_path}.
 
 You don't need to submit the complete content because it is too large. Instead, you should submit the save paths of the content you generated in Markdown format. <<<提交路径而不是content>>>
 
