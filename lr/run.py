@@ -31,10 +31,37 @@ def fetch_prompt_local(slug:str, inputs:dict) -> str:
 def main():
     MAX_ITER = 2
 
-    variant = {
+    variant = {            
+		    "read_paper": {
+                "slug": "read_paper",
+                "inputs": {
+                    "paper_path": "../papers/EP/paper.md",
+                    "knowledge_path": "../knowledges/llm_parallel_strategies.md",
+                    "save_path": f"../outputs/{submission_dir}"
+                    },
+                "tools": [
+                    FileReadTool(),
+                    FileWriterTool(),
+                    AppendFileTool(),
+                    CommandTool()
+                    ]
+                },
+            "check_paper": {
+                "slug" : "check_paper",
+                "inputs": {
+                    "origin_paper_path" : "../papers/EP/paper.md",
+					"save_path": f"../outputs/{submission_dir}"
+                    },
+                "tools": [
+                    FileReadTool(),
+                    FileWriterTool(),
+                    AppendFileTool(),
+                    CommandTool(),
+                    SearchFileTool()
+                    ]
+                },
 		    "generate_method": {
                 "slug": "generate_method",
-                "version": 1,
                 "inputs": {
 					"task_path": "./inputs/task.md",
 					"knowledge_path": "./knowledge/moe_parallelism.md",
@@ -49,7 +76,6 @@ def main():
                  },
 		     "check_method": {
                  "slug": "performance_evaluation",
-                 "version": 1,
                  "inputs": {
 					 "task_path": "./inputs/task.md",
 					 "knowledge_path": "./knowledge/moe_parallelism.md",
@@ -64,7 +90,6 @@ def main():
                  },
             "generate_dag": {
                 "slug": "generate_dag",
-                "version": 1,
                 "inputs": {
                     "save_path": f"./outputs/{submission_dir}"
                     },
@@ -78,7 +103,6 @@ def main():
                 },
              "check_dag": {
                  "slug": "check_dag",
-                 "version": 1,
                  "inputs": {
                      "save_path": f"./outputs/{submission_dir}"
                      },
