@@ -36,7 +36,7 @@ def main():
                 "slug": "read_paper",
                 "inputs": {
                     "paper_path": "./papers/EP/paper.md",
-                    "knowledge_path": "./knowledge/moe_parallelism.md",
+                    "knowledge_path": "./knowledge/llm_knowledge.md",
                     "save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
@@ -50,6 +50,7 @@ def main():
                 "slug" : "check_paper",
                 "inputs": {
                     "origin_paper_path" : "./papers/EP/paper.md",
+					"knowledge_path": "./knowledge/llm_knowledge.md",
 					"save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
@@ -64,7 +65,7 @@ def main():
                 "slug": "generate_method",
                 "inputs": {
 					"task_path": "./inputs/task.md",
-					"knowledge_path": "./knowledge/moe_parallelism.md",
+					"knowledge_path": "./knowledge/llm_knowledge.md",
                     "save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
@@ -78,7 +79,7 @@ def main():
                  "slug": "performance_evaluation",
                  "inputs": {
 					 "task_path": "./inputs/task.md",
-					 "knowledge_path": "./knowledge/moe_parallelism.md",
+					 "knowledge_path": "./knowledge/llm_knowledge.md",
                      "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
