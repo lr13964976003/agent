@@ -155,7 +155,7 @@ def main():
 
 
     # Method_Loop
-    method_loop = ReviewLoop(worker=GMA, reviewer=PEA, work_task=GMT, review_task=PET, inputs=paper_result)
+    method_loop = ReviewLoop(worker=GMA, reviewer=PEA, work_task=GMT, review_task=PET)
     method_result = method_loop.run()
 
     # DAG_Loop
