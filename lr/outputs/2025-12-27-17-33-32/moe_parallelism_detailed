@@ -1,0 +1,166 @@
+// MoE Model Parallelism Deployment DAG
+digraph {
+	bgcolor=white rankdir=TB size="30,40"
+	node [fontname=Arial fontsize=10]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	subgraph cluster_layer1 {
+		fillcolor=lightgray label="Layer 1 (PP Stage 1)" style="rounded,filled"
+		sp_split_1 [label="SP Split\nGPU: 0-1\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=512]" fillcolor=lightyellow shape=parallelogram]
+		attn_q_1 [label="Attention Q Projection\nGPU: 0\nTP Rank 0\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_q_1_tp1 [label="Attention Q Projection\nGPU: 1\nTP Rank 1\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_k_1 [label="Attention K Projection\nGPU: 0\nTP Rank 0\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_k_1_tp1 [label="Attention K Projection\nGPU: 1\nTP Rank 1\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_v_1 [label="Attention V Projection\nGPU: 0\nTP Rank 0\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_v_1_tp1 [label="Attention V Projection\nGPU: 1\nTP Rank 1\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_comp_1 [label="Attention Computation\nGPU: 0\nTP Rank 0\nInput: [batch_size=128, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_comp_1_tp1 [label="Attention Computation\nGPU: 1\nTP Rank 1\nInput: [batch_size=128, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_1 [label="Attention Output Proj\nGPU: 0\nTP Rank 0\nInput: [batch_size=128, seq_len=5120, dim=256]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_1_tp1 [label="Attention Output Proj\nGPU: 1\nTP Rank 1\nInput: [batch_size=128, seq_len=5120, dim=256]\nOutput: [batch_size=128, seq_len=5120, dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_allreduce_1 [label="TP All-Reduce\nGPU: 0-1\nInput: [batch_size=128, seq_len=5120, dim=256]\nOutput: [batch_size=128, seq_len=5120, dim=512]" fillcolor=lightblue shape=ellipse]
+		gate_1 [label="Expert Gate\nGPU: 0-1\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, num_experts=16]" fillcolor=lightyellow shape=parallelogram]
+		expert_0_1 [label="Expert 0\nGPU: 2\nEP Rank 0\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=512]" fillcolor=lightgreen shape=rectangle]
+		expert_1_1 [label="Expert 1\nGPU: 3\nEP Rank 1\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=512]" fillcolor=lightgreen shape=rectangle]
+		expert_2_1 [label="Expert 2\nGPU: 4\nEP Rank 2\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=512]" fillcolor=lightgreen shape=rectangle]
+		expert_3_1 [label="Expert 3\nGPU: 5\nEP Rank 3\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=5120, dim=512]" fillcolor=lightgreen shape=rectangle]
+		expert_agg_1 [label="Expert Aggregation\nGPU: 0-1\nInput: [batch_size=128, seq_len=5120, dim=512] x 16\nOutput: [batch_size=128, seq_len=5120, dim=512]" fillcolor=lightyellow shape=parallelogram]
+		sp_merge_1 [label="SP Merge\nGPU: 0-1\nInput: [batch_size=128, seq_len=5120, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightyellow shape=parallelogram]
+	}
+	pp_comm_1_2 [label="PP Communication\nLayer 1 -> 2\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_2_3 [label="PP Communication\nLayer 2 -> 3\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_3_4 [label="PP Communication\nLayer 3 -> 4\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_4_5 [label="PP Communication\nLayer 4 -> 5\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_5_6 [label="PP Communication\nLayer 5 -> 6\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_6_7 [label="PP Communication\nLayer 6 -> 7\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_7_8 [label="PP Communication\nLayer 7 -> 8\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_8_9 [label="PP Communication\nLayer 8 -> 9\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_9_10 [label="PP Communication\nLayer 9 -> 10\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_10_11 [label="PP Communication\nLayer 10 -> 11\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_11_12 [label="PP Communication\nLayer 11 -> 12\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_12_13 [label="PP Communication\nLayer 12 -> 13\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_13_14 [label="PP Communication\nLayer 13 -> 14\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_14_15 [label="PP Communication\nLayer 14 -> 15\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	pp_comm_15_16 [label="PP Communication\nLayer 15 -> 16\nGPU: All GPUs\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightblue shape=ellipse]
+	output [label="Output\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, vocab_size=50000]" fillcolor=lightblue shape=ellipse]
+	subgraph cluster_layer2 {
+		fillcolor=lightgray label="Layer 2 (PP Stage 2)" style="rounded,filled"
+		layer_2_block [label="Layer 2 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer3 {
+		fillcolor=lightgray label="Layer 3 (PP Stage 3)" style="rounded,filled"
+		layer_3_block [label="Layer 3 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer4 {
+		fillcolor=lightgray label="Layer 4 (PP Stage 4)" style="rounded,filled"
+		layer_4_block [label="Layer 4 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer5 {
+		fillcolor=lightgray label="Layer 5 (PP Stage 5)" style="rounded,filled"
+		layer_5_block [label="Layer 5 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer6 {
+		fillcolor=lightgray label="Layer 6 (PP Stage 6)" style="rounded,filled"
+		layer_6_block [label="Layer 6 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer7 {
+		fillcolor=lightgray label="Layer 7 (PP Stage 7)" style="rounded,filled"
+		layer_7_block [label="Layer 7 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer8 {
+		fillcolor=lightgray label="Layer 8 (PP Stage 8)" style="rounded,filled"
+		layer_8_block [label="Layer 8 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer9 {
+		fillcolor=lightgray label="Layer 9 (PP Stage 9)" style="rounded,filled"
+		layer_9_block [label="Layer 9 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer10 {
+		fillcolor=lightgray label="Layer 10 (PP Stage 10)" style="rounded,filled"
+		layer_10_block [label="Layer 10 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer11 {
+		fillcolor=lightgray label="Layer 11 (PP Stage 11)" style="rounded,filled"
+		layer_11_block [label="Layer 11 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer12 {
+		fillcolor=lightgray label="Layer 12 (PP Stage 12)" style="rounded,filled"
+		layer_12_block [label="Layer 12 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer13 {
+		fillcolor=lightgray label="Layer 13 (PP Stage 13)" style="rounded,filled"
+		layer_13_block [label="Layer 13 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer14 {
+		fillcolor=lightgray label="Layer 14 (PP Stage 14)" style="rounded,filled"
+		layer_14_block [label="Layer 14 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer15 {
+		fillcolor=lightgray label="Layer 15 (PP Stage 15)" style="rounded,filled"
+		layer_15_block [label="Layer 15 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	subgraph cluster_layer16 {
+		fillcolor=lightgray label="Layer 16 (PP Stage 16)" style="rounded,filled"
+		layer_16_block [label="Layer 16 Complete\nGPU: 0-255\nInput: [batch_size=128, seq_len=10240, dim=512]\nOutput: [batch_size=128, seq_len=10240, dim=512]" fillcolor=lightgreen shape=rectangle]
+	}
+	dp_replicas [label="Data Parallelism\n7 Additional Replicas\nGPU: 256-2047\nEach replica: 256 GPUs" fillcolor=lightcoral shape=ellipse]
+	input -> sp_split_1
+	sp_split_1 -> attn_q_1
+	sp_split_1 -> attn_q_1_tp1
+	sp_split_1 -> attn_k_1
+	sp_split_1 -> attn_k_1_tp1
+	sp_split_1 -> attn_v_1
+	sp_split_1 -> attn_v_1_tp1
+	attn_q_1 -> attn_comp_1
+	attn_q_1_tp1 -> attn_comp_1_tp1
+	attn_k_1 -> attn_comp_1
+	attn_k_1_tp1 -> attn_comp_1_tp1
+	attn_v_1 -> attn_comp_1
+	attn_v_1_tp1 -> attn_comp_1_tp1
+	attn_comp_1 -> attn_out_1
+	attn_comp_1_tp1 -> attn_out_1_tp1
+	attn_out_1 -> attn_allreduce_1
+	attn_out_1_tp1 -> attn_allreduce_1
+	attn_allreduce_1 -> gate_1 [style=dashed]
+	attn_allreduce_1 -> expert_0_1
+	attn_allreduce_1 -> expert_1_1
+	attn_allreduce_1 -> expert_2_1
+	attn_allreduce_1 -> expert_3_1
+	expert_0_1 -> expert_agg_1
+	expert_1_1 -> expert_agg_1
+	expert_2_1 -> expert_agg_1
+	expert_3_1 -> expert_agg_1
+	expert_agg_1 -> sp_merge_1
+	sp_merge_1 -> pp_comm_1_2
+	pp_comm_1_2 -> layer_2_block
+	layer_2_block -> pp_comm_2_3
+	pp_comm_2_3 -> layer_3_block
+	layer_3_block -> pp_comm_3_4
+	pp_comm_3_4 -> layer_4_block
+	layer_4_block -> pp_comm_4_5
+	pp_comm_4_5 -> layer_5_block
+	layer_5_block -> pp_comm_5_6
+	pp_comm_5_6 -> layer_6_block
+	layer_6_block -> pp_comm_6_7
+	pp_comm_6_7 -> layer_7_block
+	layer_7_block -> pp_comm_7_8
+	pp_comm_7_8 -> layer_8_block
+	layer_8_block -> pp_comm_8_9
+	pp_comm_8_9 -> layer_9_block
+	layer_9_block -> pp_comm_9_10
+	pp_comm_9_10 -> layer_10_block
+	layer_10_block -> pp_comm_10_11
+	pp_comm_10_11 -> layer_11_block
+	layer_11_block -> pp_comm_11_12
+	pp_comm_11_12 -> layer_12_block
+	layer_12_block -> pp_comm_12_13
+	pp_comm_12_13 -> layer_13_block
+	layer_13_block -> pp_comm_13_14
+	pp_comm_13_14 -> layer_14_block
+	layer_14_block -> pp_comm_14_15
+	pp_comm_14_15 -> layer_15_block
+	layer_15_block -> pp_comm_15_16
+	pp_comm_15_16 -> layer_16_block
+	layer_16_block -> output
+}

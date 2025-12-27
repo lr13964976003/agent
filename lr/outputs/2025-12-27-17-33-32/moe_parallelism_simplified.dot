@@ -1,0 +1,97 @@
+digraph {
+	graph [bb="0,0,487.25,916.02",
+		bgcolor=white,
+		rankdir=TB,
+		size="20,30"
+	];
+	node [fontname=Arial,
+		fontsize=12,
+		label="\N"
+	];
+	subgraph cluster_layer_detail {
+		graph [bb="8,159.08,385,823.17",
+			fillcolor=lightgray,
+			label="Layer 1 Detail (Representative of all 16 layers)",
+			lheight=0.21,
+			lp="196.5,811.67",
+			lwidth=4.67,
+			style="rounded,filled"
+		];
+		sp_split	[fillcolor=lightyellow,
+			height=1.3056,
+			label="SP Split\nGPU: 0-1\nSeq len: 10240 → 5120",
+			pos="196,745.17",
+			shape=parallelogram,
+			width=4.1182];
+		attn_tp	[fillcolor=lightgreen,
+			height=0.65278,
+			label="Attention (TP=2)\nGPU: 0-1\nDim: 512 → 256 each",
+			pos="196,638.67",
+			shape=rectangle,
+			width=1.8333];
+		sp_split -> attn_tp	[pos="e,196,662.39 196,698.03 196,689.44 196,680.62 196,672.53"];
+		tp_allreduce	[fillcolor=lightblue,
+			height=0.66782,
+			label="TP All-Reduce\nGPU: 0-1",
+			pos="196,555.12",
+			shape=ellipse,
+			width=1.866];
+		attn_tp -> tp_allreduce	[pos="e,196,579.28 196,614.95 196,607.05 196,598 196,589.42"];
+		gate	[fillcolor=lightyellow,
+			height=1.3056,
+			label="Expert Gate\nGPU: 0-1\nSelects experts",
+			pos="118,448.08",
+			shape=parallelogram,
+			width=2.8223];
+		tp_allreduce -> gate	[pos="e,152.35,495.34 179.27,531.59 173.11,523.3 165.84,513.51 158.51,503.63",
+			style=dashed];
+		experts	[fillcolor=lightgreen,
+			height=0.65278,
+			label="Expert Computation\nGPU: 2-17 (16 experts)\nEP=16",
+			pos="307,448.08",
+			shape=rectangle,
+			width=1.9306];
+		tp_allreduce -> experts	[pos="e,282.88,471.91 219,532.36 235.33,516.9 257.47,495.95 275.45,478.94"];
+		expert_agg	[fillcolor=lightyellow,
+			height=0.94444,
+			label="Expert Aggregation\nGPU: 0-1",
+			pos="241,331.08",
+			shape=parallelogram,
+			width=3.427];
+		experts -> expert_agg	[pos="e,260.01,365.21 293.96,424.36 285.71,409.98 274.78,390.95 265,373.91"];
+		sp_merge	[fillcolor=lightyellow,
+			height=1.3056,
+			label="SP Merge\nGPU: 0-1\nSeq len: 5120 → 10240",
+			pos="229,214.08",
+			shape=parallelogram,
+			width=4.1182];
+		expert_agg -> sp_merge	[pos="e,233.8,261.1 237.53,296.82 236.69,288.81 235.78,280.03 234.87,271.29"];
+	}
+	input	[fillcolor=lightblue,
+		height=0.66782,
+		label="Input Batch\n128 sequences, 10240 tokens",
+		pos="196,873.59",
+		shape=ellipse,
+		width=3.457];
+	input -> sp_split	[pos="e,196,792.26 196,849.4 196,836.18 196,818.99 196,802.44"];
+	pipeline	[fillcolor=lightgreen,
+		height=0.65278,
+		label="Pipeline Stages 2-16\nPP=16\nGPU: 18-255",
+		pos="229,107.58",
+		shape=rectangle,
+		width=1.7778];
+	sp_merge -> pipeline	[pos="e,229,131.3 229,166.94 229,158.35 229,149.54 229,141.44"];
+	output	[fillcolor=lightblue,
+		height=0.66782,
+		label="Output\n128 sequences, 10240 tokens",
+		pos="229,24.042",
+		shape=ellipse,
+		width=3.457];
+	pipeline -> output	[pos="e,229,48.2 229,83.869 229,75.963 229,66.921 229,58.337"];
+	dp	[fillcolor=lightcoral,
+		height=1.1785,
+		label="Data Parallelism\nDP=8\nGPU: 256-2047\n8 replicas",
+		pos="413,873.59",
+		shape=ellipse,
+		width=2.0624];
+}

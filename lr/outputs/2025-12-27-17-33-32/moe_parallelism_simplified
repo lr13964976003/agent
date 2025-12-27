@@ -1,0 +1,28 @@
+// MoE Model Parallelism Deployment DAG - Simplified
+digraph {
+	bgcolor=white rankdir=TB size="20,30"
+	node [fontname=Arial fontsize=12]
+	input [label="Input Batch\n128 sequences, 10240 tokens" fillcolor=lightblue shape=ellipse]
+	subgraph cluster_layer_detail {
+		fillcolor=lightgray label="Layer 1 Detail (Representative of all 16 layers)" style="rounded,filled"
+		sp_split [label="SP Split\nGPU: 0-1\nSeq len: 10240 → 5120" fillcolor=lightyellow shape=parallelogram]
+		attn_tp [label="Attention (TP=2)\nGPU: 0-1\nDim: 512 → 256 each" fillcolor=lightgreen shape=rectangle]
+		tp_allreduce [label="TP All-Reduce\nGPU: 0-1" fillcolor=lightblue shape=ellipse]
+		gate [label="Expert Gate\nGPU: 0-1\nSelects experts" fillcolor=lightyellow shape=parallelogram]
+		experts [label="Expert Computation\nGPU: 2-17 (16 experts)\nEP=16" fillcolor=lightgreen shape=rectangle]
+		expert_agg [label="Expert Aggregation\nGPU: 0-1" fillcolor=lightyellow shape=parallelogram]
+		sp_merge [label="SP Merge\nGPU: 0-1\nSeq len: 5120 → 10240" fillcolor=lightyellow shape=parallelogram]
+	}
+	pipeline [label="Pipeline Stages 2-16\nPP=16\nGPU: 18-255" fillcolor=lightgreen shape=rectangle]
+	dp [label="Data Parallelism\nDP=8\nGPU: 256-2047\n8 replicas" fillcolor=lightcoral shape=ellipse]
+	output [label="Output\n128 sequences, 10240 tokens" fillcolor=lightblue shape=ellipse]
+	input -> sp_split
+	sp_split -> attn_tp
+	attn_tp -> tp_allreduce
+	tp_allreduce -> gate [style=dashed]
+	tp_allreduce -> experts
+	experts -> expert_agg
+	expert_agg -> sp_merge
+	sp_merge -> pipeline
+	pipeline -> output
+}
