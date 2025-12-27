@@ -1,6 +1,3 @@
-You are tasked with some tasks. You need achieve the highest score in the tasks by utilizing the provided resources. Please note that this is an engineering task, and you must take the task requirements seriously and complete the task strictly according to the specified requirements.
-
-
 
 RESOURCES
 
