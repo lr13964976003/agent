@@ -35,9 +35,9 @@ def main():
 		    "read_paper": {
                 "slug": "read_paper",
                 "inputs": {
-                    "paper_path": "../papers/EP/paper.md",
-                    "knowledge_path": "../knowledges/llm_parallel_strategies.md",
-                    "save_path": f"../outputs/{submission_dir}"
+                    "paper_path": "./papers/EP/paper.md",
+                    "knowledge_path": "./knowledge/moe_parallelism.md",
+                    "save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
                     FileReadTool(),
@@ -49,8 +49,8 @@ def main():
             "check_paper": {
                 "slug" : "check_paper",
                 "inputs": {
-                    "origin_paper_path" : "../papers/EP/paper.md",
-					"save_path": f"../outputs/{submission_dir}"
+                    "origin_paper_path" : "./papers/EP/paper.md",
+					"save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
                     FileReadTool(),
@@ -117,28 +117,45 @@ def main():
             }
     prompts = []
     tools = []
-    expected_outputs = ["The path of parallelism strategy deployment method file", "Performance Evaluation and Modify", "The path of graphviz code describing the DAG", "DAG Modify Method"]
+    expected_outputs = ["The path of refined paper", "check result",
+						"The path of parallelism strategy deployment method file", "Performance Evaluation and Modify", 
+						"The path of graphviz code describing the DAG", "DAG Modify Method"]
+	
     for k in variant.keys():
         prompts.append(fetch_prompt_local(variant[k]["slug"], variant[k]["inputs"]))
         tools.append(variant[k]["tools"])
+	# Read_Paper_Agent
+    RPA = Researcher("openai/Kimi-K2",tools[0])
+    RPT = build_task(prompts[0], expected_outputs[0], RPA)
+	
+	# Check_Paper_Agent
+    CPA = Researcher("openai/Kimi-K2",tools[1])
+    CPT = build_task(prompts[1], expected_outputs[1], CPA)
+	
 	# Generate_Method_Agent
-    GMA = Researcher("openai/Kimi-K2",tools[0])
-    GMT = build_task(prompts[0], expected_outputs[0], GMA)
+    GMA = Researcher("openai/Kimi-K2",tools[2])
+    GMT = build_task(prompts[2], expected_outputs[2], GMA)
 
 	# Performance_Evaluation_Agent
-    PEA = Engineer("openai/Kimi-K2",tools[1])
-    PET = build_task(prompts[1], expected_outputs[1], PEA)
+    PEA = Engineer("openai/Kimi-K2",tools[3])
+    PET = build_task(prompts[3], expected_outputs[3], PEA)
 
 	# Generate_DAG_Agent
-    GDA = Engineer("openai/Kimi-K2",tools[2])
-    GDT = build_task(prompts[2], expected_outputs[2], PEA)
+    GDA = Engineer("openai/Kimi-K2",tools[4])
+    GDT = build_task(prompts[4], expected_outputs[4], PEA)
 
 	# Check_DAG_Agent
-    CDA = Engineer("openai/Kimi-K2",tools[3])
-    CDT = build_task(prompts[3], expected_outputs[3], CDA)
+    CDA = Engineer("openai/Kimi-K2",tools[5])
+    CDT = build_task(prompts[5], expected_outputs[5], CDA)
+
+	# Paper_Loop
+	paper_loop = ReviewLoop(worker=RPA, reviewer=CPA, work_task=RPT, review_task=CPT)
+    paper_result = paper_loop.run()
+
+    return
 
     # Method_Loop
-    method_loop = ReviewLoop(worker=GMA, reviewer=PEA, work_task=GMT, review_task=PET)
+    method_loop = ReviewLoop(worker=GMA, reviewer=PEA, work_task=GMT, review_task=PET, inputs=paper_result)
     method_result = method_loop.run()
 
     # DAG_Loop
