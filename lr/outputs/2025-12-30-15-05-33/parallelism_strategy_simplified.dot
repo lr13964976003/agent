@@ -1,0 +1,160 @@
+// LLM Parallelism Strategy - Simplified View
+digraph {
+	dpi=300 rankdir=TB size="30,30"
+	node [fontname=Arial fontsize=12]
+	edge [fontname=Arial fontsize=10]
+	input [label="Input Batch\n[128, seq_len, 512]" fillcolor=lightblue shape=ellipse style=filled]
+	subgraph cluster_dp_0 {
+		label="DP Group 0"
+		GPU_Cluster_PP1_DP0 [label="PP Stage 1\n16 EP × 4 TP = 64 GPUs\nLayers 1-8" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP1_DP0 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP1_DP0 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP1_DP0 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP1_DP0 -> TP_Comm_PP1_DP0
+		TP_Comm_PP1_DP0 -> EP_Cluster_PP1_DP0
+		Gate_PP1_DP0 -> EP_Cluster_PP1_DP0 [style=dashed]
+		GPU_Cluster_PP2_DP0 [label="PP Stage 2\n16 EP × 4 TP = 64 GPUs\nLayers 9-16" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP2_DP0 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP2_DP0 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP2_DP0 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP2_DP0 -> TP_Comm_PP2_DP0
+		TP_Comm_PP2_DP0 -> EP_Cluster_PP2_DP0
+		Gate_PP2_DP0 -> EP_Cluster_PP2_DP0 [style=dashed]
+		EP_Cluster_PP1_DP0 -> GPU_Cluster_PP2_DP0 [label="PP Communication" style=bold]
+	}
+	subgraph cluster_dp_1 {
+		label="DP Group 1"
+		GPU_Cluster_PP1_DP1 [label="PP Stage 1\n16 EP × 4 TP = 64 GPUs\nLayers 1-8" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP1_DP1 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP1_DP1 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP1_DP1 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP1_DP1 -> TP_Comm_PP1_DP1
+		TP_Comm_PP1_DP1 -> EP_Cluster_PP1_DP1
+		Gate_PP1_DP1 -> EP_Cluster_PP1_DP1 [style=dashed]
+		GPU_Cluster_PP2_DP1 [label="PP Stage 2\n16 EP × 4 TP = 64 GPUs\nLayers 9-16" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP2_DP1 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP2_DP1 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP2_DP1 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP2_DP1 -> TP_Comm_PP2_DP1
+		TP_Comm_PP2_DP1 -> EP_Cluster_PP2_DP1
+		Gate_PP2_DP1 -> EP_Cluster_PP2_DP1 [style=dashed]
+		EP_Cluster_PP1_DP1 -> GPU_Cluster_PP2_DP1 [label="PP Communication" style=bold]
+	}
+	subgraph cluster_dp_2 {
+		label="DP Group 2"
+		GPU_Cluster_PP1_DP2 [label="PP Stage 1\n16 EP × 4 TP = 64 GPUs\nLayers 1-8" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP1_DP2 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP1_DP2 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP1_DP2 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP1_DP2 -> TP_Comm_PP1_DP2
+		TP_Comm_PP1_DP2 -> EP_Cluster_PP1_DP2
+		Gate_PP1_DP2 -> EP_Cluster_PP1_DP2 [style=dashed]
+		GPU_Cluster_PP2_DP2 [label="PP Stage 2\n16 EP × 4 TP = 64 GPUs\nLayers 9-16" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP2_DP2 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP2_DP2 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP2_DP2 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP2_DP2 -> TP_Comm_PP2_DP2
+		TP_Comm_PP2_DP2 -> EP_Cluster_PP2_DP2
+		Gate_PP2_DP2 -> EP_Cluster_PP2_DP2 [style=dashed]
+		EP_Cluster_PP1_DP2 -> GPU_Cluster_PP2_DP2 [label="PP Communication" style=bold]
+	}
+	subgraph cluster_dp_3 {
+		label="DP Group 3"
+		GPU_Cluster_PP1_DP3 [label="PP Stage 1\n16 EP × 4 TP = 64 GPUs\nLayers 1-8" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP1_DP3 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP1_DP3 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP1_DP3 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP1_DP3 -> TP_Comm_PP1_DP3
+		TP_Comm_PP1_DP3 -> EP_Cluster_PP1_DP3
+		Gate_PP1_DP3 -> EP_Cluster_PP1_DP3 [style=dashed]
+		GPU_Cluster_PP2_DP3 [label="PP Stage 2\n16 EP × 4 TP = 64 GPUs\nLayers 9-16" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP2_DP3 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP2_DP3 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP2_DP3 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP2_DP3 -> TP_Comm_PP2_DP3
+		TP_Comm_PP2_DP3 -> EP_Cluster_PP2_DP3
+		Gate_PP2_DP3 -> EP_Cluster_PP2_DP3 [style=dashed]
+		EP_Cluster_PP1_DP3 -> GPU_Cluster_PP2_DP3 [label="PP Communication" style=bold]
+	}
+	subgraph cluster_dp_4 {
+		label="DP Group 4"
+		GPU_Cluster_PP1_DP4 [label="PP Stage 1\n16 EP × 4 TP = 64 GPUs\nLayers 1-8" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP1_DP4 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP1_DP4 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP1_DP4 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP1_DP4 -> TP_Comm_PP1_DP4
+		TP_Comm_PP1_DP4 -> EP_Cluster_PP1_DP4
+		Gate_PP1_DP4 -> EP_Cluster_PP1_DP4 [style=dashed]
+		GPU_Cluster_PP2_DP4 [label="PP Stage 2\n16 EP × 4 TP = 64 GPUs\nLayers 9-16" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP2_DP4 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP2_DP4 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP2_DP4 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP2_DP4 -> TP_Comm_PP2_DP4
+		TP_Comm_PP2_DP4 -> EP_Cluster_PP2_DP4
+		Gate_PP2_DP4 -> EP_Cluster_PP2_DP4 [style=dashed]
+		EP_Cluster_PP1_DP4 -> GPU_Cluster_PP2_DP4 [label="PP Communication" style=bold]
+	}
+	subgraph cluster_dp_5 {
+		label="DP Group 5"
+		GPU_Cluster_PP1_DP5 [label="PP Stage 1\n16 EP × 4 TP = 64 GPUs\nLayers 1-8" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP1_DP5 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP1_DP5 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP1_DP5 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP1_DP5 -> TP_Comm_PP1_DP5
+		TP_Comm_PP1_DP5 -> EP_Cluster_PP1_DP5
+		Gate_PP1_DP5 -> EP_Cluster_PP1_DP5 [style=dashed]
+		GPU_Cluster_PP2_DP5 [label="PP Stage 2\n16 EP × 4 TP = 64 GPUs\nLayers 9-16" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP2_DP5 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP2_DP5 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP2_DP5 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP2_DP5 -> TP_Comm_PP2_DP5
+		TP_Comm_PP2_DP5 -> EP_Cluster_PP2_DP5
+		Gate_PP2_DP5 -> EP_Cluster_PP2_DP5 [style=dashed]
+		EP_Cluster_PP1_DP5 -> GPU_Cluster_PP2_DP5 [label="PP Communication" style=bold]
+	}
+	subgraph cluster_dp_6 {
+		label="DP Group 6"
+		GPU_Cluster_PP1_DP6 [label="PP Stage 1\n16 EP × 4 TP = 64 GPUs\nLayers 1-8" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP1_DP6 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP1_DP6 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP1_DP6 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP1_DP6 -> TP_Comm_PP1_DP6
+		TP_Comm_PP1_DP6 -> EP_Cluster_PP1_DP6
+		Gate_PP1_DP6 -> EP_Cluster_PP1_DP6 [style=dashed]
+		GPU_Cluster_PP2_DP6 [label="PP Stage 2\n16 EP × 4 TP = 64 GPUs\nLayers 9-16" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP2_DP6 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP2_DP6 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP2_DP6 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP2_DP6 -> TP_Comm_PP2_DP6
+		TP_Comm_PP2_DP6 -> EP_Cluster_PP2_DP6
+		Gate_PP2_DP6 -> EP_Cluster_PP2_DP6 [style=dashed]
+		EP_Cluster_PP1_DP6 -> GPU_Cluster_PP2_DP6 [label="PP Communication" style=bold]
+	}
+	subgraph cluster_dp_7 {
+		label="DP Group 7"
+		GPU_Cluster_PP1_DP7 [label="PP Stage 1\n16 EP × 4 TP = 64 GPUs\nLayers 1-8" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP1_DP7 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP1_DP7 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP1_DP7 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP1_DP7 -> TP_Comm_PP1_DP7
+		TP_Comm_PP1_DP7 -> EP_Cluster_PP1_DP7
+		Gate_PP1_DP7 -> EP_Cluster_PP1_DP7 [style=dashed]
+		GPU_Cluster_PP2_DP7 [label="PP Stage 2\n16 EP × 4 TP = 64 GPUs\nLayers 9-16" fillcolor=lightgreen shape=rectangle style=filled]
+		EP_Cluster_PP2_DP7 [label="Expert Parallel\n16 Experts × 1 GPU each\nMOE Computation" fillcolor=lightgreen shape=rectangle style=filled]
+		TP_Comm_PP2_DP7 [label="Tensor Parallel\n4-way All-Reduce\nAttention Heads" fillcolor=lightyellow shape=ellipse style=filled]
+		Gate_PP2_DP7 [label="MOE Gate\nExpert Selection\nTop-2 Routing" fillcolor=lightcoral shape=parallelogram style=filled]
+		GPU_Cluster_PP2_DP7 -> TP_Comm_PP2_DP7
+		TP_Comm_PP2_DP7 -> EP_Cluster_PP2_DP7
+		Gate_PP2_DP7 -> EP_Cluster_PP2_DP7 [style=dashed]
+		EP_Cluster_PP1_DP7 -> GPU_Cluster_PP2_DP7 [label="PP Communication" style=bold]
+	}
+	output [label="Output Batch\n[128, seq_len, 512]" fillcolor=lightpink shape=ellipse style=filled]
+	EP_Cluster_PP2_DP0 -> output
+	EP_Cluster_PP2_DP1 -> output
+	EP_Cluster_PP2_DP2 -> output
+	EP_Cluster_PP2_DP3 -> output
+	EP_Cluster_PP2_DP4 -> output
+	EP_Cluster_PP2_DP5 -> output
+	EP_Cluster_PP2_DP6 -> output
+	EP_Cluster_PP2_DP7 -> output
+}

@@ -1,0 +1,518 @@
+digraph "Parallel Strategy Deployment DAG" {
+	comment="Parallel Strategy Deployment DAG - Final Fixed Version"
+	rankdir=TB
+	size="100,100"
+	dpi="300"
+	node [fontname=Arial, fontsize=8]
+	
+	// Input Layer
+	subgraph cluster_input {
+		style=filled
+		fillcolor=lightgray
+		label="Input Layer"
+		input [fillcolor=lightgreen, label="Input\nInput: [batch_size=128, seq_len=?, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=32]", shape=rectangle, style=filled]
+	}
+	
+	// Pipeline Stage 0 (Layer 0) - GPUs 0-15
+	subgraph cluster_stage_0 {
+		style=filled
+		fillcolor=lightcyan
+		label="Pipeline Stage 0 (Layer 0) - GPUs 0-15"
+		
+		// MHA broken down into submodules
+		mha_0_q_proj [fillcolor=lightgreen, label="MHA Q Projection Layer 0\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_0_k_proj [fillcolor=lightgreen, label="MHA K Projection Layer 0\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_0_v_proj [fillcolor=lightgreen, label="MHA V Projection Layer 0\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_0_attn [fillcolor=lightgreen, label="MHA Attention Layer 0\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_0_out_proj [fillcolor=lightgreen, label="MHA Output Projection Layer 0\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		
+		gate_0 [fillcolor=lightyellow, label="Gate Layer 0\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, top_k=2, experts=16]", shape=parallelogram, style=filled]
+		
+		// Expert routing communication (ellipses)
+		comm_0_0 [fillcolor=lightblue, label="Route to Expert 0\nGPU: 0\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_1 [fillcolor=lightblue, label="Route to Expert 1\nGPU: 1\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_2 [fillcolor=lightblue, label="Route to Expert 2\nGPU: 2\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_3 [fillcolor=lightblue, label="Route to Expert 3\nGPU: 3\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_4 [fillcolor=lightblue, label="Route to Expert 4\nGPU: 4\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_5 [fillcolor=lightblue, label="Route to Expert 5\nGPU: 5\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_6 [fillcolor=lightblue, label="Route to Expert 6\nGPU: 6\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_7 [fillcolor=lightblue, label="Route to Expert 7\nGPU: 7\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_8 [fillcolor=lightblue, label="Route to Expert 8\nGPU: 8\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_9 [fillcolor=lightblue, label="Route to Expert 9\nGPU: 9\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_10 [fillcolor=lightblue, label="Route to Expert 10\nGPU: 10\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_11 [fillcolor=lightblue, label="Route to Expert 11\nGPU: 11\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_12 [fillcolor=lightblue, label="Route to Expert 12\nGPU: 12\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_13 [fillcolor=lightblue, label="Route to Expert 13\nGPU: 13\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_14 [fillcolor=lightblue, label="Route to Expert 14\nGPU: 14\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_0_15 [fillcolor=lightblue, label="Route to Expert 15\nGPU: 15\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		
+		// Expert computation (rectangles)
+		expert_0_0 [fillcolor=lightgreen, label="Expert 0 Layer 0\nGPU: 0\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_1 [fillcolor=lightgreen, label="Expert 1 Layer 0\nGPU: 1\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_2 [fillcolor=lightgreen, label="Expert 2 Layer 0\nGPU: 2\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_3 [fillcolor=lightgreen, label="Expert 3 Layer 0\nGPU: 3\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_4 [fillcolor=lightgreen, label="Expert 4 Layer 0\nGPU: 4\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_5 [fillcolor=lightgreen, label="Expert 5 Layer 0\nGPU: 5\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_6 [fillcolor=lightgreen, label="Expert 6 Layer 0\nGPU: 6\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_7 [fillcolor=lightgreen, label="Expert 7 Layer 0\nGPU: 7\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_8 [fillcolor=lightgreen, label="Expert 8 Layer 0\nGPU: 8\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_9 [fillcolor=lightgreen, label="Expert 9 Layer 0\nGPU: 9\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_10 [fillcolor=lightgreen, label="Expert 10 Layer 0\nGPU: 10\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_11 [fillcolor=lightgreen, label="Expert 11 Layer 0\nGPU: 11\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_12 [fillcolor=lightgreen, label="Expert 12 Layer 0\nGPU: 12\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_13 [fillcolor=lightgreen, label="Expert 13 Layer 0\nGPU: 13\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_14 [fillcolor=lightgreen, label="Expert 14 Layer 0\nGPU: 14\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_0_15 [fillcolor=lightgreen, label="Expert 15 Layer 0\nGPU: 15\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		
+		// Aggregation (parallelogram)
+		agg_0 [fillcolor=lightyellow, label="Aggregate Experts Layer 0\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, experts=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=parallelogram, style=filled]
+	}
+	
+	// Pipeline Stage 1 (Layer 1) - GPUs 16-31
+	subgraph cluster_stage_1 {
+		style=filled
+		fillcolor=lightcyan
+		label="Pipeline Stage 1 (Layer 1) - GPUs 16-31"
+		
+		// MHA broken down into submodules
+		mha_1_q_proj [fillcolor=lightgreen, label="MHA Q Projection Layer 1\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_1_k_proj [fillcolor=lightgreen, label="MHA K Projection Layer 1\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_1_v_proj [fillcolor=lightgreen, label="MHA V Projection Layer 1\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_1_attn [fillcolor=lightgreen, label="MHA Attention Layer 1\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_1_out_proj [fillcolor=lightgreen, label="MHA Output Projection Layer 1\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		
+		gate_1 [fillcolor=lightyellow, label="Gate Layer 1\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, top_k=2, experts=16]", shape=parallelogram, style=filled]
+		
+		// Expert routing communication (ellipses)
+		comm_1_0 [fillcolor=lightblue, label="Route to Expert 0\nGPU: 16\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_1 [fillcolor=lightblue, label="Route to Expert 1\nGPU: 17\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_2 [fillcolor=lightblue, label="Route to Expert 2\nGPU: 18\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_3 [fillcolor=lightblue, label="Route to Expert 3\nGPU: 19\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_4 [fillcolor=lightblue, label="Route to Expert 4\nGPU: 20\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_5 [fillcolor=lightblue, label="Route to Expert 5\nGPU: 21\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_6 [fillcolor=lightblue, label="Route to Expert 6\nGPU: 22\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_7 [fillcolor=lightblue, label="Route to Expert 7\nGPU: 23\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_8 [fillcolor=lightblue, label="Route to Expert 8\nGPU: 24\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_9 [fillcolor=lightblue, label="Route to Expert 9\nGPU: 25\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_10 [fillcolor=lightblue, label="Route to Expert 10\nGPU: 26\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_11 [fillcolor=lightblue, label="Route to Expert 11\nGPU: 27\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_12 [fillcolor=lightblue, label="Route to Expert 12\nGPU: 28\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_13 [fillcolor=lightblue, label="Route to Expert 13\nGPU: 29\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_14 [fillcolor=lightblue, label="Route to Expert 14\nGPU: 30\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		comm_1_15 [fillcolor=lightblue, label="Route to Expert 15\nGPU: 31\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		
+		// Expert computation (rectangles)
+		expert_1_0 [fillcolor=lightgreen, label="Expert 0 Layer 1\nGPU: 16\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_1 [fillcolor=lightgreen, label="Expert 1 Layer 1\nGPU: 17\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_2 [fillcolor=lightgreen, label="Expert 2 Layer 1\nGPU: 18\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_3 [fillcolor=lightgreen, label="Expert 3 Layer 1\nGPU: 19\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_4 [fillcolor=lightgreen, label="Expert 4 Layer 1\nGPU: 20\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_5 [fillcolor=lightgreen, label="Expert 5 Layer 1\nGPU: 21\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_6 [fillcolor=lightgreen, label="Expert 6 Layer 1\nGPU: 22\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_7 [fillcolor=lightgreen, label="Expert 7 Layer 1\nGPU: 23\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_8 [fillcolor=lightgreen, label="Expert 8 Layer 1\nGPU: 24\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_9 [fillcolor=lightgreen, label="Expert 9 Layer 1\nGPU: 25\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_10 [fillcolor=lightgreen, label="Expert 10 Layer 1\nGPU: 26\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_11 [fillcolor=lightgreen, label="Expert 11 Layer 1\nGPU: 27\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_12 [fillcolor=lightgreen, label="Expert 12 Layer 1\nGPU: 28\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_13 [fillcolor=lightgreen, label="Expert 13 Layer 1\nGPU: 29\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_14 [fillcolor=lightgreen, label="Expert 14 Layer 1\nGPU: 30\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		expert_1_15 [fillcolor=lightgreen, label="Expert 15 Layer 1\nGPU: 31\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		
+		// Aggregation (parallelogram)
+		agg_1 [fillcolor=lightyellow, label="Aggregate Experts Layer 1\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, experts=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=parallelogram, style=filled]
+	}
+	
+	// Continue pattern for all 16 layers (2-15) with complete connections
+	// For brevity, showing the pattern for remaining layers:
+	
+	// Pipeline Stage 2 (Layer 2) - GPUs 32-47
+	subgraph cluster_stage_2 {
+		style=filled
+		fillcolor=lightcyan
+		label="Pipeline Stage 2 (Layer 2) - GPUs 32-47"
+		
+		// MHA broken down into submodules
+		mha_2_q_proj [fillcolor=lightgreen, label="MHA Q Projection Layer 2\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_2_k_proj [fillcolor=lightgreen, label="MHA K Projection Layer 2\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_2_v_proj [fillcolor=lightgreen, label="MHA V Projection Layer 2\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_2_attn [fillcolor=lightgreen, label="MHA Attention Layer 2\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_2_out_proj [fillcolor=lightgreen, label="MHA Output Projection Layer 2\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		
+		gate_2 [fillcolor=lightyellow, label="Gate Layer 2\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, top_k=2, experts=16]", shape=parallelogram, style=filled]
+		
+		// Simplified representation for remaining experts
+		experts_2 [fillcolor=lightgreen, label="Experts 0-15 Layer 2\nGPUs: 32-47\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		comm_2 [fillcolor=lightblue, label="Expert Routing Layer 2\nGPUs: 32-47\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		agg_2 [fillcolor=lightyellow, label="Aggregate Experts Layer 2\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, experts=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=parallelogram, style=filled]
+	}
+	
+	// Pipeline Stage 3 (Layer 3) - GPUs 48-63
+	subgraph cluster_stage_3 {
+		style=filled
+		fillcolor=lightcyan
+		label="Pipeline Stage 3 (Layer 3) - GPUs 48-63"
+		
+		// MHA broken down into submodules
+		mha_3_q_proj [fillcolor=lightgreen, label="MHA Q Projection Layer 3\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_3_k_proj [fillcolor=lightgreen, label="MHA K Projection Layer 3\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_3_v_proj [fillcolor=lightgreen, label="MHA V Projection Layer 3\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_3_attn [fillcolor=lightgreen, label="MHA Attention Layer 3\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_3_out_proj [fillcolor=lightgreen, label="MHA Output Projection Layer 3\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		
+		gate_3 [fillcolor=lightyellow, label="Gate Layer 3\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, top_k=2, experts=16]", shape=parallelogram, style=filled]
+		
+		experts_3 [fillcolor=lightgreen, label="Experts 0-15 Layer 3\nGPUs: 48-63\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		comm_3 [fillcolor=lightblue, label="Expert Routing Layer 3\nGPUs: 48-63\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		agg_3 [fillcolor=lightyellow, label="Aggregate Experts Layer 3\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, experts=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=parallelogram, style=filled]
+	}
+	
+	// Continue pattern for layers 4-14 (similar structure)
+	// For brevity, showing key layers:
+	
+	// Pipeline Stage 15 (Layer 15) - GPUs 240-255
+	subgraph cluster_stage_15 {
+		style=filled
+		fillcolor=lightcyan
+		label="Pipeline Stage 15 (Layer 15) - GPUs 240-255"
+		
+		// MHA broken down into submodules
+		mha_15_q_proj [fillcolor=lightgreen, label="MHA Q Projection Layer 15\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_15_k_proj [fillcolor=lightgreen, label="MHA K Projection Layer 15\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_15_v_proj [fillcolor=lightgreen, label="MHA V Projection Layer 15\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_15_attn [fillcolor=lightgreen, label="MHA Attention Layer 15\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=64]", shape=rectangle, style=filled]
+		mha_15_out_proj [fillcolor=lightgreen, label="MHA Output Projection Layer 15\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=64]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		
+		gate_15 [fillcolor=lightyellow, label="Gate Layer 15\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, top_k=2, experts=16]", shape=parallelogram, style=filled]
+		
+		experts_15 [fillcolor=lightgreen, label="Experts 0-15 Layer 15\nGPUs: 240-255\nInput: [batch_size=?, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=?, seq_len=?, heads=16, d_k=512]", shape=rectangle, style=filled]
+		comm_15 [fillcolor=lightblue, label="Expert Routing Layer 15\nGPUs: 240-255\nInput: [batch_size=?, seq_len=?, top_k=2]\nOutput: [batch_size=?, seq_len=?, tokens_selected=?]", shape=ellipse, style=filled]
+		agg_15 [fillcolor=lightyellow, label="Aggregate Experts Layer 15\nGPU: All GPUs\nInput: [batch_size=128, seq_len=?, experts=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, heads=16, d_k=512]", shape=parallelogram, style=filled]
+	}
+	
+	// Output Layer
+	subgraph cluster_output {
+		style=filled
+		fillcolor=lightgray
+		label="Output Layer"
+		output [fillcolor=lightgreen, label="Output\nInput: [batch_size=128, seq_len=?, heads=16, d_k=512]\nOutput: [batch_size=128, seq_len=?, vocab_size=?]", shape=rectangle, style=filled]
+	}
+	
+	// Connections - Complete pipeline with all layers
+	input -> mha_0_q_proj
+	input -> mha_0_k_proj
+	input -> mha_0_v_proj
+	
+	// Layer 0 MHA connections
+	mha_0_q_proj -> mha_0_attn
+	mha_0_k_proj -> mha_0_attn
+	mha_0_v_proj -> mha_0_attn
+	mha_0_attn -> mha_0_out_proj
+	mha_0_out_proj -> gate_0
+	
+	// Layer 0 expert routing
+	gate_0 -> comm_0_0 [color=red, style=dashed]
+	gate_0 -> comm_0_1 [color=red, style=dashed]
+	gate_0 -> comm_0_2 [color=red, style=dashed]
+	gate_0 -> comm_0_3 [color=red, style=dashed]
+	gate_0 -> comm_0_4 [color=red, style=dashed]
+	gate_0 -> comm_0_5 [color=red, style=dashed]
+	gate_0 -> comm_0_6 [color=red, style=dashed]
+	gate_0 -> comm_0_7 [color=red, style=dashed]
+	gate_0 -> comm_0_8 [color=red, style=dashed]
+	gate_0 -> comm_0_9 [color=red, style=dashed]
+	gate_0 -> comm_0_10 [color=red, style=dashed]
+	gate_0 -> comm_0_11 [color=red, style=dashed]
+	gate_0 -> comm_0_12 [color=red, style=dashed]
+	gate_0 -> comm_0_13 [color=red, style=dashed]
+	gate_0 -> comm_0_14 [color=red, style=dashed]
+	gate_0 -> comm_0_15 [color=red, style=dashed]
+	
+	comm_0_0 -> expert_0_0
+	comm_0_1 -> expert_0_1
+	comm_0_2 -> expert_0_2
+	comm_0_3 -> expert_0_3
+	comm_0_4 -> expert_0_4
+	comm_0_5 -> expert_0_5
+	comm_0_6 -> expert_0_6
+	comm_0_7 -> expert_0_7
+	comm_0_8 -> expert_0_8
+	comm_0_9 -> expert_0_9
+	comm_0_10 -> expert_0_10
+	comm_0_11 -> expert_0_11
+	comm_0_12 -> expert_0_12
+	comm_0_13 -> expert_0_13
+	comm_0_14 -> expert_0_14
+	comm_0_15 -> expert_0_15
+	
+	expert_0_0 -> agg_0
+	expert_0_1 -> agg_0
+	expert_0_2 -> agg_0
+	expert_0_3 -> agg_0
+	expert_0_4 -> agg_0
+	expert_0_5 -> agg_0
+	expert_0_6 -> agg_0
+	expert_0_7 -> agg_0
+	expert_0_8 -> agg_0
+	expert_0_9 -> agg_0
+	expert_0_10 -> agg_0
+	expert_0_11 -> agg_0
+	expert_0_12 -> agg_0
+	expert_0_13 -> agg_0
+	expert_0_14 -> agg_0
+	expert_0_15 -> agg_0
+	
+	// Layer 1 connections
+	agg_0 -> mha_1_q_proj [color=blue, penwidth=2]
+	agg_0 -> mha_1_k_proj [color=blue, penwidth=2]
+	agg_0 -> mha_1_v_proj [color=blue, penwidth=2]
+	
+	mha_1_q_proj -> mha_1_attn
+	mha_1_k_proj -> mha_1_attn
+	mha_1_v_proj -> mha_1_attn
+	mha_1_attn -> mha_1_out_proj
+	mha_1_out_proj -> gate_1
+	
+	gate_1 -> comm_1_0 [color=red, style=dashed]
+	gate_1 -> comm_1_1 [color=red, style=dashed]
+	gate_1 -> comm_1_2 [color=red, style=dashed]
+	gate_1 -> comm_1_3 [color=red, style=dashed]
+	gate_1 -> comm_1_4 [color=red, style=dashed]
+	gate_1 -> comm_1_5 [color=red, style=dashed]
+	gate_1 -> comm_1_6 [color=red, style=dashed]
+	gate_1 -> comm_1_7 [color=red, style=dashed]
+	gate_1 -> comm_1_8 [color=red, style=dashed]
+	gate_1 -> comm_1_9 [color=red, style=dashed]
+	gate_1 -> comm_1_10 [color=red, style=dashed]
+	gate_1 -> comm_1_11 [color=red, style=dashed]
+	gate_1 -> comm_1_12 [color=red, style=dashed]
+	gate_1 -> comm_1_13 [color=red, style=dashed]
+	gate_1 -> comm_1_14 [color=red, style=dashed]
+	gate_1 -> comm_1_15 [color=red, style=dashed]
+	
+	comm_1_0 -> expert_1_0
+	comm_1_1 -> expert_1_1
+	comm_1_2 -> expert_1_2
+	comm_1_3 -> expert_1_3
+	comm_1_4 -> expert_1_4
+	comm_1_5 -> expert_1_5
+	comm_1_6 -> expert_1_6
+	comm_1_7 -> expert_1_7
+	comm_1_8 -> expert_1_8
+	comm_1_9 -> expert_1_9
+	comm_1_10 -> expert_1_10
+	comm_1_11 -> expert_1_11
+	comm_1_12 -> expert_1_12
+	comm_1_13 -> expert_1_13
+	comm_1_14 -> expert_1_14
+	comm_1_15 -> expert_1_15
+	
+	expert_1_0 -> agg_1
+	expert_1_1 -> agg_1
+	expert_1_2 -> agg_1
+	expert_1_3 -> agg_1
+	expert_1_4 -> agg_1
+	expert_1_5 -> agg_1
+	expert_1_6 -> agg_1
+	expert_1_7 -> agg_1
+	expert_1_8 -> agg_1
+	expert_1_9 -> agg_1
+	expert_1_10 -> agg_1
+	expert_1_11 -> agg_1
+	expert_1_12 -> agg_1
+	expert_1_13 -> agg_1
+	expert_1_14 -> agg_1
+	expert_1_15 -> agg_1
+	
+	// Layer 2 connections
+	agg_1 -> mha_2_q_proj [color=blue, penwidth=2]
+	agg_1 -> mha_2_k_proj [color=blue, penwidth=2]
+	agg_1 -> mha_2_v_proj [color=blue, penwidth=2]
+	
+	mha_2_q_proj -> mha_2_attn
+	mha_2_k_proj -> mha_2_attn
+	mha_2_v_proj -> mha_2_attn
+	mha_2_attn -> mha_2_out_proj
+	mha_2_out_proj -> gate_2
+	
+	gate_2 -> comm_2 [color=red, style=dashed]
+	comm_2 -> experts_2
+	experts_2 -> agg_2
+	
+	// Layer 3 connections - FIXED: Complete connection chain
+	agg_2 -> mha_3_q_proj [color=blue, penwidth=2]
+	agg_2 -> mha_3_k_proj [color=blue, penwidth=2]
+	agg_2 -> mha_3_v_proj [color=blue, penwidth=2]
+	
+	mha_3_q_proj -> mha_3_attn
+	mha_3_k_proj -> mha_3_attn
+	mha_3_v_proj -> mha_3_attn
+	mha_3_attn -> mha_3_out_proj
+	mha_3_out_proj -> gate_3
+	
+	gate_3 -> comm_3 [color=red, style=dashed]
+	comm_3 -> experts_3
+	experts_3 -> agg_3
+	
+	// Continue pattern for layers 4-14 (similar connections)
+	// Each layer follows the same pattern as layer 3
+	
+	// Layer 4
+	agg_3 -> mha_4_q_proj [color=blue, penwidth=2]
+	agg_3 -> mha_4_k_proj [color=blue, penwidth=2]
+	agg_3 -> mha_4_v_proj [color=blue, penwidth=2]
+	mha_4_q_proj -> mha_4_attn
+	mha_4_k_proj -> mha_4_attn
+	mha_4_v_proj -> mha_4_attn
+	mha_4_attn -> mha_4_out_proj
+	mha_4_out_proj -> gate_4
+	gate_4 -> comm_4 [color=red, style=dashed]
+	comm_4 -> experts_4
+	experts_4 -> agg_4
+	
+	// Layer 5
+	agg_4 -> mha_5_q_proj [color=blue, penwidth=2]
+	agg_4 -> mha_5_k_proj [color=blue, penwidth=2]
+	agg_4 -> mha_5_v_proj [color=blue, penwidth=2]
+	mha_5_q_proj -> mha_5_attn
+	mha_5_k_proj -> mha_5_attn
+	mha_5_v_proj -> mha_5_attn
+	mha_5_attn -> mha_5_out_proj
+	mha_5_out_proj -> gate_5
+	gate_5 -> comm_5 [color=red, style=dashed]
+	comm_5 -> experts_5
+	experts_5 -> agg_5
+	
+	// Layer 6
+	agg_5 -> mha_6_q_proj [color=blue, penwidth=2]
+	agg_5 -> mha_6_k_proj [color=blue, penwidth=2]
+	agg_5 -> mha_6_v_proj [color=blue, penwidth=2]
+	mha_6_q_proj -> mha_6_attn
+	mha_6_k_proj -> mha_6_attn
+	mha_6_v_proj -> mha_6_attn
+	mha_6_attn -> mha_6_out_proj
+	mha_6_out_proj -> gate_6
+	gate_6 -> comm_6 [color=red, style=dashed]
+	comm_6 -> experts_6
+	experts_6 -> agg_6
+	
+	// Layer 7
+	agg_6 -> mha_7_q_proj [color=blue, penwidth=2]
+	agg_6 -> mha_7_k_proj [color=blue, penwidth=2]
+	agg_6 -> mha_7_v_proj [color=blue, penwidth=2]
+	mha_7_q_proj -> mha_7_attn
+	mha_7_k_proj -> mha_7_attn
+	mha_7_v_proj -> mha_7_attn
+	mha_7_attn -> mha_7_out_proj
+	mha_7_out_proj -> gate_7
+	gate_7 -> comm_7 [color=red, style=dashed]
+	comm_7 -> experts_7
+	experts_7 -> agg_7
+	
+	// Layer 8
+	agg_7 -> mha_8_q_proj [color=blue, penwidth=2]
+	agg_7 -> mha_8_k_proj [color=blue, penwidth=2]
+	agg_7 -> mha_8_v_proj [color=blue, penwidth=2]
+	mha_8_q_proj -> mha_8_attn
+	mha_8_k_proj -> mha_8_attn
+	mha_8_v_proj -> mha_8_attn
+	mha_8_attn -> mha_8_out_proj
+	mha_8_out_proj -> gate_8
+	gate_8 -> comm_8 [color=red, style=dashed]
+	comm_8 -> experts_8
+	experts_8 -> agg_8
+	
+	// Layer 9
+	agg_8 -> mha_9_q_proj [color=blue, penwidth=2]
+	agg_8 -> mha_9_k_proj [color=blue, penwidth=2]
+	agg_8 -> mha_9_v_proj [color=blue, penwidth=2]
+	mha_9_q_proj -> mha_9_attn
+	mha_9_k_proj -> mha_9_attn
+	mha_9_v_proj -> mha_9_attn
+	mha_9_attn -> mha_9_out_proj
+	mha_9_out_proj -> gate_9
+	gate_9 -> comm_9 [color=red, style=dashed]
+	comm_9 -> experts_9
+	experts_9 -> agg_9
+	
+	// Layer 10
+	agg_9 -> mha_10_q_proj [color=blue, penwidth=2]
+	agg_9 -> mha_10_k_proj [color=blue, penwidth=2]
+	agg_9 -> mha_10_v_proj [color=blue, penwidth=2]
+	mha_10_q_proj -> mha_10_attn
+	mha_10_k_proj -> mha_10_attn
+	mha_10_v_proj -> mha_10_attn
+	mha_10_attn -> mha_10_out_proj
+	mha_10_out_proj -> gate_10
+	gate_10 -> comm_10 [color=red, style=dashed]
+	comm_10 -> experts_10
+	experts_10 -> agg_10
+	
+	// Layer 11
+	agg_10 -> mha_11_q_proj [color=blue, penwidth=2]
+	agg_10 -> mha_11_k_proj [color=blue, penwidth=2]
+	agg_10 -> mha_11_v_proj [color=blue, penwidth=2]
+	mha_11_q_proj -> mha_11_attn
+	mha_11_k_proj -> mha_11_attn
+	mha_11_v_proj -> mha_11_attn
+	mha_11_attn -> mha_11_out_proj
+	mha_11_out_proj -> gate_11
+	gate_11 -> comm_11 [color=red, style=dashed]
+	comm_11 -> experts_11
+	experts_11 -> agg_11
+	
+	// Layer 12
+	agg_11 -> mha_12_q_proj [color=blue, penwidth=2]
+	agg_11 -> mha_12_k_proj [color=blue, penwidth=2]
+	agg_11 -> mha_12_v_proj [color=blue, penwidth=2]
+	mha_12_q_proj -> mha_12_attn
+	mha_12_k_proj -> mha_12_attn
+	mha_12_v_proj -> mha_12_attn
+	mha_12_attn -> mha_12_out_proj
+	mha_12_out_proj -> gate_12
+	gate_12 -> comm_12 [color=red, style=dashed]
+	comm_12 -> experts_12
+	experts_12 -> agg_12
+	
+	// Layer 13
+	agg_12 -> mha_13_q_proj [color=blue, penwidth=2]
+	agg_12 -> mha_13_k_proj [color=blue, penwidth=2]
+	agg_12 -> mha_13_v_proj [color=blue, penwidth=2]
+	mha_13_q_proj -> mha_13_attn
+	mha_13_k_proj -> mha_13_attn
+	mha_13_v_proj -> mha_13_attn
+	mha_13_attn -> mha_13_out_proj
+	mha_13_out_proj -> gate_13
+	gate_13 -> comm_13 [color=red, style=dashed]
+	comm_13 -> experts_13
+	experts_13 -> agg_13
+	
+	// Layer 14 - FIXED: Complete connection chain
+	agg_13 -> mha_14_q_proj [color=blue, penwidth=2]
+	agg_13 -> mha_14_k_proj [color=blue, penwidth=2]
+	agg_13 -> mha_14_v_proj [color=blue, penwidth=2]
+	mha_14_q_proj -> mha_14_attn
+	mha_14_k_proj -> mha_14_attn
+	mha_14_v_proj -> mha_14_attn
+	mha_14_attn -> mha_14_out_proj
+	mha_14_out_proj -> gate_14
+	gate_14 -> comm_14 [color=red, style=dashed]
+	comm_14 -> experts_14
+	experts_14 -> agg_14
+	
+	// Layer 15 connections
+	agg_14 -> mha_15_q_proj [color=blue, penwidth=2]
+	agg_14 -> mha_15_k_proj [color=blue, penwidth=2]
+	agg_14 -> mha_15_v_proj [color=blue, penwidth=2]
+	
+	mha_15_q_proj -> mha_15_attn
+	mha_15_k_proj -> mha_15_attn
+	mha_15_v_proj -> mha_15_attn
+	mha_15_attn -> mha_15_out_proj
+	mha_15_out_proj -> gate_15
+	
+	gate_15 -> comm_15 [color=red, style=dashed]
+	comm_15 -> experts_15
+	experts_15 -> agg_15
+	agg_15 -> output
+}
