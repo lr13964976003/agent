@@ -4,7 +4,6 @@ RESOURCES
 
 You have been provided with a parallelism strategy deployment method file of LLM by previous agent located at {save_path}.  
 
-Provided knowledge file about how to generate dag is located at {knowledge_path}.
 
 TASK
 
