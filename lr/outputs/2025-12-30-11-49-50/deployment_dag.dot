@@ -1,0 +1,1088 @@
+// 10B Model Deployment DAG
+digraph {
+	rankdir=TB size="20,30"
+	node [fontname=Arial fontsize=10]
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	node [fillcolor=lightgreen shape=rectangle style=filled]
+	node [fillcolor=lightyellow shape=parallelogram style=filled]
+	input [label="Input\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=32]\nOutput: [batch_size=128, seq_len=10240, heads=16, d_k=32]" fillcolor=lightcoral shape=ellipse]
+	dp_split [label="DP Split\nInput: [batch_size=128, seq_len=10240, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=10240, heads=16, d_k=32]" fillcolor=lightyellow shape=parallelogram]
+	input -> dp_split [label="Host to Device"]
+	subgraph cluster_dp1 {
+		fillcolor=lightgray label="DP Replica 1: GPU0 + GPU1" style="rounded,filled"
+		sp_split_1 [label="SP Split (Rep1)\nInput: [batch_size=64, seq_len=10240, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=16, d_k=32]" fillcolor=lightyellow shape=parallelogram]
+		attn_qkv_1_l1 [label="Attention QKV (L1)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l1 [label="Attention QKV (L1)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l1 [label="TP All-Reduce (Attn L1)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l1 [label="Attention Output (L1)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l1 [label="Attention Output (L1)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l1 [label="TP All-Reduce (Attn Out L1)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l1 [label="MLP FC1 (L1)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l1 [label="MLP FC1 (L1)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l1 [label="MLP FC2 (L1)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l1 [label="MLP FC2 (L1)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l1 [label="TP All-Reduce (MLP L1)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l1 [label="LayerNorm1 (L1)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l1 [label="LayerNorm1 (L1)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l1 [label="LayerNorm2 (L1)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l1 [label="LayerNorm2 (L1)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l2 [label="Attention QKV (L2)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l2 [label="Attention QKV (L2)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l2 [label="TP All-Reduce (Attn L2)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l2 [label="Attention Output (L2)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l2 [label="Attention Output (L2)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l2 [label="TP All-Reduce (Attn Out L2)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l2 [label="MLP FC1 (L2)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l2 [label="MLP FC1 (L2)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l2 [label="MLP FC2 (L2)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l2 [label="MLP FC2 (L2)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l2 [label="TP All-Reduce (MLP L2)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l2 [label="LayerNorm1 (L2)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l2 [label="LayerNorm1 (L2)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l2 [label="LayerNorm2 (L2)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l2 [label="LayerNorm2 (L2)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l3 [label="Attention QKV (L3)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l3 [label="Attention QKV (L3)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l3 [label="TP All-Reduce (Attn L3)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l3 [label="Attention Output (L3)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l3 [label="Attention Output (L3)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l3 [label="TP All-Reduce (Attn Out L3)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l3 [label="MLP FC1 (L3)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l3 [label="MLP FC1 (L3)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l3 [label="MLP FC2 (L3)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l3 [label="MLP FC2 (L3)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l3 [label="TP All-Reduce (MLP L3)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l3 [label="LayerNorm1 (L3)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l3 [label="LayerNorm1 (L3)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l3 [label="LayerNorm2 (L3)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l3 [label="LayerNorm2 (L3)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l4 [label="Attention QKV (L4)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l4 [label="Attention QKV (L4)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l4 [label="TP All-Reduce (Attn L4)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l4 [label="Attention Output (L4)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l4 [label="Attention Output (L4)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l4 [label="TP All-Reduce (Attn Out L4)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l4 [label="MLP FC1 (L4)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l4 [label="MLP FC1 (L4)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l4 [label="MLP FC2 (L4)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l4 [label="MLP FC2 (L4)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l4 [label="TP All-Reduce (MLP L4)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l4 [label="LayerNorm1 (L4)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l4 [label="LayerNorm1 (L4)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l4 [label="LayerNorm2 (L4)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l4 [label="LayerNorm2 (L4)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l5 [label="Attention QKV (L5)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l5 [label="Attention QKV (L5)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l5 [label="TP All-Reduce (Attn L5)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l5 [label="Attention Output (L5)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l5 [label="Attention Output (L5)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l5 [label="TP All-Reduce (Attn Out L5)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l5 [label="MLP FC1 (L5)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l5 [label="MLP FC1 (L5)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l5 [label="MLP FC2 (L5)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l5 [label="MLP FC2 (L5)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l5 [label="TP All-Reduce (MLP L5)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l5 [label="LayerNorm1 (L5)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l5 [label="LayerNorm1 (L5)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l5 [label="LayerNorm2 (L5)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l5 [label="LayerNorm2 (L5)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l6 [label="Attention QKV (L6)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l6 [label="Attention QKV (L6)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l6 [label="TP All-Reduce (Attn L6)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l6 [label="Attention Output (L6)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l6 [label="Attention Output (L6)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l6 [label="TP All-Reduce (Attn Out L6)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l6 [label="MLP FC1 (L6)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l6 [label="MLP FC1 (L6)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l6 [label="MLP FC2 (L6)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l6 [label="MLP FC2 (L6)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l6 [label="TP All-Reduce (MLP L6)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l6 [label="LayerNorm1 (L6)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l6 [label="LayerNorm1 (L6)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l6 [label="LayerNorm2 (L6)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l6 [label="LayerNorm2 (L6)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l7 [label="Attention QKV (L7)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l7 [label="Attention QKV (L7)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l7 [label="TP All-Reduce (Attn L7)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l7 [label="Attention Output (L7)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l7 [label="Attention Output (L7)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l7 [label="TP All-Reduce (Attn Out L7)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l7 [label="MLP FC1 (L7)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l7 [label="MLP FC1 (L7)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l7 [label="MLP FC2 (L7)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l7 [label="MLP FC2 (L7)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l7 [label="TP All-Reduce (MLP L7)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l7 [label="LayerNorm1 (L7)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l7 [label="LayerNorm1 (L7)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l7 [label="LayerNorm2 (L7)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l7 [label="LayerNorm2 (L7)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l8 [label="Attention QKV (L8)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l8 [label="Attention QKV (L8)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l8 [label="TP All-Reduce (Attn L8)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l8 [label="Attention Output (L8)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l8 [label="Attention Output (L8)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l8 [label="TP All-Reduce (Attn Out L8)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l8 [label="MLP FC1 (L8)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l8 [label="MLP FC1 (L8)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l8 [label="MLP FC2 (L8)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l8 [label="MLP FC2 (L8)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l8 [label="TP All-Reduce (MLP L8)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l8 [label="LayerNorm1 (L8)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l8 [label="LayerNorm1 (L8)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l8 [label="LayerNorm2 (L8)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l8 [label="LayerNorm2 (L8)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l9 [label="Attention QKV (L9)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l9 [label="Attention QKV (L9)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l9 [label="TP All-Reduce (Attn L9)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l9 [label="Attention Output (L9)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l9 [label="Attention Output (L9)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l9 [label="TP All-Reduce (Attn Out L9)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l9 [label="MLP FC1 (L9)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l9 [label="MLP FC1 (L9)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l9 [label="MLP FC2 (L9)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l9 [label="MLP FC2 (L9)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l9 [label="TP All-Reduce (MLP L9)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l9 [label="LayerNorm1 (L9)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l9 [label="LayerNorm1 (L9)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l9 [label="LayerNorm2 (L9)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l9 [label="LayerNorm2 (L9)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l10 [label="Attention QKV (L10)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l10 [label="Attention QKV (L10)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l10 [label="TP All-Reduce (Attn L10)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l10 [label="Attention Output (L10)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l10 [label="Attention Output (L10)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l10 [label="TP All-Reduce (Attn Out L10)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l10 [label="MLP FC1 (L10)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l10 [label="MLP FC1 (L10)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l10 [label="MLP FC2 (L10)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l10 [label="MLP FC2 (L10)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l10 [label="TP All-Reduce (MLP L10)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l10 [label="LayerNorm1 (L10)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l10 [label="LayerNorm1 (L10)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l10 [label="LayerNorm2 (L10)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l10 [label="LayerNorm2 (L10)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l11 [label="Attention QKV (L11)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l11 [label="Attention QKV (L11)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l11 [label="TP All-Reduce (Attn L11)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l11 [label="Attention Output (L11)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l11 [label="Attention Output (L11)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l11 [label="TP All-Reduce (Attn Out L11)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l11 [label="MLP FC1 (L11)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l11 [label="MLP FC1 (L11)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l11 [label="MLP FC2 (L11)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l11 [label="MLP FC2 (L11)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l11 [label="TP All-Reduce (MLP L11)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l11 [label="LayerNorm1 (L11)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l11 [label="LayerNorm1 (L11)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l11 [label="LayerNorm2 (L11)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l11 [label="LayerNorm2 (L11)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l12 [label="Attention QKV (L12)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l12 [label="Attention QKV (L12)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l12 [label="TP All-Reduce (Attn L12)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l12 [label="Attention Output (L12)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l12 [label="Attention Output (L12)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l12 [label="TP All-Reduce (Attn Out L12)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l12 [label="MLP FC1 (L12)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l12 [label="MLP FC1 (L12)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l12 [label="MLP FC2 (L12)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l12 [label="MLP FC2 (L12)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l12 [label="TP All-Reduce (MLP L12)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l12 [label="LayerNorm1 (L12)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l12 [label="LayerNorm1 (L12)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l12 [label="LayerNorm2 (L12)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l12 [label="LayerNorm2 (L12)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l13 [label="Attention QKV (L13)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l13 [label="Attention QKV (L13)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l13 [label="TP All-Reduce (Attn L13)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l13 [label="Attention Output (L13)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l13 [label="Attention Output (L13)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l13 [label="TP All-Reduce (Attn Out L13)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l13 [label="MLP FC1 (L13)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l13 [label="MLP FC1 (L13)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l13 [label="MLP FC2 (L13)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l13 [label="MLP FC2 (L13)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l13 [label="TP All-Reduce (MLP L13)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l13 [label="LayerNorm1 (L13)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l13 [label="LayerNorm1 (L13)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l13 [label="LayerNorm2 (L13)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l13 [label="LayerNorm2 (L13)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l14 [label="Attention QKV (L14)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l14 [label="Attention QKV (L14)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l14 [label="TP All-Reduce (Attn L14)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l14 [label="Attention Output (L14)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l14 [label="Attention Output (L14)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l14 [label="TP All-Reduce (Attn Out L14)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l14 [label="MLP FC1 (L14)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l14 [label="MLP FC1 (L14)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l14 [label="MLP FC2 (L14)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l14 [label="MLP FC2 (L14)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l14 [label="TP All-Reduce (MLP L14)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l14 [label="LayerNorm1 (L14)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l14 [label="LayerNorm1 (L14)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l14 [label="LayerNorm2 (L14)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l14 [label="LayerNorm2 (L14)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l15 [label="Attention QKV (L15)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l15 [label="Attention QKV (L15)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l15 [label="TP All-Reduce (Attn L15)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l15 [label="Attention Output (L15)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l15 [label="Attention Output (L15)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l15 [label="TP All-Reduce (Attn Out L15)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l15 [label="MLP FC1 (L15)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l15 [label="MLP FC1 (L15)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l15 [label="MLP FC2 (L15)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l15 [label="MLP FC2 (L15)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l15 [label="TP All-Reduce (MLP L15)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l15 [label="LayerNorm1 (L15)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l15 [label="LayerNorm1 (L15)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l15 [label="LayerNorm2 (L15)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l15 [label="LayerNorm2 (L15)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_1_l16 [label="Attention QKV (L16)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_2_l16 [label="Attention QKV (L16)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_l16 [label="TP All-Reduce (Attn L16)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_1_l16 [label="Attention Output (L16)\nGPU0\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_2_l16 [label="Attention Output (L16)\nGPU1\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_l16 [label="TP All-Reduce (Attn Out L16)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_1_l16 [label="MLP FC1 (L16)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_2_l16 [label="MLP FC1 (L16)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_1_l16 [label="MLP FC2 (L16)\nGPU0\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_2_l16 [label="MLP FC2 (L16)\nGPU1\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_l16 [label="TP All-Reduce (MLP L16)\nGPU0 <-> GPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_1_l16 [label="LayerNorm1 (L16)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_2_l16 [label="LayerNorm1 (L16)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_1_l16 [label="LayerNorm2 (L16)\nGPU0\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_2_l16 [label="LayerNorm2 (L16)\nGPU1\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		sp_merge_1 [label="SP Merge (Rep1)\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=10240, token_dim=512]" fillcolor=lightyellow shape=parallelogram]
+	}
+	subgraph cluster_dp2 {
+		fillcolor=lightgray label="DP Replica 2: GPU2 + GPU3" style="rounded,filled"
+		sp_split_2 [label="SP Split (Rep2)\nInput: [batch_size=64, seq_len=10240, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=16, d_k=32]" fillcolor=lightyellow shape=parallelogram]
+		attn_qkv_3_l1 [label="Attention QKV (L1)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l1 [label="Attention QKV (L1)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l1 [label="TP All-Reduce (Attn L1)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l1 [label="Attention Output (L1)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l1 [label="Attention Output (L1)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l1 [label="TP All-Reduce (Attn Out L1)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l1 [label="MLP FC1 (L1)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l1 [label="MLP FC1 (L1)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l1 [label="MLP FC2 (L1)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l1 [label="MLP FC2 (L1)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l1 [label="TP All-Reduce (MLP L1)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l1 [label="LayerNorm1 (L1)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l1 [label="LayerNorm1 (L1)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l1 [label="LayerNorm2 (L1)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l1 [label="LayerNorm2 (L1)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l2 [label="Attention QKV (L2)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l2 [label="Attention QKV (L2)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l2 [label="TP All-Reduce (Attn L2)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l2 [label="Attention Output (L2)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l2 [label="Attention Output (L2)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l2 [label="TP All-Reduce (Attn Out L2)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l2 [label="MLP FC1 (L2)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l2 [label="MLP FC1 (L2)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l2 [label="MLP FC2 (L2)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l2 [label="MLP FC2 (L2)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l2 [label="TP All-Reduce (MLP L2)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l2 [label="LayerNorm1 (L2)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l2 [label="LayerNorm1 (L2)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l2 [label="LayerNorm2 (L2)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l2 [label="LayerNorm2 (L2)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l3 [label="Attention QKV (L3)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l3 [label="Attention QKV (L3)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l3 [label="TP All-Reduce (Attn L3)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l3 [label="Attention Output (L3)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l3 [label="Attention Output (L3)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l3 [label="TP All-Reduce (Attn Out L3)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l3 [label="MLP FC1 (L3)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l3 [label="MLP FC1 (L3)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l3 [label="MLP FC2 (L3)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l3 [label="MLP FC2 (L3)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l3 [label="TP All-Reduce (MLP L3)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l3 [label="LayerNorm1 (L3)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l3 [label="LayerNorm1 (L3)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l3 [label="LayerNorm2 (L3)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l3 [label="LayerNorm2 (L3)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l4 [label="Attention QKV (L4)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l4 [label="Attention QKV (L4)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l4 [label="TP All-Reduce (Attn L4)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l4 [label="Attention Output (L4)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l4 [label="Attention Output (L4)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l4 [label="TP All-Reduce (Attn Out L4)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l4 [label="MLP FC1 (L4)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l4 [label="MLP FC1 (L4)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l4 [label="MLP FC2 (L4)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l4 [label="MLP FC2 (L4)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l4 [label="TP All-Reduce (MLP L4)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l4 [label="LayerNorm1 (L4)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l4 [label="LayerNorm1 (L4)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l4 [label="LayerNorm2 (L4)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l4 [label="LayerNorm2 (L4)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l5 [label="Attention QKV (L5)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l5 [label="Attention QKV (L5)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l5 [label="TP All-Reduce (Attn L5)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l5 [label="Attention Output (L5)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l5 [label="Attention Output (L5)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l5 [label="TP All-Reduce (Attn Out L5)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l5 [label="MLP FC1 (L5)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l5 [label="MLP FC1 (L5)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l5 [label="MLP FC2 (L5)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l5 [label="MLP FC2 (L5)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l5 [label="TP All-Reduce (MLP L5)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l5 [label="LayerNorm1 (L5)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l5 [label="LayerNorm1 (L5)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l5 [label="LayerNorm2 (L5)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l5 [label="LayerNorm2 (L5)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l6 [label="Attention QKV (L6)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l6 [label="Attention QKV (L6)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l6 [label="TP All-Reduce (Attn L6)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l6 [label="Attention Output (L6)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l6 [label="Attention Output (L6)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l6 [label="TP All-Reduce (Attn Out L6)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l6 [label="MLP FC1 (L6)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l6 [label="MLP FC1 (L6)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l6 [label="MLP FC2 (L6)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l6 [label="MLP FC2 (L6)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l6 [label="TP All-Reduce (MLP L6)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l6 [label="LayerNorm1 (L6)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l6 [label="LayerNorm1 (L6)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l6 [label="LayerNorm2 (L6)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l6 [label="LayerNorm2 (L6)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l7 [label="Attention QKV (L7)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l7 [label="Attention QKV (L7)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l7 [label="TP All-Reduce (Attn L7)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l7 [label="Attention Output (L7)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l7 [label="Attention Output (L7)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l7 [label="TP All-Reduce (Attn Out L7)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l7 [label="MLP FC1 (L7)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l7 [label="MLP FC1 (L7)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l7 [label="MLP FC2 (L7)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l7 [label="MLP FC2 (L7)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l7 [label="TP All-Reduce (MLP L7)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l7 [label="LayerNorm1 (L7)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l7 [label="LayerNorm1 (L7)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l7 [label="LayerNorm2 (L7)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l7 [label="LayerNorm2 (L7)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l8 [label="Attention QKV (L8)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l8 [label="Attention QKV (L8)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l8 [label="TP All-Reduce (Attn L8)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l8 [label="Attention Output (L8)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l8 [label="Attention Output (L8)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l8 [label="TP All-Reduce (Attn Out L8)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l8 [label="MLP FC1 (L8)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l8 [label="MLP FC1 (L8)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l8 [label="MLP FC2 (L8)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l8 [label="MLP FC2 (L8)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l8 [label="TP All-Reduce (MLP L8)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l8 [label="LayerNorm1 (L8)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l8 [label="LayerNorm1 (L8)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l8 [label="LayerNorm2 (L8)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l8 [label="LayerNorm2 (L8)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l9 [label="Attention QKV (L9)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l9 [label="Attention QKV (L9)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l9 [label="TP All-Reduce (Attn L9)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l9 [label="Attention Output (L9)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l9 [label="Attention Output (L9)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l9 [label="TP All-Reduce (Attn Out L9)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l9 [label="MLP FC1 (L9)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l9 [label="MLP FC1 (L9)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l9 [label="MLP FC2 (L9)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l9 [label="MLP FC2 (L9)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l9 [label="TP All-Reduce (MLP L9)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l9 [label="LayerNorm1 (L9)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l9 [label="LayerNorm1 (L9)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l9 [label="LayerNorm2 (L9)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l9 [label="LayerNorm2 (L9)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l10 [label="Attention QKV (L10)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l10 [label="Attention QKV (L10)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l10 [label="TP All-Reduce (Attn L10)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l10 [label="Attention Output (L10)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l10 [label="Attention Output (L10)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l10 [label="TP All-Reduce (Attn Out L10)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l10 [label="MLP FC1 (L10)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l10 [label="MLP FC1 (L10)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l10 [label="MLP FC2 (L10)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l10 [label="MLP FC2 (L10)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l10 [label="TP All-Reduce (MLP L10)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l10 [label="LayerNorm1 (L10)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l10 [label="LayerNorm1 (L10)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l10 [label="LayerNorm2 (L10)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l10 [label="LayerNorm2 (L10)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l11 [label="Attention QKV (L11)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l11 [label="Attention QKV (L11)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l11 [label="TP All-Reduce (Attn L11)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l11 [label="Attention Output (L11)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l11 [label="Attention Output (L11)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l11 [label="TP All-Reduce (Attn Out L11)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l11 [label="MLP FC1 (L11)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l11 [label="MLP FC1 (L11)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l11 [label="MLP FC2 (L11)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l11 [label="MLP FC2 (L11)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l11 [label="TP All-Reduce (MLP L11)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l11 [label="LayerNorm1 (L11)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l11 [label="LayerNorm1 (L11)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l11 [label="LayerNorm2 (L11)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l11 [label="LayerNorm2 (L11)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l12 [label="Attention QKV (L12)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l12 [label="Attention QKV (L12)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l12 [label="TP All-Reduce (Attn L12)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l12 [label="Attention Output (L12)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l12 [label="Attention Output (L12)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l12 [label="TP All-Reduce (Attn Out L12)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l12 [label="MLP FC1 (L12)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l12 [label="MLP FC1 (L12)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l12 [label="MLP FC2 (L12)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l12 [label="MLP FC2 (L12)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l12 [label="TP All-Reduce (MLP L12)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l12 [label="LayerNorm1 (L12)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l12 [label="LayerNorm1 (L12)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l12 [label="LayerNorm2 (L12)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l12 [label="LayerNorm2 (L12)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l13 [label="Attention QKV (L13)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l13 [label="Attention QKV (L13)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l13 [label="TP All-Reduce (Attn L13)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l13 [label="Attention Output (L13)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l13 [label="Attention Output (L13)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l13 [label="TP All-Reduce (Attn Out L13)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l13 [label="MLP FC1 (L13)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l13 [label="MLP FC1 (L13)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l13 [label="MLP FC2 (L13)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l13 [label="MLP FC2 (L13)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l13 [label="TP All-Reduce (MLP L13)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l13 [label="LayerNorm1 (L13)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l13 [label="LayerNorm1 (L13)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l13 [label="LayerNorm2 (L13)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l13 [label="LayerNorm2 (L13)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l14 [label="Attention QKV (L14)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l14 [label="Attention QKV (L14)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l14 [label="TP All-Reduce (Attn L14)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l14 [label="Attention Output (L14)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l14 [label="Attention Output (L14)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l14 [label="TP All-Reduce (Attn Out L14)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l14 [label="MLP FC1 (L14)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l14 [label="MLP FC1 (L14)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l14 [label="MLP FC2 (L14)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l14 [label="MLP FC2 (L14)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l14 [label="TP All-Reduce (MLP L14)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l14 [label="LayerNorm1 (L14)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l14 [label="LayerNorm1 (L14)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l14 [label="LayerNorm2 (L14)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l14 [label="LayerNorm2 (L14)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l15 [label="Attention QKV (L15)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l15 [label="Attention QKV (L15)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l15 [label="TP All-Reduce (Attn L15)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l15 [label="Attention Output (L15)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l15 [label="Attention Output (L15)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l15 [label="TP All-Reduce (Attn Out L15)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l15 [label="MLP FC1 (L15)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l15 [label="MLP FC1 (L15)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l15 [label="MLP FC2 (L15)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l15 [label="MLP FC2 (L15)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l15 [label="TP All-Reduce (MLP L15)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l15 [label="LayerNorm1 (L15)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l15 [label="LayerNorm1 (L15)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l15 [label="LayerNorm2 (L15)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l15 [label="LayerNorm2 (L15)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_3_l16 [label="Attention QKV (L16)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		attn_qkv_4_l16 [label="Attention QKV (L16)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=16, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_gpu23_l16 [label="TP All-Reduce (Attn L16)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, heads=8, d_k=32]" fillcolor=lightblue shape=ellipse]
+		attn_out_3_l16 [label="Attention Output (L16)\nGPU2\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		attn_out_4_l16 [label="Attention Output (L16)\nGPU3\nInput: [batch_size=64, seq_len=5120, heads=8, d_k=32]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_attn_out_gpu23_l16 [label="TP All-Reduce (Attn Out L16)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		mlp_fc1_3_l16 [label="MLP FC1 (L16)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc1_4_l16 [label="MLP FC1 (L16)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=5120, hidden=512]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_3_l16 [label="MLP FC2 (L16)\nGPU2\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		mlp_fc2_4_l16 [label="MLP FC2 (L16)\nGPU3\nInput: [batch_size=64, seq_len=5120, hidden=512]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		tp_comm_mlp_gpu23_l16 [label="TP All-Reduce (MLP L16)\nGPU2 <-> GPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightblue shape=ellipse]
+		ln1_3_l16 [label="LayerNorm1 (L16)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln1_4_l16 [label="LayerNorm1 (L16)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_3_l16 [label="LayerNorm2 (L16)\nGPU2\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		ln2_4_l16 [label="LayerNorm2 (L16)\nGPU3\nInput: [batch_size=64, seq_len=5120, token_dim=256]\nOutput: [batch_size=64, seq_len=5120, token_dim=256]" fillcolor=lightgreen shape=rectangle]
+		sp_merge_2 [label="SP Merge (Rep2)\nInput: [batch_size=64, seq_len=5120, token_dim=512]\nOutput: [batch_size=64, seq_len=10240, token_dim=512]" fillcolor=lightyellow shape=parallelogram]
+	}
+	dp_merge [label="DP Merge\nInput: [batch_size=64, seq_len=10240, token_dim=512]\nOutput: [batch_size=128, seq_len=10240, token_dim=512]" fillcolor=lightyellow shape=parallelogram]
+	output [label="Output\nInput: [batch_size=128, seq_len=10240, token_dim=512]\nOutput: [batch_size=128, seq_len=10240, token_dim=512]" fillcolor=lightcoral shape=ellipse]
+	dp_split -> sp_split_1 [label="Replica 1"]
+	dp_split -> sp_split_2 [label="Replica 2"]
+	sp_split_1 -> attn_qkv_1_l1
+	sp_split_1 -> attn_qkv_2_l1
+	attn_qkv_1_l1 -> tp_comm_attn_l1
+	attn_qkv_2_l1 -> tp_comm_attn_l1
+	tp_comm_attn_l1 -> attn_out_1_l1
+	tp_comm_attn_l1 -> attn_out_2_l1
+	attn_out_1_l1 -> tp_comm_attn_out_l1
+	attn_out_2_l1 -> tp_comm_attn_out_l1
+	tp_comm_attn_out_l1 -> ln1_1_l1
+	tp_comm_attn_out_l1 -> ln1_2_l1
+	ln1_1_l1 -> mlp_fc1_1_l1
+	ln1_2_l1 -> mlp_fc1_2_l1
+	mlp_fc1_1_l1 -> mlp_fc2_1_l1
+	mlp_fc1_2_l1 -> mlp_fc2_2_l1
+	mlp_fc2_1_l1 -> tp_comm_mlp_l1
+	mlp_fc2_2_l1 -> tp_comm_mlp_l1
+	tp_comm_mlp_l1 -> ln2_1_l1
+	tp_comm_mlp_l1 -> ln2_2_l1
+	ln2_1_l1 -> attn_qkv_1_l2
+	ln2_2_l1 -> attn_qkv_2_l2
+	attn_qkv_1_l2 -> tp_comm_attn_l2
+	attn_qkv_2_l2 -> tp_comm_attn_l2
+	tp_comm_attn_l2 -> attn_out_1_l2
+	tp_comm_attn_l2 -> attn_out_2_l2
+	attn_out_1_l2 -> tp_comm_attn_out_l2
+	attn_out_2_l2 -> tp_comm_attn_out_l2
+	tp_comm_attn_out_l2 -> ln1_1_l2
+	tp_comm_attn_out_l2 -> ln1_2_l2
+	ln1_1_l2 -> mlp_fc1_1_l2
+	ln1_2_l2 -> mlp_fc1_2_l2
+	mlp_fc1_1_l2 -> mlp_fc2_1_l2
+	mlp_fc1_2_l2 -> mlp_fc2_2_l2
+	mlp_fc2_1_l2 -> tp_comm_mlp_l2
+	mlp_fc2_2_l2 -> tp_comm_mlp_l2
+	tp_comm_mlp_l2 -> ln2_1_l2
+	tp_comm_mlp_l2 -> ln2_2_l2
+	ln2_1_l2 -> attn_qkv_1_l3
+	ln2_2_l2 -> attn_qkv_2_l3
+	attn_qkv_1_l3 -> tp_comm_attn_l3
+	attn_qkv_2_l3 -> tp_comm_attn_l3
+	tp_comm_attn_l3 -> attn_out_1_l3
+	tp_comm_attn_l3 -> attn_out_2_l3
+	attn_out_1_l3 -> tp_comm_attn_out_l3
+	attn_out_2_l3 -> tp_comm_attn_out_l3
+	tp_comm_attn_out_l3 -> ln1_1_l3
+	tp_comm_attn_out_l3 -> ln1_2_l3
+	ln1_1_l3 -> mlp_fc1_1_l3
+	ln1_2_l3 -> mlp_fc1_2_l3
+	mlp_fc1_1_l3 -> mlp_fc2_1_l3
+	mlp_fc1_2_l3 -> mlp_fc2_2_l3
+	mlp_fc2_1_l3 -> tp_comm_mlp_l3
+	mlp_fc2_2_l3 -> tp_comm_mlp_l3
+	tp_comm_mlp_l3 -> ln2_1_l3
+	tp_comm_mlp_l3 -> ln2_2_l3
+	ln2_1_l3 -> attn_qkv_1_l4
+	ln2_2_l3 -> attn_qkv_2_l4
+	attn_qkv_1_l4 -> tp_comm_attn_l4
+	attn_qkv_2_l4 -> tp_comm_attn_l4
+	tp_comm_attn_l4 -> attn_out_1_l4
+	tp_comm_attn_l4 -> attn_out_2_l4
+	attn_out_1_l4 -> tp_comm_attn_out_l4
+	attn_out_2_l4 -> tp_comm_attn_out_l4
+	tp_comm_attn_out_l4 -> ln1_1_l4
+	tp_comm_attn_out_l4 -> ln1_2_l4
+	ln1_1_l4 -> mlp_fc1_1_l4
+	ln1_2_l4 -> mlp_fc1_2_l4
+	mlp_fc1_1_l4 -> mlp_fc2_1_l4
+	mlp_fc1_2_l4 -> mlp_fc2_2_l4
+	mlp_fc2_1_l4 -> tp_comm_mlp_l4
+	mlp_fc2_2_l4 -> tp_comm_mlp_l4
+	tp_comm_mlp_l4 -> ln2_1_l4
+	tp_comm_mlp_l4 -> ln2_2_l4
+	ln2_1_l4 -> attn_qkv_1_l5
+	ln2_2_l4 -> attn_qkv_2_l5
+	attn_qkv_1_l5 -> tp_comm_attn_l5
+	attn_qkv_2_l5 -> tp_comm_attn_l5
+	tp_comm_attn_l5 -> attn_out_1_l5
+	tp_comm_attn_l5 -> attn_out_2_l5
+	attn_out_1_l5 -> tp_comm_attn_out_l5
+	attn_out_2_l5 -> tp_comm_attn_out_l5
+	tp_comm_attn_out_l5 -> ln1_1_l5
+	tp_comm_attn_out_l5 -> ln1_2_l5
+	ln1_1_l5 -> mlp_fc1_1_l5
+	ln1_2_l5 -> mlp_fc1_2_l5
+	mlp_fc1_1_l5 -> mlp_fc2_1_l5
+	mlp_fc1_2_l5 -> mlp_fc2_2_l5
+	mlp_fc2_1_l5 -> tp_comm_mlp_l5
+	mlp_fc2_2_l5 -> tp_comm_mlp_l5
+	tp_comm_mlp_l5 -> ln2_1_l5
+	tp_comm_mlp_l5 -> ln2_2_l5
+	ln2_1_l5 -> attn_qkv_1_l6
+	ln2_2_l5 -> attn_qkv_2_l6
+	attn_qkv_1_l6 -> tp_comm_attn_l6
+	attn_qkv_2_l6 -> tp_comm_attn_l6
+	tp_comm_attn_l6 -> attn_out_1_l6
+	tp_comm_attn_l6 -> attn_out_2_l6
+	attn_out_1_l6 -> tp_comm_attn_out_l6
+	attn_out_2_l6 -> tp_comm_attn_out_l6
+	tp_comm_attn_out_l6 -> ln1_1_l6
+	tp_comm_attn_out_l6 -> ln1_2_l6
+	ln1_1_l6 -> mlp_fc1_1_l6
+	ln1_2_l6 -> mlp_fc1_2_l6
+	mlp_fc1_1_l6 -> mlp_fc2_1_l6
+	mlp_fc1_2_l6 -> mlp_fc2_2_l6
+	mlp_fc2_1_l6 -> tp_comm_mlp_l6
+	mlp_fc2_2_l6 -> tp_comm_mlp_l6
+	tp_comm_mlp_l6 -> ln2_1_l6
+	tp_comm_mlp_l6 -> ln2_2_l6
+	ln2_1_l6 -> attn_qkv_1_l7
+	ln2_2_l6 -> attn_qkv_2_l7
+	attn_qkv_1_l7 -> tp_comm_attn_l7
+	attn_qkv_2_l7 -> tp_comm_attn_l7
+	tp_comm_attn_l7 -> attn_out_1_l7
+	tp_comm_attn_l7 -> attn_out_2_l7
+	attn_out_1_l7 -> tp_comm_attn_out_l7
+	attn_out_2_l7 -> tp_comm_attn_out_l7
+	tp_comm_attn_out_l7 -> ln1_1_l7
+	tp_comm_attn_out_l7 -> ln1_2_l7
+	ln1_1_l7 -> mlp_fc1_1_l7
+	ln1_2_l7 -> mlp_fc1_2_l7
+	mlp_fc1_1_l7 -> mlp_fc2_1_l7
+	mlp_fc1_2_l7 -> mlp_fc2_2_l7
+	mlp_fc2_1_l7 -> tp_comm_mlp_l7
+	mlp_fc2_2_l7 -> tp_comm_mlp_l7
+	tp_comm_mlp_l7 -> ln2_1_l7
+	tp_comm_mlp_l7 -> ln2_2_l7
+	ln2_1_l7 -> attn_qkv_1_l8
+	ln2_2_l7 -> attn_qkv_2_l8
+	attn_qkv_1_l8 -> tp_comm_attn_l8
+	attn_qkv_2_l8 -> tp_comm_attn_l8
+	tp_comm_attn_l8 -> attn_out_1_l8
+	tp_comm_attn_l8 -> attn_out_2_l8
+	attn_out_1_l8 -> tp_comm_attn_out_l8
+	attn_out_2_l8 -> tp_comm_attn_out_l8
+	tp_comm_attn_out_l8 -> ln1_1_l8
+	tp_comm_attn_out_l8 -> ln1_2_l8
+	ln1_1_l8 -> mlp_fc1_1_l8
+	ln1_2_l8 -> mlp_fc1_2_l8
+	mlp_fc1_1_l8 -> mlp_fc2_1_l8
+	mlp_fc1_2_l8 -> mlp_fc2_2_l8
+	mlp_fc2_1_l8 -> tp_comm_mlp_l8
+	mlp_fc2_2_l8 -> tp_comm_mlp_l8
+	tp_comm_mlp_l8 -> ln2_1_l8
+	tp_comm_mlp_l8 -> ln2_2_l8
+	ln2_1_l8 -> attn_qkv_1_l9
+	ln2_2_l8 -> attn_qkv_2_l9
+	attn_qkv_1_l9 -> tp_comm_attn_l9
+	attn_qkv_2_l9 -> tp_comm_attn_l9
+	tp_comm_attn_l9 -> attn_out_1_l9
+	tp_comm_attn_l9 -> attn_out_2_l9
+	attn_out_1_l9 -> tp_comm_attn_out_l9
+	attn_out_2_l9 -> tp_comm_attn_out_l9
+	tp_comm_attn_out_l9 -> ln1_1_l9
+	tp_comm_attn_out_l9 -> ln1_2_l9
+	ln1_1_l9 -> mlp_fc1_1_l9
+	ln1_2_l9 -> mlp_fc1_2_l9
+	mlp_fc1_1_l9 -> mlp_fc2_1_l9
+	mlp_fc1_2_l9 -> mlp_fc2_2_l9
+	mlp_fc2_1_l9 -> tp_comm_mlp_l9
+	mlp_fc2_2_l9 -> tp_comm_mlp_l9
+	tp_comm_mlp_l9 -> ln2_1_l9
+	tp_comm_mlp_l9 -> ln2_2_l9
+	ln2_1_l9 -> attn_qkv_1_l10
+	ln2_2_l9 -> attn_qkv_2_l10
+	attn_qkv_1_l10 -> tp_comm_attn_l10
+	attn_qkv_2_l10 -> tp_comm_attn_l10
+	tp_comm_attn_l10 -> attn_out_1_l10
+	tp_comm_attn_l10 -> attn_out_2_l10
+	attn_out_1_l10 -> tp_comm_attn_out_l10
+	attn_out_2_l10 -> tp_comm_attn_out_l10
+	tp_comm_attn_out_l10 -> ln1_1_l10
+	tp_comm_attn_out_l10 -> ln1_2_l10
+	ln1_1_l10 -> mlp_fc1_1_l10
+	ln1_2_l10 -> mlp_fc1_2_l10
+	mlp_fc1_1_l10 -> mlp_fc2_1_l10
+	mlp_fc1_2_l10 -> mlp_fc2_2_l10
+	mlp_fc2_1_l10 -> tp_comm_mlp_l10
+	mlp_fc2_2_l10 -> tp_comm_mlp_l10
+	tp_comm_mlp_l10 -> ln2_1_l10
+	tp_comm_mlp_l10 -> ln2_2_l10
+	ln2_1_l10 -> attn_qkv_1_l11
+	ln2_2_l10 -> attn_qkv_2_l11
+	attn_qkv_1_l11 -> tp_comm_attn_l11
+	attn_qkv_2_l11 -> tp_comm_attn_l11
+	tp_comm_attn_l11 -> attn_out_1_l11
+	tp_comm_attn_l11 -> attn_out_2_l11
+	attn_out_1_l11 -> tp_comm_attn_out_l11
+	attn_out_2_l11 -> tp_comm_attn_out_l11
+	tp_comm_attn_out_l11 -> ln1_1_l11
+	tp_comm_attn_out_l11 -> ln1_2_l11
+	ln1_1_l11 -> mlp_fc1_1_l11
+	ln1_2_l11 -> mlp_fc1_2_l11
+	mlp_fc1_1_l11 -> mlp_fc2_1_l11
+	mlp_fc1_2_l11 -> mlp_fc2_2_l11
+	mlp_fc2_1_l11 -> tp_comm_mlp_l11
+	mlp_fc2_2_l11 -> tp_comm_mlp_l11
+	tp_comm_mlp_l11 -> ln2_1_l11
+	tp_comm_mlp_l11 -> ln2_2_l11
+	ln2_1_l11 -> attn_qkv_1_l12
+	ln2_2_l11 -> attn_qkv_2_l12
+	attn_qkv_1_l12 -> tp_comm_attn_l12
+	attn_qkv_2_l12 -> tp_comm_attn_l12
+	tp_comm_attn_l12 -> attn_out_1_l12
+	tp_comm_attn_l12 -> attn_out_2_l12
+	attn_out_1_l12 -> tp_comm_attn_out_l12
+	attn_out_2_l12 -> tp_comm_attn_out_l12
+	tp_comm_attn_out_l12 -> ln1_1_l12
+	tp_comm_attn_out_l12 -> ln1_2_l12
+	ln1_1_l12 -> mlp_fc1_1_l12
+	ln1_2_l12 -> mlp_fc1_2_l12
+	mlp_fc1_1_l12 -> mlp_fc2_1_l12
+	mlp_fc1_2_l12 -> mlp_fc2_2_l12
+	mlp_fc2_1_l12 -> tp_comm_mlp_l12
+	mlp_fc2_2_l12 -> tp_comm_mlp_l12
+	tp_comm_mlp_l12 -> ln2_1_l12
+	tp_comm_mlp_l12 -> ln2_2_l12
+	ln2_1_l12 -> attn_qkv_1_l13
+	ln2_2_l12 -> attn_qkv_2_l13
+	attn_qkv_1_l13 -> tp_comm_attn_l13
+	attn_qkv_2_l13 -> tp_comm_attn_l13
+	tp_comm_attn_l13 -> attn_out_1_l13
+	tp_comm_attn_l13 -> attn_out_2_l13
+	attn_out_1_l13 -> tp_comm_attn_out_l13
+	attn_out_2_l13 -> tp_comm_attn_out_l13
+	tp_comm_attn_out_l13 -> ln1_1_l13
+	tp_comm_attn_out_l13 -> ln1_2_l13
+	ln1_1_l13 -> mlp_fc1_1_l13
+	ln1_2_l13 -> mlp_fc1_2_l13
+	mlp_fc1_1_l13 -> mlp_fc2_1_l13
+	mlp_fc1_2_l13 -> mlp_fc2_2_l13
+	mlp_fc2_1_l13 -> tp_comm_mlp_l13
+	mlp_fc2_2_l13 -> tp_comm_mlp_l13
+	tp_comm_mlp_l13 -> ln2_1_l13
+	tp_comm_mlp_l13 -> ln2_2_l13
+	ln2_1_l13 -> attn_qkv_1_l14
+	ln2_2_l13 -> attn_qkv_2_l14
+	attn_qkv_1_l14 -> tp_comm_attn_l14
+	attn_qkv_2_l14 -> tp_comm_attn_l14
+	tp_comm_attn_l14 -> attn_out_1_l14
+	tp_comm_attn_l14 -> attn_out_2_l14
+	attn_out_1_l14 -> tp_comm_attn_out_l14
+	attn_out_2_l14 -> tp_comm_attn_out_l14
+	tp_comm_attn_out_l14 -> ln1_1_l14
+	tp_comm_attn_out_l14 -> ln1_2_l14
+	ln1_1_l14 -> mlp_fc1_1_l14
+	ln1_2_l14 -> mlp_fc1_2_l14
+	mlp_fc1_1_l14 -> mlp_fc2_1_l14
+	mlp_fc1_2_l14 -> mlp_fc2_2_l14
+	mlp_fc2_1_l14 -> tp_comm_mlp_l14
+	mlp_fc2_2_l14 -> tp_comm_mlp_l14
+	tp_comm_mlp_l14 -> ln2_1_l14
+	tp_comm_mlp_l14 -> ln2_2_l14
+	ln2_1_l14 -> attn_qkv_1_l15
+	ln2_2_l14 -> attn_qkv_2_l15
+	attn_qkv_1_l15 -> tp_comm_attn_l15
+	attn_qkv_2_l15 -> tp_comm_attn_l15
+	tp_comm_attn_l15 -> attn_out_1_l15
+	tp_comm_attn_l15 -> attn_out_2_l15
+	attn_out_1_l15 -> tp_comm_attn_out_l15
+	attn_out_2_l15 -> tp_comm_attn_out_l15
+	tp_comm_attn_out_l15 -> ln1_1_l15
+	tp_comm_attn_out_l15 -> ln1_2_l15
+	ln1_1_l15 -> mlp_fc1_1_l15
+	ln1_2_l15 -> mlp_fc1_2_l15
+	mlp_fc1_1_l15 -> mlp_fc2_1_l15
+	mlp_fc1_2_l15 -> mlp_fc2_2_l15
+	mlp_fc2_1_l15 -> tp_comm_mlp_l15
+	mlp_fc2_2_l15 -> tp_comm_mlp_l15
+	tp_comm_mlp_l15 -> ln2_1_l15
+	tp_comm_mlp_l15 -> ln2_2_l15
+	ln2_1_l15 -> attn_qkv_1_l16
+	ln2_2_l15 -> attn_qkv_2_l16
+	attn_qkv_1_l16 -> tp_comm_attn_l16
+	attn_qkv_2_l16 -> tp_comm_attn_l16
+	tp_comm_attn_l16 -> attn_out_1_l16
+	tp_comm_attn_l16 -> attn_out_2_l16
+	attn_out_1_l16 -> tp_comm_attn_out_l16
+	attn_out_2_l16 -> tp_comm_attn_out_l16
+	tp_comm_attn_out_l16 -> ln1_1_l16
+	tp_comm_attn_out_l16 -> ln1_2_l16
+	ln1_1_l16 -> mlp_fc1_1_l16
+	ln1_2_l16 -> mlp_fc1_2_l16
+	mlp_fc1_1_l16 -> mlp_fc2_1_l16
+	mlp_fc1_2_l16 -> mlp_fc2_2_l16
+	mlp_fc2_1_l16 -> tp_comm_mlp_l16
+	mlp_fc2_2_l16 -> tp_comm_mlp_l16
+	tp_comm_mlp_l16 -> ln2_1_l16
+	tp_comm_mlp_l16 -> ln2_2_l16
+	ln2_1_l16 -> sp_merge_1
+	ln2_2_l16 -> sp_merge_1
+	sp_split_2 -> attn_qkv_3_l1
+	sp_split_2 -> attn_qkv_4_l1
+	attn_qkv_3_l1 -> tp_comm_attn_gpu23_l1
+	attn_qkv_4_l1 -> tp_comm_attn_gpu23_l1
+	tp_comm_attn_gpu23_l1 -> attn_out_3_l1
+	tp_comm_attn_gpu23_l1 -> attn_out_4_l1
+	attn_out_3_l1 -> tp_comm_attn_out_gpu23_l1
+	attn_out_4_l1 -> tp_comm_attn_out_gpu23_l1
+	tp_comm_attn_out_gpu23_l1 -> ln1_3_l1
+	tp_comm_attn_out_gpu23_l1 -> ln1_4_l1
+	ln1_3_l1 -> mlp_fc1_3_l1
+	ln1_4_l1 -> mlp_fc1_4_l1
+	mlp_fc1_3_l1 -> mlp_fc2_3_l1
+	mlp_fc1_4_l1 -> mlp_fc2_4_l1
+	mlp_fc2_3_l1 -> tp_comm_mlp_gpu23_l1
+	mlp_fc2_4_l1 -> tp_comm_mlp_gpu23_l1
+	tp_comm_mlp_gpu23_l1 -> ln2_3_l1
+	tp_comm_mlp_gpu23_l1 -> ln2_4_l1
+	ln2_3_l1 -> attn_qkv_3_l2
+	ln2_4_l1 -> attn_qkv_4_l2
+	attn_qkv_3_l2 -> tp_comm_attn_gpu23_l2
+	attn_qkv_4_l2 -> tp_comm_attn_gpu23_l2
+	tp_comm_attn_gpu23_l2 -> attn_out_3_l2
+	tp_comm_attn_gpu23_l2 -> attn_out_4_l2
+	attn_out_3_l2 -> tp_comm_attn_out_gpu23_l2
+	attn_out_4_l2 -> tp_comm_attn_out_gpu23_l2
+	tp_comm_attn_out_gpu23_l2 -> ln1_3_l2
+	tp_comm_attn_out_gpu23_l2 -> ln1_4_l2
+	ln1_3_l2 -> mlp_fc1_3_l2
+	ln1_4_l2 -> mlp_fc1_4_l2
+	mlp_fc1_3_l2 -> mlp_fc2_3_l2
+	mlp_fc1_4_l2 -> mlp_fc2_4_l2
+	mlp_fc2_3_l2 -> tp_comm_mlp_gpu23_l2
+	mlp_fc2_4_l2 -> tp_comm_mlp_gpu23_l2
+	tp_comm_mlp_gpu23_l2 -> ln2_3_l2
+	tp_comm_mlp_gpu23_l2 -> ln2_4_l2
+	ln2_3_l2 -> attn_qkv_3_l3
+	ln2_4_l2 -> attn_qkv_4_l3
+	attn_qkv_3_l3 -> tp_comm_attn_gpu23_l3
+	attn_qkv_4_l3 -> tp_comm_attn_gpu23_l3
+	tp_comm_attn_gpu23_l3 -> attn_out_3_l3
+	tp_comm_attn_gpu23_l3 -> attn_out_4_l3
+	attn_out_3_l3 -> tp_comm_attn_out_gpu23_l3
+	attn_out_4_l3 -> tp_comm_attn_out_gpu23_l3
+	tp_comm_attn_out_gpu23_l3 -> ln1_3_l3
+	tp_comm_attn_out_gpu23_l3 -> ln1_4_l3
+	ln1_3_l3 -> mlp_fc1_3_l3
+	ln1_4_l3 -> mlp_fc1_4_l3
+	mlp_fc1_3_l3 -> mlp_fc2_3_l3
+	mlp_fc1_4_l3 -> mlp_fc2_4_l3
+	mlp_fc2_3_l3 -> tp_comm_mlp_gpu23_l3
+	mlp_fc2_4_l3 -> tp_comm_mlp_gpu23_l3
+	tp_comm_mlp_gpu23_l3 -> ln2_3_l3
+	tp_comm_mlp_gpu23_l3 -> ln2_4_l3
+	ln2_3_l3 -> attn_qkv_3_l4
+	ln2_4_l3 -> attn_qkv_4_l4
+	attn_qkv_3_l4 -> tp_comm_attn_gpu23_l4
+	attn_qkv_4_l4 -> tp_comm_attn_gpu23_l4
+	tp_comm_attn_gpu23_l4 -> attn_out_3_l4
+	tp_comm_attn_gpu23_l4 -> attn_out_4_l4
+	attn_out_3_l4 -> tp_comm_attn_out_gpu23_l4
+	attn_out_4_l4 -> tp_comm_attn_out_gpu23_l4
+	tp_comm_attn_out_gpu23_l4 -> ln1_3_l4
+	tp_comm_attn_out_gpu23_l4 -> ln1_4_l4
+	ln1_3_l4 -> mlp_fc1_3_l4
+	ln1_4_l4 -> mlp_fc1_4_l4
+	mlp_fc1_3_l4 -> mlp_fc2_3_l4
+	mlp_fc1_4_l4 -> mlp_fc2_4_l4
+	mlp_fc2_3_l4 -> tp_comm_mlp_gpu23_l4
+	mlp_fc2_4_l4 -> tp_comm_mlp_gpu23_l4
+	tp_comm_mlp_gpu23_l4 -> ln2_3_l4
+	tp_comm_mlp_gpu23_l4 -> ln2_4_l4
+	ln2_3_l4 -> attn_qkv_3_l5
+	ln2_4_l4 -> attn_qkv_4_l5
+	attn_qkv_3_l5 -> tp_comm_attn_gpu23_l5
+	attn_qkv_4_l5 -> tp_comm_attn_gpu23_l5
+	tp_comm_attn_gpu23_l5 -> attn_out_3_l5
+	tp_comm_attn_gpu23_l5 -> attn_out_4_l5
+	attn_out_3_l5 -> tp_comm_attn_out_gpu23_l5
+	attn_out_4_l5 -> tp_comm_attn_out_gpu23_l5
+	tp_comm_attn_out_gpu23_l5 -> ln1_3_l5
+	tp_comm_attn_out_gpu23_l5 -> ln1_4_l5
+	ln1_3_l5 -> mlp_fc1_3_l5
+	ln1_4_l5 -> mlp_fc1_4_l5
+	mlp_fc1_3_l5 -> mlp_fc2_3_l5
+	mlp_fc1_4_l5 -> mlp_fc2_4_l5
+	mlp_fc2_3_l5 -> tp_comm_mlp_gpu23_l5
+	mlp_fc2_4_l5 -> tp_comm_mlp_gpu23_l5
+	tp_comm_mlp_gpu23_l5 -> ln2_3_l5
+	tp_comm_mlp_gpu23_l5 -> ln2_4_l5
+	ln2_3_l5 -> attn_qkv_3_l6
+	ln2_4_l5 -> attn_qkv_4_l6
+	attn_qkv_3_l6 -> tp_comm_attn_gpu23_l6
+	attn_qkv_4_l6 -> tp_comm_attn_gpu23_l6
+	tp_comm_attn_gpu23_l6 -> attn_out_3_l6
+	tp_comm_attn_gpu23_l6 -> attn_out_4_l6
+	attn_out_3_l6 -> tp_comm_attn_out_gpu23_l6
+	attn_out_4_l6 -> tp_comm_attn_out_gpu23_l6
+	tp_comm_attn_out_gpu23_l6 -> ln1_3_l6
+	tp_comm_attn_out_gpu23_l6 -> ln1_4_l6
+	ln1_3_l6 -> mlp_fc1_3_l6
+	ln1_4_l6 -> mlp_fc1_4_l6
+	mlp_fc1_3_l6 -> mlp_fc2_3_l6
+	mlp_fc1_4_l6 -> mlp_fc2_4_l6
+	mlp_fc2_3_l6 -> tp_comm_mlp_gpu23_l6
+	mlp_fc2_4_l6 -> tp_comm_mlp_gpu23_l6
+	tp_comm_mlp_gpu23_l6 -> ln2_3_l6
+	tp_comm_mlp_gpu23_l6 -> ln2_4_l6
+	ln2_3_l6 -> attn_qkv_3_l7
+	ln2_4_l6 -> attn_qkv_4_l7
+	attn_qkv_3_l7 -> tp_comm_attn_gpu23_l7
+	attn_qkv_4_l7 -> tp_comm_attn_gpu23_l7
+	tp_comm_attn_gpu23_l7 -> attn_out_3_l7
+	tp_comm_attn_gpu23_l7 -> attn_out_4_l7
+	attn_out_3_l7 -> tp_comm_attn_out_gpu23_l7
+	attn_out_4_l7 -> tp_comm_attn_out_gpu23_l7
+	tp_comm_attn_out_gpu23_l7 -> ln1_3_l7
+	tp_comm_attn_out_gpu23_l7 -> ln1_4_l7
+	ln1_3_l7 -> mlp_fc1_3_l7
+	ln1_4_l7 -> mlp_fc1_4_l7
+	mlp_fc1_3_l7 -> mlp_fc2_3_l7
+	mlp_fc1_4_l7 -> mlp_fc2_4_l7
+	mlp_fc2_3_l7 -> tp_comm_mlp_gpu23_l7
+	mlp_fc2_4_l7 -> tp_comm_mlp_gpu23_l7
+	tp_comm_mlp_gpu23_l7 -> ln2_3_l7
+	tp_comm_mlp_gpu23_l7 -> ln2_4_l7
+	ln2_3_l7 -> attn_qkv_3_l8
+	ln2_4_l7 -> attn_qkv_4_l8
+	attn_qkv_3_l8 -> tp_comm_attn_gpu23_l8
+	attn_qkv_4_l8 -> tp_comm_attn_gpu23_l8
+	tp_comm_attn_gpu23_l8 -> attn_out_3_l8
+	tp_comm_attn_gpu23_l8 -> attn_out_4_l8
+	attn_out_3_l8 -> tp_comm_attn_out_gpu23_l8
+	attn_out_4_l8 -> tp_comm_attn_out_gpu23_l8
+	tp_comm_attn_out_gpu23_l8 -> ln1_3_l8
+	tp_comm_attn_out_gpu23_l8 -> ln1_4_l8
+	ln1_3_l8 -> mlp_fc1_3_l8
+	ln1_4_l8 -> mlp_fc1_4_l8
+	mlp_fc1_3_l8 -> mlp_fc2_3_l8
+	mlp_fc1_4_l8 -> mlp_fc2_4_l8
+	mlp_fc2_3_l8 -> tp_comm_mlp_gpu23_l8
+	mlp_fc2_4_l8 -> tp_comm_mlp_gpu23_l8
+	tp_comm_mlp_gpu23_l8 -> ln2_3_l8
+	tp_comm_mlp_gpu23_l8 -> ln2_4_l8
+	ln2_3_l8 -> attn_qkv_3_l9
+	ln2_4_l8 -> attn_qkv_4_l9
+	attn_qkv_3_l9 -> tp_comm_attn_gpu23_l9
+	attn_qkv_4_l9 -> tp_comm_attn_gpu23_l9
+	tp_comm_attn_gpu23_l9 -> attn_out_3_l9
+	tp_comm_attn_gpu23_l9 -> attn_out_4_l9
+	attn_out_3_l9 -> tp_comm_attn_out_gpu23_l9
+	attn_out_4_l9 -> tp_comm_attn_out_gpu23_l9
+	tp_comm_attn_out_gpu23_l9 -> ln1_3_l9
+	tp_comm_attn_out_gpu23_l9 -> ln1_4_l9
+	ln1_3_l9 -> mlp_fc1_3_l9
+	ln1_4_l9 -> mlp_fc1_4_l9
+	mlp_fc1_3_l9 -> mlp_fc2_3_l9
+	mlp_fc1_4_l9 -> mlp_fc2_4_l9
+	mlp_fc2_3_l9 -> tp_comm_mlp_gpu23_l9
+	mlp_fc2_4_l9 -> tp_comm_mlp_gpu23_l9
+	tp_comm_mlp_gpu23_l9 -> ln2_3_l9
+	tp_comm_mlp_gpu23_l9 -> ln2_4_l9
+	ln2_3_l9 -> attn_qkv_3_l10
+	ln2_4_l9 -> attn_qkv_4_l10
+	attn_qkv_3_l10 -> tp_comm_attn_gpu23_l10
+	attn_qkv_4_l10 -> tp_comm_attn_gpu23_l10
+	tp_comm_attn_gpu23_l10 -> attn_out_3_l10
+	tp_comm_attn_gpu23_l10 -> attn_out_4_l10
+	attn_out_3_l10 -> tp_comm_attn_out_gpu23_l10
+	attn_out_4_l10 -> tp_comm_attn_out_gpu23_l10
+	tp_comm_attn_out_gpu23_l10 -> ln1_3_l10
+	tp_comm_attn_out_gpu23_l10 -> ln1_4_l10
+	ln1_3_l10 -> mlp_fc1_3_l10
+	ln1_4_l10 -> mlp_fc1_4_l10
+	mlp_fc1_3_l10 -> mlp_fc2_3_l10
+	mlp_fc1_4_l10 -> mlp_fc2_4_l10
+	mlp_fc2_3_l10 -> tp_comm_mlp_gpu23_l10
+	mlp_fc2_4_l10 -> tp_comm_mlp_gpu23_l10
+	tp_comm_mlp_gpu23_l10 -> ln2_3_l10
+	tp_comm_mlp_gpu23_l10 -> ln2_4_l10
+	ln2_3_l10 -> attn_qkv_3_l11
+	ln2_4_l10 -> attn_qkv_4_l11
+	attn_qkv_3_l11 -> tp_comm_attn_gpu23_l11
+	attn_qkv_4_l11 -> tp_comm_attn_gpu23_l11
+	tp_comm_attn_gpu23_l11 -> attn_out_3_l11
+	tp_comm_attn_gpu23_l11 -> attn_out_4_l11
+	attn_out_3_l11 -> tp_comm_attn_out_gpu23_l11
+	attn_out_4_l11 -> tp_comm_attn_out_gpu23_l11
+	tp_comm_attn_out_gpu23_l11 -> ln1_3_l11
+	tp_comm_attn_out_gpu23_l11 -> ln1_4_l11
+	ln1_3_l11 -> mlp_fc1_3_l11
+	ln1_4_l11 -> mlp_fc1_4_l11
+	mlp_fc1_3_l11 -> mlp_fc2_3_l11
+	mlp_fc1_4_l11 -> mlp_fc2_4_l11
+	mlp_fc2_3_l11 -> tp_comm_mlp_gpu23_l11
+	mlp_fc2_4_l11 -> tp_comm_mlp_gpu23_l11
+	tp_comm_mlp_gpu23_l11 -> ln2_3_l11
+	tp_comm_mlp_gpu23_l11 -> ln2_4_l11
+	ln2_3_l11 -> attn_qkv_3_l12
+	ln2_4_l11 -> attn_qkv_4_l12
+	attn_qkv_3_l12 -> tp_comm_attn_gpu23_l12
+	attn_qkv_4_l12 -> tp_comm_attn_gpu23_l12
+	tp_comm_attn_gpu23_l12 -> attn_out_3_l12
+	tp_comm_attn_gpu23_l12 -> attn_out_4_l12
+	attn_out_3_l12 -> tp_comm_attn_out_gpu23_l12
+	attn_out_4_l12 -> tp_comm_attn_out_gpu23_l12
+	tp_comm_attn_out_gpu23_l12 -> ln1_3_l12
+	tp_comm_attn_out_gpu23_l12 -> ln1_4_l12
+	ln1_3_l12 -> mlp_fc1_3_l12
+	ln1_4_l12 -> mlp_fc1_4_l12
+	mlp_fc1_3_l12 -> mlp_fc2_3_l12
+	mlp_fc1_4_l12 -> mlp_fc2_4_l12
+	mlp_fc2_3_l12 -> tp_comm_mlp_gpu23_l12
+	mlp_fc2_4_l12 -> tp_comm_mlp_gpu23_l12
+	tp_comm_mlp_gpu23_l12 -> ln2_3_l12
+	tp_comm_mlp_gpu23_l12 -> ln2_4_l12
+	ln2_3_l12 -> attn_qkv_3_l13
+	ln2_4_l12 -> attn_qkv_4_l13
+	attn_qkv_3_l13 -> tp_comm_attn_gpu23_l13
+	attn_qkv_4_l13 -> tp_comm_attn_gpu23_l13
+	tp_comm_attn_gpu23_l13 -> attn_out_3_l13
+	tp_comm_attn_gpu23_l13 -> attn_out_4_l13
+	attn_out_3_l13 -> tp_comm_attn_out_gpu23_l13
+	attn_out_4_l13 -> tp_comm_attn_out_gpu23_l13
+	tp_comm_attn_out_gpu23_l13 -> ln1_3_l13
+	tp_comm_attn_out_gpu23_l13 -> ln1_4_l13
+	ln1_3_l13 -> mlp_fc1_3_l13
+	ln1_4_l13 -> mlp_fc1_4_l13
+	mlp_fc1_3_l13 -> mlp_fc2_3_l13
+	mlp_fc1_4_l13 -> mlp_fc2_4_l13
+	mlp_fc2_3_l13 -> tp_comm_mlp_gpu23_l13
+	mlp_fc2_4_l13 -> tp_comm_mlp_gpu23_l13
+	tp_comm_mlp_gpu23_l13 -> ln2_3_l13
+	tp_comm_mlp_gpu23_l13 -> ln2_4_l13
+	ln2_3_l13 -> attn_qkv_3_l14
+	ln2_4_l13 -> attn_qkv_4_l14
+	attn_qkv_3_l14 -> tp_comm_attn_gpu23_l14
+	attn_qkv_4_l14 -> tp_comm_attn_gpu23_l14
+	tp_comm_attn_gpu23_l14 -> attn_out_3_l14
+	tp_comm_attn_gpu23_l14 -> attn_out_4_l14
+	attn_out_3_l14 -> tp_comm_attn_out_gpu23_l14
+	attn_out_4_l14 -> tp_comm_attn_out_gpu23_l14
+	tp_comm_attn_out_gpu23_l14 -> ln1_3_l14
+	tp_comm_attn_out_gpu23_l14 -> ln1_4_l14
+	ln1_3_l14 -> mlp_fc1_3_l14
+	ln1_4_l14 -> mlp_fc1_4_l14
+	mlp_fc1_3_l14 -> mlp_fc2_3_l14
+	mlp_fc1_4_l14 -> mlp_fc2_4_l14
+	mlp_fc2_3_l14 -> tp_comm_mlp_gpu23_l14
+	mlp_fc2_4_l14 -> tp_comm_mlp_gpu23_l14
+	tp_comm_mlp_gpu23_l14 -> ln2_3_l14
+	tp_comm_mlp_gpu23_l14 -> ln2_4_l14
+	ln2_3_l14 -> attn_qkv_3_l15
+	ln2_4_l14 -> attn_qkv_4_l15
+	attn_qkv_3_l15 -> tp_comm_attn_gpu23_l15
+	attn_qkv_4_l15 -> tp_comm_attn_gpu23_l15
+	tp_comm_attn_gpu23_l15 -> attn_out_3_l15
+	tp_comm_attn_gpu23_l15 -> attn_out_4_l15
+	attn_out_3_l15 -> tp_comm_attn_out_gpu23_l15
+	attn_out_4_l15 -> tp_comm_attn_out_gpu23_l15
+	tp_comm_attn_out_gpu23_l15 -> ln1_3_l15
+	tp_comm_attn_out_gpu23_l15 -> ln1_4_l15
+	ln1_3_l15 -> mlp_fc1_3_l15
+	ln1_4_l15 -> mlp_fc1_4_l15
+	mlp_fc1_3_l15 -> mlp_fc2_3_l15
+	mlp_fc1_4_l15 -> mlp_fc2_4_l15
+	mlp_fc2_3_l15 -> tp_comm_mlp_gpu23_l15
+	mlp_fc2_4_l15 -> tp_comm_mlp_gpu23_l15
+	tp_comm_mlp_gpu23_l15 -> ln2_3_l15
+	tp_comm_mlp_gpu23_l15 -> ln2_4_l15
+	ln2_3_l15 -> attn_qkv_3_l16
+	ln2_4_l15 -> attn_qkv_4_l16
+	attn_qkv_3_l16 -> tp_comm_attn_gpu23_l16
+	attn_qkv_4_l16 -> tp_comm_attn_gpu23_l16
+	tp_comm_attn_gpu23_l16 -> attn_out_3_l16
+	tp_comm_attn_gpu23_l16 -> attn_out_4_l16
+	attn_out_3_l16 -> tp_comm_attn_out_gpu23_l16
+	attn_out_4_l16 -> tp_comm_attn_out_gpu23_l16
+	tp_comm_attn_out_gpu23_l16 -> ln1_3_l16
+	tp_comm_attn_out_gpu23_l16 -> ln1_4_l16
+	ln1_3_l16 -> mlp_fc1_3_l16
+	ln1_4_l16 -> mlp_fc1_4_l16
+	mlp_fc1_3_l16 -> mlp_fc2_3_l16
+	mlp_fc1_4_l16 -> mlp_fc2_4_l16
+	mlp_fc2_3_l16 -> tp_comm_mlp_gpu23_l16
+	mlp_fc2_4_l16 -> tp_comm_mlp_gpu23_l16
+	tp_comm_mlp_gpu23_l16 -> ln2_3_l16
+	tp_comm_mlp_gpu23_l16 -> ln2_4_l16
+	ln2_3_l16 -> sp_merge_2
+	ln2_4_l16 -> sp_merge_2
+	sp_merge_1 -> dp_merge
+	sp_merge_2 -> dp_merge
+	dp_merge -> output
+}
