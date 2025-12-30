@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""
+Complete MoE Model DAG Generator
+Generates Graphviz DOT code for 10B MoE model with parallel strategies
+"""
+
+def generate_moe_dag():
+    dot_content = '''digraph MoE_Parallel_Strategy {
+    rankdir=TB;
+    bgcolor=white;
+    fontname="Arial";
+    
+    // Graph styling
+    node [fontname="Arial", fontsize=10, shape=rectangle, style=filled, fillcolor=lightblue];
+    edge [fontname="Arial", fontsize=9];
+    
+    // ==================== DATA PARALLEL LEVEL ====================
+    // Root request node
+    Request [shape=ellipse, fillcolor=lightgreen, label="Request\\nInput: [batch_size=128, seq_len=1024]\\nOutput: [batch_size=128, seq_len=1024]"];
+    
+    // DP fan-out (2 replicas)
+    DP_Split [shape=ellipse, fillcolor=yellow, label="DP Split\\nInput: [batch_size=128, seq_len=1024]\\nOutput: [batch_size=64, seq_len=1024]"];
+    
+    Request -> DP_Split [label="DP=2"];
+    
+    // ==================== REPLICA 0 ====================
+    subgraph cluster_replica0 {
+        label="Replica 0 (DP=0)";
+        style=dashed;
+        fillcolor=lightgrey;
+        
+        // Input for replica 0
+        Input_R0 [shape=ellipse, fillcolor=lightgreen, label="Input R0\\nInput: [batch_size=64, seq_len=1024]\\nOutput: [batch_size=64, seq_len=1024, token_dim=512]"];
+        
+        // ==================== PIPELINE STAGE ====================
+        subgraph cluster_pipeline {
+            label="Pipeline Stage (PP=1)";
+            style=solid;
+            fillcolor=white;
+            
+            // Layer 1
+            subgraph cluster_layer1 {
+                label="Layer 1 (GPU 0-3)";
+                style=rounded;
+                fillcolor=lightcyan;
+                
+                // Attention with TP=4
+                Attention_L1 [shape=rectangle, fillcolor=orange, label="Attention L1\\nInput: [batch_size=64, seq_len=1024, token_dim=512]\\nOutput: [batch_size=64, seq_len=1024, heads=16, d_k=32]"];
+                
+                // TP split for attention
+                TP_Split_L1 [shape=ellipse, fillcolor=yellow, label="TP Split L1\\nInput: [batch_size=64, seq_len=1024, heads=16]\\nOutput: [batch_size=64, seq_len=1024, heads=4]"];
+                
+                // TP shards
+                TP_Shard_L1_0 [shape=rectangle, fillcolor=lightcoral, label="TP Shard 0 L1\\nGPU: 0\\nInput: [batch_size=64, seq_len=1024, heads=4]\\nOutput: [batch_size=64, seq_len=1024, heads=4]"];
+                TP_Shard_L1_1 [shape=rectangle, fillcolor=lightcoral, label="TP Shard 1 L1\\nGPU: 1\\nInput: [batch_size=64, seq_len=1024, heads=4]\\nOutput: [batch_size=64, seq_len=1024, heads=4]"];
+                TP_Shard_L1_2 [shape=rectangle, fillcolor=lightcoral, label="TP Shard 2 L1\\nGPU: 2\\nInput: [batch_size=64, seq_len=1024, heads=4]\\nOutput: [batch_size=64, seq_len=1024, heads=4]"];
+                TP_Shard_L1_3 [shape=rectangle, fillcolor=lightcoral, label="TP Shard 3 L1\\nGPU: 3\\nInput: [batch_size=64, seq_len=1024, heads=4]\\nOutput: [batch_size=64, seq_len=1024, heads=4]"];
+                
+                // TP allreduce
+                TP_AllReduce_L1 [shape=ellipse, fillcolor=purple, label="TP AllReduce L1\\nInput: [batch_size=64, seq_len=1024, heads=4]×4\\nOutput: [batch_size=64, seq_len=1024, heads=16]"];
+                
+                // MoE Layer with EP=16
+                MoE_L1 [shape=rectangle, fillcolor=lightgreen, label="MoE L1\\nInput: [batch_size=64, seq_len=1024, token_dim=512]\\nOutput: [batch_size=64, seq_len=1024, token_dim=512]"];
+                
+                // Router (parallelogram for routing)
+                Router_L1 [shape=parallelogram, fillcolor=gold, label="Router L1\\nGPU: 0-15\\nInput: [batch_size=64, seq_len=1024, token_dim=512]\\nOutput: [batch_size=64, seq_len=1024, expert_ids]"];
+                
+                // Expert selection (dashed line for gate)
+                Expert_Selection_L1 [shape=ellipse, style=dashed, fillcolor=pink, label="Expert Selection L1\\nInput: [batch_size=64, seq_len=1024]\\nOutput: [batch_size=64, seq_len=1024, top_2_experts]"];
+                
+                // EP experts (16 experts on 16 GPUs)
+                Expert_L1_0 [shape=rectangle, fillcolor=lightblue, label="Expert 0 L1\\nGPU: 4\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_1 [shape=rectangle, fillcolor=lightblue, label="Expert 1 L1\\nGPU: 5\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_2 [shape=rectangle, fillcolor=lightblue, label="Expert 2 L1\\nGPU: 6\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_3 [shape=rectangle, fillcolor=lightblue, label="Expert 3 L1\\nGPU: 7\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_4 [shape=rectangle, fillcolor=lightblue, label="Expert 4 L1\\nGPU: 8\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_5 [shape=rectangle, fillcolor=lightblue, label="Expert 5 L1\\nGPU: 9\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_6 [shape=rectangle, fillcolor=lightblue, label="Expert 6 L1\\nGPU: 10\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_7 [shape=rectangle, fillcolor=lightblue, label="Expert 7 L1\\nGPU: 11\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_8 [shape=rectangle, fillcolor=lightblue, label="Expert 8 L1\\nGPU: 12\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_9 [shape=rectangle, fillcolor=lightblue, label="Expert 9 L1\\nGPU: 13\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_10 [shape=rectangle, fillcolor=lightblue, label="Expert 10 L1\\nGPU: 14\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_11 [shape=rectangle, fillcolor=lightblue, label="Expert 11 L1\\nGPU: 15\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_12 [shape=rectangle, fillcolor=lightblue, label="Expert 12 L1\\nGPU: 16\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_13 [shape=rectangle, fillcolor=lightblue, label="Expert 13 L1\\nGPU: 17\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_14 [shape=rectangle, fillcolor=lightblue, label="Expert 14 L1\\nGPU: 18\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                Expert_L1_15 [shape=rectangle, fillcolor=lightblue, label="Expert 15 L1\\nGPU: 19\\nInput: [batch_size=8, seq_len=1024, token_dim=512]\\nOutput: [batch_size=8, seq_len=1024, token_dim=512]"];
+                
+                // Expert aggregation
+                Expert_Aggregate_L1 [shape=parallelogram, fillcolor=gold, label="Expert Aggregate L1\\nGPU: 0-3\\nInput: [batch_size=8, seq_len=1024, token_dim=512]×16\\nOutput: [batch_size=64, seq_len=1024, token_dim=512]"];
+                
+                // Connections within Layer 1
+                Attention_L1 -> TP_Split_L1;
+                TP_Split_L1 -> TP_Sharp_L1_0;
+                TP_Split_L1 -> TP_Sharp_L1_1;
+                TP_Split_L1 -> TP_Sharp_L1_2;
+                TP_Split_L1 -> TP_Sharp_L1_3;
+                
+                TP_Sharp_L1_0 -> TP_AllReduce_L1;
+                TP_Sharp_L1_1 -> TP_AllReduce_L1;
+                TP_Sharp_L1_2 -> TP_AllReduce_L1;
+                TP_Sharp_L1_3 -> TP_AllReduce_L1;
+                
+                TP_AllReduce_L1 -> MoE_L1;
+                MoE_L1 -> Router_L1;
+                Router_L1 -> Expert_Selection_L1 [style=dashed];
+                Expert_Selection_L1 -> Expert_L1_0;
+                Expert_Selection_L1 -> Expert_L1_1;
+                Expert_Selection_L1 -> Expert_L1_2;
+                Expert_Selection_L1 -> Expert_L1_3;
+                Expert_Selection_L1 -> Expert_L1_4;
+                Expert_Selection_L1 -> Expert_L1_5;
+                Expert_Selection_L1 -> Expert_L1_6;
+                Expert_Selection_L1 -> Expert_L1_7;
+                Expert_Selection_L1 -> Expert_L1_8;
+                Expert_Selection_L1 -> Expert_L1_9;
+                Expert_Selection_L1 -> Expert_L1_10;
+                Expert_Selection_L1 -> Expert_L1_11;
+                Expert_Selection_L1 -> Expert_L1_12;
+                Expert_Selection_L1 -> Expert_L1_13;
+                Expert_Selection_L1 -> Expert_L1_14;
+                Expert_Selection_L1 -> Expert_L1_15;
+                
+                Expert_L1_0 -> Expert_Aggregate_L1;
+                Expert_L1_1 -> Expert_Aggregate_L1;
+                Expert_L1_2 -> Expert_Aggregate_L1;
+                Expert_L1_3 -> Expert_Aggregate_L1;
+                Expert_L1_4 -> Expert_Aggregate_L1;
+                Expert_L1_5 -> Expert_Aggregate_L1;
+                Expert_L1_6 -> Expert_Aggregate_L1;
+                Expert_L1_7 -> Expert_Aggregate_L1;
+                Expert_L1_8 -> Expert_Aggregate_L1;
+                Expert_L1_9 -> Expert_Aggregate_L1;
+                Expert_L1_10 -> Expert_Aggregate_L1;
+                Expert_L1_11 -> Expert_Aggregate_L1;
+                Expert_L1_12 -> Expert_Aggregate_L1;
+                Expert_L1_13 -> Expert_Aggregate_L1;
+                Expert_L1_14 -> Expert_Aggregate_L1;
+                Expert_L1_15 -> Expert_Aggregate_L1;
+            }
+            
+            // Output of Layer 1
+            Layer1_Output [shape=ellipse, fillcolor=lightgreen, label="Layer 1 Output\\nInput: [batch_size=64, seq_len=1024, token_dim=512]\\nOutput: [batch_size=64, seq_len=1024, token_dim=512]"];
+            Expert_Aggregate_L1 -> Layer1_Output;
+        }
+        
+        // Connect input to first layer
+        Input_R0 -> Attention_L1;
+    }
+    
+    // ==================== REPLICA 1 ====================
+    subgraph cluster_replica1 {
+        label="Replica 1 (DP=1)";
+        style=dashed;
+        fillcolor=lightgrey;
+        
+        // Input for replica 1
+        Input_R1 [shape=ellipse, fillcolor=lightgreen, label="Input R1\\nInput: [batch_size=64, seq_len=1024]\\nOutput: [batch_size=64, seq_len=1024, token_dim=512]"];
+        
+        // Simplified representation of Replica 1 (same structure as R0 but different GPUs)
+        Layer1_R1 [shape=rectangle, fillcolor=lightcyan, label="Layer 1 R1\\nGPUs: 20-39\\nInput: [batch_size=64, seq_len=1024, token_dim=512]\\nOutput: [batch_size=64, seq_len=1024, token_dim=512]"];
+        
+        Input_R1 -> Layer1_R1;
+    }
+    
+    // ==================== CONNECTIONS ====================
+    // DP connections
+    DP_Split -> Input_R0;
+    DP_Split -> Input_R1;
+    
+    // Final output
+    Final_Output [shape=ellipse, fillcolor=lightgreen, label="Final Output\\nInput: [batch_size=64, seq_len=1024, token_dim=512]×2\\nOutput: [batch_size=128, seq_len=1024, token_dim=512]"];
+    
+    Layer1_Output -> Final_Output;
+    Layer1_R1 -> Final_Output;
+    
+    // Communication edges between GPUs
+    edge [color=red, style=dotted];
+    TP_Split_L1 -> TP_Sharp_L1_0 [label="GPU 0"];
+    TP_Split_L1 -> TP_Sharp_L1_1 [label="GPU 1"];
+    TP_Split_L1 -> TP_Sharp_L1_2 [label="GPU 2"];
+    TP_Split_L1 -> TP_Sharp_L1_3 [label="GPU 3"];
+    
+    Expert_Selection_L1 -> Expert_L1_0 [label="GPU 4", style=dashed];
+    Expert_Selection_L1 -> Expert_L1_1 [label="GPU 5", style=dashed];
+    Expert_Selection_L1 -> Expert_L1_2 [label="GPU 6", style=dashed];
+    Expert_Selection_L1 -> Expert_L1_3 [label="GPU 7", style=dashed];
+}'''
+    
+    return dot_content
+
+if __name__ == "__main__":
+    dag_content = generate_moe_dag()
+    
+    # Write DOT file
+    with open('./outputs/2025-12-30-10-00-03/moe_parallel_strategy.dot', 'w') as f:
+        f.write(dag_content)
+    
+    print("Generated DOT file: moe_parallel_strategy.dot")
+    print("\nTo generate SVG image, run:")
+    print("dot -Tsvg ./outputs/2025-12-30-10-00-03/moe_parallel_strategy.dot -o ./outputs/2025-12-30-10-00-03/moe_parallel_strategy.svg")
