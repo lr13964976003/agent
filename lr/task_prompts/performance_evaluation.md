@@ -34,6 +34,8 @@ You need to follow the following constraints:
 
 Do not make any changes to the original file.<<<禁止修改源文件>>>
 
+The number of GPUs required for the deployment plan is not simply calculated as EP * TP * PP * DP * SP; instead, there is a complex mapping relationship, and the rules are specified in the knowledge file. <<<提醒GPU总数>>>
+
 
 SUBMISSION
 
