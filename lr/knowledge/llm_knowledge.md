@@ -18,6 +18,8 @@ Parallel strategies operate on **different structural domains** of the model and
 
 GPU allocation **MUST** be derived from **model–structure mapping**, not arithmetic composition.
 
+Only the **parallel dimensions that take effect simultaneously within the same operator phase** need to be multiplied.
+
 ---
 
 ## 2. Structural Scope of Each Parallel Strategy
