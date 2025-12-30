@@ -1,0 +1,162 @@
+// MoE Parallel Strategy Deployment DAG - Final Version
+// EP=16, TP=4, PP=1, DP=1
+// Complete with cross-GPU expert routing and detailed operator breakdown
+
+digraph {
+    rankdir=TB
+    size="40,50"
+    node [fontname=Arial fontsize=10]
+    edge [fontname=Arial fontsize=8]
+    
+    // Input and Output nodes
+    input [label="Input\n[batch_size=128, seq_len=var, dim=512]" shape=ellipse style=filled fillcolor=lightblue]
+    output [label="Output\n[batch_size=128, seq_len=var, dim=512]" shape=ellipse style=filled fillcolor=lightblue]
+    
+    // Create subgraphs for each GPU with detailed breakdown
+    subgraph cluster_gpu_0 {
+        label="GPU 0 (Expert 0)"
+        style="rounded,filled"
+        fillcolor=lightgray
+        
+        // Input distribution
+        distribute_0 [label="Distribute to GPU_0\nInput: [B=128->8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        
+        // Layer 0 detailed breakdown
+        attention_0_0 [label="Attention GPU_0_L0\nTP=4 Split\nInput: [B=8, S=var, H=16, D=32]\nOutput: [B=8, S=var, H=16, D=32]" shape=rectangle style=filled fillcolor=lightgreen]
+        gate_0_0 [label="Gate GPU_0_L0\nSelect Top-2 Experts\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=diamond style=filled fillcolor=orange]
+        expert_0_0 [label="Expert GPU_0_L0\nExpert ID=0\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=1024]" shape=rectangle style=filled fillcolor=lightcoral]
+        aggregate_0_0 [label="Aggregate GPU_0_L0\nCombine Expert Outputs\nInput: [B=8, S=var, D=1024]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        
+        // Communication nodes for TP=4
+        comm_0_0 [label="TP=4 AllReduce\nGPU_0_L0_Attention" shape=ellipse style=filled fillcolor=lightblue]
+        
+        // Simplified representation of remaining layers (showing key connections)
+        attention_0_15 [label="Attention GPU_0_L15\nTP=4 Split\nInput: [B=8, S=var, H=16, D=32]\nOutput: [B=8, S=var, H=16, D=32]" shape=rectangle style=filled fillcolor=lightgreen]
+        gate_0_15 [label="Gate GPU_0_L15\nSelect Top-2 Experts\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=diamond style=filled fillcolor=orange]
+        expert_0_15 [label="Expert GPU_0_L15\nExpert ID=0\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=1024]" shape=rectangle style=filled fillcolor=lightcoral]
+        aggregate_0_15 [label="Aggregate GPU_0_L15\nCombine Expert Outputs\nInput: [B=8, S=var, D=1024]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        
+        collect_0 [label="Collect from GPU_0\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+    }
+    
+    subgraph cluster_gpu_1 {
+        label="GPU 1 (Expert 1)"
+        style="rounded,filled"
+        fillcolor=lightgray
+        
+        distribute_1 [label="Distribute to GPU_1\nInput: [B=128->8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        attention_1_0 [label="Attention GPU_1_L0\nTP=4 Split\nInput: [B=8, S=var, H=16, D=32]\nOutput: [B=8, S=var, H=16, D=32]" shape=rectangle style=filled fillcolor=lightgreen]
+        gate_1_0 [label="Gate GPU_1_L0\nSelect Top-2 Experts\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=diamond style=filled fillcolor=orange]
+        expert_1_0 [label="Expert GPU_1_L0\nExpert ID=1\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=1024]" shape=rectangle style=filled fillcolor=lightcoral]
+        aggregate_1_0 [label="Aggregate GPU_1_L0\nCombine Expert Outputs\nInput: [B=8, S=var, D=1024]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        
+        comm_1_0 [label="TP=4 AllReduce\nGPU_1_L0_Attention" shape=ellipse style=filled fillcolor=lightblue]
+        
+        attention_1_15 [label="Attention GPU_1_L15\nTP=4 Split\nInput: [B=8, S=var, H=16, D=32]\nOutput: [B=8, S=var, H=16, D=32]" shape=rectangle style=filled fillcolor=lightgreen]
+        gate_1_15 [label="Gate GPU_1_L15\nSelect Top-2 Experts\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=diamond style=filled fillcolor=orange]
+        expert_1_15 [label="Expert GPU_1_L15\nExpert ID=1\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=1024]" shape=rectangle style=filled fillcolor=lightcoral]
+        aggregate_1_15 [label="Aggregate GPU_1_L15\nCombine Expert Outputs\nInput: [B=8, S=var, D=1024]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        
+        collect_1 [label="Collect from GPU_1\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+    }
+    
+    subgraph cluster_gpu_2 {
+        label="GPU 2 (Expert 2)"
+        style="rounded,filled"
+        fillcolor=lightgray
+        
+        distribute_2 [label="Distribute to GPU_2\nInput: [B=128->8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        attention_2_0 [label="Attention GPU_2_L0\nTP=4 Split\nInput: [B=8, S=var, H=16, D=32]\nOutput: [B=8, S=var, H=16, D=32]" shape=rectangle style=filled fillcolor=lightgreen]
+        gate_2_0 [label="Gate GPU_2_L0\nSelect Top-2 Experts\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=diamond style=filled fillcolor=orange]
+        expert_2_0 [label="Expert GPU_2_L0\nExpert ID=2\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=1024]" shape=rectangle style=filled fillcolor=lightcoral]
+        aggregate_2_0 [label="Aggregate GPU_2_L0\nCombine Expert Outputs\nInput: [B=8, S=var, D=1024]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        
+        comm_2_0 [label="TP=4 AllReduce\nGPU_2_L0_Attention" shape=ellipse style=filled fillcolor=lightblue]
+        
+        collect_2 [label="Collect from GPU_2\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+    }
+    
+    subgraph cluster_gpu_3 {
+        label="GPU 3 (Expert 3)"
+        style="rounded,filled"
+        fillcolor=lightgray
+        
+        distribute_3 [label="Distribute to GPU_3\nInput: [B=128->8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        attention_3_0 [label="Attention GPU_3_L0\nTP=4 Split\nInput: [B=8, S=var, H=16, D=32]\nOutput: [B=8, S=var, H=16, D=32]" shape=rectangle style=filled fillcolor=lightgreen]
+        gate_3_0 [label="Gate GPU_3_L0\nSelect Top-2 Experts\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=diamond style=filled fillcolor=orange]
+        expert_3_0 [label="Expert GPU_3_L0\nExpert ID=3\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=1024]" shape=rectangle style=filled fillcolor=lightcoral]
+        aggregate_3_0 [label="Aggregate GPU_3_L0\nCombine Expert Outputs\nInput: [B=8, S=var, D=1024]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+        
+        comm_3_0 [label="TP=4 AllReduce\nGPU_3_L0_Attention" shape=ellipse style=filled fillcolor=lightblue]
+        
+        collect_3 [label="Collect from GPU_3\nInput: [B=8, S=var, D=512]\nOutput: [B=8, S=var, D=512]" shape=parallelogram style=filled fillcolor=lightyellow]
+    }
+    
+    // Main data flow connections
+    input -> distribute_0
+    input -> distribute_1
+    input -> distribute_2
+    input -> distribute_3
+    
+    // GPU 0 data flow
+    distribute_0 -> attention_0_0
+    attention_0_0 -> comm_0_0
+    comm_0_0 -> gate_0_0
+    gate_0_0 -> expert_0_0
+    expert_0_0 -> aggregate_0_0
+    aggregate_0_0 -> attention_0_15
+    attention_0_15 -> gate_0_15
+    gate_0_15 -> expert_0_15
+    expert_0_15 -> aggregate_0_15
+    aggregate_0_15 -> collect_0
+    collect_0 -> output
+    
+    // GPU 1 data flow
+    distribute_1 -> attention_1_0
+    attention_1_0 -> comm_1_0
+    comm_1_0 -> gate_1_0
+    gate_1_0 -> expert_1_0
+    expert_1_0 -> aggregate_1_0
+    aggregate_1_0 -> attention_1_15
+    attention_1_15 -> gate_1_15
+    gate_1_15 -> expert_1_15
+    expert_1_15 -> aggregate_1_15
+    aggregate_1_15 -> collect_1
+    collect_1 -> output
+    
+    // GPU 2 data flow
+    distribute_2 -> attention_2_0
+    attention_2_0 -> comm_2_0
+    comm_2_0 -> gate_2_0
+    gate_2_0 -> expert_2_0
+    expert_2_0 -> aggregate_2_0
+    aggregate_2_0 -> collect_2
+    collect_2 -> output
+    
+    // GPU 3 data flow
+    distribute_3 -> attention_3_0
+    attention_3_0 -> comm_3_0
+    comm_3_0 -> gate_3_0
+    gate_3_0 -> expert_3_0
+    expert_3_0 -> aggregate_3_0
+    aggregate_3_0 -> collect_3
+    collect_3 -> output
+    
+    // Cross-GPU expert routing (dashed lines showing potential routing)
+    // This demonstrates that tokens from any GPU can be routed to any expert
+    gate_0_0 -> expert_1_0 [color=red constraint=false style=dashed label="Route to Expert 1"]
+    gate_0_0 -> expert_2_0 [color=red constraint=false style=dashed label="Route to Expert 2"]
+    gate_0_0 -> expert_3_0 [color=red constraint=false style=dashed label="Route to Expert 3"]
+    
+    gate_1_0 -> expert_0_0 [color=red constraint=false style=dashed label="Route to Expert 0"]
+    gate_1_0 -> expert_2_0 [color=red constraint=false style=dashed label="Route to Expert 2"]
+    gate_1_0 -> expert_3_0 [color=red constraint=false style=dashed label="Route to Expert 3"]
+    
+    gate_2_0 -> expert_0_0 [color=red constraint=false style=dashed label="Route to Expert 0"]
+    gate_2_0 -> expert_1_0 [color=red constraint=false style=dashed label="Route to Expert 1"]
+    gate_2_0 -> expert_3_0 [color=red constraint=false style=dashed label="Route to Expert 3"]
+    
+    gate_3_0 -> expert_0_0 [color=red constraint=false style=dashed label="Route to Expert 0"]
+    gate_3_0 -> expert_1_0 [color=red constraint=false style=dashed label="Route to Expert 1"]
+    gate_3_0 -> expert_2_0 [color=red constraint=false style=dashed label="Route to Expert 2"]
+}
