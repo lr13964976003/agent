@@ -87,7 +87,7 @@ Meaning:
 
 - Operates on the **sequence-length dimension**
 - Applies **only inside Attention**
-- Typically coupled with TP or specialized attention algorithms
+- Typically coupled with TP or specialized attention algorithms, If both are run in parallel and combined, **the required number of GPUs = TP × SP**
 
 ---
 
