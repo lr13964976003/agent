@@ -13,11 +13,11 @@
 ## **Model Configuration**
 
 * **weights**: 10B
-* **Layers**: 16-layer, Each layer includes Multi-head attention + MLP.
+* **Layers**: 16-layer, Each layer includes Multi-head attention + MOE, each layer has 16 experts.
 * **Precision**: FP16
 * **Token Dimension**: The dimension of each token is 512
 * **Dimension of MHA**: The number of heads is 16 and the dimension of each heads is 32
-* **Hidden size of MOE**: The hidden is of MLP is 1024
+* **Hidden size of MOE**: The hidden is of MOE is 1024
 
 ---
 
