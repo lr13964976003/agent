@@ -3,7 +3,7 @@ RESOURCES
 
 ---
 
-Provide input file located at {task_path} containing hardware environment conditions, model configurations, and basic performance requirements. <<<提供包含硬件环境和模型参数以及性能需求的输入文件>>>
+Provide input file located at {task_path} containing hardware environment conditions, model configurations, input data and basic performance requirements. <<<提供包含硬件环境和模型参数以及性能需求的输入文件>>>
 
 Provided knowledge file about how to generate parallel strategy deployment file is located at {knowledge_path}.
 
