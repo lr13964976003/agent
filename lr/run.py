@@ -75,11 +75,11 @@ def main():
                      FileWriterTool()
                      ]
                  },
-		     "check_method": {
+		     "performance_evaluation": {
                  "slug": "performance_evaluation",
                  "inputs": {
 					 "task_path": "./inputs/task.md",
-					 "knowledge_path": "./knowledge/llm_knowledge.md",
+					 "knowledge_path": "./knowledge/performance_knowledge.md",
                      "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
