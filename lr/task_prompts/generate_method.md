@@ -33,6 +33,8 @@ After you complete the deployment method, calculate how many parts the module ha
 
 Basic performance requirements must be met. <<<要求必须满足基本的性能需求>>>
 
+The number of GPUs required for the deployment plan is not simply calculated as EP * TP * PP * DP * SP; instead, there is a complex mapping relationship, and the rules are specified in the knowledge file. <<<提醒GPU总数>>>
+
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
 
