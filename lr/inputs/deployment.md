@@ -1,7 +1,9 @@
 ```
+#Prefill
+
 ## **Environment Condition**
 
-* **GPUs**: Ample GPU resources, no limits.
+* **NPUs**: Ample NPU resources, no limits.
 * **Single-card computing power**: 400TFlops.
 * **MFU utilization**: 60%.
 * **VRAM Bandwidth**: 1.8TBps.
@@ -12,25 +14,31 @@
 
 ## **Model Configuration**
 
-* **weights**: 10B
-* **Layers**: 16-layer, Each layer includes Multi-head attention + MOE, each layer has 16 experts.
-* **Precision**: FP16
-* **Token Dimension**: The dimension of each token is 512
-* **Dimension of MHA**: The number of heads is 16 and the dimension of each heads is 32
-* **Hidden size of MOE**: The hidden is of MOE is 1024
+* **name**: Qwen3-235B
+* **weights**: 235B
+* **Layers**: 94-layer, Each layer includes GQA + MOE, each layer has 128 experts.
+* **Precision**: FP8
+* **Token Dimension**: The dimension of each token is 4096
+* **Dimension of MHA**: The number of heads is 64 and the dimension of each heads is 64
+* **Hidden size of MOE**: The hidden is of FFN is 1536
+* **Top-K Gate**: 8
+* **Vocabulary size**: 151936
+* **GQA kv heads**: 4
 
 ---
 
 ## **Input Data**
 * **Batch size**: Each batch consists of 128 sequences.
 * **Sequence Length**: The sequence length for each batch is variable, ranging from [128, 10240].
+* **Sequence In**: 2048
+* **Sequence Out**: 2048
 
 ---
 
 ## **Basic Performance Requirements**
-- **The time to the first token(TTFT)**: 10s
+- **The time to the first token(TTFT)**: 30s
 - **Time per output token(TPOT)**:  None
-- **Throughput per GPU**: 100tokens/ms
+- **Throughput per GPU**: 4000 tokens/s
 
 ```
 
