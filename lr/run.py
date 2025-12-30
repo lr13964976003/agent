@@ -92,7 +92,6 @@ def main():
             "generate_dag": {
                 "slug": "generate_dag",
                 "inputs": {
-					"knowledge_path": "./knowledge/dag_knowledge.md",
                     "save_path": f"./outputs/{submission_dir}"
                     },
                 "tools": [
@@ -106,7 +105,6 @@ def main():
              "check_dag": {
                  "slug": "check_dag",
                  "inputs": {
-					 "knowledge_path": "./knowledge/dag_knowledge.md",
                      "save_path": f"./outputs/{submission_dir}"
                      },
                  "tools": [
