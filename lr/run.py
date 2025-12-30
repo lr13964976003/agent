@@ -134,7 +134,7 @@ def main():
     CPT = build_task(prompts[1], expected_outputs[1], CPA)
 	
 	# Generate_Method_Agent
-    GMA = Researcher("openai/Kimi-K2",tools[2])
+    GMA = Engineer("openai/Kimi-K2",tools[2])
     GMT = build_task(prompts[2], expected_outputs[2], GMA)
 
 	# Performance_Evaluation_Agent
