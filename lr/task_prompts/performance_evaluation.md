@@ -11,13 +11,15 @@ TASK
 
 ---
 
-You are tested to completed the following tasks:
+Request for performance evaluation of the generated parallel strategy deployment plan:
 
 Check whether the parallel strategy deployment method is compatible with the current hardware environment and model parameters. <<<检查并行策略是否符合实际>>>
 
-Check whether the performance is optimized while meeting basic performance requirements. <<<检查是否在满足基本性能需求的情况下，性能达到最优>>>
+Based on the parallel strategy deployment plan and the original input, estimate the latency of each part of the model to check whether it meets the TTFT requirements. <<<检查是否在满足TTFT>>>
 
 Ensure that the refined version of deployment method file retains sufficient information to generate the directed acyclic graph for the deployment of the experimental model in the paper.<<<提醒要保留足够的信息来生成dag>>>
+
+Under the premise of meeting TTFT, calculate the total throughput of the computing system, and compute the utilization rates of computing power, GPU memory, and network bandwidth.
 
 Is this parallel strategy deployment method incorrect. If incorrect, how to modify.  
 
