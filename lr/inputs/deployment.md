@@ -28,6 +28,7 @@
 ---
 
 ## **Input Data**
+
 * **Batch size**: Each batch consists of 128 sequences.
 * **Sequence Length**: The sequence length for each batch is variable, ranging from [128, 10240].
 * **Sequence In**: 2048
@@ -36,9 +37,8 @@
 ---
 
 ## **Basic Performance Requirements**
+
 - **The time to the first token(TTFT)**: 30s
-- **Time per output token(TPOT)**:  None
-- **Throughput per GPU**: 4000 tokens/s
 
 ```
 
