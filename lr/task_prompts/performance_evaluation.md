@@ -5,6 +5,8 @@ RESOURCES
 
 You have been provided with the parallel strategy deployment method file by previous agent. <<<提供部署方案文件>>>
 
+Provide input file located at {task_path} containing hardware environment conditions, model configurations, input data and basic performance requirements. <<<提供包含硬件环境和模型参数以及性能需求的输入文件>>>
+
 Provided knowledge file about how to evaluate the performance of model is located at {knowledge_path}.
 
 TASK
