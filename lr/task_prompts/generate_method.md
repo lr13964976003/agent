@@ -16,11 +16,11 @@ You are tested to completed the following tasks:
 
 Requires a deep understanding of the hardware environment, models, and performance requirements. <<<要求理解输入文件>>> 
 
-Propose the optimal parallel strategy for the model based on the current hardware environment, while meeting basic performance requirements. <<<要求在满足基本性能需求的前提下，提出基于当前硬件环境下模型的最优并行策略>>>
+The requirement is to maximize the total throughput as much as possible while meeting the TTFT (Time to First Token) criteria. <<<要求在满足基本性能需求的前提下，提出基于当前硬件环境下模型的最优并行策略>>>
+
+Request to use as few GPU resources as possible to improve resource utilization. <<<要求充分利用硬件资源>>>
 
 Document requiring the generation of a parallel strategy deployment method file. <<<要求生成并行策略的部署方案的文件>>>
-
-Make full use of hardware resources and leverage the advantages of current deployment conditions. <<<要求充分利用硬件资源>>>
 
 
 NOTE
