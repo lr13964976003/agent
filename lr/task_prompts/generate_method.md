@@ -5,7 +5,7 @@ RESOURCES
 
 Provide input file located at {task_path} containing hardware environment conditions, model configurations, input data and basic performance requirements. <<<提供包含硬件环境和模型参数以及性能需求的输入文件>>>
 
-Provided knowledge file about how to generate parallel strategy deployment file is located at {knowledge_path}.
+Provided knowledge file about how to generate parallel strategy deployment method file is located at {knowledge_path}.
 
 
 TASK
@@ -33,7 +33,7 @@ After you complete the deployment method, calculate how many parts the module ha
 
 Basic performance requirements must be met. <<<要求必须满足基本的性能需求>>>
 
-The number of GPUs required for the deployment plan is not simply calculated as EP * TP * PP * DP * SP; instead, there is a complex mapping relationship, and the rules are specified in the knowledge file. <<<提醒GPU总数>>>
+The number of GPUs required for the deployment method is not simply calculated as EP * TP * PP * DP * SP; instead, there is a complex mapping relationship, and the rules are specified in the knowledge file. <<<提醒GPU总数>>>
 
 Ensure GPU load balancing to facilitate throughput or latency evaluation. <<<确保GPU负载均衡>>>
 
@@ -44,7 +44,7 @@ SUBMISSION
 
 ---
 
-The parallel strategy deployment plan should be saved in {save_path}. 
+The parallel strategy deployment method should be saved in {save_path}. 
 
 You don't need to submit the complete content because it is too large. Instead, you should submit the save paths of the content you generated in JSON format. <<<提交路径而不是content>>>
 
