@@ -19,7 +19,7 @@
 * **Layers**: 94-layer, Each layer includes GQA + MOE, each layer has 128 experts.
 * **Precision**: FP8
 * **Token Dimension**: The dimension of each token is 4096
-* **Dimension of MHA**: The number of heads is 64 and the dimension of each heads is 64
+* **Dimension of Attention**: The number of heads is 64 and the dimension of each heads is 64
 * **Hidden size of MOE**: The hidden is of FFN is 1536
 * **Top-K Gate**: 8
 * **Vocabulary size**: 151936
