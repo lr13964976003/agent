@@ -16,11 +16,13 @@ You are tested to completed the following tasks:
 
 Requires a deep understanding of the hardware environment, models, and performance requirements. <<<要求理解输入文件>>> 
 
-The requirement is to maximize the total throughput as much as possible while meeting the TTFT (Time to First Token) criteria. <<<要求在满足基本性能需求的前提下，提出基于当前硬件环境下模型的最优并行策略>>>
+The requirement is to maximize the total throughput as much as possible while meeting the TTFT (Time to First Token) criteria. <<<要求在满足基本性能需求的前提下，提出基于当前硬件环境下模型的并行策略>>>
+
+Different parallel strategies can be employed in the prefill phase and the decode phase, as these two phases are separable. <<<PD分离>>>
 
 Request to use as few GPU resources as possible to improve resource utilization. <<<要求充分利用硬件资源>>>
 
-Document requiring the generation of a parallel strategy deployment method file. <<<要求生成并行策略的部署方案的文件>>>
+Document requiring the generation of two parallel strategy deployment method file of prefill and decode. <<<要求生成并行策略的部署方案的文件>>>
 
 
 NOTE
@@ -44,7 +46,7 @@ SUBMISSION
 
 ---
 
-The parallel strategy deployment method should be saved in {save_path}. 
+The two parallel strategy deployment method files should be saved in {save_path}. 
 
 You don't need to submit the complete content because it is too large. Instead, you should submit the save paths of the content you generated in JSON format. <<<提交路径而不是content>>>
 
