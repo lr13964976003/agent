@@ -46,7 +46,7 @@ SUBMISSION
 
 ---
 
-The two parallel strategy deployment method files should be saved in {save_path}. 
+The two parallel strategy deployment method files should be saved in JSON format at {save_path}. 
 
 You don't need to submit the complete content because it is too large. Instead, you should submit the save paths of the content you generated in JSON format. <<<提交路径而不是content>>>
 
