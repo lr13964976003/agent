@@ -45,9 +45,9 @@ SUBMISSION
 
 ---
 
-You only need to save the final parallel strategy deployment method in markdown and JSON format at the {save_path} and delete other intermediate result files.
+You only need to save the two parallel strategy deployment method files of prefill and decode in JSON format at the {save_path} and delete other intermediate result files.
 
-If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method in markdown and JSON format.
+If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method in JSON format.
 
 ---
 
