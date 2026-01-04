@@ -14,7 +14,7 @@ You are tested to completed the following tasks:
 
 Gain a deep understanding of the methods proposed in the paper. <<<要求理解论文>>>
 
-Condense the content of the paper according to the following requirements in different parts:
+Condense the content of the paper according to the following requirements into different parts in one file:
 
 Part1: Extract the content related to the hardware deployment environment in the experimental section of the paper, such as the number of GPUs, GPU memory capacity, single-GPU computing power, network bandwidth, etc.
 
@@ -42,7 +42,7 @@ SUBMISSION
 
 ---
 
-The refined content of the paper should be saved in {save_path}.
+The refined paper should be saved in {save_path}.
 
 You don't need to submit the complete content because it is too large. Instead, you should submit the save paths of the content you generated in Markdown format. <<<提交路径而不是content>>>
 
