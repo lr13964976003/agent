@@ -14,15 +14,15 @@ You are tested to completed the following tasks:
 
 Gain a deep understanding of the methods proposed in the paper. <<<要求理解论文>>>
 
-Condense the content of the paper according to the following requirements:
+Condense the content of the paper according to the following requirements in different parts:
 
-Extract the content related to the hardware deployment environment in the experimental section of the paper, such as the number of GPUs, GPU memory capacity, single-GPU computing power, network bandwidth, etc.
+Part1: Extract the content related to the hardware deployment environment in the experimental section of the paper, such as the number of GPUs, GPU memory capacity, single-GPU computing power, network bandwidth, etc.
 
-Extract the parameter information of the models used in the experimental section of the paper, such as the number of model parameters, model architecture (e.g., MLA + MOE, GQA + MLP, etc.), number of attention heads, hidden layer dimensions, number of experts, etc.
+Part2: Extract the parameter information of the models used in the experimental section of the paper, such as the number of model parameters, model architecture (e.g., MLA + MOE, GQA + MLP, etc.), number of attention heads, hidden layer dimensions, number of experts, etc.
 
-Refine the format of input data for the experimental section of the paper, such as batch size, sequence length, etc.
+Part3: Refine the format of input data for the experimental section of the paper, such as batch size, sequence length, etc.
 
-Extracting the parallel strategy combinations in the experimental section of the paper may include PP, TP, DP, EP, SP, etc.
+Part4: Extracting the parallel strategy combinations in the experimental section of the paper may include PP, TP, DP, EP, SP, etc.
 
 
 
@@ -50,7 +50,7 @@ How we would grade this:
 
 Understand: We will check whether you have read and understood ALL the contents of the paper.
 
-Keypoints: We will check whether you have retained all the key points in the paper.
+Keypoints: We will check whether you have retained all the parts metioned before.
 
 
 
