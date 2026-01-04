@@ -13,9 +13,9 @@ TASK
 
 You are tested to completed the following tasks:
 
-Gain a deep understanding of both the paper. <<<要求理解两篇论文>>>
+Gain a deep understanding of the paper. <<<要求理解两篇论文>>>
 
-Check whether the key points in the refined paper are consistent with those in the original paper.<<<检查keypoints是否保持一致>>>
+Check whether all parts in the refined paper are consistent with those in the original paper.<<<检查keypoints是否保持一致>>>
 
 Check whether the description of the experimental section in the refined paper supports complete replication of the experiment.<<<检查experiment的描述是否完整>>>
 
@@ -42,7 +42,7 @@ If necessary, which part needs to be revised.
 
 The evaluation of generated deployment config. 
 
-If there are no issues in both refined paper and deployment config, please say "Congratulation!!" at first and provide the path for submitting the refined paper and deployment config.
+If there are no issues in both refined paper, please say "Congratulation!!" at first and provide the path for submitting the refined paper.
 
 How we would grade this:
 
