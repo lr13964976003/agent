@@ -13,7 +13,7 @@ TASK
 
 ---
 
-Request for performance evaluation of the generated parallel strategy deployment plan:
+Request for performance evaluation of the generated parallel strategy deployment method:
 
 Check whether the parallel strategy deployment method is compatible with the current hardware environment and model parameters. <<<检查并行策略是否符合实际>>>
 
@@ -25,9 +25,9 @@ Under the premise of meeting TTFT, calculate the total throughput of the computi
 
 Is this parallel strategy deployment method incorrect. If incorrect, how to modify.  
 
-Has this parallel strategy deployment plan met the basic performance requirements. If not, how to modify.
+Has this parallel strategy deployment method met the basic performance requirements. If not, how to modify.
 
-Has this parallel strategy deployment plan achieved the optimal outcome under the current environment. If not, how to modify.
+Has this parallel strategy deployment method achieved the optimal outcome under the current environment. If not, how to modify.
 
 
 NOTE
@@ -45,9 +45,9 @@ SUBMISSION
 
 ---
 
-You only need to save the final parallel strategy deployment plan in markdown format at the {save_path} and delete other intermediate result files.
+You only need to save the final parallel strategy deployment method in markdown and JSON format at the {save_path} and delete other intermediate result files.
 
-If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method in markdown format.
+If there are no issues, please say "Congratulation!!" at first and provide the path for submitting the deployment method in markdown and JSON format.
 
 ---
 
