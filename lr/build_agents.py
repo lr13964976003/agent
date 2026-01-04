@@ -31,7 +31,7 @@ def fetch_prompt(app_slug: str, variant_slug: str, variant_version: int, inputs:
 def Engineer(model: str, tools: list):
     llm = ChatOpenAI(
             model = model,
-            temperature = 0.0,
+            temperature = 0.1,
             max_tokens = 16384,
             request_timeout = 1800
             )
