@@ -11,9 +11,9 @@ TASK
 
 You are tested to completed the following tasks:
 
-Gain a deep understanding of the methods proposed in the parallelism strategy deployment method file. <<<要求理解部署方案>>> 
+Gain a deep understanding of the methods proposed in two parallelism strategy deployment method files. <<<要求理解部署方案>>> 
 
-Generate one complete model deployment DAG(directed acyclic graph) according to parallelism strategy deployment method by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
+Generate two complete model deployment DAGs (directed acyclic graph) of prefill and decode according to parallelism strategy deployment method by calling tools to generate graphviz code, meet the following conditions: <<<要求生成DAG，并遵守以下要求>>>
 
 It is required that the parallel strategy be fully, completely and correctly reflected. <<<要求充分完整正确地体现并行策略>>>
 
@@ -42,7 +42,7 @@ Do not make any changes to the original file. <<<禁止修改原始文件>>>
 
 Avoid vague expressions like "ALL GPUs"; instead, specify the exact GPUs number. <<<禁止出现ALL GPUs这种模糊的表述，写成具体的GPU>>>
 
-The generated DAG must not contain any cycles.<<<禁止有环>>>
+The generated DAGs must not contain any cycles.<<<禁止有环>>>
 
 Except for the input node, each node must have a preceding input node; except for the output node, each node must output to another node. <<<禁止有空悬的节点>>>
 
@@ -55,7 +55,7 @@ SUBMISSION
 
 ---
 
-The generated DAG should be saved in {save_path}. 
+The two generated DAGs should be saved in {save_path}. 
 
 Only the final graphviz codes in DOT forma need to be saved and delete other DOT files.<<<需要提交graphviz代码>>>
 
