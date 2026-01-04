@@ -70,7 +70,7 @@ def main():
                     },
                 "tools": [
                      FileReadTool(),
-					           PythonTool(),
+					 PythonTool(),
                      CommandTool(),
                      FileWriterTool()
                      ]
@@ -84,7 +84,7 @@ def main():
                      },
                  "tools": [
                      FileReadTool(),
-					           PythonTool(),
+					 PythonTool(),
                      CommandTool(),
                      FileWriterTool()
                      ]
@@ -98,7 +98,7 @@ def main():
                     FileReadTool(),
                     FileWriterTool(),
                     CommandTool(),
-		                PythonTool(),
+		            PythonTool(),
                     ExtractEdgeFromDAGTool()
                     ]
                 },
@@ -111,7 +111,7 @@ def main():
                     FileReadTool(),
                     FileWriterTool(),
                     CommandTool(),
-		                PythonTool(),
+		            PythonTool(),
                     ExtractEdgeFromDAGTool()
                      ]
                  }
@@ -150,12 +150,12 @@ def main():
     CDT = build_task(prompts[5], expected_outputs[5], CDA)
 
 	# Paper_Loop
-    #paper_loop = ReviewLoop(worker=RPA, reviewer=CPA, work_task=RPT, review_task=CPT)
-    #paper_result = paper_loop.run()
+    paper_loop = ReviewLoop(worker=RPA, reviewer=CPA, work_task=RPT, review_task=CPT)
+    paper_result = paper_loop.run()
 
 
     # Method_Loop
-    method_loop = ReviewLoop(worker=GMA, reviewer=PEA, work_task=GMT, review_task=PET)
+    method_loop = ReviewLoop(worker=GMA, reviewer=PEA, work_task=GMT, review_task=PET, inputs=paper_result)
     method_result = method_loop.run()
 
     # DAG_Loop
