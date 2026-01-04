@@ -217,11 +217,6 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 * **Hidden size of MLP**: The hidden is of MLP is 16384
 
 
-**Metrics:**
-
-
-* **TPS (Tokens per Second)**: Measures throughput
-* **TPOT (Time per Output Token)**: Measures latency per token
 
 
 ---
@@ -229,20 +224,7 @@ We evaluate the proposed large-scale cross-node expert parallelism method in an 
 
 ### **2. Parallel Deployment Details**
 
-
-#### **2.1 Baseline Deployment (TP=8, PP=2)**
-
-
-* **GPUs Used**: adequate H100 GPUs
-* **Per-GPU Allocation**:
-
-
-  * Each GPU holds  tensor-parallel shard for all layers.
-  * Experts are colocated on GPUs.
-* **Processing**: Tokens flow sequentially through the pipeline stages, and multiple experts per GPU share compute resources.
-
-
-#### **2.2 Proposed Cross-Node Expert Parallelism**
+#### **2.1 Proposed Cross-Node Expert Parallelism**
 
 
 * **GPUs Used**: adequate H100 GPUs (one GPU per expert per layer)
@@ -263,27 +245,12 @@ This deployment ensures **all 16 experts per layer compute in parallel**, maximi
 ---
 
 
-### **3. Results**
-
-
-| Method                                 | GPUs Used | Per-GPU Deployment           | TPS (Tokens/s) | TPOT (ms) |
-| -------------------------------------- | --------- | ---------------------------- | -------------- | --------- |
-| Baseline (TP=8, PP=2)                  | adequate  | TP shard per GPU             | 120,000        | 8.3       |
-| Proposed Cross-Node Expert Parallelism | adequate  | 1 expert each layer per GPU  | 450,000        | 2.2       |
-
-
-**Notes:**
-
-
-* Baseline GPUs are shared among multiple experts, causing intra-GPU contention and pipeline stalls.
-* Our method dedicates one expert per GPU, enabling **maximal expert-level parallelism**.
-* Throughput (TPS) is ~3.75× higher, and latency (TPOT) is ~3.8× lower than the baseline.
 
 
 ---
 
 
-### **4. Discussion**
+### **3. Discussion**
 
 
 * Deploying **one expert per GPU** allows full utilization of GPU compute and memory.
