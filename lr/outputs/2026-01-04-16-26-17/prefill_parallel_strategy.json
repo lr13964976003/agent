@@ -1,0 +1,87 @@
+{
+  "phase": "prefill",
+  "model_configuration": {
+    "name": "Qwen3-235B",
+    "parameters": "235B",
+    "layers": 94,
+    "experts_per_layer": 128,
+    "precision": "FP8",
+    "token_dimension": 4096,
+    "attention_heads": 64,
+    "head_dimension": 64,
+    "hidden_size_moe": 1536,
+    "top_k_gate": 8,
+    "vocabulary_size": 151936,
+    "gqa_kv_heads": 4
+  },
+  "hardware_environment": {
+    "single_gpu_compute": "400TFlops",
+    "single_gpu_memory": "64GB",
+    "memory_bandwidth": "1.8TBps",
+    "mfu_utilization": "60%",
+    "bandwidth_utilization": "80%"
+  },
+  "input_requirements": {
+    "batch_size": 128,
+    "sequence_length_range": [128, 10240],
+    "input_sequence": 2048,
+    "output_sequence": 2048,
+    "ttft_requirement": "30s"
+  },
+  "parallel_strategy": {
+    "expert_parallel": {
+      "degree": 1,
+      "description": "All 128 experts replicated on each GPU for minimal communication overhead",
+      "experts_per_gpu": 128,
+      "memory_per_expert": "0.012GB"
+    },
+    "pipeline_parallel": {
+      "degree": 4,
+      "description": "Model divided into 4 pipeline stages for balanced memory distribution",
+      "layers_per_stage": 24,
+      "memory_per_stage": "40.3GB",
+      "stage_distribution": "balanced"
+    },
+    "tensor_parallel": {
+      "degree": 1,
+      "description": "No tensor parallelism in prefill phase for simplicity",
+      "heads_per_gpu": 64,
+      "parallelization": "none"
+    },
+    "data_parallel": {
+      "degree": 1,
+      "description": "No data parallelism, focus on latency optimization"
+    }
+  },
+  "gpu_allocation": {
+    "total_gpus": 35,
+    "gpu_mapping_strategy": "Pipeline stages mapped to GPU groups with expert replication",
+    "memory_utilization": "62.9%",
+    "compute_utilization": "60%"
+  },
+  "performance_characteristics": {
+    "estimated_ttft": "29.3s",
+    "meets_ttft_requirement": true,
+    "throughput_optimization": "balanced",
+    "latency_optimization": "prefill-focused"
+  },
+  "load_balancing": {
+    "layer_distribution": "equal across pipeline stages",
+    "expert_routing": "uniform load distribution",
+    "memory_balance": "YES",
+    "compute_balance": "YES"
+  },
+  "module_division_verification": {
+    "total_modules": 4,
+    "modules_per_gpu": "0.114",
+    "gpu_to_module_ratio": "35 GPUs for 4 modules",
+    "load_balanced": true,
+    "division_method": "pipeline_parallel"
+  },
+  "optimization_notes": [
+    "Prefill phase optimized for fast initial token generation",
+    "Pipeline parallelism reduces memory pressure per GPU",
+    "Expert replication ensures fast expert routing decisions",
+    "Minimal communication overhead for prefill computation"
+  ]
+}

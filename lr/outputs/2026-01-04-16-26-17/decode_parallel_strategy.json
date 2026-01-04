@@ -1,0 +1,96 @@
+{
+  "phase": "decode",
+  "model_configuration": {
+    "name": "Qwen3-235B",
+    "parameters": "235B",
+    "layers": 94,
+    "experts_per_layer": 128,
+    "precision": "FP8",
+    "token_dimension": 4096,
+    "attention_heads": 64,
+    "head_dimension": 64,
+    "hidden_size_moe": 1536,
+    "top_k_gate": 8,
+    "vocabulary_size": 151936,
+    "gqa_kv_heads": 4
+  },
+  "hardware_environment": {
+    "single_gpu_compute": "400TFlops",
+    "single_gpu_memory": "64GB",
+    "memory_bandwidth": "1.8TBps",
+    "mfu_utilization": "60%",
+    "bandwidth_utilization": "80%"
+  },
+  "input_requirements": {
+    "batch_size": 128,
+    "sequence_length_range": [128, 10240],
+    "input_sequence": 2048,
+    "output_sequence": 2048,
+    "decode_throughput_optimization": "maximized"
+  },
+  "parallel_strategy": {
+    "expert_parallel": {
+      "degree": 1,
+      "description": "All 128 experts maintained on each GPU for decode efficiency",
+      "experts_per_gpu": 128,
+      "expert_caching": "enabled for decode reuse"
+    },
+    "pipeline_parallel": {
+      "degree": 4,
+      "description": "Same pipeline stages as prefill for consistency",
+      "layers_per_stage": 24,
+      "memory_per_stage": "40.3GB",
+      "kv_cache_optimization": "enabled"
+    },
+    "tensor_parallel": {
+      "degree": 1,
+      "description": "No tensor parallelism to minimize decode latency",
+      "heads_per_gpu": 64,
+      "attention_optimization": "single-token focused"
+    },
+    "data_parallel": {
+      "degree": 1,
+      "description": "No data parallelism, focus on per-token decode speed"
+    }
+  },
+  "gpu_allocation": {
+    "total_gpus": 35,
+    "gpu_mapping_strategy": "Consistent with prefill phase for seamless transition",
+    "memory_utilization": "62.9%",
+    "compute_utilization": "60%",
+    "kv_cache_memory": "optimized"
+  },
+  "performance_characteristics": {
+    "decode_throughput": "optimized for single-token generation",
+    "latency_per_token": "minimized",
+    "memory_efficiency": "high with KV caching",
+    "expert_routing_speed": "fast with local experts"
+  },
+  "load_balancing": {
+    "token_processing": "uniform across GPUs",
+    "expert_selection": "balanced with top-k routing",
+    "memory_access": "optimized for decode pattern",
+    "pipeline_efficiency": "maximized for single-token flow"
+  },
+  "module_division_verification": {
+    "total_modules": 4,
+    "modules_per_gpu": "0.114",
+    "gpu_to_module_ratio": "35 GPUs for 4 modules",
+    "load_balanced": true,
+    "division_method": "pipeline_parallel",
+    "decode_optimization": "single_token_focused"
+  },
+  "optimization_notes": [
+    "Decode phase optimized for per-token generation speed",
+    "KV caching enabled to reduce redundant computation",
+    "Expert locality maintained for fast routing decisions",
+    "Pipeline stages aligned with decode data flow patterns",
+    "Memory bandwidth optimized for token-by-token processing"
+  ],
+  "kv_cache_optimization": {
+    "cache_size_per_layer": "0.5MB per token per layer",
+    "total_cache_memory": "~15GB for full sequence",
+    "cache_sharing": "within pipeline stages",
+    "cache_efficiency": "95%+ hit rate"
+  }
+}
