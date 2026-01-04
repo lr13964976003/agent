@@ -1,0 +1,88 @@
+// Qwen3-235B Parallel Strategy DAG - Corrected
+digraph {
+	rankdir=TB size="20,30"
+	node [fillcolor=lightblue shape=ellipse style=filled]
+	input [label="Input\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=ellipse]
+	subgraph cluster_stage1 {
+		fillcolor=lightyellow label="Pipeline Stage 1 (GPUs 0-7)" style=rounded
+		embed [label="Embedding (GPU-0)\nInput: [batch_size=128, seq_len=2048]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightcoral shape=rectangle]
+		norm1_1 [label="LayerNorm (GPU-0)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightblue shape=rectangle]
+		attn_qkv_1 [label="QKV Projection (GPU-0,1)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, heads=32, d_k=32]" fillcolor=lightblue shape=rectangle]
+		attn_score_1 [label="Attention Scores (GPU-0,1)\nInput: [batch_size=128, seq_len=2048, heads=32, d_k=32]\nOutput: [batch_size=128, seq_len=2048, heads=32, d_k Lav32]" fillcolor=lightblue shape=rectangle]
+		attn_out_1 [label="Attention Output (GPU-0,1)\nInput: [batch_size=128, seq_len=2048, heads=32, d_k=32]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightblue shape=rectangle]
+		gate_1 [label="Expert Gate (GPU-0)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, experts=16]" fillcolor=orange shape=parallelogram style=dashed]
+		expert_1_0 [label="Expert 0 (GPU-0)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_1_1 [label="Expert 1 (GPU-0)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_1_2 [label="Expert 2 (GPU-0)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_1_3 [label="Expert 3 (GPU-0)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_1_4 [label="Expert 4 (GPU-1)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_1_5 [label="Expert 5 (GPU-1)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_1_6 [label="Expert 6 (GPU-1)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_1_7 [label="Expert 7 (GPU-1)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_agg_1 [label="Expert Aggregation (GPU-0)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=orange shape=parallelogram]
+	}
+	subgraph cluster_stage2 {
+		fillcolor=lightyellow label="Pipeline Stage 2 (GPUs 8-15)" style=rounded
+		comm_s1_s2 [label="Pipeline Communication\nGPU-7 → GPU-8\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=red shape=ellipse]
+		norm2_1 [label="LayerNorm (GPU-8)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightblue shape=rectangle]
+		attn_qkv_2 [label="QKV Projection (GPU-8,9)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, heads=32, d_k=32]" fillcolor=lightblue shape=rectangle]
+		attn_score_2 [label="Attention Scores (GPU-8,9)\nInput: [batch_size=128, seq_len=2048, heads=32, d_k=32]\nOutput: [batch_size=128, seq_len=2048, heads=32, d_k=32]" fillcolor=lightblue shape=rectangle]
+		attn_out_2 [label="Attention Output (GPU-8,9)\nInput: [batch_size=128, seq_len=2048, heads=32, d_k=32]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightblue shape=rectangle]
+		gate_2 [label="Expert Gate (GPU-8)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, experts=16]" fillcolor=orange shape=parallelogram style=dashed]
+		expert_2_0 [label="Expert 0 (GPU-8)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_2_1 [label="Expert 1 (GPU-8)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_2_2 [label="Expert 2 (GPU-8)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_2_3 [label="Expert 3 (GPU-8)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_2_4 [label="Expert 4 (GPU-9)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_2_5 [label="Expert 5 (GPU-9)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_2_6 [label="Expert 6 (GPU-9)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_2_7 [label="Expert 7 (GPU-9)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=rectangle]
+		expert_agg_2 [label="Expert Aggregation (GPU-8)\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=orange shape=parallelogram]
+		output [label="Output\nInput: [batch_size=128, seq_len=2048, hidden_dim=4096]\nOutput: [batch_size=128, seq_len=2048, hidden_dim=4096]" fillcolor=lightgreen shape=ellipse]
+	}
+	input -> embed
+	embed -> norm1_1
+	norm1_1 -> attn_qkv_1
+	attn_qkv_1 -> attn_score_1
+	attn_score_1 -> attn_out_1
+	attn_out_1 -> gate_1
+	gate_1 -> expert_1_0 [style=dashed]
+	expert_1_0 -> expert_agg_1
+	gate_1 -> expert_1_1 [style=dashed]
+	expert_1_1 -> expert_agg_1
+	gate_1 -> expert_1_2 [style=dashed]
+	expert_1_2 -> expert_agg_1
+	gate_1 -> expert_1_3 [style=dashed]
+	expert_1_3 -> expert_agg_1
+	gate_1 -> expert_1_4 [style=dashed]
+	expert_1_4 -> expert_agg_1
+	gate_1 -> expert_1_5 [style=dashed]
+	expert_1_5 -> expert_agg_1
+	gate_1 -> expert_1_6 [style=dashed]
+	expert_1_6 -> expert_agg_1
+	gate_1 -> expert_1_7 [style=dashed]
+	expert_1_7 -> expert_agg_1
+	expert_agg_1 -> comm_s1_s2
+	comm_s1_s2 -> norm2_1
+	norm2_1 -> attn_qkv_2
+	attn_qkv_2 -> attn_score_2
+	attn_score_2 -> attn_out_2
+	attn_out_2 -> gate_2
+	gate_2 -> expert_2_0 [style=dashed]
+	expert_2_0 -> expert_agg_2
+	gate_2 -> expert_2_1 [style=dashed]
+	expert_2_1 -> expert_agg_2
+	gate_2 -> expert_2_2 [style=dashed]
+	expert_2_2 -> expert_agg_2
+	gate_2 -> expert_2_3 [style=dashed]
+	expert_2_3 -> expert_agg_2
+	gate_2 -> expert_2_4 [style=dashed]
+	expert_2_4 -> expert_agg_2
+	gate_2 -> expert_2_5 [style=dashed]
+	expert_2_5 -> expert_agg_2
+	gate_2 -> expert_2_6 [style=dashed]
+	expert_2_6 -> expert_agg_2
+	gate_2 -> expert_2_7 [style=dashed]
+	expert_2_7 -> expert_agg_2
+	expert_agg_2 -> output
+}
