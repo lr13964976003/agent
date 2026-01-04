@@ -152,7 +152,7 @@ def main():
 	# Paper_Loop
     paper_loop = ReviewLoop(worker=RPA, reviewer=CPA, work_task=RPT, review_task=CPT)
     paper_result = paper_loop.run()
-
+    return 
 
     # Method_Loop
     method_loop = ReviewLoop(worker=GMA, reviewer=PEA, work_task=GMT, review_task=PET, inputs=paper_result)
