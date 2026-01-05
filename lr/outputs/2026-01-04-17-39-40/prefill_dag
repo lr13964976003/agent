@@ -1,0 +1,563 @@
+// Prefill Phase DAG
+digraph {
+	rankdir=TB size="20,30"
+	node [fillcolor=lightblue shape=rectangle style=filled]
+	input [label="INPUT\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+	subgraph stage0 {
+		rank=same
+		s0_emb_0 [label="GPU0: Embedding\nInput: [batch_size=1, seq_len=4096]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_ln0_0 [label="GPU0: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_q_0 [label="GPU0: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_k_0 [label="GPU0: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_v_0 [label="GPU0: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_allgather_q_0 [label="GPU0: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_k_0 [label="GPU0: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_v_0 [label="GPU0: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_attn_0 [label="GPU0: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_gate_0 [label="GPU0: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s0_expert_0 [label="GPU0: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_alltoall_0 [label="GPU0: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_ln1_0 [label="GPU0: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_emb_1 [label="GPU1: Embedding\nInput: [batch_size=1, seq_len=4096]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_ln0_1 [label="GPU1: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_q_1 [label="GPU1: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_k_1 [label="GPU1: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_v_1 [label="GPU1: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_allgather_q_1 [label="GPU1: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_k_1 [label="GPU1: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_v_1 [label="GPU1: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_attn_1 [label="GPU1: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_gate_1 [label="GPU1: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s0_expert_1 [label="GPU1: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_alltoall_1 [label="GPU1: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_ln1_1 [label="GPU1: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_emb_2 [label="GPU2: Embedding\nInput: [batch_size=1, seq_len=4096]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_ln0_2 [label="GPU2: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_q_2 [label="GPU2: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_k_2 [label="GPU2: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_v_2 [label="GPU2: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_allgather_q_2 [label="GPU2: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_k_2 [label="GPU2: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_v_2 [label="GPU2: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_attn_2 [label="GPU2: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_gate_2 [label="GPU2: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s0_expert_2 [label="GPU2: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_alltoall_2 [label="GPU2: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_ln1_2 [label="GPU2: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_emb_3 [label="GPU3: Embedding\nInput: [batch_size=1, seq_len=4096]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_ln0_3 [label="GPU3: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_q_3 [label="GPU3: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_k_3 [label="GPU3: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_v_3 [label="GPU3: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_allgather_q_3 [label="GPU3: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_k_3 [label="GPU3: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_v_3 [label="GPU3: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_attn_3 [label="GPU3: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_gate_3 [label="GPU3: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s0_expert_3 [label="GPU3: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_alltoall_3 [label="GPU3: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_ln1_3 [label="GPU3: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_emb_4 [label="GPU4: Embedding\nInput: [batch_size=1, seq_len=4096]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_ln0_4 [label="GPU4: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_q_4 [label="GPU4: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_k_4 [label="GPU4: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_v_4 [label="GPU4: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_allgather_q_4 [label="GPU4: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_k_4 [label="GPU4: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_v_4 [label="GPU4: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_attn_4 [label="GPU4: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_gate_4 [label="GPU4: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s0_expert_4 [label="GPU4: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_alltoall_4 [label="GPU4: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_ln1_4 [label="GPU4: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_emb_5 [label="GPU5: Embedding\nInput: [batch_size=1, seq_len=4096]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_ln0_5 [label="GPU5: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_q_5 [label="GPU5: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_k_5 [label="GPU5: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_v_5 [label="GPU5: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_allgather_q_5 [label="GPU5: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_k_5 [label="GPU5: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_v_5 [label="GPU5: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_attn_5 [label="GPU5: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_gate_5 [label="GPU5: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s0_expert_5 [label="GPU5: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_alltoall_5 [label="GPU5: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_ln1_5 [label="GPU5: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_emb_6 [label="GPU6: Embedding\nInput: [batch_size=1, seq_len=4096]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_ln0_6 [label="GPU6: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_q_6 [label="GPU6: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_k_6 [label="GPU6: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_v_6 [label="GPU6: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_allgather_q_6 [label="GPU6: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_k_6 [label="GPU6: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_v_6 [label="GPU6: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_attn_6 [label="GPU6: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_gate_6 [label="GPU6: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s0_expert_6 [label="GPU6: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_alltoall_6 [label="GPU6: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_ln1_6 [label="GPU6: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_emb_7 [label="GPU7: Embedding\nInput: [batch_size=1, seq_len=4096]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_ln0_7 [label="GPU7: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_q_7 [label="GPU7: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_k_7 [label="GPU7: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_v_7 [label="GPU7: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightblue]
+		s0_allgather_q_7 [label="GPU7: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_k_7 [label="GPU7: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_allgather_v_7 [label="GPU7: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_attn_7 [label="GPU7: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_gate_7 [label="GPU7: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s0_expert_7 [label="GPU7: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+		s0_alltoall_7 [label="GPU7: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s0_ln1_7 [label="GPU7: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightblue]
+	}
+	subgraph stage1 {
+		rank=same
+		s1_ln0_8 [label="GPU8: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_q_8 [label="GPU8: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_k_8 [label="GPU8: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_v_8 [label="GPU8: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_allgather_q_8 [label="GPU8: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_k_8 [label="GPU8: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_v_8 [label="GPU8: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_attn_8 [label="GPU8: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_gate_8 [label="GPU8: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s1_expert_8 [label="GPU8: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_alltoall_8 [label="GPU8: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_ln1_8 [label="GPU8: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_ln0_9 [label="GPU9: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_q_9 [label="GPU9: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_k_9 [label="GPU9: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_v_9 [label="GPU9: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_allgather_q_9 [label="GPU9: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_k_9 [label="GPU9: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_v_9 [label="GPU9: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_attn_9 [label="GPU9: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_gate_9 [label="GPU9: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s1_expert_9 [label="GPU9: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_alltoall_9 [label="GPU9: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_ln1_9 [label="GPU9: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_ln0_10 [label="GPU10: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_q_10 [label="GPU10: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_k_10 [label="GPU10: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_v_10 [label="GPU10: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_allgather_q_10 [label="GPU10: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_k_10 [label="GPU10: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_v_10 [label="GPU10: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_attn_10 [label="GPU10: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_gate_10 [label="GPU10: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s1_expert_10 [label="GPU10: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_alltoall_10 [label="GPU10: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_ln1_10 [label="GPU10: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_ln0_11 [label="GPU11: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_q_11 [label="GPU11: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_k_11 [label="GPU11: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_v_11 [label="GPU11: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_allgather_q_11 [label="GPU11: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_k_11 [label="GPU11: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_v_11 [label="GPU11: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_attn_11 [label="GPU11: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_gate_11 [label="GPU11: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s1_expert_11 [label="GPU11: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_alltoall_11 [label="GPU11: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_ln1_11 [label="GPU11: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_ln0_12 [label="GPU12: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_q_12 [label="GPU12: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_k_12 [label="GPU12: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_v_12 [label="GPU12: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_allgather_q_12 [label="GPU12: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_k_12 [label="GPU12: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_v_12 [label="GPU12: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_attn_12 [label="GPU12: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_gate_12 [label="GPU12: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s1_expert_12 [label="GPU12: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_alltoall_12 [label="GPU12: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_ln1_12 [label="GPU12: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_ln0_13 [label="GPU13: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_q_13 [label="GPU13: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_k_13 [label="GPU13: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_v_13 [label="GPU13: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_allgather_q_13 [label="GPU13: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_k_13 [label="GPU13: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_v_13 [label="GPU13: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_attn_13 [label="GPU13: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_gate_13 [label="GPU13: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s1_expert_13 [label="GPU13: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_alltoall_13 [label="GPU13: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_ln1_13 [label="GPU13: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_ln0_14 [label="GPU14: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_q_14 [label="GPU14: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_k_14 [label="GPU14: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_v_14 [label="GPU14: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_allgather_q_14 [label="GPU14: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_k_14 [label="GPU14: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_v_14 [label="GPU14: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_attn_14 [label="GPU14: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_gate_14 [label="GPU14: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s1_expert_14 [label="GPU14: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_alltoall_14 [label="GPU14: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_ln1_14 [label="GPU14: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_ln0_15 [label="GPU15: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_q_15 [label="GPU15: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_k_15 [label="GPU15: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_v_15 [label="GPU15: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightgreen]
+		s1_allgather_q_15 [label="GPU15: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_k_15 [label="GPU15: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_allgather_v_15 [label="GPU15: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_attn_15 [label="GPU15: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_gate_15 [label="GPU15: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s1_expert_15 [label="GPU15: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+		s1_alltoall_15 [label="GPU15: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s1_ln1_15 [label="GPU15: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightgreen]
+	}
+	subgraph stage2 {
+		rank=same
+		s2_ln0_16 [label="GPU16: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_q_16 [label="GPU16: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_k_16 [label="GPU16: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_v_16 [label="GPU16: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_allgather_q_16 [label="GPU16: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_k_16 [label="GPU16: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_v_16 [label="GPU16: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_attn_16 [label="GPU16: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_gate_16 [label="GPU16: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s2_expert_16 [label="GPU16: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_alltoall_16 [label="GPU16: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_ln1_16 [label="GPU16: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_ln0_17 [label="GPU17: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_q_17 [label="GPU17: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_k_17 [label="GPU17: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_v_17 [label="GPU17: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_allgather_q_17 [label="GPU17: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_k_17 [label="GPU17: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_v_17 [label="GPU17: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_attn_17 [label="GPU17: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_gate_17 [label="GPU17: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s2_expert_17 [label="GPU17: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_alltoall_17 [label="GPU17: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_ln1_17 [label="GPU17: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_ln0_18 [label="GPU18: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_q_18 [label="GPU18: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_k_18 [label="GPU18: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_v_18 [label="GPU18: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_allgather_q_18 [label="GPU18: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_k_18 [label="GPU18: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_v_18 [label="GPU18: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_attn_18 [label="GPU18: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_gate_18 [label="GPU18: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s2_expert_18 [label="GPU18: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_alltoall_18 [label="GPU18: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_ln1_18 [label="GPU18: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_ln0_19 [label="GPU19: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_q_19 [label="GPU19: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_k_19 [label="GPU19: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_v_19 [label="GPU19: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_allgather_q_19 [label="GPU19: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_k_19 [label="GPU19: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_v_19 [label="GPU19: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_attn_19 [label="GPU19: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_gate_19 [label="GPU19: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s2_expert_19 [label="GPU19: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_alltoall_19 [label="GPU19: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_ln1_19 [label="GPU19: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_ln0_20 [label="GPU20: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_q_20 [label="GPU20: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_k_20 [label="GPU20: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_v_20 [label="GPU20: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_allgather_q_20 [label="GPU20: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_k_20 [label="GPU20: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_v_20 [label="GPU20: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_attn_20 [label="GPU20: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_gate_20 [label="GPU20: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s2_expert_20 [label="GPU20: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_alltoall_20 [label="GPU20: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_ln1_20 [label="GPU20: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_ln0_21 [label="GPU21: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_q_21 [label="GPU21: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_k_21 [label="GPU21: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_v_21 [label="GPU21: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_allgather_q_21 [label="GPU21: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_k_21 [label="GPU21: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_v_21 [label="GPU21: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_attn_21 [label="GPU21: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_gate_21 [label="GPU21: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s2_expert_21 [label="GPU21: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_alltoall_21 [label="GPU21: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_ln1_21 [label="GPU21: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_ln0_22 [label="GPU22: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_q_22 [label="GPU22: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_k_22 [label="GPU22: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_v_22 [label="GPU22: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_allgather_q_22 [label="GPU22: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_k_22 [label="GPU22: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_v_22 [label="GPU22: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_attn_22 [label="GPU22: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_gate_22 [label="GPU22: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s2_expert_22 [label="GPU22: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_alltoall_22 [label="GPU22: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_ln1_22 [label="GPU22: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_ln0_23 [label="GPU23: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_q_23 [label="GPU23: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_k_23 [label="GPU23: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_v_23 [label="GPU23: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightyellow]
+		s2_allgather_q_23 [label="GPU23: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_k_23 [label="GPU23: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_allgather_v_23 [label="GPU23: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_attn_23 [label="GPU23: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_gate_23 [label="GPU23: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s2_expert_23 [label="GPU23: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+		s2_alltoall_23 [label="GPU23: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s2_ln1_23 [label="GPU23: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightyellow]
+	}
+	subgraph stage3 {
+		rank=same
+		s3_ln0_24 [label="GPU24: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_q_24 [label="GPU24: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_k_24 [label="GPU24: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_v_24 [label="GPU24: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_allgather_q_24 [label="GPU24: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_k_24 [label="GPU24: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_v_24 [label="GPU24: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_attn_24 [label="GPU24: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_gate_24 [label="GPU24: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s3_expert_24 [label="GPU24: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_alltoall_24 [label="GPU24: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_ln1_24 [label="GPU24: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_ln0_25 [label="GPU25: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_q_25 [label="GPU25: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_k_25 [label="GPU25: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_v_25 [label="GPU25: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_allgather_q_25 [label="GPU25: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_k_25 [label="GPU25: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_v_25 [label="GPU25: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_attn_25 [label="GPU25: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_gate_25 [label="GPU25: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s3_expert_25 [label="GPU25: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_alltoall_25 [label="GPU25: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_ln1_25 [label="GPU25: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_ln0_26 [label="GPU26: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_q_26 [label="GPU26: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_k_26 [label="GPU26: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_v_26 [label="GPU26: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_allgather_q_26 [label="GPU26: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_k_26 [label="GPU26: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_v_26 [label="GPU26: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_attn_26 [label="GPU26: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_gate_26 [label="GPU26: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s3_expert_26 [label="GPU26: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_alltoall_26 [label="GPU26: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_ln1_26 [label="GPU26: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_ln0_27 [label="GPU27: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_q_27 [label="GPU27: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_k_27 [label="GPU27: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_v_27 [label="GPU27: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_allgather_q_27 [label="GPU27: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_k_27 [label="GPU27: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_v_27 [label="GPU27: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_attn_27 [label="GPU27: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_gate_27 [label="GPU27: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s3_expert_27 [label="GPU27: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_alltoall_27 [label="GPU27: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_ln1_27 [label="GPU27: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_ln0_28 [label="GPU28: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_q_28 [label="GPU28: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_k_28 [label="GPU28: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_v_28 [label="GPU28: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_allgather_q_28 [label="GPU28: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_k_28 [label="GPU28: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_v_28 [label="GPU28: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_attn_28 [label="GPU28: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_gate_28 [label="GPU28: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s3_expert_28 [label="GPU28: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_alltoall_28 [label="GPU28: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_ln1_28 [label="GPU28: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_ln0_29 [label="GPU29: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_q_29 [label="GPU29: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_k_29 [label="GPU29: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_v_29 [label="GPU29: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_allgather_q_29 [label="GPU29: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_k_29 [label="GPU29: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_v_29 [label="GPU29: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_attn_29 [label="GPU29: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_gate_29 [label="GPU29: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s3_expert_29 [label="GPU29: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_alltoall_29 [label="GPU29: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_ln1_29 [label="GPU29: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_ln0_30 [label="GPU30: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_q_30 [label="GPU30: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_k_30 [label="GPU30: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_v_30 [label="GPU30: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_allgather_q_30 [label="GPU30: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_k_30 [label="GPU30: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_v_30 [label="GPU30: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_attn_30 [label="GPU30: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_gate_30 [label="GPU30: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s3_expert_30 [label="GPU30: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_alltoall_30 [label="GPU30: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_ln1_30 [label="GPU30: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_ln0_31 [label="GPU31: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_q_31 [label="GPU31: Q Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_k_31 [label="GPU31: K Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_v_31 [label="GPU31: V Linear\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=768]" fillcolor=lightcoral]
+		s3_allgather_q_31 [label="GPU31: AllGather Q\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_k_31 [label="GPU31: AllGather K\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_allgather_v_31 [label="GPU31: AllGather V\nInput: [batch_size=1, seq_len=4096, hidden=768]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_attn_31 [label="GPU31: Attention\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_gate_31 [label="GPU31: MoE Gate\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, experts=8]" fillcolor=orange shape=parallelogram]
+		s3_expert_31 [label="GPU31: Expert FFN\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+		s3_alltoall_31 [label="GPU31: AllToAll\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+		s3_ln1_31 [label="GPU31: LayerNorm\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=lightcoral]
+	}
+	output [label="OUTPUT\nInput: [batch_size=1, seq_len=4096, hidden=6144]\nOutput: [batch_size=1, seq_len=4096, hidden=6144]" fillcolor=white shape=ellipse]
+	input -> s0_emb_0
+	s0_emb_0 -> s0_ln0_0
+	s0_ln0_0 -> s0_q_0
+	s0_ln0_0 -> s0_k_0
+	s0_ln0_0 -> s0_v_0
+	s0_q_0 -> s0_allgather_q_0
+	s0_k_0 -> s0_allgather_k_0
+	s0_v_0 -> s0_allgather_v_0
+	s0_allgather_q_0 -> s0_attn_0
+	s0_allgather_k_0 -> s0_attn_0
+	s0_allgather_v_0 -> s0_attn_0
+	s0_attn_0 -> s0_gate_0
+	s0_gate_0 -> s0_expert_0 [style=dashed]
+	s0_expert_0 -> s0_alltoall_0
+	s0_alltoall_0 -> s0_ln1_0
+	input -> s0_emb_1
+	s0_emb_1 -> s0_ln0_1
+	s0_ln0_1 -> s0_q_1
+	s0_ln0_1 -> s0_k_1
+	s0_ln0_1 -> s0_v_1
+	s0_q_1 -> s0_allgather_q_1
+	s0_k_1 -> s0_allgather_k_1
+	s0_v_1 -> s0_allgather_v_1
+	s0_allgather_q_1 -> s0_attn_1
+	s0_allgather_k_1 -> s0_attn_1
+	s0_allgather_v_1 -> s0_attn_1
+	s0_attn_1 -> s0_gate_1
+	s0_gate_1 -> s0_expert_1 [style=dashed]
+	s0_expert_1 -> s0_alltoall_1
+	s0_alltoall_1 -> s0_ln1_1
+	input -> s0_emb_2
+	s0_emb_2 -> s0_ln0_2
+	s0_ln0_2 -> s0_q_2
+	s0_ln0_2 -> s0_k_2
+	s0_ln0_2 -> s0_v_2
+	s0_q_2 -> s0_allgather_q_2
+	s0_k_2 -> s0_allgather_k_2
+	s0_v_2 -> s0_allgather_v_2
+	s0_allgather_q_2 -> s0_attn_2
+	s0_allgather_k_2 -> s0_attn_2
+	s0_allgather_v_2 -> s0_attn_2
+	s0_attn_2 -> s0_gate_2
+	s0_gate_2 -> s0_expert_2 [style=dashed]
+	s0_expert_2 -> s0_alltoall_2
+	s0_alltoall_2 -> s0_ln1_2
+	input -> s0_emb_3
+	s0_emb_3 -> s0_ln0_3
+	s0_ln0_3 -> s0_q_3
+	s0_ln0_3 -> s0_k_3
+	s0_ln0_3 -> s0_v_3
+	s0_q_3 -> s0_allgather_q_3
+	s0_k_3 -> s0_allgather_k_3
+	s0_v_3 -> s0_allgather_v_3
+	s0_allgather_q_3 -> s0_attn_3
+	s0_allgather_k_3 -> s0_attn_3
+	s0_allgather_v_3 -> s0_attn_3
+	s0_attn_3 -> s0_gate_3
+	s0_gate_3 -> s0_expert_3 [style=dashed]
+	s0_expert_3 -> s0_alltoall_3
+	s0_alltoall_3 -> s0_ln1_3
+	input -> s0_emb_4
+	s0_emb_4 -> s0_ln0_4
+	s0_ln0_4 -> s0_q_4
+	s0_ln0_4 -> s0_k_4
+	s0_ln0_4 -> s0_v_4
+	s0_q_4 -> s0_allgather_q_4
+	s0_k_4 -> s0_allgather_k_4
+	s0_v_4 -> s0_allgather_v_4
+	s0_allgather_q_4 -> s0_attn_4
+	s0_allgather_k_4 -> s0_attn_4
+	s0_allgather_v_4 -> s0_attn_4
+	s0_attn_4 -> s0_gate_4
+	s0_gate_4 -> s0_expert_4 [style=dashed]
+	s0_expert_4 -> s0_alltoall_4
+	s0_alltoall_4 -> s0_ln1_4
+	input -> s0_emb_5
+	s0_emb_5 -> s0_ln0_5
+	s0_ln0_5 -> s0_q_5
+	s0_ln0_5 -> s0_k_5
+	s0_ln0_5 -> s0_v_5
+	s0_q_5 -> s0_allgather_q_5
+	s0_k_5 -> s0_allgather_k_5
+	s0_v_5 -> s0_allgather_v_5
+	s0_allgather_q_5 -> s0_attn_5
+	s0_allgather_k_5 -> s0_attn_5
+	s0_allgather_v_5 -> s0_attn_5
+	s0_attn_5 -> s0_gate_5
+	s0_gate_5 -> s0_expert_5 [style=dashed]
+	s0_expert_5 -> s0_alltoall_5
+	s0_alltoall_5 -> s0_ln1_5
+	input -> s0_emb_6
+	s0_emb_6 -> s0_ln0_6
+	s0_ln0_6 -> s0_q_6
+	s0_ln0_6 -> s0_k_6
+	s0_ln0_6 -> s0_v_6
+	s0_q_6 -> s0_allgather_q_6
+	s0_k_6 -> s0_allgather_k_6
+	s0_v_6 -> s0_allgather_v_6
+	s0_allgather_q_6 -> s0_attn_6
+	s0_allgather_k_6 -> s0_attn_6
+	s0_allgather_v_6 -> s0_attn_6
+	s0_attn_6 -> s0_gate_6
+	s0_gate_6 -> s0_expert_6 [style=dashed]
+	s0_expert_6 -> s0_alltoall_6
+	s0_alltoall_6 -> s0_ln1_6
+	input -> s0_emb_7
+	s0_emb_7 -> s0_ln0_7
+	s0_ln0_7 -> s0_q_7
+	s0_ln0_7 -> s0_k_7
+	s0_ln0_7 -> s0_v_7
+	s0_q_7 -> s0_allgather_q_7
+	s0_k_7 -> s0_allgather_k_7
+	s0_v_7 -> s0_allgather_v_7
+	s0_allgather_q_7 -> s0_attn_7
+	s0_allgather_k_7 -> s0_attn_7
+	s0_allgather_v_7 -> s0_attn_7
+	s0_attn_7 -> s0_gate_7
+	s0_gate_7 -> s0_expert_7 [style=dashed]
+	s0_expert_7 -> s0_alltoall_7
+	s0_alltoall_7 -> s0_ln1_7
+	s0_ln1_0 -> s1_ln0_8
+	s0_ln1_1 -> s1_ln0_9
+	s0_ln1_2 -> s1_ln0_10
+	s0_ln1_3 -> s1_ln0_11
+	s0_ln1_4 -> s1_ln0_12
+	s0_ln1_5 -> s1_ln0_13
+	s0_ln1_6 -> s1_ln0_14
+	s0_ln1_7 -> s1_ln0_15
+	s1_ln1_8 -> s2_ln0_16
+	s1_ln1_9 -> s2_ln0_17
+	s1_ln1_10 -> s2_ln0_18
+	s1_ln1_11 -> s2_ln0_19
+	s1_ln1_12 -> s2_ln0_20
+	s1_ln1_13 -> s2_ln0_21
+	s1_ln1_14 -> s2_ln0_22
+	s1_ln1_15 -> s2_ln0_23
+	s2_ln1_16 -> s3_ln0_24
+	s2_ln1_17 -> s3_ln0_25
+	s2_ln1_18 -> s3_ln0_26
+	s2_ln1_19 -> s3_ln0_27
+	s2_ln1_20 -> s3_ln0_28
+	s2_ln1_21 -> s3_ln0_29
+	s2_ln1_22 -> s3_ln0_30
+	s2_ln1_23 -> s3_ln0_31
+	s3_ln1_24 -> output
+	s3_ln1_25 -> output
+	s3_ln1_26 -> output
+	s3_ln1_27 -> output
+	s3_ln1_28 -> output
+	s3_ln1_29 -> output
+	s3_ln1_30 -> output
+	s3_ln1_31 -> output
+}

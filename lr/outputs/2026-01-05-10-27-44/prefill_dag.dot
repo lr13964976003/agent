@@ -1,0 +1,72 @@
+digraph "Prefill Phase DAG - PP4_TP4_DP2_EP1" {
+	graph [bgcolor=white, fontname=Arial, fontsize=12, nodesep=0.5, ranksep=0.8, size="30,40"];
+	node [fillcolor=lightblue, fontname=Arial, fontsize=10, shape=ellipse, style=filled];
+	edge [fontname=Arial, fontsize=10];
+
+	input [fillcolor=lightcoral, fontsize=12, label="Input\n[batch_size=512, seq_len=2048, heads=64, d_k=64]\nGPU: Host", shape=ellipse];
+	dp_split [fillcolor=lightyellow, fontsize=12, label="Data Parallel Split\n[batch_size=256, seq_len=2048, heads=64, d_k=64]\nGPU: Host", shape=parallelogram];
+	input -> dp_split [label="DP=2"];
+
+	// DP0 Pipeline Stage 0 (GPUs 0-7)
+	d0_attn_s0_l0_tp0 [fillcolor=lightgreen, label="Attention L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU0", shape=rectangle];
+	dp0_attn_s0_l0_tp1 [fillcolor=lightgreen, label="Attention L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU1", shape=rectangle];
+	dp0_attn_s0_l0_tp2 [fillcolor=lightgreen, label="Attention L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU2", shape=rectangle];
+	dp0_attn_s0_l0_tp3 [fillcolor=lightgreen, label="Attention L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU3", shape=rectangle];
+	dp_split -> dp0_attn_s0_l0_tp0;
+
+	// TP All-reduce for attention
+	dp0_attn_s0_l0_ar0 [fillcolor=lightblue, label="Attention All-Reduce L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU0", shape=ellipse];
+	dp0_attn_s0_l0_ar1 [fillcolor=lightblue, label="Attention All-Reduce L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU1", shape=ellipse];
+	dp0_attn_s0_l0_ar2 [fillcolor=lightblue, label="Attention All-Reduce L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU2", shape=ellipse];
+	d0_attn_s0_l0_tp0 -> dp0_attn_s0_l0_ar0;
+	dp0_attn_s0_l0_ar0 -> dp0_attn_s0_l0_tp1;
+	dp0_attn_s0_l0_tp1 -> dp0_attn_s0_l0_ar1;
+	dp0_attn_s0_l0_ar1 -> dp0_attn_s0_l0_tp2;
+	dp0_attn_s0_l0_tp2 -> dp0_attn_s0_l0_ar2;
+	dp0_attn_s0_l0_ar2 -> dp0_attn_s0_l0_tp3;
+
+	// MoE Layer 0 with Gate Selection (dashed)
+	dp0_moe_s0_l0_tp0 [fillcolor=lightgreen, label="MoE Layer 0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU0", shape=rectangle];
+	dp0_moe_s0_l0_tp1 [fillcolor=lightgreen, label="MoE Layer 0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU1", shape=rectangle];
+	dp0_moe_s0_l0_tp2 [fillcolor=lightgreen, label="MoE Layer 0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU2", shape=rectangle];
+	dp0_moe_s0_l0_tp3 [fillcolor=lightgreen, label="MoE Layer 0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU3", shape=rectangle];
+	dp0_attn_s0_l0_tp3 -> dp0_moe_s0_l0_tp0;
+	dp0_attn_s0_l0_tp3 -> dp0_moe_s0_l0_tp1;
+	dp0_attn_s0_l0_tp3 -> dp0_moe_s0_l0_tp2;
+	dp0_attn_s0_l0_tp3 -> dp0_moe_s0_l0_tp3;
+
+	// Gate routing (dashed lines)
+	dp0_gate_s0_l0_tp0 [fillcolor=lightyellow, label="Gate Selection L0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU0", shape=parallelogram, style=dashed];
+	dp0_gate_s0_l0_tp1 [fillcolor=lightyellow, label="Gate Selection L0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU1", shape=parallelogram, style=dashed];
+	dp0_gate_s0_l0_tp2 [fillcolor=lightyellow, label="Gate Selection L0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU2", shape=parallelogram, style=dashed];
+	dp0_gate_s0_l0_tp3 [fillcolor=lightyellow, label="Gate Selection L0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU3", shape=parallelogram, style=dashed];
+	dp0_gate_s0_l0_tp0 -> dp0_moe_s0_l0_tp0 [style=dashed];
+	dp0_gate_s0_l0_tp1 -> dp0_moe_s0_l0_tp1 [style=dashed];
+	dp0_gate_s0_l0_tp2 -> dp0_moe_s0_l0_tp2 [style=dashed];
+	dp0_gate_s0_l0_tp3 -> dp0_moe_s0_l0_tp3 [style=dashed];
+
+	// Pipeline communication to Stage 1
+	dp0_pp_s0_to_s1 [fillcolor=lightblue, label="Pipeline Stage 0→1\n[batch_size=256, seq_len=2048, d_model=4096]\nGPU: GPU3→GPU8", shape=ellipse];
+	dp0_moe_s0_l0_tp3 -> dp0_pp_s0_to_s1;
+
+	// Continue with DP1 (GPUs 16-31)
+	dp1_attn_s0_l0_tp0 [fillcolor=lightgreen, label="Attention L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU16", shape=rectangle];
+	dp1_attn_s0_l0_tp1 [fillcolor=lightgreen, label="Attention L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU17", shape=rectangle];
+	dp1_attn_s0_l0_tp2 [fillcolor=lightgreen, label="Attention L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU18", shape=rectangle];
+	dp1_attn_s0_l0_tp3 [fillcolor=lightgreen, label="Attention L0\n[batch_size=256, seq_len=2048, heads=16, d_k=64]\nGPU: GPU19", shape=rectangle];
+	dp_split -> dp1_attn_s0_l0_tp0;
+
+	// Similar structure for DP1...
+	dp1_moe_s0_l0_tp0 [fillcolor=lightgreen, label="MoE Layer 0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU16", shape=rectangle];
+	dp1_moe_s0_l0_tp1 [fillcolor=lightgreen, label="MoE Layer 0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU17", shape=rectangle];
+	dp1_moe_s0_l0_tp2 [fillcolor=lightgreen, label="MoE Layer 0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU18", shape=rectangle];
+	dp1_moe_s0_l0_tp3 [fillcolor=lightgreen, label="MoE Layer 0\n[batch_size=256, seq_len=2048, experts=128, top_k=8]\nGPU: GPU19", shape=rectangle];
+	dp1_attn_s0_l0_tp3 -> dp1_moe_s0_l0_tp0;
+	dp1_attn_s0_l0_tp3 -> dp1_moe_s0_l0_tp1;
+	dp1_attn_s0_l0_tp3 -> dp1_moe_s0_l0_tp2;
+	dp1_attn_s0_l0_tp3 -> dp1_moe_s0_l0_tp3;
+
+	// Final output
+	output [fillcolor=lightcoral, fontsize=12, label="Output\n[batch_size=512, seq_len=2048, d_model=4096]\nGPU: Host", shape=ellipse];
+	dp0_pp_s0_to_s1 -> output;
+}
