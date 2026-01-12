@@ -10,8 +10,6 @@ Provided knowledge file about how to generate parallel strategy deployment metho
 
 TASK
 
----
-
 You are tested to completed the following tasks:
 
 Requires a deep understanding of the hardware environment, models, and performance requirements. <<<要求理解输入文件>>> 
