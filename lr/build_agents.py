@@ -58,7 +58,7 @@ def Researcher(model: str, tools: list):
             request_timeout = 1800
             )
     agent = Agent(
-                role="Engineer",
+                role="Researcher",
                 goal=(
                      "Explore the problem space thoroughly, propose multiple hypotheses "
                      "or solution paths, and analyze their trade-offs."
